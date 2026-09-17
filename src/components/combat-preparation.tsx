@@ -1,0 +1,63 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { startFight } from "@/app/combat-actions";
+import { CombatantPanel } from "@/components/combatant-panel";
+import { COMBAT_COST, combatError, type CombatPreview } from "@/lib/combat";
+
+export function CombatPreparation({ preview }: { preview: CombatPreview }) {
+  const router = useRouter();
+  const [message, setMessage] = useState("");
+  const [pending, startTransition] = useTransition();
+  const request = useRef<string | null>(null);
+  const inFlight = useRef(false);
+  useEffect(() => {
+    const timer = setInterval(() => { if (document.visibilityState === "visible" && !inFlight.current) router.refresh(); }, 5000);
+    return () => clearInterval(timer);
+  }, [router]);
+
+  function start() {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    request.current ??= crypto.randomUUID();
+    const requestId = request.current;
+    setMessage("");
+    startTransition(async () => {
+      try {
+        const result = await startFight(preview.defender.id, requestId);
+        if (result.battleId) router.refresh();
+        else setMessage(result.message ?? "The fight could not be started.");
+      } catch {
+        setMessage("Connection interrupted. Try again to recover the same start request.");
+      } finally { inFlight.current = false; }
+    });
+  }
+
+  return <>
+    <div className="o-combat-intro"><strong>{preview.join_combat_id ? "An attack is already underway" : "Prepare for an encounter"}</strong>
+      <p>{preview.join_combat_id ? "Join the attackers with your own orders. You share the opposing ship and crew health." : "Inspect your condition before committing. The opposing equipment will be revealed when the fight starts."}</p></div>
+    <div className="o-combat-grid">
+      <CombatantPanel captain={preview.attacker} own phase="sea" />
+      <CombatantPanel captain={preview.defender} own={false} phase="sea" />
+    </div>
+    <div className="o-combat-start">
+      <div><h2>Give the order</h2><p>Both captains act each round. Your opponent follows saved defence orders.</p>
+        <p className="o-copy">You can attack while injured. At least 1 Ship Health and 1 Crew Health are required.</p></div>
+      <button className="o-training-button o-combat-start-button" disabled={pending || !preview.can_start} onClick={start}>
+        {pending && <span className="o-spinner" aria-hidden="true" />}
+        {pending ? "Entering battle..." : preview.join_combat_id ? "Join battle" : "Start battle"}
+        <small>{COMBAT_COST} Energy</small>
+      </button>
+    </div>
+    {!preview.can_start && <div className="o-combat-message">
+      <p>{combatError(preview.reason ?? "")}</p>
+      {preview.target_protected_until && <p>Protection ends at <time dateTime={preview.target_protected_until}>
+        {new Date(preview.target_protected_until).toLocaleTimeString("en-GB", { timeZone: "UTC" })} UTC</time>.</p>}
+      <button className="o-text-button" onClick={() => router.refresh()}>Check availability</button>
+    </div>}
+    <p className="o-combat-feedback" role="status">{message}</p>
+    <div className="o-panel-foot o-combat-foot"><Link href={"/characters/" + preview.defender.id}>Back to profile</Link><span>Opening this screen costs no Energy.</span></div>
+  </>;
+}

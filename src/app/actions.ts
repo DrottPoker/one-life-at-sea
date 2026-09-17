@@ -10,7 +10,7 @@ const value = (data: FormData, key: string) => typeof data.get(key) === "string"
 
 function authMessage(code?: string) {
   if (code === "over_request_rate_limit" || code === "over_email_send_rate_limit") return "Too many attempts. Please wait a minute and try again.";
-  if (code === "weak_password") return "Choose a stronger password with at least 12 characters.";
+  if (code === "weak_password") return "Use at least 6 characters.";
   if (code === "email_address_not_authorized") return "Email delivery is not ready for this address. Please contact the game owner.";
   return "We could not complete your request. Please try again.";
 }

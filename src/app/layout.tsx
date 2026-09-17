@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Masthead } from "@/components/shell";
+import { AppFrame } from "@/components/app-frame";
+import { currentUser, characterForUser, gameStateForPlayer } from "@/lib/player";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,8 +10,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const user = await currentUser();
+  const character = user ? await characterForUser(user.id) : null;
+  const state = character ? await gameStateForPlayer() : null;
   return <html lang="en"><body><a href="#main" className="skip-link">Skip to content</a>
-    <div className="game-shell"><Masthead />{children}<footer className="o-bottom"><span>One Life At Sea</span><span>A life to remember.</span></footer></div>
+    <AppFrame characterId={character?.id ?? null} attack={state?.active_attack ?? null}>{children}</AppFrame>
   </body></html>;
 }

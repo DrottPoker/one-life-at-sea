@@ -4,6 +4,11 @@ Status: **Första grunden är implementerad och verifierad lokalt.**
 
 Datum: 2026-09-15. Version: 0.8. Konto och karaktär skapas tillsammans. E-postbekräftelse är avstängd för utveckling.
 
+Senare beslut om kapten, skepp, besättning, överlevnad, strid och färdigheter
+samlas i [designunderlaget](COMBAT_AND_PROGRESSION_DESIGN.md). De är planerade
+spelsystem och ingår inte i den ursprungliga första grunden. Det efterföljande
+steget med resurser och träning beskrivs i [träningsgrunden](TRAINING_FOUNDATION.md).
+
 ## 1. Målet
 
 En spelare ska kunna skapa ett konto, skapa sin första karaktär och komma in i en
@@ -41,7 +46,7 @@ Hamnen är spelarens första plats i världen. Aktiviteter kommer i senare etapp
 | Kontohantering | Supabase Auth med e-post och lösenord | Passar vald plattform och hela inloggningsflödet. |
 | E-postbekräftelse | Avstängd under den första utvecklingsfasen | E-post och lösenord räcker; spelaren loggas in direkt efter registrering. |
 | Karaktärer per konto | En karaktär, skapad samtidigt som kontot | Databasen garanterar sambandet och förhindrar en andra karaktär. |
-| Karaktärsnamn | Unikt, 3-24 tecken | Tydlig identitet i den framtida sociala världen. |
+| Karaktärsnamn | Ifyllt och unikt, fria tecken och ingen spellängdsgräns | Namnreglerna har förenklats för utveckling. |
 | Namnregler | Bokstäver, mellanslag, bindestreck och apostrof | Tillåter svenska namn. Versaler och överflödiga mellanslag ger inte nya namn. |
 | Startutrustning | Inget skepp eller någon utrustning ännu | Startresurser beslutas tillsammans med kommande aktiviteter. |
 | Visuell form | Havsblå paneler, ljusblått hav, sandtoner och en hamnillustration | Sammanhängande värld genom hela flödet. |
@@ -83,7 +88,7 @@ Registrering:
 
 - **Your life at sea starts here** och en kort introduktion.
 - Karaktärsnamn med namnförhandsvisning, e-postadress, lösenord och bekräftelse av lösenordet.
-- Tydliga lösenordskrav och visa/dölj lösenord.
+- Visa/dölj lösenord. Utvecklingsversionen kräver endast minst 6 tecken, utan komplexitetskrav.
 - **Create account** och länk till **Log in**.
 
 Inloggning:
@@ -328,7 +333,8 @@ Utförda kontroller och återstående begränsningar redovisas i
 - Frigör eller ordna en Supabase Free-plats innan molnanslutningen görs.
 - Konfigurera extern e-postleverans för lösenordsåterställning inför externa testare.
 - Besluta separat om e-postbekräftelse ska återinföras inför publik användning.
-- Välj nästa spelaktivitet först efter att den här grunden har provats.
+- Ägaren har valt nästa steg: tre resursmätare samt Crew Training och Ship Upgrades.
+  Omfattning och regler finns i [träningsgrunden](TRAINING_FOUNDATION.md).
 
 ## Referenser
 

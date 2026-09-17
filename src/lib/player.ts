@@ -3,6 +3,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseConfig } from "@/lib/env";
+import { withDatabaseRetry } from "@/lib/database-retry";
 
 export const currentUser = cache(async () => {
   if (!getSupabaseConfig()) return null;
@@ -31,3 +32,11 @@ export async function requireCharacter() {
   if (!character) redirect("/create-character");
   return character;
 }
+
+export const gameStateForPlayer = cache(async () => {
+  await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await withDatabaseRetry(() => supabase.rpc("get_game_state"));
+  if (error || !data) throw new Error("Your resources could not be loaded. Please try again.");
+  return data;
+});

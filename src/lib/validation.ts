@@ -14,10 +14,7 @@ export function normalizeCharacterName(value: string) {
 
 export function validateCharacterName(value: string): string | undefined {
   const name = normalizeCharacterName(value);
-  if ([...name].length < 3 || [...name].length > 24) return "Use 3-24 characters for your name.";
-  if (!/^[\p{L}][\p{L} '\-]*[\p{L}]$/u.test(name)) {
-    return "Use letters, spaces, hyphens or apostrophes. Begin and end with a letter.";
-  }
+  if (!name) return "Enter a character name.";
 }
 
 export function validateEmail(value: string): string | undefined {
@@ -26,7 +23,8 @@ export function validateEmail(value: string): string | undefined {
 
 export function validatePassword(password: string, confirmation: string): FieldErrors {
   const errors: FieldErrors = {};
-  if (password.length < 12 || password.length > 128) errors.password = "Use a password with 12-128 characters.";
+  if (password.length < 6) errors.password = "Use at least 6 characters.";
+  else if (password.length > 128) errors.password = "Use no more than 128 characters.";
   if (confirmation !== password) errors.confirmPassword = "The passwords do not match.";
   return errors;
 }

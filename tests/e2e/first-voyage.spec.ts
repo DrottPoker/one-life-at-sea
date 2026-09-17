@@ -49,14 +49,14 @@ async function recoveryLink(email: string) {
 
 test("registration creates the character and returns to the same harbor after login", async ({ page, browser }) => {
   const email = `voyage-${suffix()}@example.test`;
-  const secret = password();
-  const name = `Captain ${suffix()}`;
+  const secret = suffix().slice(0, 6);
+  const name = `Captain_${suffix()}_123_🦜_LongName`;
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.name));
   await page.goto("/harbor");
   await expect(page).toHaveURL(/\/login$/);
-  await fillRegistration(page, email, secret, "Captain123");
-  await expect(page.locator("#name-error")).toContainText("Use letters");
+  await fillRegistration(page, email, secret, "   ");
+  await expect(page.locator("#name-error")).toContainText("Enter a character name");
   await register(page, email, secret, name);
   await page.goto("/create-character");
   await expect(page).toHaveURL(/\/harbor$/);
@@ -102,7 +102,7 @@ test("registration creates the character and returns to the same harbor after lo
 test("password recovery uses the local email link and preserves the character", async ({ page }) => {
   const email = `recovery-${suffix()}@example.test`;
   const oldPassword = password();
-  const newPassword = password();
+  const newPassword = suffix().slice(0, 6);
   const name = `Sailor ${suffix()}`;
   await register(page, email, oldPassword, name);
   await page.getByRole("button", { name: "Log out", exact: true }).filter({ visible: true }).click();
@@ -178,7 +178,7 @@ test("simultaneous registrations cannot reserve one name twice or leave orphan a
   }
   const incomplete = client();
   const email = `missing-${suffix()}@example.test`;
-  const secret = password();
+  const secret = suffix().slice(0, 6);
   expect(!!(await incomplete.auth.signUp({ email, password: secret })).error).toBe(true);
   expect((await incomplete.auth.signInWithPassword({ email, password: secret })).error?.code).toBe("invalid_credentials");
 });

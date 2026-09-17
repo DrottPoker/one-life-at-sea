@@ -1,0 +1,232 @@
+# PvP och gemensamma attacker
+
+Uppdaterat 2026-09-16. Detta dokument beskriver den implementerade versionen.
+[FIRST_COMBAT_PLAN.md](FIRST_COMBAT_PLAN.md) är den historiska planen för version 1.
+
+## Flöde och sidlås
+
+- Attack på en profil öppnar /attack/<character-id>. Adressen identifierar motståndaren och kan delas.
+- Förberedelse är gratis. Båda deltagarna visas sida vid sida. Motståndarens utrustning är Unknown.
+- Start battle kostar 10 Energy. Om målet redan försvarar ett möte visas Join battle, med samma kostnad.
+- Adressen ändras inte vid start eller join. Varje besökare ser sin egen förberedelse eller pågående attack.
+- En delad länk ger Join battle när målet redan angrips. Att bara öppna länken kostar ingen Energy och ansluter inte automatiskt.
+- Aktuellt möte hämtas från spelarens serverdata. Strids-ID finns endast i rapportadressen, /combatlog/<battle-id>.
+- När mötet avslutas skickas deltagare i attackvyn till rapporten. Ett nytt besök på målets attacklänk visar åter förberedelsen.
+- Attackvyn använder hela spelutrymmet utan hamnens sidopanel, masthead eller footer. Energy och båda hälsomätarna finns i vyn.
+- Före start kan spelaren gå tillbaka fritt.
+- En aktiv angripare skickas tillbaka till sitt sparade möte vid andra sidbesök, reload, ny flik och bakåtnavigering. Proxy kontrollerar serverns lås; rotlayouten fångar även klientens cachade navigation.
+- Tränings-RPC:n nekar aktiva angripare även vid direkta API-anrop.
+- Vinst, nederlag, reträtt, rundgräns eller timeout frigör deltagaren. Stängd flik avslutar inte striden direkt.
+- Avslutade möten har /combatlog/<battle-id>. Alla med länken kan läsa rapporten utan konto.
+- Äldre /attack?target=<id>&battle=<id>, /combat/prepare/<id> och /combat/<id> är enbart kompatibilitetsomdirigeringar.
+
+## Flera angripare
+
+Mötet har en försvarare med gemensam Ship Health och Crew Health. Varje angripare har egna:
+
+- Hälsovärden, stats och ammunition.
+- Runda, stridsfas och inaktivitetsdeadline.
+- Startbegäran, orderhistorik, träffar och utdelad skada.
+
+En angripare kan boarda medan en annan skjuter. Försvararen svarar automatiskt i respektive angripares fas.
+Den ena angriparens fasbyte eller runda ändrar inte den andras.
+
+Servern behandlar handlingar atomiskt under mötets deltagarlås. Den första accepterade träffen som
+sänker försvararens skepp eller besättning till noll avslutar hela mötet. Angriparen får Final blow;
+andra angripare som fortfarande deltar får Assist. En redan flydd eller besegrad deltagare får ingen assist.
+Sena order kan inte göra mer skada eller ändra vinnaren.
+
+Båda handlingarna i en enskild runda beräknas från samma startläge. Försvararen får utföra sin låsta
+motattack även om den avgörande träffen kommer i samma runda. I version 2 behålls final-blow-krediten
+även om motattacken samtidigt slår ut angriparen. Detta ersätter version 1:s oavgjort vid ömsesidigt utslag.
+
+Om en angripare flyr eller besegras fortsätter de andra. När sista angriparen lämnar avslutas mötet.
+Samma kapten kan inte återansluta till samma möte och därmed återställa ammunition eller rundor.
+En kapten kan delta i ett möte åt gången. Den som försvarar kan använda vanliga spelsidor och träna,
+men måste avsluta sitt försvar innan ett separat anfall kan startas.
+
+## Onlineförsvar och realtid
+
+Försvararen flyttas inte till attackvyn och får inga manuella försvarsval under pågående möte.
+Hälsomätarna uppdateras i vanliga spelvyer. Träning och ändrade försvarsorder gäller kommande möten;
+pågående möte använder sin sparade ögonblicksbild.
+
+Supabase Realtime publicerar endast public.player_game_events: en ägarbegränsad revisionssignal.
+Efter en signal hämtar appen auktoritativa serverdata och uppdaterar befintlig vy utan dokumentomladdning.
+Alla angripare och försvararen signaleras vid start, anslutning, order och avslut.
+Återanslutning, återvunnet fokus och en 15-sekunders reservkontroll stämmer av missade signaler.
+Förberedelsen kontrollerar tillgänglighet var femte sekund. Startkommandot avgör alltid atomiskt om
+ett nytt möte ska skapas eller ett befintligt anslutas.
+
+Råa karaktärsrader, stats, försvarsförval och stridsögonblicksbilder publiceras inte till Realtime.
+
+## Hälsa och återhämtning
+
+Både angripare och mål behöver minst 1 Ship Health och 1 Crew Health. Full hälsa krävs inte.
+Start återställer aldrig hälsa. PvP förstör inte permanent kapten, skepp, besättning eller tränade stats.
+
+- Ship Health: +1 per 30 sekunder efter deltagarens avslut.
+- Crew Health: +1 per 10 sekunder efter deltagarens avslut.
+- Båda återhämtas parallellt, även offline, högst 100.
+- Hälsa återhämtas inte för aktiva deltagare. En tillbakadragen angripare kan börja återhämta sig medan mötet fortsätter.
+- Energy: +1 per fem minuter, högst 100.
+- Fem minuters skydd mot inkommande attacker efter deltagarens avslut.
+- Skyddet hindrar inte egna attacker. Ett eget anfall avslutar skyddet.
+
+## Order och förval
+
+| Fas | Order | Regel |
+| --- | --- | --- |
+| Sea | Fire cannons | En salva även vid miss. Träff skadar Ship Health. |
+| Sea | Board | Ingen egen salva. Bordningsförsök efter motståndarens handling. |
+| Boarding | Crew attack | Träff skadar Crew Health. |
+| Boarding | Disengage | Ta motattacken och återgå till Sea om besättningen överlever. |
+| Båda | Retreat | Ta motattacken och lämna mötet om kaptenen överlever. |
+
+Nederlag avgörs före reträtt och fasbyte. Lyckad boarding börjar crew-strid nästa runda.
+Båda som väljer Board lyckas utan slump. Skador följer med mellan faserna.
+
+Cannon focus skjuter så länge ammunition finns och boardar därefter. Boarding focus boardar direkt.
+I boarding används alltid Crew attack. Grundutrustningen är Basic cannons och Cutlasses.
+
+Varje angripare får tio utvecklingssalvor. Försvararen har tio salvor per angriparpar.
+Detta är en tillfällig tilldelning utan inventarium eller ammunitionsekonomi.
+
+Bordningschans: clamp(0.70 + 0.30 * (ship_speed - enemy_ship_speed) / (ship_speed + enemy_ship_speed), 0.20, 0.90).
+Crew-stats gäller boarding; Ship-stats gäller till sjöss. Speed påverkar undvikande och bordning.
+
+## Statkurvor och skada
+
+Grundmodellen jämför par av stats, inspirerad av Torns offentligt beskrivna kurvor.
+Samma funktioner används för angripare och försvarare, både till sjöss och vid boarding.
+
+| Vår stat | Torn-motsvarighet | Funktion |
+| --- | --- | --- |
+| Attack | Strength | Grundskada och jämförelse mot Defense. |
+| Defense | Defense | Minskar skadan från en träff. |
+| Accuracy | Speed | Jämförs med målets Speed för träffchans. |
+| Speed | Dexterity | Undviker träffar; påverkar även vårt separata bordningsförsök. |
+
+### Träffchans
+
+Sätt r = egen Accuracy / motståndarens Speed. Funktionen returnerar en sannolikhet mellan 0 och 1:
+
+- r <= 1/64: 0.
+- 1/64 < r <= 1: (8 * sqrt(r) - 1) / 14.
+- 1 < r < 64: 1 - (8 * sqrt(1/r) - 1) / 14.
+- r >= 64: 1.
+
+Lika stats ger 50 % träffchans. Dubbelt så hög Accuracy ger cirka 66,74 %.
+64 gånger så hög Speed som inkommande Accuracy ger garanterade missar.
+64 gånger så hög Accuracy som målets Speed ger garanterade träffar.
+Servern träffar när slumpvärdet i [0, 1) är strikt lägre än sannolikheten.
+Det tidigare intervallet 50-95 % används inte längre.
+
+### Skademinskning
+
+Sätt q = motståndarens Defense / egen Attack. Minskningen m är:
+
+- q <= 1/32: 0.
+- 1/32 < q <= 1: 0,5 + 0,1 * ln(q) / ln(2).
+- 1 < q < 25: 0,5 + 0,5 * ln(q) / ln(25).
+- q >= 25: 1.
+
+Full blockering kräver **25 gånger Defense**, enligt ägarens justering från Torns 14.
+Endast den övre delen av kurvan har gjorts flackare. Lika stats ger fortfarande 50 % minskning.
+
+| Defense / Attack | Skademinskning |
+| --- | --- |
+| 1 | 50 % |
+| 2 | 60,77 % |
+| 4 | 71,53 % |
+| 10 | 85,77 % |
+| 14 | 90,99 % |
+| 20 | 96,53 % |
+| 25 eller mer | 100 % |
+
+### Grundskada och avrundning
+
+Sätt x = log10(Attack). Grundskadan är 7*x*x + 27*x + 30.
+Detta använder den offentliga Torn-approximationens form med en skalenhet där
+en av våra statpoäng motsvarar tio Torn-poäng. Nya karaktärer börjar med 10 i alla åtta stats
+och 100 HP. Detta ger 32 skada vid en träff mellan två nya kaptener. Befintliga karaktärers
+stats och tidigare träning behålls. Träning kostar fortfarande 5 Energy för +1 stat.
+
+- Vid full blockering (q >= 25): 0 skada.
+- Annars: max(1, round(grundskada * (1 - m))).
+- Den faktiskt sparade skadan begränsas till målets återstående hälsa.
+- Golvet på 1 före full blockering hindrar heltalsavrundning från att ge noll för tidigt.
+- Det tidigare taket på 40 skada är borttaget.
+- En blockerad träff räknas fortfarande som en träff och visas som Blocked · 0 damage.
+  En miss visas som Missed. Kanonsalvor förbrukas i båda fallen.
+
+Absolut Attack påverkar alltså grundskadan, medan kvoterna avgör träffchans och minskning.
+Vid lika Attack och Defense blir skadan per träff 15 vid stats 1, 32 vid 10,
+56 vid 100 och 87 vid 1 000. Skadad hälsa sänker inte dessa stats.
+
+Utrustningsmodifierare, kritiska träffar, kroppsdelar, slumpvariation i skadebeloppet och
+gruppbonusar ingår inte. Rundor, försvarsorder, bordningschans och återhämtning är oförändrade.
+
+### Referenser och avgränsning
+
+[Torn Wiki: Battle Stats](https://wiki.torn.com/wiki/Battle_Stats) beskriver statrelationer och referenspunkter.
+[Proximas ursprungliga undersökning](https://www.torn.com/forums.php?p=threads&t=16199413)
+beskriver skadeformeln och dess begränsningar. Det är offentligt undersökta approximationer,
+inte tillgång till Torns serverkod. Vår modell använder dessa som grund, med uttryckliga
+anpassningar för statskalan och full blockering vid 25 gånger Defense.
+
+## Tidsgränser och rapport
+
+- Högst 25 rundor per angripare, över båda faserna.
+- Två minuter utan accepterad order ger automatisk Retreat med motattack.
+- Ett möte varar högst tio minuter från första starten; sena anslutningar förlänger inte detta.
+- Utgångna deltagare avslutas vid nästa relevanta serverläsning eller handling.
+- Återhämtning räknas från deadline, inte från återbesöket.
+- Offentlig rapport skapas när hela mötet är avslutat. Den visar starter, anslutningar, order,
+  skador, fasbyten, servertid (UTC), final blow, assists och deltagarnas träffar.
+- Loggen visar inga lokala rundnummer eller summerat antal rundor. Det egna rundtaket visas fortfarande i attackvyn.
+- Deltagarlistan visar Ship damage och Crew damage separat för både angripare och försvarare.
+  Summorna räknas från sparade händelsers fas, vilket även fungerar för äldre strider.
+- Alla karaktärsnamn i attackvyn, händelselistan, deltagarlistan och resultatet länkar till profilen.
+  Navigationslåset gäller fortfarande under en aktiv attack.
+- Rapportens hälsa är historiska slutvärden, inte senare återhämtad hälsa.
+- Rapporten avslöjar inga konton, e-postadresser, privata stats, ammunition, försvarsförval eller begärans-ID:n.
+- Guld, föremål och XP delas ännu inte ut. PvE och flottuppdrag ingår inte.
+
+## Lagring och behörighet
+
+- private.combats: gemensamt möte, försvararens ögonblicksbild, delad hälsa, resultat och yttersta deadline.
+- private.combat_participants: angriparnas egna faser, rundor, snapshots, resultat och bidrag.
+- private.combat_engagements: reservation och roll per aktiv kapten.
+- private.combat_rounds: globalt ordnad händelselogg med aktör och lokalt rundnummer.
+- public.player_game_events: endast ägarens ändringssignal, skyddad av RLS.
+
+Alla råa stridstabeller har RLS och saknar klienträttigheter. Privata mutatorer kan inte anropas av spelare.
+get_combat och preview kräver registrerad spelare och filtrerar bort privata motståndardata.
+get_attack_lock returnerar endast den egna aktiva attacken.
+get_combat_log är ett separat offentligt läsanrop med explicit fältlista och endast avslutade möten.
+
+Stats och försvarsförval snapshots vid start. Serverns privata round resolver och pgcrypto äger alla utfall.
+Ordnade deltagarlås, idempotenta begärans-ID:n och förväntade lokala rundnummer skyddar mot dubbeldebitering,
+samtidiga sluthits och gamla tabbar. Hälsa, logg, resultat och notifieringar sparas i samma transaktion.
+Oberoende möten har separata lås. Förändrad deltagargrupp utlöser transaktionsåterförsök.
+
+Migration 20260916022241_shared_attack_encounters.sql införde delade attacker.
+20260916044300_combat_damage_breakdown.sql lägger till separata skadevärden genom att läsa befintliga händelser.
+20260916051659_torn_style_combat_curves.sql inför de privata statfunktionerna och ersätter beräkningarna i round resolver.
+Alla tre är applicerade lokalt. Befintlig stridshistorik bevaras. Ingen databasreset eller molnändring har gjorts.
+De nya kurvorna används för nästa order även i pågående strider; tidigare händelser räknas inte om.
+
+Migration 20260916064805_combat_stats_start_at_ten.sql ändrar endast kolumnernas startvärden för nya karaktärer.
+
+## Verifiering
+
+npm run check: lint, TypeScript, 24 enhetstester och produktionsbygge passerade.
+npm run test:db: 347 assertioner passerade, inklusive 66 för statkurvor och deras resolverintegration,
+91 tidigare stridskontroller och 53 kontroller för delade attacker och skadeuppdelning.
+Alla fem Playwright-scenarier i tests/e2e/combat.spec.ts och båda träningsscenarierna passerade tillsammans. De täcker attackflöde/sidlås,
+samtidiga order/sluthits, kopierade länkar och livehälsa, gemensam rapport samt garanterade missar och
+blockerade träffar i båda stridsfaserna. Mobilbredd 320, 375 och 768 px kontrollerades utan överflöde.
+Supabase security advisors rapporterade inga problem. git diff --check passerade.
+Den tidigare kända Next.js-varningen om avbrutna RSC-strömmar syntes vid navigation; samtliga scenarier passerade.
+Se IMPLEMENTATION_STATUS.md för tidigare breda webbläsarkörningar och kända begränsningar.
