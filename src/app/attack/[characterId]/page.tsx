@@ -4,7 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { requireCharacter, gameStateForPlayer } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
-import { attackUrl, isUuid, type Battle, type CombatPreview } from "@/lib/combat";
+import { attackUrl, type Battle, type CombatPreview } from "@/lib/combat";
+import { isUuid } from "@/lib/validation";
 import { AttackSession } from "@/components/attack-session";
 import { GameStateProvider } from "@/components/game-state";
 

@@ -1,4 +1,4 @@
-import { isUuid } from "@/lib/combat";
+import { isUuid } from "@/lib/validation";
 
 export type HospitalPatient = { character_id: string; display_name: string; hospital_until: string };
 export type HospitalRoster = {

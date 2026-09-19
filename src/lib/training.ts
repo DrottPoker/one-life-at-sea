@@ -1,7 +1,7 @@
-import { gameplay, frontend } from "@/config/public";
+import { gameplay } from "@/config/public";
 import type { Stat, TrainingGroup } from "@/lib/game";
 
-export type TrainingProgress = { xp: number; tier_id: string };
+type TrainingProgress = { xp: number; tier_id: string };
 export type ShipJob = {
   id: string; stat: Stat; size_id: string | null; workshop_id: string; workshop_name: string;
   energy_cost: number; stat_gain: number; xp_gain: number;
@@ -34,8 +34,4 @@ export function parseShipEnergy(value: unknown): number | null {
 
 export function shipStatGain(baseGain: number, energy: number): number {
   return Math.round(baseGain * 1_000_000 / gameplay.training.shipEnergyPerUnit) * energy / 1_000_000;
-}
-
-export function formatStat(value: number): string {
-  return new Intl.NumberFormat(frontend.site.locale, { maximumFractionDigits: 6 }).format(value);
 }

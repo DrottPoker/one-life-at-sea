@@ -1,48 +1,18 @@
-import { test, expect, type Page } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
-import { execFileSync } from "node:child_process";
-import { randomBytes, randomUUID } from "node:crypto";
-import type { Database } from "../../src/lib/database.types";
+import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { createTestAccount, createTestClient as client, testSql as sql,
+  loginTestAccount as login, cleanupTestAccounts as cleanup } from "../support/accounts";
 import { inventoryFixtureSql } from "../../scripts/inventory-fixture.mjs";
-import { isLocalTestApi, localDatabaseContainer } from "../support/local";
 
-process.loadEnvFile(".env.local");
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!, key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-if (!isLocalTestApi(url)) throw new Error("Inventory tests require local Supabase.");
-const client = () => createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-function sql(statement: string) {
-  return execFileSync("docker", ["exec","-i",localDatabaseContainer,"psql","-U","postgres","-d","postgres","-v","ON_ERROR_STOP=1","-q","-t","-A"],
-    { input: statement, encoding: "utf8", stdio: ["pipe","pipe","pipe"] });
-}
 async function account(seed = true) {
-  const api = client(), tag = randomBytes(10).toString("hex");
-  const email = "inventory-" + tag + "@example.test", password = randomBytes(24).toString("hex");
-  const signup = await api.auth.signUp({ email, password, options: { data: { character_name: "Items " + tag } } });
-  expect(signup.error).toBeNull();
-  const own = await api.from("characters").select("id").single();
-  expect(own.error).toBeNull();
-  const id = own.data!.id, userId = signup.data.user!.id;
-  if (![id, userId].every(value => /^[0-9a-f-]{36}$/.test(value))) throw new Error("Invalid fixture ID.");
-  expect((await api.rpc("list_inventory")).data?.total).toBe(0);
+  const own = await createTestAccount("inventory");
+  expect((await own.api.rpc("list_inventory")).data?.total).toBe(0);
   if (seed) {
-    sql(inventoryFixtureSql(id));
-    sql(inventoryFixtureSql(id));
-    expect((await api.rpc("list_inventory")).data?.total).toBe(7);
+    sql(inventoryFixtureSql(own.id));
+    sql(inventoryFixtureSql(own.id));
+    expect((await own.api.rpc("list_inventory")).data?.total).toBe(7);
   }
-  return { api, id, userId, email, password };
-}
-async function login(page: Page, own: Awaited<ReturnType<typeof account>>, hospital = false) {
-  await page.goto("/login");
-  await page.getByLabel("Email address", { exact: true }).fill(own.email);
-  await page.getByLabel("Password", { exact: true }).fill(own.password);
-  await page.getByRole("button", { name: "Log in", exact: true }).click();
-  await expect(page).toHaveURL(hospital ? /\/harbor\/hospital$/ : /\/harbor$/);
-}
-async function cleanup(accounts: Awaited<ReturnType<typeof account>>[]) {
-  for (const own of accounts) {
-    await own.api.auth.signOut();
-    sql("delete from auth.users where id='" + own.userId + "'");
-  }
+  return own;
 }
 
 test("inventory rows, categories, details, item images and mobile layout", async ({ page }) => {

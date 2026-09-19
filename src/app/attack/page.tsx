@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
-import { attackUrl, isUuid } from "@/lib/combat";
+import { attackUrl } from "@/lib/combat";
+import { isUuid } from "@/lib/validation";
 
 export default async function LegacyAttackPage({ searchParams }: { searchParams: Promise<{ target?: string }> }) {
   const { target } = await searchParams;

@@ -1,10 +1,11 @@
-# First foundation architecture
+# Project architecture
 
 ## Central configuration
 
 Editable settings live under `config/`. The app imports browser-safe JSON through `src/config/public.ts`;
-server settings use a separate server-only module. `supabase/templates/gameplay.sql` is the maintained SQL
-source, rendered with validated gameplay values into append-only migrations. Root tool configuration files
+server settings use a separate server-only module. `supabase/templates/gameplay.sql` lists the ordered
+modules under `supabase/templates/gameplay/`. They are combined and rendered with validated gameplay
+values into append-only migrations. Splitting the source does not change the generated SQL or revision. Root tool configuration files
 are thin adapters. UI styles are generated from `config/interface.css.template`; theme tokens are direct CSS.
 A public revision fingerprint and request-scoped server check prevent an app build from silently using a
 different gameplay configuration than its database. Existing data, snapshots, grants and historical migrations
@@ -26,6 +27,12 @@ CSS default, unless a specific design explicitly overrides placement. Dialogs co
 height to the viewport and scroll internally. Use DialogCloseButton for the small upper-right
 close control and o-dialog-title on the heading to reserve space for it. Inventory destruction
 and admin record dialogs follow this convention; closing does not submit their forms.
+
+Shared lifecycle helpers live in `src/hooks/` and `src/lib/`. Hospital, ship and combat timers use
+`useServerCountdown`; the hospital roster and profile use `createSnapshotPoller` to serialize reads,
+coalesce events, recover after failures and discard responses after unmount. `subscribeToForeground`
+owns focus/online/visibility listeners. AppFrame alone refreshes shared game state on foreground events;
+GameStateProvider owns resource deadlines. See [code organization and maintenance](CODE_MAINTENANCE.md).
 
 ## Navigation and loading
 
@@ -324,6 +331,13 @@ browser history all passed, with no browser JavaScript errors. This matches the
 [upstream client-aborted RSC stream report](https://github.com/vercel/next.js/issues/96704).
 The diagnostic is retained; no log filter or dependency patch hides it. Recheck
 it when adopting an upstream fix.
+
+A targeted admin browser test on 2026-09-20 also reproduced the existing
+`MaxListenersExceededWarning` for Gzip with `NODE_OPTIONS=--trace-warnings`.
+The stack points to `next/dist/compiled/compression/index.js` forwarding drain
+listeners from `next/dist/compiled/next-server/app-page-turbo.runtime.prod.js`.
+The scenario passes. Track this with the framework stream diagnostics; do not
+suppress listener warnings or patch installed dependencies to conceal it.
 
 ## Hospital and persistent characters
 

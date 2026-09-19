@@ -5,6 +5,7 @@ import { frontend } from "@/config/public";
 import { Suspense, useEffect, useId, useRef, useTransition, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Masthead } from "@/components/shell";
+import { subscribeToForeground } from "@/lib/browser-events";
 import { createClient } from "@/lib/supabase/browser";
 import { isHospitalAccessiblePath } from "@/lib/hospital";
 import { attackUrl, type AttackLock } from "@/lib/combat";
@@ -54,22 +55,13 @@ function SessionFrame({ children, characterId, attack, hospitalUntil, isAdmin }:
       if (!disposed) channel.subscribe(status => { if (status === "SUBSCRIBED") schedule(); });
     }).catch(() => { if (!disposed) schedule(); });
     const foreground = () => { if (document.visibilityState === "visible") schedule(); };
-    // Reconcile after reconnects and cached back/forward navigation.
-    window.addEventListener("focus", foreground);
-    window.addEventListener("online", foreground);
-    window.addEventListener("popstate", foreground);
-    window.addEventListener("pageshow", foreground);
-    document.addEventListener("visibilitychange", foreground);
+    const unsubscribeForeground = subscribeToForeground(schedule, true);
     const fallback = setInterval(foreground, frontend.refresh.fallbackMs);
     return () => {
       disposed = true;
       clearTimeout(timer);
       clearInterval(fallback);
-      window.removeEventListener("focus", foreground);
-      window.removeEventListener("online", foreground);
-      window.removeEventListener("popstate", foreground);
-      window.removeEventListener("pageshow", foreground);
-      document.removeEventListener("visibilitychange", foreground);
+      unsubscribeForeground();
       void client.removeChannel(channel);
     };
   }, [characterId, instance, router]);

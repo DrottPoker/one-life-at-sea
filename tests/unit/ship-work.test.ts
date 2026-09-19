@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { formatStat, parseShipEnergy, shipStatGain } from "../../src/lib/training";
+import { formatStat } from "../../src/lib/format";
+import { parseShipEnergy, shipStatGain } from "../../src/lib/training";
 
 describe("variable ship work", () => {
   it.each(["", "0", "1", "4", "-5", "5.5", "1e1", "101", "9007199254740991", null, 5])("rejects invalid Energy %s", value => {

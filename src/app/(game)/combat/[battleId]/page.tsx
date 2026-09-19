@@ -1,7 +1,8 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireCharacter } from "@/lib/player";
-import { attackUrl, isUuid } from "@/lib/combat";
+import { attackUrl } from "@/lib/combat";
+import { isUuid } from "@/lib/validation";
 import { withDatabaseRetry } from "@/lib/database-retry";
 export default async function LegacyCombat({ params }: { params: Promise<{ battleId: string }> }) {
   await requireCharacter();

@@ -19,6 +19,7 @@ export function parseGoldAmount(value: unknown): number | null {
   return Number.isSafeInteger(amount) && amount > 0 && amount <= gameplay.economy.maxGoldCoins ? amount : null;
 }
 
+const goldFormatter = new Intl.NumberFormat(frontend.site.locale, { maximumFractionDigits: 0 });
 export function formatGold(amount: number): string {
-  return new Intl.NumberFormat(frontend.site.locale, { maximumFractionDigits: 0 }).format(amount);
+  return goldFormatter.format(amount);
 }

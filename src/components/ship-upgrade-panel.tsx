@@ -1,23 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { gameplay, durationLabel } from "@/config/public";
 import { useGameState } from "@/components/game-state";
 import { TrainingActionForm } from "@/components/training-action-form";
 import { TrainingTierProgress } from "@/components/training-tier-progress";
+import { useServerCountdown } from "@/hooks/use-server-countdown";
+import { formatCountdown } from "@/lib/time";
+import { formatStat } from "@/lib/format";
 import { STATS, STAT_LABELS, type Stat } from "@/lib/game";
-import { trainingTier, shipStatGain, formatStat, type ShipJob } from "@/lib/training";
+import { trainingTier, shipStatGain, type ShipJob } from "@/lib/training";
 
 function ShipCountdown({ job, observedAt }: { job: ShipJob; observedAt: string }) {
-  const [elapsed, setElapsed] = useState({ anchor: observedAt, seconds: 0 });
-  useEffect(() => {
-    const start = performance.now();
-    const timer = window.setInterval(() => setElapsed({ anchor: observedAt, seconds: (performance.now() - start) / 1000 }), 1000);
-    return () => window.clearInterval(timer);
-  }, [observedAt]);
-  const seconds = Math.max(0, Math.ceil((Date.parse(job.finishes_at) - Date.parse(observedAt)) / 1000 -
-    (elapsed.anchor === observedAt ? elapsed.seconds : 0)));
-  return <span>{seconds ? Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0") + " remaining" : "Completing..."}</span>;
+  const seconds = useServerCountdown(job.finishes_at, observedAt);
+  return <span>{seconds ? formatCountdown(seconds) + " remaining" : "Completing..."}</span>;
 }
 
 export function ShipUpgradePanel() {

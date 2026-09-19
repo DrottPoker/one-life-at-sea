@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
-import { isUuid } from "@/lib/combat";
+import { isUuid } from "@/lib/validation";
 import { formatItemCount, isInventoryEntryType, parseItemQuantity, type TrashResult } from "@/lib/inventory";
 
 const errors: Record<string, string> = {

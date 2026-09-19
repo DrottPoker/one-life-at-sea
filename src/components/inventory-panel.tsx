@@ -1,13 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ChartLine, Boxes, CircleDot, ChevronDown, ChevronLeft, ChevronRight, Compass, Cross, Crosshair, FlaskConical, Package, Search, Swords, Trash2, X, Zap } from "lucide-react";
+import { Boxes, CircleDot, ChevronDown, ChevronLeft, ChevronRight, Compass, Cross, Crosshair, FlaskConical, Package, Search, Swords, Trash2, Zap } from "lucide-react";
 import { DialogCloseButton } from "@/components/dialog-close-button";
-import { ItemCirculationChart } from "@/components/item-circulation-chart";
-import { formatCirculation } from "@/lib/circulation";
+import { ItemImage } from "@/components/inventory/item-image";
+import { ItemDetails } from "@/components/inventory/item-details";
 import { trashInventoryItem } from "@/app/inventory-actions";
 import { useGameState } from "@/components/game-state";
 import { formatItemCount, formatItemStat, inventoryCategories, inventoryCategoryName, inventoryEntryKey,
@@ -16,45 +15,6 @@ import { formatItemCount, formatItemStat, inventoryCategories, inventoryCategory
 const categoryIcons: Record<string, typeof Package> = {
   swords: Swords, cannon: CircleDot, cross: Cross, flask: FlaskConical, boxes: Boxes, compass: Compass,
 };
-
-function ItemImage({ item, large = false }: { item: InventoryEntry; large?: boolean }) {
-  const [failed, setFailed] = useState(false);
-  return <span className={large ? "o-item-art" : "o-item-thumb"}>
-    {failed ? <Package aria-label="Item image unavailable" role="img" /> :
-      <Image src={item.image_path} alt={large ? item.name : ""} width={large ? 280 : 64} height={large ? 190 : 48}
-        sizes={large ? "280px" : "64px"} onError={() => setFailed(true)} />}
-  </span>;
-}
-
-function ItemDetails({ item, onClose }: { item: InventoryEntry; onClose: () => void }) {
-  const [showCirculation, setShowCirculation] = useState(false);
-  const historyId = "circulation-" + inventoryEntryKey(item);
-  return <section className="o-item-details" id={"details-" + inventoryEntryKey(item)} aria-label={item.name + " details"}>
-    <div className="o-item-description"><p>{item.description}</p>
-      <button type="button" className="o-item-icon-button" aria-label={"Close " + item.name + " details"} onClick={onClose}><X aria-hidden="true" /></button>
-    </div>
-    <p className="o-item-effect">{item.effect_description}</p>
-    <div className="o-item-detail-grid">
-      <ItemImage key={item.image_path} item={item} large />
-      <dl className="o-item-properties">
-        <div><dt>Category</dt><dd>{inventoryCategoryName(item.category_id)}</dd></div>
-        <div><dt>Quantity</dt><dd>{formatItemCount(item.quantity)}</dd></div>
-        {item.stats && <>
-          <div><dt>Damage</dt><dd>{formatItemStat(item.stats.damage)}</dd></div>
-          <div><dt>Accuracy</dt><dd>{formatItemStat(item.stats.accuracy)}</dd></div>
-        </>}
-        <div><dt title="Items of this type in the world">Circ.</dt><dd className="o-circulation-value">
-          <span>{formatCirculation(item.circulation)}</span>
-          <button type="button" className="o-item-icon-button" title="Circulation history"
-            aria-label={(showCirculation ? "Hide" : "Show") + " circulation history for " + item.name}
-            aria-expanded={showCirculation} aria-controls={showCirculation ? historyId : undefined}
-            onClick={() => setShowCirculation(value => !value)}><ChartLine aria-hidden="true" /></button>
-        </dd></div>
-      </dl>
-    </div>
-    {showCirculation && <ItemCirculationChart id={historyId} itemId={item.item_id} name={item.name} circulation={item.circulation} />}
-  </section>;
-}
 
 export function InventoryPanel({ inventory, filters }: { inventory: InventoryPage; filters: InventoryFilters }) {
   const router = useRouter();

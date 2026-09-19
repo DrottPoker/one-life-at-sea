@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
-import { isUuid } from "@/lib/combat";
+import { isUuid } from "@/lib/validation";
 import { isStat, isTrainingGroup, STAT_LABELS } from "@/lib/game";
 import { formatGold } from "@/lib/bank";
-import { parseShipEnergy, formatStat, type TrainingResult } from "@/lib/training";
+import { formatStat } from "@/lib/format";
+import { parseShipEnergy, type TrainingResult } from "@/lib/training";
 
 const errors: Record<string, string> = {
   INVALID_REQUEST: "Reload the page and try again.",

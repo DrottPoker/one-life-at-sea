@@ -114,7 +114,9 @@ export function trainingCatalogSql(config) {
     "\non conflict(training_group,id) do update set name=excluded.name,xp_required=excluded.xp_required,gold_cost=excluded.gold_cost,stat_gain=excluded.stat_gain;\n";
 }
 export function gameplaySql(config) {
-  return render(read("supabase/templates/gameplay.sql")
+  const template = read("supabase/templates/gameplay.sql").replace(/\{\{include\.([a-z-]+)\}\}\n/g,
+    (_, name) => read("supabase/templates/gameplay/" + name + ".sql"));
+  return render(template
     .replace("{{training.catalogSql}}", () => trainingCatalogSql(config))
     .replace("{{inventory.catalogSql}}", () => inventoryCatalogSql(config)), config);
 }

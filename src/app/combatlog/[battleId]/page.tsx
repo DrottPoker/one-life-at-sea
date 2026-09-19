@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isUuid } from "@/lib/combat";
+import { isUuid } from "@/lib/validation";
 import { CombatEvents, CombatPeople, outcomeLabel } from "@/components/combat-log";
 import { ShareCombatLog } from "@/components/share-combat-log";
 

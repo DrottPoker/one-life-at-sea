@@ -1,42 +1,9 @@
-import { test, expect, type Page } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
-import { randomBytes, randomUUID } from "node:crypto";
-import { execFileSync } from "node:child_process";
-import { isLocalTestApi, localDatabaseContainer } from "../support/local";
-import type { Database } from "../../src/lib/database.types";
+import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { createTestAccount, testSql as sql,
+  loginTestAccount as login, cleanupTestAccounts as cleanup } from "../support/accounts";
 
-process.loadEnvFile(".env.local");
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!, key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-if (!isLocalTestApi(url)) throw new Error("Hospital tests require local Supabase.");
-function sql(statement: string) {
-  execFileSync("docker", ["exec", localDatabaseContainer, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c", statement],
-    { stdio: ["ignore", "pipe", "pipe"] });
-}
-async function captain() {
-  const api = createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const tag = randomBytes(10).toString("hex"), email = "hospital-" + tag + "@example.test";
-  const password = randomBytes(24).toString("hex"), name = "Hospital " + tag;
-  const signup = await api.auth.signUp({ email, password, options: { data: { character_name: name } } });
-  expect(signup.error).toBeNull();
-  const own = await api.from("characters").select("id").single();
-  expect(own.error).toBeNull();
-  const id = own.data!.id, userId = signup.data.user!.id;
-  if (![id, userId].every(value => /^[0-9a-f-]{36}$/.test(value))) throw new Error("Invalid fixture ID.");
-  return { api, id, userId, email, password, name };
-}
-async function login(page: Page, own: Awaited<ReturnType<typeof captain>>, hospital = false) {
-  await page.goto("/login");
-  await page.getByLabel("Email address", { exact: true }).fill(own.email);
-  await page.getByLabel("Password", { exact: true }).fill(own.password);
-  await page.getByRole("button", { name: "Log in", exact: true }).click();
-  await expect(page).toHaveURL(hospital ? /\/harbor\/hospital$/ : /\/harbor$/);
-}
-async function cleanup(accounts: Awaited<ReturnType<typeof captain>>[]) {
-  for (const own of accounts) {
-    await own.api.auth.signOut();
-    sql("delete from auth.users where id='" + own.userId + "'");
-  }
-}
+const captain = () => createTestAccount("hospital");
 
 test("hospital locks gameplay routes, updates other players and discharges online and offline captains", async ({ page, browser, context }) => {
   test.setTimeout(120_000);

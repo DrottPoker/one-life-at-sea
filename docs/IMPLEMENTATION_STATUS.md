@@ -1,3 +1,28 @@
+# Kodstädning, 2026-09-20
+
+Projektets kod, konfiguration, SQL-mallar, testhjälpare och dokumentation har gåtts igenom.
+[Underhållsguiden](CODE_MAINTENANCE.md) beskriver ansvarsfördelningen och fortsatt utveckling.
+
+- Nedräkningar delar serverankare och monoton lokaltid. Sjukhuslista och profil delar
+  serialiserad hämtning, avbrott, återförsök och tidsstyrd uppdatering.
+- Dubbla fokusuppdateringar är borttagna. Inventorybilder och expanderade detaljer
+  har egna komponenter. Generell validering och formatering ligger utanför spelmodulerna.
+- SQL-mallen är uppdelad i elva funktionsområden med oförändrad genererad SQL och
+  versionshash. Spelregler, migreringshistorik och befintliga spelardata har bevarats.
+- Gemensamma testkonton används av inventory-, hospital- och admintester.
+  Oanvänd CSS och tomma äldre kataloger är borttagna. TypeScript kontrollerar
+  oanvända lokala variabler och parametrar.
+
+Verifierat: `npm run check` passerade med lint, typkontroll, 127 enhetstester
+och produktionsbygge. Alla 38 webbläsartester passerade i samma körning.
+724 databasassertioner och 49 kontroller med alternativ konfiguration passerade.
+Konfigurationsgeneratorns kontroll bekräftade oförändrad SQL och versionshash.
+
+Next.js loggar fortfarande tidigare dokumenterad diagnostik för avbrutna strömmar
+och Gzip-lyssnare. Ett extra adminscenario passerade med `--trace-warnings`;
+stackspåret för Gzip-varningen pekar på Next.js komprimering och serverruntime.
+Ingen loggfiltrering eller beroendepatch har införts. Se [arkitekturen](ARCHITECTURE.md).
+
 # Centrerade popupfönster, 2026-09-19
 
 Alla modala dialoger centreras som standard i skärmens synliga yta, om ingen särskild

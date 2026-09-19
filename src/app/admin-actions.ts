@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { isUuid } from "@/lib/combat";
+import { isUuid } from "@/lib/validation";
 import { adminErrors, type AdminAction, type AdminPayload, type AdminResult } from "@/lib/admin";
 
 export async function runAdminAction(action: AdminAction, payload: AdminPayload, requestId: string, reason: string): Promise<AdminResult> {

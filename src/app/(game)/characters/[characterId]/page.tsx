@@ -7,7 +7,7 @@ import { ProfileDetails } from "@/components/profile-details";
 import { DefenceOrders } from "@/components/defence-orders";
 import { requireCharacter, gameStateForPlayer } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
-import { isUuid } from "@/lib/combat";
+import { isUuid } from "@/lib/validation";
 
 export const metadata = { title: "Character profile" };
 

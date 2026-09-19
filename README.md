@@ -2,7 +2,9 @@
 
 Ett browserbaserat, socialt pirat-RPG med beständig karaktär och progression.
 
-## Första grunden
+Kodens ansvarsfördelning och fortsatt utveckling beskrivs i [kodstrukturen](docs/CODE_MAINTENANCE.md).
+
+## Spelfunktioner
 
 - Registrera med karaktärsnamn, e-post och lösenord. Konto och karaktär skapas samtidigt.
 - Karaktärsnamn behöver bara vara ifyllt och unikt. Siffror, symboler, emoji och korta namn fungerar.

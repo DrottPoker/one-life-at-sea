@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
-import { combatError, MAX_ROUNDS, isCombatOrder, isUuid, type CombatActionResult } from "@/lib/combat";
+import { combatError, MAX_ROUNDS, isCombatOrder, type CombatActionResult } from "@/lib/combat";
+import { isUuid } from "@/lib/validation";
 
 export async function startFight(targetId: string, requestId: string): Promise<CombatActionResult> {
   await requireCharacter();

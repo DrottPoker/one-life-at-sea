@@ -2,7 +2,7 @@ import { gameplay } from "@/config/public";
 import Link from "next/link";
 import { Ship, Swords, Crosshair, HelpCircle } from "lucide-react";
 import { STATS, STAT_LABELS } from "@/lib/game";
-import { formatStat } from "@/lib/training";
+import { formatStat } from "@/lib/format";
 import type { Combatant } from "@/lib/combat";
 
 export function CombatantPanel({ captain, own, phase }: { captain: Combatant; own: boolean; phase: "sea" | "boarding" }) {

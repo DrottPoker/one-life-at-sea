@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HeartPulse } from "lucide-react";
-import { frontend, gameplay, durationLabel } from "@/config/public";
+import { gameplay, durationLabel } from "@/config/public";
+import { subscribeToForeground } from "@/lib/browser-events";
+import { createSnapshotPoller, snapshotRefreshDelay } from "@/lib/snapshot-poller";
 import { createClient } from "@/lib/supabase/browser";
 import { useGameState } from "@/components/game-state";
 import { HospitalCountdown } from "@/components/hospital-countdown";
@@ -20,39 +22,33 @@ export function HospitalPanel({ initial, characterId }: { initial: HospitalRoste
     else if (wasPatient.current) { wasPatient.current = false; router.replace("/harbor"); }
   }, [state.hospital_until, router]);
   useEffect(() => {
-    const client = createClient(), abort = new AbortController();
-    let disposed = false, fetching = false, dirty = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    async function refresh() {
-      if (disposed) return;
-      if (fetching) { dirty = true; return; }
-      fetching = true; dirty = false;
-      const { data, error } = await client.rpc("list_hospital_patients", { requested_page: page }).abortSignal(abort.signal);
-      fetching = false;
-      if (disposed) return;
-      if (error || !data) setError(true);
-      else { setRoster(data); setPage(data.page); setError(false); }
-      clearTimeout(timer);
-      const deadline = data?.next_discharge_at ? Date.parse(data.next_discharge_at) - Date.parse(data.observed_at) + frontend.refresh.resourceGraceMs : frontend.refresh.fallbackMs;
-      timer = setTimeout(() => void refresh(), dirty ? frontend.refresh.realtimeDebounceMs :
-        Math.max(frontend.refresh.resourceMinimumMs, Math.min(deadline, frontend.refresh.fallbackMs)));
-    }
-    const schedule = () => { clearTimeout(timer); timer = setTimeout(() => void refresh(), frontend.refresh.realtimeDebounceMs); };
+    const client = createClient();
+    let disposed = false;
+    const poller = createSnapshotPoller({
+      async load(signal) {
+        const { data, error } = await client.rpc("list_hospital_patients", { requested_page: page }).abortSignal(signal);
+        if (error || !data) throw new Error("Hospital snapshot unavailable.");
+        return data;
+      },
+      onData(data) {
+        setRoster(data);
+        setPage(data.page);
+        setError(false);
+      },
+      onError: () => setError(true),
+      nextDelay: data => snapshotRefreshDelay(data.next_discharge_at, data.observed_at),
+    });
+    const schedule = () => poller.schedule();
     const channel = client.channel("hospital-" + instance + "-" + page + "-" + attempt)
       .on("postgres_changes", { event: "*", schema: "public", table: "hospital_patients" }, schedule);
     void client.realtime.setAuth().then(() => {
       if (!disposed) channel.subscribe(status => { if (status === "SUBSCRIBED") schedule(); });
     }).catch(() => { if (!disposed) setError(true); });
-    const foreground = () => { if (document.visibilityState === "visible") schedule(); };
-    window.addEventListener("focus", foreground);
-    window.addEventListener("online", foreground);
-    document.addEventListener("visibilitychange", foreground);
+    const unsubscribeForeground = subscribeToForeground(schedule);
     schedule();
     return () => {
-      disposed = true; abort.abort(); clearTimeout(timer); void client.removeChannel(channel);
-      window.removeEventListener("focus", foreground);
-      window.removeEventListener("online", foreground);
-      document.removeEventListener("visibilitychange", foreground);
+      disposed = true; poller.dispose(); void client.removeChannel(channel);
+      unsubscribeForeground();
     };
   }, [page, instance, attempt]);
   const total = roster?.total ?? 0, currentPage = roster?.page ?? 0;

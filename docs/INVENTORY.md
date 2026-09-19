@@ -123,7 +123,9 @@ Samma original används för miniatyr och stor bild genom Nexts bildoptimering.
 En reservikon visas om en bild inte kan laddas. Produktionsprompter och ursprung
 finns i [itembilderna](ITEM_ART.md).
 
-- [inventory-panel.tsx](../src/components/inventory-panel.tsx): kategorier, rader, detaljer och Trash-dialog.
+- [inventory-panel.tsx](../src/components/inventory-panel.tsx): kategorier, rader och Trash-flöde.
+- [item-details.tsx](../src/components/inventory/item-details.tsx): expanderade detaljer och cirkulationsdiagram.
+- [item-image.tsx](../src/components/inventory/item-image.tsx): gemensam bildvisning och fallback.
 - [inventory.ts](../src/lib/inventory.ts): typer, filter och heltalsvalidering.
 - [inventory-actions.ts](../src/app/inventory-actions.ts): autentiserad serverhandling.
 - [hospital.ts](../src/lib/hospital.ts): gemensamt undantag för att läsa inventory.

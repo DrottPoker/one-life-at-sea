@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 import { HeartPulse, MapPin, Swords } from "lucide-react";
-import { frontend } from "@/config/public";
+import { subscribeToForeground } from "@/lib/browser-events";
+import { createSnapshotPoller, snapshotRefreshDelay } from "@/lib/snapshot-poller";
 import { createClient } from "@/lib/supabase/browser";
 import type { CharacterProfile } from "@/lib/database.types";
 import type { HospitalStatus } from "@/lib/hospital";
@@ -17,33 +18,22 @@ export function ProfileDetails({ profile, initialHospital, joined, age, ownProfi
   const [live, setLive] = useState(initialHospital), [error, setError] = useState(false), [attempt, setAttempt] = useState(0);
   const hospital = Date.parse(initialHospital.observed_at) > Date.parse(live.observed_at) ? initialHospital : live;
   useEffect(() => {
-    const client = createClient(), abort = new AbortController();
-    let disposed = false, fetching = false, dirty = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    async function refresh() {
-      if (disposed) return;
-      if (fetching) { dirty = true; return; }
-      fetching = true; dirty = false;
-      let delay = frontend.refresh.fallbackMs;
-      try {
-        const { data, error } = await client.rpc("get_hospital_status", { target_id: profile.character_id }).abortSignal(abort.signal);
-        if (disposed) return;
-        if (error || !data) setError(true);
-        else {
-          setLive(data); setError(false);
-          if (data.hospital_until) delay = Math.max(frontend.refresh.resourceMinimumMs,
-            Math.min(delay, Date.parse(data.hospital_until) - Date.parse(data.observed_at) + frontend.refresh.resourceGraceMs));
-        }
-      } catch { if (!disposed) setError(true); }
-      finally {
-        fetching = false;
-        if (!disposed) {
-          clearTimeout(timer);
-          timer = setTimeout(() => void refresh(), dirty ? frontend.refresh.realtimeDebounceMs : delay);
-        }
-      }
-    }
-    const schedule = () => { clearTimeout(timer); timer = setTimeout(() => void refresh(), frontend.refresh.realtimeDebounceMs); };
+    const client = createClient();
+    let disposed = false;
+    const poller = createSnapshotPoller({
+      async load(signal) {
+        const { data, error } = await client.rpc("get_hospital_status", { target_id: profile.character_id }).abortSignal(signal);
+        if (error || !data) throw new Error("Hospital snapshot unavailable.");
+        return data;
+      },
+      onData(data) {
+        setLive(data);
+        setError(false);
+      },
+      onError: () => setError(true),
+      nextDelay: data => snapshotRefreshDelay(data.hospital_until, data.observed_at),
+    });
+    const schedule = () => poller.schedule();
     const channel = client.channel("profile-hospital-" + instance + "-" + attempt)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "hospital_patients", filter: "character_id=eq." + profile.character_id }, schedule)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "hospital_patients", filter: "character_id=eq." + profile.character_id }, schedule)
@@ -52,16 +42,11 @@ export function ProfileDetails({ profile, initialHospital, joined, age, ownProfi
     void client.realtime.setAuth().then(() => {
       if (!disposed) channel.subscribe(status => { if (status === "SUBSCRIBED") schedule(); });
     }).catch(() => { if (!disposed) setError(true); });
-    const foreground = () => { if (document.visibilityState === "visible") schedule(); };
-    window.addEventListener("focus", foreground);
-    window.addEventListener("online", foreground);
-    document.addEventListener("visibilitychange", foreground);
+    const unsubscribeForeground = subscribeToForeground(schedule);
     schedule();
     return () => {
-      disposed = true; abort.abort(); clearTimeout(timer); void client.removeChannel(channel);
-      window.removeEventListener("focus", foreground);
-      window.removeEventListener("online", foreground);
-      document.removeEventListener("visibilitychange", foreground);
+      disposed = true; poller.dispose(); void client.removeChannel(channel);
+      unsubscribeForeground();
     };
   }, [profile.character_id, instance, attempt]);
   const inHospital = !!hospital.hospital_until;

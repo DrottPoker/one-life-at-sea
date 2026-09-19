@@ -5,6 +5,7 @@ import { frontend } from "@/config/public";
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 import { Anchor } from "lucide-react";
+import { subscribeToForeground } from "@/lib/browser-events";
 import { createClient } from "@/lib/supabase/browser";
 import { HARBOR_PAGE_SIZE, loadHarborRoster, type HarborRoster, type HarborPlayer } from "@/lib/harbor";
 
@@ -100,20 +101,16 @@ export function HarborPlayers({ initial, characterId }: { initial: HarborRoster 
       }
     };
     const offline = () => setConnection("Reconnecting");
-    window.addEventListener("online", foreground);
+    const unsubscribeForeground = subscribeToForeground(foreground);
     window.addEventListener("offline", offline);
-    window.addEventListener("focus", foreground);
-    document.addEventListener("visibilitychange", foreground);
     schedule();
 
     return () => {
       disposed = true;
       abort.abort();
       clearTimeout(timer);
-      window.removeEventListener("online", foreground);
+      unsubscribeForeground();
       window.removeEventListener("offline", offline);
-      window.removeEventListener("focus", foreground);
-      document.removeEventListener("visibilitychange", foreground);
       void client.removeChannel(channel);
     };
   }, [page, attempt, instance]);

@@ -1,42 +1,12 @@
-import { test, expect, type Page } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
-import { execFileSync } from "node:child_process";
-import { randomBytes, randomUUID } from "node:crypto";
-import type { Database } from "../../src/lib/database.types";
-import { isLocalTestApi, localDatabaseContainer } from "../support/local";
+import { test, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { createTestAccount, testSql as sql,
+  loginTestAccount as login, cleanupTestAccounts as cleanup } from "../support/accounts";
 
-process.loadEnvFile(".env.local");
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!, key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-if (!isLocalTestApi(url)) throw new Error("Admin tests require local Supabase.");
-const client = () => createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-function sql(statement: string) {
-  return execFileSync("docker", ["exec","-i",localDatabaseContainer,"psql","-U","postgres","-d","postgres","-v","ON_ERROR_STOP=1","-q","-t","-A"],
-    { input: statement, encoding: "utf8", stdio: ["pipe","pipe","pipe"] });
-}
 async function account(admin = false) {
-  const api = client(), tag = randomBytes(10).toString("hex");
-  const email = "admin-" + tag + "@example.test", password = randomBytes(24).toString("hex"), name = "Captain " + tag;
-  const signup = await api.auth.signUp({ email, password, options: { data: { character_name: name, is_admin: true } } });
-  expect(signup.error).toBeNull();
-  const own = await api.from("characters").select("id").single();
-  expect(own.error).toBeNull();
-  const id = own.data!.id, userId = signup.data.user!.id;
-  if (![id, userId].every(value => /^[0-9a-f-]{36}$/.test(value))) throw new Error("Invalid fixture ID.");
-  if (admin) sql("insert into private.admin_members(user_id) values('" + userId + "')");
-  return { api, id, userId, email, password, name };
-}
-async function login(page: Page, own: Awaited<ReturnType<typeof account>>) {
-  await page.goto("/login");
-  await page.getByLabel("Email address", { exact: true }).fill(own.email);
-  await page.getByLabel("Password", { exact: true }).fill(own.password);
-  await page.getByRole("button", { name: "Log in", exact: true }).click();
-  await expect(page).toHaveURL(/\/harbor$/);
-}
-async function cleanup(accounts: Awaited<ReturnType<typeof account>>[]) {
-  for (const own of accounts) {
-    await own.api.auth.signOut();
-    sql("delete from auth.users where id='" + own.userId + "'");
-  }
+  const own = await createTestAccount("admin", { is_admin: true });
+  if (admin) sql("insert into private.admin_members(user_id) values('" + own.userId + "')");
+  return own;
 }
 
 test("regular players cannot enter admin or promote themselves with metadata", async ({ page }) => {

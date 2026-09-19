@@ -33,3 +33,7 @@ export function validatePassword(password: string, confirmation: string): FieldE
 export function callbackDestination(value: string | null) {
   return value === "/reset-password" ? "/reset-password" : "/";
 }
+
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}

@@ -8,7 +8,8 @@ Uppdaterat 2026-09-17.
 config/                    Justerbara värden och gränssnittets tema/CSS
 src/config/                Typade importvägar och kontroll av databasversion
 src/app/                   Next.js-rutter och serverhandlingar
-src/components/            Återanvändbara gränssnitt
+src/components/            Återanvändbara gränssnitt och funktionskomponenter
+src/hooks/                 Gemensamma React-livscykler
 src/lib/                   Typer, dataåtkomst och domänfunktioner
 src/styles/                Genererad CSS, redigeras inte manuellt
 supabase/templates/        Underhållbar SQL-logik med config-tokens
@@ -30,7 +31,9 @@ supabase/config.toml är en genererad adapter. package.json innehåller kommando
 config/gameplay.json är värdekällan för både app och databas. Privata SQL-funktioner beräknar fortfarande
 alla utfall och debiteringar. Webbläsaren kan inte välja kostnad, skadevärde eller slumpresultat.
 
-scripts/config läser supabase/templates/gameplay.sql och ersätter typkontrollerade skalära tokens.
+scripts/config läser inkluderingsordningen i supabase/templates/gameplay.sql, sätter ihop delarna i
+supabase/templates/gameplay/ och ersätter typkontrollerade skalära tokens. Ändra funktionen i rätt
+funktionsdel; genererad SQL jämförs fortfarande i sin helhet mot senaste configmigrationen.
 Training innehåller crewTiers och shipTiers. Generatorn skriver deterministiska SQL-kataloger
 från dessa listor. Nivå-ID och ordning får inte ändras eller tas bort när de har installerats.
 XP-krav och ökningar måste stiga och första nivån är gratis vid 0 XP.

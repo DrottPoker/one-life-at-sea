@@ -1,9 +1,11 @@
 "use client";
 
-import { gameplay, frontend } from "@/config/public";
+import { gameplay } from "@/config/public";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { useServerCountdown } from "@/hooks/use-server-countdown";
+import { formatCountdown } from "@/lib/time";
 import { useRouter } from "next/navigation";
 import { Anchor, Crosshair, Flag, Swords, Undo2 } from "lucide-react";
 import { submitOrder } from "@/app/combat-actions";
@@ -21,14 +23,8 @@ const orderDetails: Record<CombatOrder, string> = {
 const orderIcons = { fire: Crosshair, board: Anchor, crew_attack: Swords, disengage: Undo2, retreat: Flag };
 
 function FightClock({ deadline, observedAt }: { deadline: string; observedAt: string }) {
-  const duration = Math.max(0, Date.parse(deadline) - Date.parse(observedAt));
-  const [remaining, setRemaining] = useState(Math.ceil(duration / 1000));
-  useEffect(() => {
-    const started = performance.now();
-    const timer = setInterval(() => setRemaining(Math.max(0, Math.ceil((duration - (performance.now() - started)) / 1000))), frontend.refresh.countdownTickMs);
-    return () => clearInterval(timer);
-  }, [duration]);
-  return <span className="o-fight-clock">Next order within <strong>{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}</strong></span>;
+  const remaining = useServerCountdown(deadline, observedAt);
+  return <span className="o-fight-clock">Next order within <strong>{formatCountdown(remaining)}</strong></span>;
 }
 
 export function CombatArena({ battle }: { battle: Battle }) {

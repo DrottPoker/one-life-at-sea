@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { activeAdminItemDefinitions, adminCatalog, readAdminTable } from "@/lib/admin-server";
-import { isUuid } from "@/lib/combat";
+import { isUuid } from "@/lib/validation";
 import { gameplay } from "@/config/public";
 import { RecordEditor } from "@/components/admin/record-editor";
 import { DatabaseTable } from "@/components/admin/database-table";
