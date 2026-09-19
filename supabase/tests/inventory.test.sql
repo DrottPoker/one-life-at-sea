@@ -1,0 +1,96 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=public,extensions;
+select no_plan();
+insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
+('1e000000-0000-4000-8000-000000000001','inventory-one@example.test',false,'{"character_name":"Inventory One"}'),
+('1e000000-0000-4000-8000-000000000002','inventory-two@example.test',false,'{"character_name":"Inventory Two"}'),
+('1e000000-0000-4000-8000-000000000003','inventory-anon@example.test',true,'{}');
+set local role anon;
+select throws_ok($$select public.list_inventory()$$,'42501',null,'Signed-out clients cannot read inventory');
+select throws_ok($$select public.trash_inventory_item(gen_random_uuid(),'stack',1,gen_random_uuid())$$,'42501',null,'Signed-out clients cannot trash');
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"1e000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select is(public.list_inventory()->>'total','0','New characters start with an empty inventory');
+select is(public.list_inventory()->'items','[]'::jsonb,'Empty list is an array');
+select is(public.list_inventory(null,'',2147483647)->>'page','0','Empty inventory clamps extreme page');
+select throws_ok($$select * from private.item_stacks$$,'42501',null,'Raw stack table is private');
+select throws_ok($$select * from private.item_instances$$,'42501',null,'Raw instance table is private');
+select throws_ok($$select * from private.inventory_requests$$,'42501',null,'Trash receipts are private');
+reset role;
+insert into private.item_stacks(id,character_id,item_id,quantity)
+select '1e200000-0000-4000-8000-000000000001',id,'linen_bandages',10 from public.characters where user_id='1e000000-0000-4000-8000-000000000001';
+insert into private.item_stacks(id,character_id,item_id,quantity)
+select '1e200000-0000-4000-8000-000000000002',id,'oak_planks',20 from public.characters where user_id='1e000000-0000-4000-8000-000000000001';
+insert into private.item_stacks(id,character_id,item_id,quantity)
+select '1e200000-0000-4000-8000-000000000003',id,'linen_bandages',77 from public.characters where user_id='1e000000-0000-4000-8000-000000000002';
+insert into private.item_instances(id,character_id,item_id,damage,accuracy)
+select '1e100000-0000-4000-8000-000000000001',id,'cutlass',32.15,54.60 from public.characters where user_id='1e000000-0000-4000-8000-000000000001';
+insert into private.item_instances(id,character_id,item_id,damage,accuracy)
+select '1e100000-0000-4000-8000-000000000002',id,'cutlass',35.20,52.80 from public.characters where user_id='1e000000-0000-4000-8000-000000000001';
+select throws_ok($$insert into private.item_stacks(character_id,item_id,quantity) select id,'cutlass',1 from public.characters where user_id='1e000000-0000-4000-8000-000000000001'$$,'23503',null,'Equipment cannot be stacked');
+select throws_ok($$update private.item_stacks set quantity=0 where id='1e200000-0000-4000-8000-000000000001'$$,'23514',null,'Zero stacks cannot persist');
+select throws_ok($$update private.item_instances set accuracy=101 where id='1e100000-0000-4000-8000-000000000001'$$,'23514',null,'Invalid instance stats rejected');
+set local role authenticated;
+select is(public.list_inventory()->>'total','4','Only own entries are returned');
+select is(public.list_inventory('medical')->>'total','1','Category filter applies');
+select is(public.list_inventory('medical')#>>'{items,0,quantity}','10','Consumable quantities persist');
+select is(public.list_inventory('medical')#>'{items,0,stats}','null'::jsonb,'Consumables have no fake zero stats');
+select is(public.list_inventory('crew_weapons')->>'total','2','Same-name weapons remain separate');
+select is(public.list_inventory('crew_weapons')#>>'{items,0,stats,damage}','32.15','First weapon retains damage');
+select is(public.list_inventory('crew_weapons')#>>'{items,1,stats,damage}','35.20','Second weapon retains its own damage');
+select is(public.list_inventory(null,'CUTLASS')->>'total','2','Search is case-insensitive');
+select is(public.list_inventory('medical','CUTLASS')->>'total','0','Search and category combine');
+select is(public.list_inventory(null,'%')->>'total','0','Search treats percent literally');
+select is(public.list_inventory(null,'_')->>'total','0','Search treats underscores literally');
+select is(public.list_inventory(null,'',2147483647)->>'page','0','Large page clamps safely');
+select throws_ok($$select public.list_inventory('invalid')$$,'22023','INVALID_CATEGORY','Invalid category rejected');
+select throws_ok($$select public.list_inventory(null,repeat('x',101))$$,'22023','INVALID_FILTER','Unbounded search rejected');
+select throws_ok($$select public.list_inventory(null,'',-1)$$,'22023','INVALID_FILTER','Negative page rejected');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',0,gen_random_uuid())$$,'22023','INVALID_QUANTITY','Zero rejected');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',-1,gen_random_uuid())$$,'22023','INVALID_QUANTITY','Negative rejected');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',1.5,gen_random_uuid())$$,'22023','INVALID_QUANTITY','Fractions never round');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack','NaN',gen_random_uuid())$$,'22023','INVALID_QUANTITY','NaN rejected');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack','Infinity',gen_random_uuid())$$,'22023','INVALID_QUANTITY','Infinity rejected');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',9007199254740992,gen_random_uuid())$$,'22023','INVALID_QUANTITY','Unsafe integers rejected');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','other',1,gen_random_uuid())$$,'22023','INVALID_ITEM_TYPE','Unknown entry kind rejected');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',1,null)$$,'22023','INVALID_REQUEST','Request ID required');
+select throws_ok($$select public.trash_inventory_item('1e100000-0000-4000-8000-000000000001','instance',2,gen_random_uuid())$$,'22023','INVALID_QUANTITY','Cannot destroy two from one instance');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000003','stack',1,gen_random_uuid())$$,'P0001','ITEM_NOT_FOUND','Other ownership is not exposed');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',11,gen_random_uuid())$$,'P0001','NOT_ENOUGH_ITEMS','Cannot exceed stack quantity');
+select is(public.list_inventory('medical')#>>'{items,0,quantity}','10','Failures preserve quantity');
+select is(public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',3,'1e300000-0000-4000-8000-000000000001')->>'remaining','7','Partial stack destruction works');
+select is(public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',3,'1e300000-0000-4000-8000-000000000001')->>'remaining','7','Retry returns receipt');
+select is(public.list_inventory('medical')#>>'{items,0,quantity}','7','Retry does not destroy again');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',4,'1e300000-0000-4000-8000-000000000001')$$,'22023','REQUEST_CONFLICT','Replay payload is immutable');
+select is(public.get_game_state()->>'gold_coins','0','Trash gives no Gold Coins');
+select is(public.get_game_state()->>'crew_attack','10','Trash changes no trained stats');
+select is(public.get_game_state()->>'energy','100','Trash spends no Energy');
+select lives_ok($$select public.trash_inventory_item('1e100000-0000-4000-8000-000000000001','instance',1,gen_random_uuid())$$,'Individual equipment can be destroyed');
+select is(public.list_inventory('crew_weapons')->>'total','1','Only selected instance removed');
+select is(public.list_inventory('crew_weapons')#>>'{items,0,stats,damage}','35.20','Remaining instance retains its stats');
+select is(public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',7,'1e300000-0000-4000-8000-000000000002')->>'remaining','0','Full stack can be destroyed');
+select is(public.list_inventory('medical')->>'total','0','Empty stack row is removed');
+select is(public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',7,'1e300000-0000-4000-8000-000000000002')->>'remaining','0','Retry still works after deleting the row');
+reset role;
+update public.characters set crew_health=0 where user_id='1e000000-0000-4000-8000-000000000001';
+set local role authenticated;
+select lives_ok($$select public.list_inventory()$$,'Inventory can be read in hospital');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000002','stack',1,gen_random_uuid())$$,'P0001','IN_HOSPITAL','Direct Trash RPC is blocked in hospital');
+select lives_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',7,'1e300000-0000-4000-8000-000000000002')$$,'Already committed request can be confirmed in hospital');
+reset role;
+update public.characters set hospital_started_at=clock_timestamp()-interval '6 minutes',hospital_until=clock_timestamp()-interval '1 minute' where user_id='1e000000-0000-4000-8000-000000000001';
+set local role authenticated;
+select lives_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000002','stack',1,gen_random_uuid())$$,'Expired hospital stay settles before Trash');
+select public.start_combat((select character_id from public.character_profiles where display_name='Inventory Two'),gen_random_uuid());
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000002','stack',1,gen_random_uuid())$$,'P0001','IN_COMBAT','Active attacker cannot bypass action lock');
+select set_config('request.jwt.claims','{"sub":"1e000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
+select is(public.list_inventory('medical')#>>'{items,0,quantity}','77','Other inventory is unchanged');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000002','stack',1,gen_random_uuid())$$,'P0001','ITEM_NOT_FOUND','Second player cannot delete first player items');
+select set_config('request.jwt.claims','{"sub":"1e000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
+select throws_ok($$select public.list_inventory()$$,'42501','NOT_AUTHORIZED','Anonymous Auth users cannot read inventory');
+select throws_ok($$select public.trash_inventory_item(gen_random_uuid(),'stack',1,gen_random_uuid())$$,'42501','NOT_AUTHORIZED','Anonymous Auth users cannot trash');
+reset role;
+select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='private' and c.relname in ('item_categories','item_definitions','item_stacks','item_instances','inventory_requests') and c.relrowsecurity),5::bigint,'All new tables have RLS enabled');
+select * from finish();
+rollback;

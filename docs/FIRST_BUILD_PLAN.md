@@ -246,8 +246,8 @@ Inga konton eller speldata skapas i skissen.
 - Supabase Auth hanterar konton, lösenord, återställning och sessioner.
 - E-postbekräftelse är avstängd för den första utvecklingsversionen.
 - PostgreSQL lagrar karaktärer och startplats.
-- Konto och karaktär har separata ID:n. Framtida karaktärsdöd ska inte radera kontot.
-  Döds- och arvssystem byggs senare.
+- Konto och karaktär har separata ID:n. Uppdatering 2026-09-19: permanent karaktärsdöd
+  är borttagen; [Hospital](HOSPITAL.md) ersätter döds- och arvssystemet.
 - Minsta karaktärsdata: ID, kontoägare, visningsnamn, normaliserad namnnyckel,
   startplats och tidpunkt för skapande.
 - En databas-trigger skapar karaktären i samma transaktion som kontot.
@@ -288,7 +288,8 @@ Inga konton eller speldata skapas i skissen.
   navigationsknapp och platshållarvy.
 - Skeppsägande, utrustning, inventarium och ekonomi. Shipyard ingår endast som
   navigationsknapp och platshållarvy.
-- Strid, PvP, skador och permadöd.
+- Strid, PvP och skador låg utanför första bygget och har implementerats senare.
+  Idén om permanent död har ersatts av Hospital.
 - Guilds, chatt, vänner och topplistor.
 - Porträttväljare, klasser och avancerad karaktärsredigering.
 - Betalningar, administratörsgränssnitt och publik hosting.

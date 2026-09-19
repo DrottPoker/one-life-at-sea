@@ -10,7 +10,17 @@ describe("configuration contract", () => {
     for (const [path, expected] of Object.entries(generatedFiles(config))) expect(read(path), path).toBe(expected);
   });
   it.each([
+    ["duplicate tier ID", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.crewTiers[1].id = c.gameplay.training.crewTiers[0].id; }],
+    ["tier XP ordering", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.shipTiers[2].xpRequired = 0; }],
+    ["unsafe Perfect Drill", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.crewTiers[9].statGain = Number.MAX_SAFE_INTEGER; }],
+    ["unequal ship efficiency", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.shipSizes[1].durationSeconds = 1; }],
+    ["invalid chance", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.perfectChanceBps = 10001; }],
+    ["paid first tier", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.crewTiers[0].goldCost = 1; }],
     ["misspelled key", (c: ReturnType<typeof loadConfig>) => Object.assign(c.gameplay.training, { energyCosts: 7 })],
+    ["negative starting coins", (c: ReturnType<typeof loadConfig>) => { c.gameplay.economy.initialGoldCoins = -1; }],
+    ["unsafe coin limit", (c: ReturnType<typeof loadConfig>) => { c.gameplay.economy.maxGoldCoins = 9007199254740992; }],
+    ["starting coins above cap", (c: ReturnType<typeof loadConfig>) => { c.gameplay.economy.maxGoldCoins = 1; c.gameplay.economy.initialGoldCoins = 2; }],
+    ["zero recovery amount", (c: ReturnType<typeof loadConfig>) => { c.gameplay.resources.energyRecoveryAmount = 0; }],
     ["zero recovery interval", (c: ReturnType<typeof loadConfig>) => { c.gameplay.resources.energyRecoverySeconds = 0; }],
     ["fractional round limit", (c: ReturnType<typeof loadConfig>) => { c.gameplay.combat.maxRounds = 2.5; }],
     ["invalid hit curve", (c: ReturnType<typeof loadConfig>) => { c.gameplay.combat.hitChance.extremeRatio = 1; }],
@@ -31,7 +41,7 @@ describe("configuration contract", () => {
     const config = loadConfig(), baseline = revision(config);
     config.frontend.refresh.fallbackMs += 100;
     expect(revision(config)).toBe(baseline);
-    config.gameplay.training.statGain += 1;
+    config.gameplay.training.crewTiers[0].statGain += 1;
     expect(revision(config)).not.toBe(baseline);
   });
   it("escapes SQL strings and rejects missing template parameters", () => {

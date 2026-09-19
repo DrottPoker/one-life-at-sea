@@ -1,3 +1,170 @@
+
+-- Tier IDs and positions are durable; balance values may change.
+{{training.catalogSql}}
+
+create or replace function private.initialize_training_progress()
+returns trigger language plpgsql security definer set search_path='' as $$
+begin
+  insert into private.character_training(character_id,training_group,tier_id)
+    select new.id,training_group,id from private.training_tiers where position=0;
+  return new;
+end;
+$$;
+revoke all on function private.initialize_training_progress() from public,anon,authenticated;
+drop trigger if exists initialize_training_progress on public.characters;
+create trigger initialize_training_progress after insert on public.characters
+for each row execute function private.initialize_training_progress();
+insert into private.character_training(character_id,training_group,tier_id)
+  select c.id,t.training_group,t.id from public.characters c cross join private.training_tiers t where t.position=0
+  on conflict(character_id,training_group) do nothing;
+
+create or replace function private.notify_training(captain_id uuid)
+returns void language sql volatile security invoker set search_path='' as $$
+  insert into public.player_game_events(character_id,revision) values(captain_id,1)
+    on conflict(character_id) do update set revision=player_game_events.revision+1;
+$$;
+
+-- Caller holds the character/combat locks. The caller's observation time also drives snapshots.
+create or replace function private.settle_ship_upgrade(captain_id uuid, observed_at timestamptz)
+returns void language plpgsql volatile security invoker set search_path='' as $$
+declare job private.ship_upgrade_jobs%rowtype;
+begin
+  select * into job from private.ship_upgrade_jobs where character_id=captain_id and applied_at is null for update;
+  if not found or job.finishes_at>observed_at then return; end if;
+  execute format('update public.characters set %I=%I+$1 where id=$2','ship_'||job.stat,'ship_'||job.stat)
+    using job.stat_gain,captain_id;
+  update private.character_training set xp=xp+job.xp_gain where character_id=captain_id and training_group='ship';
+  update private.ship_upgrade_jobs set applied_at=observed_at where id=job.id;
+  perform private.notify_training(captain_id);
+end;
+$$;
+
+create or replace function private.training_state(captain_id uuid)
+returns jsonb language sql stable security invoker set search_path='' as $$
+  select jsonb_build_object(
+    'progress',(select jsonb_object_agg(training_group,jsonb_build_object('xp',xp,'tier_id',tier_id))
+      from private.character_training where character_id=captain_id),
+    'ship_job',(select to_jsonb(j)-'character_id'-'config_revision' from private.ship_upgrade_jobs j
+      where character_id=captain_id and applied_at is null),
+    'last_ship_job',(select to_jsonb(j)-'character_id'-'config_revision' from private.ship_upgrade_jobs j
+      where character_id=captain_id and applied_at is not null order by finishes_at desc,id desc limit 1));
+$$;
+
+-- Deterministic resolver is internal only; callers cannot choose the random roll.
+create or replace function private.crew_training_gain(base_gain bigint, roll double precision)
+returns bigint language plpgsql immutable strict security invoker set search_path='' as $$
+begin
+  if base_gain<1 or roll<0 or roll>=1 then raise exception 'INVALID_TRAINING_ROLL' using errcode='22023'; end if;
+  return base_gain * case when roll < {{gameplay.training.perfectChanceBps}} / 10000.0
+    then {{gameplay.training.perfectMultiplier}} else 1 end;
+end;
+$$;
+
+create or replace function private.training_action(action text,payload jsonb,request_id uuid)
+returns jsonb language plpgsql volatile security definer set search_path='' as $$
+declare
+  viewer_id uuid:=private.combat_captain();
+  captain public.characters%rowtype;
+  progress private.character_training%rowtype;
+  tier private.training_tiers%rowtype;
+  current_tier private.training_tiers%rowtype;
+  size private.ship_work_sizes%rowtype;
+  previous private.training_requests%rowtype;
+  job private.ship_upgrade_jobs%rowtype;
+  recovered record;
+  group_name text:=case when action='crew' then 'crew' when action='ship' then 'ship' else payload->>'group' end;
+  stat text:=payload->>'stat';
+  observed_at timestamptz;
+  gain bigint; xp_gain bigint; energy_cost integer; result jsonb;
+begin
+  if request_id is null or action is null or action not in ('crew','ship','purchase') or payload is null then
+    raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
+  if group_name is null or group_name not in ('crew','ship') then raise exception 'INVALID_GROUP' using errcode='22023'; end if;
+  if action in ('crew','ship') and (stat is null or stat not in ('attack','defense','speed','accuracy')) then
+    raise exception 'INVALID_STAT' using errcode='22023'; end if;
+  perform private.settle_combat_context(array[viewer_id]);
+  select * into previous from private.training_requests r where r.character_id=viewer_id and r.request_id=training_action.request_id;
+  if found then
+    if previous.action<>action or previous.payload<>payload then raise exception 'REQUEST_CONFLICT' using errcode='22023'; end if;
+    return previous.result;
+  end if;
+  observed_at:=clock_timestamp();
+  perform private.settle_ship_upgrade(viewer_id,observed_at);
+  perform private.assert_can_act(viewer_id);
+  if exists(select 1 from private.combat_engagements where character_id=viewer_id and role='attacker') then
+    raise exception 'IN_COMBAT'; end if;
+  select * into captain from public.characters where id=viewer_id for update;
+  if captain.location<>'the_harbor' then raise exception 'NOT_IN_HARBOR'; end if;
+  select * into progress from private.character_training where character_id=viewer_id and training_group=group_name for update;
+  select * into current_tier from private.training_tiers where training_group=group_name and id=progress.tier_id;
+  if action='purchase' then
+    select * into tier from private.training_tiers where training_group=group_name and id=payload->>'tier_id';
+    if tier.id is null or tier.position<>current_tier.position+1 then raise exception 'INVALID_TIER' using errcode='22023'; end if;
+    if progress.xp<tier.xp_required then raise exception 'NOT_ENOUGH_XP'; end if;
+    if captain.gold_coins<tier.gold_cost then raise exception 'NOT_ENOUGH_GOLD'; end if;
+    update public.characters set gold_coins=gold_coins-tier.gold_cost where id=viewer_id;
+    update private.character_training set tier_id=tier.id where character_id=viewer_id and training_group=group_name;
+    result:=jsonb_build_object('kind','purchase','group',group_name,'tier_id',tier.id,'tier_name',tier.name,'gold_cost',tier.gold_cost);
+  else
+    if payload->>'tier_id' is distinct from current_tier.id then raise exception 'STALE_TIER' using errcode='22023'; end if;
+    energy_cost:={{gameplay.training.energyCost}};
+    gain:=current_tier.stat_gain;
+    if action='ship' then
+      if exists(select 1 from private.ship_upgrade_jobs where character_id=viewer_id and applied_at is null) then raise exception 'SHIP_WORK_ACTIVE'; end if;
+      select * into size from private.ship_work_sizes where id=payload->>'size_id';
+      if not found then raise exception 'INVALID_SIZE' using errcode='22023'; end if;
+      energy_cost:=energy_cost*size.units;
+      gain:=gain*size.units;
+    else
+      gain:=private.crew_training_gain(gain,private.combat_roll());
+    end if;
+    xp_gain:=energy_cost::bigint*{{gameplay.training.xpPerEnergy}};
+    if (to_jsonb(captain)->>(group_name||'_'||stat))::bigint>9007199254740991-gain
+      or progress.xp>9007199254740991-xp_gain then raise exception 'PROGRESSION_LIMIT'; end if;
+    select * into recovered from private.energy_snapshot(captain.energy,captain.energy_updated_at,observed_at);
+    if recovered.energy<energy_cost then raise exception 'NOT_ENOUGH_ENERGY'; end if;
+    update public.characters set energy=recovered.energy-energy_cost,energy_updated_at=recovered.energy_updated_at where id=viewer_id;
+    if action='crew' then
+      execute format('update public.characters set %I=%I+$1 where id=$2','crew_'||stat,'crew_'||stat) using gain,viewer_id;
+      update private.character_training set xp=xp+xp_gain where character_id=viewer_id and training_group='crew';
+      result:=jsonb_build_object('kind','crew','stat',stat,'stat_gain',gain,'xp_gain',xp_gain,'energy_cost',energy_cost,
+        'perfect',gain>current_tier.stat_gain,'tier_id',current_tier.id);
+    else
+      insert into private.ship_upgrade_jobs(character_id,stat,size_id,workshop_id,workshop_name,energy_cost,stat_gain,xp_gain,config_revision,started_at,finishes_at)
+        values(viewer_id,stat,size.id,current_tier.id,current_tier.name,energy_cost,gain,xp_gain,public.get_gameplay_revision(),
+          observed_at,observed_at+make_interval(secs=>size.duration_seconds)) returning * into job;
+      result:=jsonb_build_object('kind','ship','job_id',job.id,'stat',stat,'stat_gain',gain,'xp_gain',xp_gain,
+        'energy_cost',energy_cost,'finishes_at',job.finishes_at);
+    end if;
+  end if;
+  insert into private.training_requests(character_id,request_id,action,payload,result) values(viewer_id,request_id,action,payload,result);
+  perform private.notify_training(viewer_id);
+  return result;
+end;
+$$;
+
+revoke all on function private.notify_training(uuid),private.settle_ship_upgrade(uuid,timestamptz),
+  private.training_state(uuid),private.crew_training_gain(bigint,double precision),private.training_action(text,jsonb,uuid)
+  from public,anon,authenticated;
+grant execute on function private.training_action(text,jsonb,uuid) to authenticated;
+
+create or replace function public.train_crew(stat text,expected_tier_id text,request_id uuid)
+returns jsonb language sql volatile security invoker set search_path='' as $$
+  select private.training_action('crew',jsonb_build_object('stat',stat,'tier_id',expected_tier_id),request_id);
+$$;
+create or replace function public.purchase_training_tier(training_group text,tier_id text,request_id uuid)
+returns jsonb language sql volatile security invoker set search_path='' as $$
+  select private.training_action('purchase',jsonb_build_object('group',training_group,'tier_id',tier_id),request_id);
+$$;
+create or replace function public.start_ship_upgrade(stat text,size_id text,expected_workshop_id text,request_id uuid)
+returns jsonb language sql volatile security invoker set search_path='' as $$
+  select private.training_action('ship',jsonb_build_object('stat',stat,'size_id',size_id,'tier_id',expected_workshop_id),request_id);
+$$;
+revoke all on function public.train_crew(text,text,uuid),public.purchase_training_tier(text,text,uuid),
+  public.start_ship_upgrade(text,text,text,uuid) from public,anon,authenticated;
+grant execute on function public.train_crew(text,text,uuid),public.purchase_training_tier(text,text,uuid),
+  public.start_ship_upgrade(text,text,text,uuid) to authenticated;
+
 -- Canonical function bodies; scalar config tokens are substituted by config tooling.
 -- Existing rows and reports are preserved; incompatible lower caps abort migration.
 alter table public.characters
@@ -32,13 +199,15 @@ create or replace function private.energy_snapshot(stored_energy integer, anchor
 returns table (energy integer, energy_updated_at timestamptz)
 language sql immutable strict security invoker set search_path = ''
 as $$
-  with recovery as (
-    select least({{gameplay.resources.energyMax}} - stored_energy,
-      greatest(0, floor(extract(epoch from (observed_at - anchor)) / {{gameplay.resources.energyRecoverySeconds}})))::integer as gained
+  with elapsed as (
+    select greatest(0, floor(extract(epoch from (observed_at - anchor)) / {{gameplay.resources.energyRecoverySeconds}})) as intervals
+  ), recovery as (
+    select intervals, least({{gameplay.resources.energyMax}} - stored_energy,
+      intervals * {{gameplay.resources.energyRecoveryAmount}})::integer as gained from elapsed
   )
   select stored_energy + gained,
     case when stored_energy + gained = {{gameplay.resources.energyMax}} then observed_at
-      else anchor + gained * make_interval(secs => {{gameplay.resources.energyRecoverySeconds}}) end
+      else anchor + intervals * make_interval(secs => {{gameplay.resources.energyRecoverySeconds}}) end
   from recovery;
 $$;
 
@@ -166,6 +335,8 @@ begin
     'ammo', (a->>'ammo')::integer - case when player_order = 'fire' then {{gameplay.combat.ammoPerShot}} else 0 end);
   d := d || jsonb_build_object(health_key, (d->>health_key)::integer - a_damage,
     'ammo', (d->>'ammo')::integer - case when defender_order = 'fire' then {{gameplay.combat.ammoPerShot}} else 0 end);
+  if (a->>'ship_health')::integer=0 then a:=a || jsonb_build_object('crew_health',0); end if;
+  if (d->>'ship_health')::integer=0 then d:=d || jsonb_build_object('crew_health',0); end if;
   a_down := (a->>'ship_health')::integer = 0 or (a->>'crew_health')::integer = 0;
   d_down := (d->>'ship_health')::integer = 0 or (d->>'crew_health')::integer = 0;
   if a_down and d_down then outcome := 'draw';
@@ -228,9 +399,14 @@ begin
     where combat_id=battle_id and character_id=actor;
   update public.characters set ship_health=(a->>'ship_health')::integer,crew_health=(a->>'crew_health')::integer,
     ship_recovery_at=occurred_at,crew_recovery_at=occurred_at,
+    hospital_started_at=case when (a->>'crew_health')::integer=0 then occurred_at else hospital_started_at end,
+    hospital_until=case when (a->>'crew_health')::integer=0 then occurred_at+make_interval(secs=>{{gameplay.hospital.durationSeconds}}) else hospital_until end,
     protected_until=case when personal_status<>'active' then occurred_at+make_interval(secs => {{gameplay.combat.protectionSeconds}}) end where id=actor;
   update public.characters set ship_health=(d->>'ship_health')::integer,crew_health=(d->>'crew_health')::integer,
-    ship_recovery_at=occurred_at,crew_recovery_at=occurred_at where id=b.defender_id;
+    ship_recovery_at=occurred_at,crew_recovery_at=occurred_at,
+    hospital_started_at=case when (d->>'crew_health')::integer=0 then occurred_at else hospital_started_at end,
+    hospital_until=case when (d->>'crew_health')::integer=0 then occurred_at+make_interval(secs=>{{gameplay.hospital.durationSeconds}}) else hospital_until end
+    where id=b.defender_id;
   if personal_status<>'active' then delete from private.combat_engagements where character_id=actor and combat_id=battle_id; end if;
   if ending is not null then
     update public.characters set ship_recovery_at=occurred_at,crew_recovery_at=occurred_at,protected_until=occurred_at+make_interval(secs => {{gameplay.combat.protectionSeconds}})
@@ -264,6 +440,8 @@ begin
   if target_id is null then return jsonb_build_object('error','CHARACTER_NOT_FOUND'); end if;
   perform private.settle_combat_context(array[viewer_id,target_id]);
   observed_at:=clock_timestamp();
+  perform private.settle_ship_upgrade(viewer_id,observed_at);
+  perform private.settle_ship_upgrade(target_id,observed_at);
   select * into a from public.characters where id=viewer_id;
   select * into d from public.characters where id=target_id;
   if d.id is null then return jsonb_build_object('error','CHARACTER_NOT_FOUND'); end if;
@@ -274,7 +452,9 @@ begin
   if own_engagement.character_id is not null then a_snapshot:=a_snapshot || jsonb_build_object('ship_health',a.ship_health,'crew_health',a.crew_health); end if;
   if target_engagement.character_id is not null then d_snapshot:=d_snapshot || jsonb_build_object('ship_health',d.ship_health,'crew_health',d.crew_health); end if;
   select energy into energy_now from private.energy_snapshot(a.energy,a.energy_updated_at,observed_at);
-  reason:=case when viewer_id=target_id then 'SELF_ATTACK'
+  reason:=case when a.hospital_until is not null then 'IN_HOSPITAL'
+    when d.hospital_until is not null then 'TARGET_IN_HOSPITAL'
+    when viewer_id=target_id then 'SELF_ATTACK'
     when own_engagement.role='attacker' then 'IN_COMBAT'
     when own_engagement.role='defender' then 'DEFENDING'
     when target_engagement.role='attacker' then 'TARGET_IN_COMBAT'
@@ -309,6 +489,8 @@ begin
   if preview ? 'error' then return preview; end if;
   if not (preview->>'can_start')::boolean then return jsonb_build_object('error',preview->>'reason'); end if;
   observed_at:=clock_timestamp();
+  perform private.settle_ship_upgrade(viewer_id,observed_at);
+  perform private.settle_ship_upgrade(target_id,observed_at);
   select * into a from public.characters where id=viewer_id;
   select * into d from public.characters where id=target_id;
   select * into recovered from private.energy_snapshot(a.energy,a.energy_updated_at,observed_at);
@@ -356,6 +538,7 @@ begin
     return jsonb_build_object('battle',private.combat_view(battle_id,viewer_id));
   end if;
   if b.status='completed' or p.status<>'active' then return jsonb_build_object('battle',private.combat_view(battle_id,viewer_id)); end if;
+  perform private.assert_can_act(viewer_id);
   if p.round<>expected_round then return jsonb_build_object('error','STALE_ROUND'); end if;
   if player_order is null or (p.phase='sea' and player_order not in ('fire','board','retreat'))
     or (p.phase='boarding' and player_order not in ('crew_attack','disengage','retreat')) then return jsonb_build_object('error','INVALID_ORDER'); end if;
@@ -374,14 +557,15 @@ begin
   select * into c from public.characters where user_id=auth.uid();
   if not found then return null; end if;
   perform private.settle_combat_context(array[c.id]);
+  observed_at:=clock_timestamp();
+  perform private.settle_ship_upgrade(c.id,observed_at);
   select * into c from public.characters where id=c.id;
   select * into engagement from private.combat_engagements where character_id=c.id;
   select * into active from private.combats where id=engagement.combat_id;
-  observed_at:=clock_timestamp();
   select * into recovered from private.energy_snapshot(c.energy,c.energy_updated_at,observed_at);
-  ship_hp:=case when active.id is not null then c.ship_health else private.health_snapshot(c.ship_health,c.ship_recovery_at,observed_at,{{gameplay.resources.shipRecoverySeconds}}) end;
-  crew_hp:=case when active.id is not null then c.crew_health else private.health_snapshot(c.crew_health,c.crew_recovery_at,observed_at,{{gameplay.resources.crewRecoverySeconds}}) end;
-  if active.id is null then
+  ship_hp:=case when active.id is not null or c.hospital_until is not null then c.ship_health else private.health_snapshot(c.ship_health,c.ship_recovery_at,observed_at,{{gameplay.resources.shipRecoverySeconds}}) end;
+  crew_hp:=case when active.id is not null or c.hospital_until is not null then c.crew_health else private.health_snapshot(c.crew_health,c.crew_recovery_at,observed_at,{{gameplay.resources.crewRecoverySeconds}}) end;
+  if active.id is null and c.hospital_until is null then
     health_next_at:=least(case when ship_hp<{{gameplay.resources.healthMax}} then c.ship_recovery_at+(ship_hp-c.ship_health+1)*make_interval(secs => {{gameplay.resources.shipRecoverySeconds}}) end,
       case when crew_hp<{{gameplay.resources.healthMax}} then c.crew_recovery_at+(crew_hp-c.crew_health+1)*make_interval(secs => {{gameplay.resources.crewRecoverySeconds}}) end);
   end if;
@@ -389,7 +573,8 @@ begin
     or exists(select 1 from private.combat_participants where combat_id=b.id and character_id=c.id)
     order by b.started_at desc,b.id desc limit 1;
   return jsonb_build_object('energy',recovered.energy,'energy_next_at',case when recovered.energy<{{gameplay.resources.energyMax}} then recovered.energy_updated_at+make_interval(secs => {{gameplay.resources.energyRecoverySeconds}}) end,
-    'observed_at',observed_at,'ship_health',ship_hp,'crew_health',crew_hp,'health_next_at',health_next_at,
+    'gold_coins',c.gold_coins,'bank_gold_coins',c.bank_gold_coins,'training',private.training_state(c.id),
+    'hospital_until',c.hospital_until,'observed_at',observed_at,'ship_health',ship_hp,'crew_health',crew_hp,'health_next_at',health_next_at,
     'active_combat_id',active.id,'combat_next_at',active.deadline,'last_combat_id',last_id,
     'active_attack',case when engagement.role='attacker' then jsonb_build_object('battle_id',active.id,'target_id',active.defender_id) end,
     'defence_order',c.defence_order,'protected_until',case when c.protected_until>observed_at then c.protected_until end,
@@ -398,28 +583,6 @@ begin
 end;
 $$;
 
-create or replace function private.train_stat(training_group text,stat text)
-returns void language plpgsql volatile security definer set search_path='' as $$
-declare captain public.characters%rowtype; recovered record; viewer_id uuid:=private.combat_captain();
-begin
-  if training_group is null or training_group not in ('ship','crew') or stat is null or stat not in ('attack','defense','speed','accuracy') then
-    raise exception 'INVALID_STAT' using errcode='22023'; end if;
-  perform private.settle_combat_context(array[viewer_id]);
-  if exists(select 1 from private.combat_engagements where character_id=viewer_id and role='attacker') then raise exception 'IN_COMBAT'; end if;
-  select * into captain from public.characters where id=viewer_id for update;
-  select * into recovered from private.energy_snapshot(captain.energy,captain.energy_updated_at,clock_timestamp());
-  if recovered.energy<{{gameplay.training.energyCost}} then raise exception 'NOT_ENOUGH_ENERGY' using errcode='P0001'; end if;
-  update public.characters set energy=recovered.energy-{{gameplay.training.energyCost}},energy_updated_at=recovered.energy_updated_at,
-    ship_attack=ship_attack+case when training_group='ship' and stat='attack' then {{gameplay.training.statGain}} else 0 end,
-    ship_defense=ship_defense+case when training_group='ship' and stat='defense' then {{gameplay.training.statGain}} else 0 end,
-    ship_speed=ship_speed+case when training_group='ship' and stat='speed' then {{gameplay.training.statGain}} else 0 end,
-    ship_accuracy=ship_accuracy+case when training_group='ship' and stat='accuracy' then {{gameplay.training.statGain}} else 0 end,
-    crew_attack=crew_attack+case when training_group='crew' and stat='attack' then {{gameplay.training.statGain}} else 0 end,
-    crew_defense=crew_defense+case when training_group='crew' and stat='defense' then {{gameplay.training.statGain}} else 0 end,
-    crew_speed=crew_speed+case when training_group='crew' and stat='speed' then {{gameplay.training.statGain}} else 0 end,
-    crew_accuracy=crew_accuracy+case when training_group='crew' and stat='accuracy' then {{gameplay.training.statGain}} else 0 end where id=viewer_id;
-end;
-$$;
 
 create or replace function public.list_harbor_players(requested_page integer default 0)
 returns jsonb
@@ -442,3 +605,513 @@ as $$
     ), '[]'::jsonb)
   ) from paging;
 $$;
+
+-- Gold Coins are separate carried and bank balances.
+alter table public.characters
+  alter column gold_coins set default {{gameplay.economy.initialGoldCoins}},
+  drop constraint characters_gold_coins_check,
+  add constraint characters_gold_coins_check check (gold_coins between 0 and {{gameplay.economy.maxGoldCoins}}),
+  drop constraint characters_bank_gold_coins_check,
+  add constraint characters_bank_gold_coins_check check (bank_gold_coins between 0 and {{gameplay.economy.maxGoldCoins}});
+
+create or replace function private.transfer_gold(direction text, amount numeric, request_id uuid)
+returns jsonb language plpgsql volatile security definer set search_path='' as $$
+declare
+  viewer_id uuid := private.combat_captain();
+  captain public.characters%rowtype;
+  previous private.bank_transfers%rowtype;
+  coins bigint;
+begin
+  if request_id is null then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
+  if direction is null or direction not in ('deposit','withdraw') then
+    raise exception 'INVALID_DIRECTION' using errcode='22023'; end if;
+  if amount is null or amount < 1 or amount > {{gameplay.economy.maxGoldCoins}} or amount <> trunc(amount) then
+    raise exception 'INVALID_AMOUNT' using errcode='22023'; end if;
+  coins := amount::bigint;
+  perform private.settle_combat_context(array[viewer_id]);
+  select * into previous from private.bank_transfers t
+    where t.character_id=viewer_id and t.request_id=transfer_gold.request_id;
+  if found then
+    if previous.direction <> direction or previous.amount <> coins then
+      raise exception 'REQUEST_CONFLICT' using errcode='22023';
+    end if;
+    return jsonb_build_object('direction',previous.direction,'amount',previous.amount,
+      'gold_coins',previous.gold_coins,'bank_gold_coins',previous.bank_gold_coins);
+  end if;
+  perform private.assert_can_act(viewer_id);
+  if exists(select 1 from private.combat_engagements where character_id=viewer_id and role='attacker') then
+    raise exception 'IN_COMBAT' using errcode='P0001'; end if;
+  select * into captain from public.characters where id=viewer_id for update;
+  if captain.location <> 'the_harbor' then raise exception 'NOT_IN_HARBOR' using errcode='P0001'; end if;
+  if direction='deposit' then
+    if captain.gold_coins < coins then raise exception 'NOT_ENOUGH_GOLD' using errcode='P0001'; end if;
+    if captain.bank_gold_coins > {{gameplay.economy.maxGoldCoins}} - coins then
+      raise exception 'BALANCE_LIMIT' using errcode='P0001'; end if;
+    update public.characters set gold_coins=gold_coins-coins, bank_gold_coins=bank_gold_coins+coins
+      where id=viewer_id returning * into captain;
+  else
+    if captain.bank_gold_coins < coins then raise exception 'NOT_ENOUGH_BANK_GOLD' using errcode='P0001'; end if;
+    if captain.gold_coins > {{gameplay.economy.maxGoldCoins}} - coins then
+      raise exception 'BALANCE_LIMIT' using errcode='P0001'; end if;
+    update public.characters set gold_coins=gold_coins+coins, bank_gold_coins=bank_gold_coins-coins
+      where id=viewer_id returning * into captain;
+  end if;
+  insert into private.bank_transfers(character_id,request_id,direction,amount,gold_coins,bank_gold_coins)
+    values(viewer_id,request_id,direction,coins,captain.gold_coins,captain.bank_gold_coins);
+  insert into public.player_game_events(character_id,revision) values(viewer_id,1)
+    on conflict(character_id) do update set revision=player_game_events.revision+1;
+  return jsonb_build_object('direction',direction,'amount',coins,
+    'gold_coins',captain.gold_coins,'bank_gold_coins',captain.bank_gold_coins);
+end;
+$$;
+revoke all on function private.transfer_gold(text,numeric,uuid) from public,anon,authenticated;
+grant execute on function private.transfer_gold(text,numeric,uuid) to authenticated;
+
+create or replace function public.transfer_gold(direction text, amount numeric, request_id uuid)
+returns jsonb language sql volatile security invoker set search_path='' as $$
+  select private.transfer_gold(direction,amount,request_id);
+$$;
+revoke all on function public.transfer_gold(text,numeric,uuid) from public,anon,authenticated;
+grant execute on function public.transfer_gold(text,numeric,uuid) to authenticated;
+
+-- A sinking ship kills its crew. Every new death starts one hospital stay.
+create or replace function private.admit_to_hospital()
+returns trigger language plpgsql volatile security definer set search_path='' as $$
+declare admitted_at timestamptz:=clock_timestamp();
+begin
+  if new.ship_health=0 then new.crew_health:=0; end if;
+  if new.crew_health=0 and new.hospital_until is null then
+    new.hospital_started_at:=admitted_at;
+    new.hospital_until:=admitted_at+make_interval(secs=>{{gameplay.hospital.durationSeconds}});
+  end if;
+  return new;
+end;
+$$;
+revoke all on function private.admit_to_hospital() from public,anon,authenticated;
+drop trigger if exists characters_admit_to_hospital on public.characters;
+create trigger characters_admit_to_hospital before insert or update of ship_health,crew_health on public.characters
+for each row execute function private.admit_to_hospital();
+
+create or replace function private.sync_hospital_patient()
+returns trigger language plpgsql volatile security definer set search_path='' as $$
+begin
+  if new.hospital_until is not null then
+    insert into public.hospital_patients(character_id,display_name,hospital_until)
+    values(new.id,new.display_name,new.hospital_until)
+    on conflict(character_id) do update set display_name=excluded.display_name,hospital_until=excluded.hospital_until
+      where hospital_patients.display_name is distinct from excluded.display_name
+        or hospital_patients.hospital_until is distinct from excluded.hospital_until;
+  else
+    delete from public.hospital_patients where character_id=new.id;
+  end if;
+  if tg_op='INSERT' or old.hospital_until is distinct from new.hospital_until then
+    perform private.notify_training(new.id);
+  end if;
+  return new;
+end;
+$$;
+revoke all on function private.sync_hospital_patient() from public,anon,authenticated;
+drop trigger if exists characters_sync_hospital_patient on public.characters;
+create trigger characters_sync_hospital_patient after insert or update on public.characters
+for each row execute function private.sync_hospital_patient();
+
+-- Caller owns the character/combat locks. Expiry is based only on database time.
+create or replace function private.settle_hospital(captain_id uuid,observed_at timestamptz)
+returns void language plpgsql volatile security invoker set search_path='' as $$
+begin
+  update public.characters set ship_health={{gameplay.resources.healthMax}},crew_health={{gameplay.resources.healthMax}},
+    ship_recovery_at=hospital_until,crew_recovery_at=hospital_until,hospital_started_at=null,hospital_until=null
+    where id=captain_id and hospital_until<=observed_at;
+end;
+$$;
+create or replace function private.assert_can_act(captain_id uuid)
+returns void language plpgsql volatile security invoker set search_path='' as $$
+begin
+  perform private.settle_hospital(captain_id,clock_timestamp());
+  if exists(select 1 from public.characters where id=captain_id and hospital_until is not null) then
+    raise exception 'IN_HOSPITAL' using errcode='P0001';
+  end if;
+end;
+$$;
+
+-- Environmental death during a fight ends that encounter without a fabricated final blow.
+create or replace function private.interrupt_hospital_combats(captain_ids uuid[])
+returns void language plpgsql volatile security invoker set search_path='' as $$
+declare b private.combats%rowtype; patient public.characters%rowtype; observed_at timestamptz:=clock_timestamp();
+begin
+  for b in select * from private.combats where status='active'
+    and id in(select combat_id from private.combat_engagements where character_id=any(captain_ids))
+    and exists(select 1 from private.combat_engagements e join public.characters c on c.id=e.character_id
+      where e.combat_id=combats.id and c.hospital_until is not null)
+    order by id for update
+  loop
+    select c.* into patient from public.characters c join private.combat_engagements e on e.character_id=c.id
+      where e.combat_id=b.id and c.hospital_until is not null order by c.hospital_started_at,c.id limit 1;
+    update private.combat_participants p set
+      status=case when c.hospital_until is not null then 'defeated' else 'draw' end,
+      snapshot=p.snapshot || jsonb_build_object('ship_health',c.ship_health,'crew_health',c.crew_health),
+      finished_at=observed_at
+      from public.characters c where p.combat_id=b.id and p.character_id=c.id and p.status='active';
+    update private.combats set state=state || jsonb_build_object('status','completed','outcome','draw','winner_id',null,
+      'defender',state->'defender' || (select jsonb_build_object('ship_health',ship_health,'crew_health',crew_health)
+        from public.characters where id=b.defender_id)),finished_at=observed_at,deadline=observed_at where id=b.id;
+    update public.characters set ship_recovery_at=observed_at,crew_recovery_at=observed_at,
+      protected_until=observed_at+make_interval(secs=>{{gameplay.combat.protectionSeconds}})
+      where id in(select character_id from private.combat_engagements where combat_id=b.id);
+    perform private.append_combat_event(b.id,patient.id,gen_random_uuid(),
+      jsonb_build_object('kind','hospital','actor_name',patient.display_name,'at',observed_at,'outcome','draw'));
+    delete from private.combat_engagements where combat_id=b.id;
+    perform private.notify_combat(b.id);
+  end loop;
+end;
+$$;
+
+create or replace function private.settle_combat_context(captain_ids uuid[])
+returns void language plpgsql volatile security invoker set search_path='' as $$
+declare p record; captain_id uuid;
+begin
+  perform private.lock_combat_context(captain_ids);
+  perform private.interrupt_hospital_combats(captain_ids);
+  for p in select cp.combat_id,cp.character_id,cp.deadline from private.combat_participants cp
+    where cp.status='active' and cp.deadline<=clock_timestamp()
+      and cp.combat_id in(select combat_id from private.combat_engagements where character_id=any(captain_ids))
+    order by cp.deadline,cp.character_id
+  loop
+    perform private.advance_shared_combat(p.combat_id,p.character_id,'retreat',gen_random_uuid(),p.deadline,true);
+  end loop;
+  for captain_id in select distinct id from unnest(captain_ids) id where id is not null order by id loop
+    perform private.settle_hospital(captain_id,clock_timestamp());
+  end loop;
+end;
+$$;
+revoke all on function private.settle_hospital(uuid,timestamptz),private.assert_can_act(uuid),
+  private.interrupt_hospital_combats(uuid[]) from public,anon,authenticated;
+
+create or replace function private.save_defence_orders(preset text)
+returns jsonb language plpgsql volatile security definer set search_path='' as $$
+declare viewer_id uuid:=private.combat_captain();
+begin
+  if preset is null or preset not in ('cannon','boarding') then raise exception 'INVALID_PRESET' using errcode='22023'; end if;
+  perform private.settle_combat_context(array[viewer_id]);
+  perform private.assert_can_act(viewer_id);
+  update public.characters set defence_order=preset where id=viewer_id;
+  return jsonb_build_object('preset',preset);
+end;
+$$;
+
+create or replace function public.get_navigation_lock()
+returns jsonb language sql volatile security invoker set search_path='' as $$
+  select jsonb_build_object('attack',s->'active_attack','hospital_until',s->'hospital_until')
+  from (select public.get_game_state() s) state;
+$$;
+revoke all on function public.get_navigation_lock() from public,anon,authenticated;
+grant execute on function public.get_navigation_lock() to authenticated;
+
+create or replace function public.list_hospital_patients(requested_page integer default 0)
+returns jsonb language sql stable security invoker set search_path='' as $$
+  with patients as (
+    select * from public.hospital_patients where hospital_until>now()
+  ), totals as (
+    select count(*)::integer total,min(hospital_until) next_discharge_at from patients
+  ), paging as (
+    select total,next_discharge_at,least(greatest(coalesce(requested_page,0),0),
+      greatest(0,(total-1)/{{gameplay.harbor.pageSize}})) page from totals
+  )
+  select jsonb_build_object('total',total,'page',page,'observed_at',now(),'next_discharge_at',next_discharge_at,
+    'patients',coalesce((select jsonb_agg(to_jsonb(p) order by p.display_name,p.character_id)
+      from (select * from patients order by display_name,character_id
+        limit {{gameplay.harbor.pageSize}} offset paging.page*{{gameplay.harbor.pageSize}}) p),'[]'::jsonb))
+    from paging;
+$$;
+revoke all on function public.list_hospital_patients(integer) from public,anon,authenticated;
+grant execute on function public.list_hospital_patients(integer) to authenticated;
+
+-- Derive damage by phase from saved events, including existing encounters.
+create or replace function private.combat_people(battle_id uuid)
+returns jsonb language sql stable security invoker set search_path='' as $$
+  with damage as materialized (
+    select r.actor_id,
+      coalesce(sum((r.event->>'attacker_damage')::integer) filter (where r.event->>'phase'='sea'),0) ship_damage,
+      coalesce(sum((r.event->>'attacker_damage')::integer) filter (where r.event->>'phase'='boarding'),0) crew_damage,
+      coalesce(sum((r.event->>'defender_damage')::integer) filter (where r.event->>'phase'='sea'),0) defender_ship_damage,
+      coalesce(sum((r.event->>'defender_damage')::integer) filter (where r.event->>'phase'='boarding'),0) defender_crew_damage,
+      count(*) filter (where (r.event->>'defender_hit')::boolean) defender_hits
+    from private.combat_rounds r where r.combat_id=battle_id group by r.actor_id
+  )
+  select coalesce(jsonb_agg(person order by joined_at,id),'[]'::jsonb) from (
+    select p.joined_at,p.character_id id,jsonb_build_object('id',p.character_id,'name',p.snapshot->>'name',
+      'role','attacker','status',p.status,'hits',p.hits,'damage',p.damage,
+      'ship_damage',coalesce(d.ship_damage,0),'crew_damage',coalesce(d.crew_damage,0),
+      'ship_health',p.snapshot->'ship_health','crew_health',p.snapshot->'crew_health','phase',p.phase) person
+    from private.combat_participants p left join damage d on d.actor_id=p.character_id where p.combat_id=battle_id
+    union all select b.started_at,b.defender_id,jsonb_build_object('id',b.defender_id,'name',b.state->'defender'->>'name',
+      'role','defender','status',case when b.status='active' then 'active'
+        when (b.state#>>'{defender,crew_health}')::integer=0 or (b.state#>>'{defender,ship_health}')::integer=0 then 'defeated' else 'survived' end,
+      'hits',coalesce(d.hits,0),'damage',coalesce(d.ship_damage,0)+coalesce(d.crew_damage,0),
+      'ship_damage',coalesce(d.ship_damage,0),'crew_damage',coalesce(d.crew_damage,0),
+      'ship_health',b.state->'defender'->'ship_health','crew_health',b.state->'defender'->'crew_health','phase',null)
+    from private.combats b cross join (
+      select sum(defender_hits) hits,sum(defender_ship_damage) ship_damage,sum(defender_crew_damage) crew_damage from damage
+    ) d where b.id=battle_id
+  ) people;
+$$;
+
+-- Profiles share the existing public patient projection without exposing character data.
+create or replace function public.get_hospital_status(target_id uuid)
+returns jsonb language sql stable security invoker set search_path='' as $$
+  select jsonb_build_object('hospital_until',(select hospital_until from public.hospital_patients
+    where character_id=target_id and hospital_until>now()),'observed_at',now());
+$$;
+revoke all on function public.get_hospital_status(uuid) from public,anon,authenticated;
+grant execute on function public.get_hospital_status(uuid) to authenticated;
+
+-- Circulation updates share the inventory transaction and never expose ownership.
+create or replace function private.record_item_circulation_delta(target_item text,delta numeric)
+returns void language plpgsql volatile security definer set search_path='' as $$
+declare current_total numeric; recorded timestamptz;
+begin
+  if delta=0 then return; end if;
+  update private.item_circulation
+    set total=total+delta,updated_at=greatest(clock_timestamp(),updated_at+interval '1 microsecond')
+    where item_id=target_item returning total,updated_at into current_total,recorded;
+  if not found then raise exception 'CIRCULATION_NOT_INITIALIZED'; end if;
+  insert into private.item_circulation_history(item_id,transaction_id,recorded_at,total)
+    values(target_item,pg_current_xact_id(),recorded,current_total)
+    on conflict(item_id,transaction_id) do update set recorded_at=excluded.recorded_at,total=excluded.total;
+end;
+$$;
+revoke all on function private.record_item_circulation_delta(text,numeric) from public,anon,authenticated;
+
+create or replace function private.initialize_item_circulation()
+returns trigger language plpgsql security definer set search_path='' as $$
+declare started timestamptz:=clock_timestamp();
+begin
+  insert into private.item_circulation(item_id,total,initial_total,tracked_since,updated_at)
+    values(new.id,0,0,started,started);
+  insert into private.item_circulation_history(item_id,transaction_id,recorded_at,total)
+    values(new.id,pg_current_xact_id(),started,0);
+  return new;
+end;
+$$;
+revoke all on function private.initialize_item_circulation() from public,anon,authenticated;
+drop trigger if exists initialize_item_circulation on private.item_definitions;
+create trigger initialize_item_circulation after insert on private.item_definitions
+  for each row execute function private.initialize_item_circulation();
+
+create or replace function private.track_item_circulation()
+returns trigger language plpgsql security definer set search_path='' as $$
+declare change record;
+begin
+  if tg_op='INSERT' then
+    for change in select n.item_id,sum(coalesce((to_jsonb(n)->>'quantity')::numeric,1)) delta
+      from new_items n group by n.item_id order by n.item_id
+    loop perform private.record_item_circulation_delta(change.item_id,change.delta); end loop;
+  elsif tg_op='DELETE' then
+    for change in select o.item_id,-sum(coalesce((to_jsonb(o)->>'quantity')::numeric,1)) delta
+      from old_items o group by o.item_id order by o.item_id
+    loop perform private.record_item_circulation_delta(change.item_id,change.delta); end loop;
+  else
+    for change in select item_id,sum(amount) delta from (
+      select n.item_id,coalesce((to_jsonb(n)->>'quantity')::numeric,1) amount from new_items n
+      union all select o.item_id,-coalesce((to_jsonb(o)->>'quantity')::numeric,1) from old_items o
+    ) changes group by item_id having sum(amount)<>0 order by item_id
+    loop perform private.record_item_circulation_delta(change.item_id,change.delta); end loop;
+  end if;
+  return null;
+end;
+$$;
+revoke all on function private.track_item_circulation() from public,anon,authenticated;
+
+drop trigger if exists circulation_insert on private.item_stacks;
+drop trigger if exists circulation_update on private.item_stacks;
+drop trigger if exists circulation_delete on private.item_stacks;
+create trigger circulation_insert after insert on private.item_stacks
+  referencing new table as new_items for each statement execute function private.track_item_circulation();
+create trigger circulation_update after update on private.item_stacks
+  referencing old table as old_items new table as new_items for each statement execute function private.track_item_circulation();
+create trigger circulation_delete after delete on private.item_stacks
+  referencing old table as old_items for each statement execute function private.track_item_circulation();
+drop trigger if exists circulation_insert on private.item_instances;
+drop trigger if exists circulation_update on private.item_instances;
+drop trigger if exists circulation_delete on private.item_instances;
+create trigger circulation_insert after insert on private.item_instances
+  referencing new table as new_items for each statement execute function private.track_item_circulation();
+create trigger circulation_update after update on private.item_instances
+  referencing old table as old_items new table as new_items for each statement execute function private.track_item_circulation();
+create trigger circulation_delete after delete on private.item_instances
+  referencing old table as old_items for each statement execute function private.track_item_circulation();
+
+-- Definitions are durable. Removing a definition or changing its ownership shape is rejected.
+{{inventory.catalogSql}}
+
+create or replace function private.list_inventory(category_id text default null,search_term text default '',requested_page integer default 0)
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare
+  viewer_id uuid:=private.combat_captain();
+  page_size integer:={{gameplay.inventory.pageSize}};
+  result jsonb;
+begin
+  if requested_page is null or requested_page<0 or search_term is null or length(search_term)>100 then
+    raise exception 'INVALID_FILTER' using errcode='22023'; end if;
+  if category_id is not null and not exists(select 1 from private.item_categories c where c.id=category_id) then
+    raise exception 'INVALID_CATEGORY' using errcode='22023'; end if;
+  with owned as (
+    select s.id,'stack'::text entry_type,s.item_id,s.quantity,null::jsonb stats
+      from private.item_stacks s where s.character_id=viewer_id
+    union all
+    select i.id,'instance',i.item_id,1::bigint,jsonb_build_object('damage',i.damage,'accuracy',i.accuracy)
+      from private.item_instances i where i.character_id=viewer_id
+  ), matching as (
+    select o.*,d.name,d.category_id,d.kind,d.description,d.effect_description,d.image_path
+      from owned o join private.item_definitions d on d.id=o.item_id
+      where (list_inventory.category_id is null or d.category_id=list_inventory.category_id)
+        and strpos(lower(d.name),lower(btrim(search_term)))>0
+  ), bounds as (
+    select count(*) total,least(requested_page,greatest(0,(count(*)-1)/page_size))::integer page from matching
+  ), items as (
+    select m.*,c.total::text circulation from matching m
+      join private.item_circulation c on c.item_id=m.item_id
+      order by lower(m.name) collate "C",m.item_id,m.id,m.entry_type
+      limit page_size offset (select page::bigint*page_size from bounds)
+  )
+  select jsonb_build_object('items',coalesce((select jsonb_agg(to_jsonb(i)
+      order by lower(i.name) collate "C",i.item_id,i.id,i.entry_type) from items i),'[]'::jsonb),
+    'total',b.total,'page',b.page,'page_size',page_size) into result from bounds b;
+  return result;
+end;
+$$;
+revoke all on function private.list_inventory(text,text,integer) from public,anon,authenticated;
+grant execute on function private.list_inventory(text,text,integer) to authenticated;
+create or replace function public.list_inventory(category_id text default null,search_term text default '',requested_page integer default 0)
+returns jsonb language sql stable security invoker set search_path='' as $$
+  select private.list_inventory(category_id,search_term,requested_page);
+$$;
+revoke all on function public.list_inventory(text,text,integer) from public,anon,authenticated;
+grant execute on function public.list_inventory(text,text,integer) to authenticated;
+
+create or replace function private.trash_inventory_item(entry_id uuid,entry_type text,quantity numeric,request_id uuid)
+returns jsonb language plpgsql volatile security definer set search_path='' as $$
+declare
+  viewer_id uuid:=private.combat_captain();
+  previous private.inventory_requests%rowtype;
+  stack private.item_stacks%rowtype;
+  item private.item_instances%rowtype;
+  payload jsonb;
+  result jsonb;
+  amount bigint;
+  remaining bigint;
+  item_name text;
+begin
+  if request_id is null or entry_id is null then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
+  if entry_type is null or entry_type not in ('stack','instance') then
+    raise exception 'INVALID_ITEM_TYPE' using errcode='22023'; end if;
+  if quantity is null or quantity<1 or quantity>9007199254740991 or quantity<>trunc(quantity)
+    or (entry_type='instance' and quantity<>1) then
+    raise exception 'INVALID_QUANTITY' using errcode='22023'; end if;
+  amount:=quantity::bigint;
+  payload:=jsonb_build_object('entry_id',entry_id,'entry_type',entry_type,'quantity',amount);
+  perform private.settle_combat_context(array[viewer_id]);
+  select * into previous from private.inventory_requests r
+    where r.character_id=viewer_id and r.request_id=trash_inventory_item.request_id;
+  if found then
+    if previous.payload<>payload then raise exception 'REQUEST_CONFLICT' using errcode='22023'; end if;
+    return previous.result;
+  end if;
+  perform private.assert_can_act(viewer_id);
+  if exists(select 1 from private.combat_engagements where character_id=viewer_id and role='attacker') then
+    raise exception 'IN_COMBAT' using errcode='P0001'; end if;
+  if entry_type='stack' then
+    select * into stack from private.item_stacks s where s.id=entry_id and s.character_id=viewer_id for update;
+    if not found then raise exception 'ITEM_NOT_FOUND' using errcode='P0001'; end if;
+    if stack.quantity<amount then raise exception 'NOT_ENOUGH_ITEMS' using errcode='P0001'; end if;
+    select name into item_name from private.item_definitions where id=stack.item_id;
+    remaining:=stack.quantity-amount;
+    if remaining=0 then delete from private.item_stacks where id=stack.id;
+    else update private.item_stacks set quantity=remaining where id=stack.id; end if;
+  else
+    select * into item from private.item_instances i where i.id=entry_id and i.character_id=viewer_id for update;
+    if not found then raise exception 'ITEM_NOT_FOUND' using errcode='P0001'; end if;
+    select name into item_name from private.item_definitions where id=item.item_id;
+    remaining:=0;
+    delete from private.item_instances where id=item.id;
+  end if;
+  result:=jsonb_build_object('entry_id',entry_id,'entry_type',entry_type,'quantity',amount,
+    'name',item_name,'remaining',remaining);
+  insert into private.inventory_requests(character_id,request_id,payload,result)
+    values(viewer_id,request_id,payload,result);
+  perform private.notify_training(viewer_id);
+  return result;
+end;
+$$;
+revoke all on function private.trash_inventory_item(uuid,text,numeric,uuid) from public,anon,authenticated;
+grant execute on function private.trash_inventory_item(uuid,text,numeric,uuid) to authenticated;
+create or replace function public.trash_inventory_item(entry_id uuid,entry_type text,quantity numeric,request_id uuid)
+returns jsonb language sql volatile security invoker set search_path='' as $$
+  select private.trash_inventory_item(entry_id,entry_type,quantity,request_id);
+$$;
+revoke all on function public.trash_inventory_item(uuid,text,numeric,uuid) from public,anon,authenticated;
+grant execute on function public.trash_inventory_item(uuid,text,numeric,uuid) to authenticated;
+
+-- Large ranges use bounded indexed lookups; stored history keeps every transaction.
+create or replace function private.get_item_circulation(target_item text,period text default 'all')
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare
+  viewer_id uuid:=private.combat_captain();
+  counter private.item_circulation%rowtype;
+  observed timestamptz:=statement_timestamp();
+  range_start timestamptz;
+  initial numeric;
+  point_limit integer:={{gameplay.inventory.historyMaxPoints}};
+  points jsonb;
+  sampled boolean;
+begin
+  if period is null or period not in ('1m','3m','6m','1y','3y','all') then
+    raise exception 'INVALID_PERIOD' using errcode='22023'; end if;
+  select * into counter from private.item_circulation where item_id=target_item;
+  if not found then raise exception 'ITEM_NOT_FOUND' using errcode='22023'; end if;
+  observed:=greatest(observed,counter.updated_at);
+  range_start:=greatest(counter.tracked_since,case period
+    when '1m' then observed-interval '1 month'
+    when '3m' then observed-interval '3 months'
+    when '6m' then observed-interval '6 months'
+    when '1y' then observed-interval '1 year'
+    when '3y' then observed-interval '3 years'
+    else counter.tracked_since end);
+  select coalesce((select h.total from private.item_circulation_history h
+    where h.item_id=target_item and h.recorded_at<=range_start
+    order by h.recorded_at desc,h.id desc limit 1),counter.initial_total) into initial;
+  select count(*)>point_limit into sampled from (
+    select 1 from private.item_circulation_history h
+    where h.item_id=target_item and h.recorded_at>range_start and h.recorded_at<observed
+    limit point_limit+1
+  ) limited;
+  if not sampled then
+    select coalesce(jsonb_agg(jsonb_build_object('at',h.recorded_at,'total',h.total::text)
+      order by h.recorded_at,h.id),'[]'::jsonb) into points
+      from private.item_circulation_history h where h.item_id=target_item
+        and h.recorded_at>range_start and h.recorded_at<observed;
+  else
+    select jsonb_agg(jsonb_build_object('at',t.sample_at,'total',coalesce(h.total,initial)::text)
+      order by t.sample_at) into points
+    from (select range_start+(observed-range_start)*(n::double precision/(point_limit+1)) as sample_at
+      from generate_series(1,point_limit) n) t
+    left join lateral (
+      select total from private.item_circulation_history h
+      where h.item_id=target_item and h.recorded_at<=t.sample_at
+      order by h.recorded_at desc,h.id desc limit 1
+    ) h on true;
+  end if;
+  return jsonb_build_object('item_id',target_item,'period',period,'total',counter.total::text,
+    'tracked_since',counter.tracked_since,'from',range_start,'to',observed,'sampled',sampled,
+    'points',jsonb_build_array(jsonb_build_object('at',range_start,'total',initial::text)) ||
+      points || jsonb_build_array(jsonb_build_object('at',observed,'total',counter.total::text)));
+end;
+$$;
+revoke all on function private.get_item_circulation(text,text) from public,anon,authenticated;
+grant execute on function private.get_item_circulation(text,text) to authenticated;
+create or replace function public.get_item_circulation(target_item text,period text default 'all')
+returns jsonb language sql stable security invoker set search_path='' as $$
+  select private.get_item_circulation(target_item,period);
+$$;
+revoke all on function public.get_item_circulation(text,text) from public,anon,authenticated;
+grant execute on function public.get_item_circulation(text,text) to authenticated;

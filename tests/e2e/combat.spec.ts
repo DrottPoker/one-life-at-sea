@@ -106,7 +106,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await extra.goto("/harbor/ship-upgrades");
     await expect(extra).toHaveURL(lockedUrl);
     await extra.close();
-    expect((await a.api.rpc("train_stat", { training_group: "crew", stat: "attack" })).error?.message).toBe("IN_COMBAT");
+    expect((await a.api.rpc("train_crew", { stat: "attack", expected_tier_id: "crew_1", request_id: randomUUID() })).error?.message).toBe("IN_COMBAT");
     await main.getByRole("button", { name: /^Board Give up/ }).click();
     await expect(main.getByRole("button", { name: /^Crew attack Attack/ })).toBeVisible();
     await main.getByRole("button", { name: /^Crew attack Attack/ }).click();
@@ -197,7 +197,7 @@ test("simultaneous starts join once; duplicate orders, independent phases, timeo
         expect(latest.people.filter(p => p.status === "victory")).toHaveLength(1);
         expect(latest.people.filter(p => p.status === "assist")).toHaveLength(1);
         expect(latest.events.filter(e => e.participant_result === "victory")).toHaveLength(1);
-        expect(latest.defender.ship_health === 0 && latest.defender.crew_health === 0).toBe(false);
+        expect(latest.defender.crew_health).toBe(0);
       }
     }
     expect(finished).toBe(true);

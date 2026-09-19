@@ -1,3 +1,297 @@
+# Stabilt periodbyte i cirkulationsdiagrammet, 2026-09-19
+
+- Felet reproducerades på 1280 och 375 px: ett nytt periodval tog bort diagrammets
+  DOM-nod medan hämtningen pågick, vilket krympte sidan och flyttade scrollpositionen.
+- Den senaste kurvan ligger nu kvar tills ersättningen kommer. Plotten behåller
+  samma DOM-nod och uppmätt bredd. Laddning, fel och stickprovsindikator ligger
+  ovanpå en stabil diagramyta; bildtextens höjd ändras inte vid periodbyte.
+- Retry bevarar tidigare data och anger vilken period som fortfarande visas om
+  den nya hämtningen misslyckas. Avbrutna svar kan fortfarande inte skriva över nya val.
+- Lint och produktionsbygge inklusive TypeScript passerade. Det fullständiga
+  cirkulationsflödet samt två regressionstester passerade i samma körning.
+  Regressionstesterna håller tillbaka nätverkssvaret och mäter sidans höjd,
+  scrollposition och plottnod varje bildruta före, under och efter bytet.
+  Ingen uppmätt scrollförflyttning över 1 px och ingen höjdändring tilläts.
+- De två nya regressionstesterna misslyckades på versionen före fixen.
+
+# Item Circulation implementerat, 2026-09-19
+
+[Item Circulation](ITEM_CIRCULATION.md) är implementerat och applicerat lokalt.
+
+- Circ. visar det globala antalet per itemtyp. En diagramknapp öppnar historiken
+  direkt under itemets detaljer, före nästa itemrad.
+- Sex perioder finns, med All time förvalt. Vänsterkant följer verklig historik
+  och vald period; högerkant är aktuell observationstid.
+- Hover, tryck och tangentbord visar datum/tid i UTC samt Total in circulation.
+- Räknare och historik uppdateras atomärt med skapande, ändrade mängder,
+  Trash och kontoradering. Ägar-/statändringar och idempotenta återförsök räknar
+  inte extra. Historiken börjar vid införandet med det befintliga innehavet.
+- Stora globala antal behåller sin precision. Stora historiksvar begränsas
+  genom indexerade stickprov; den fullständiga historiken sparas.
+- Diagrammet kan läsas under sjukhusvistelse och hanterar avbrutna hämtningar,
+  periodbyten och Retry. Tooltipen begränsas till diagrammets bredd även under resize.
+
+Verifierat:
+- Lint, typkontroll, 102 enhetstester och produktionsbygge passerade.
+  De nio diagramtesterna och berörda lintkontroller kördes också efter sista ändringen.
+- 617 databasassertioner passerade, varav 49 för cirkulation.
+- 49 kontroller av alternativ config passerade och rullades tillbaka.
+- Alla sju inventoryscenarier passerade tillsammans, inklusive det nya fullständiga
+  cirkulationsflödet, två samtidiga ägare, nätverksfel, Hospital och mobil.
+- Skärmbredder 320, 375, 768 och 1280 px klarade kontrollen utan horisontellt överflöde.
+  Slutresultatet inspekterades visuellt på dator och mobil.
+- Supabase security advisors fann inga problem. Samtliga sex globala totalsummor
+  jämfördes med faktiskt innehav och stämde.
+- Localhost svarar med HTTP 200. Inga commits eller publiceringar har gjorts.
+
+Den sedan tidigare dokumenterade Next.js-diagnostiken vid avbrutna RSC-strömmar
+förekommer i testserverns logg; samtliga spel- och diagramflöden passerade.
+
+# Inventory och items implementerat, 2026-09-19
+
+[Inventory](INVENTORY.md) är implementerat enligt den första etappen i
+[inventoryplanen](INVENTORY_PLAN.md).
+
+- Inventory finns i sidopanelens Harbor-meny med sex kategorier, namnsökning och sidindelning.
+  Panelen fyller innehållsytans bredd; itemradernas grundhöjd är 36 px på dator och 45 px på mobil.
+  En tunn, indragen avskiljare ligger mellan miniatyren och namnet.
+  Detaljbildens yta är högst 280 × 190 px och 180 px hög på mobil.
+- Kompakta itemrader visar egna bilder, namn, stackantal och individuella stats.
+  Klick öppnar beskrivning, effekttext och större bild direkt under raden.
+  Detaljernas egenskaper visas i två kolumner: Category/Quantity och Damage/Accuracy,
+  bredvid bilden på dator och under bilden på mobil.
+- Crew-vapen och kanoner är separata exemplar. Förbrukningsvaror och material stackas.
+- Trash har antal, bekräftelse, ägarkontroll, atomär radering och beständiga kvitton.
+  Återförsök efter ett förlorat svar förstör inte fler items, även om sista raden försvunnit.
+- Andra flikar uppdateras. Öppen bekräftelse visar senaste tillgängliga mängd.
+- Inventory kan läsas i Hospital. Trash är spärrat där och för aktiva angripare.
+  Profiler, sjukhusnedräkning och övriga navigationslås fungerar fortsatt.
+- Equip och Use är synliga men inaktiva. Medicinska effekter, träningsbuffar,
+  utrustningsbonusar och value återstår. [Cirkulation och historik](ITEM_CIRCULATION.md) är tillagt.
+- Katalogen följer central config. Tidigare definitioner kan inte tas bort eller
+  ändra typ/utrustningsplats genom synk; befintliga innehav och stats bevaras.
+- Två nya migrationer är applicerade lokalt utan reset:
+  20260919072355_inventory_foundation.sql och
+  20260919072801_central_gameplay_config_60b2d2217835.sql.
+- Vanliga karaktärer har tomt inventory. Ett verifierat lokalt fixturekommando finns
+  för en uttryckligt vald testkaraktär. Provitems har därefter lagts på Ludorex på ägarens begäran.
+- Sex egna transparenta PNG-bilder finns i public/images/items. Prompter och ursprung
+  är dokumenterade i [ITEM_ART.md](ITEM_ART.md).
+
+Efter justeringen av bredd, bildstorlek och menylänk passerade lint, typkontroll,
+produktionsbygge och samtliga sex inventoryscenarier igen. Dator- och mobilbilder
+kontrollerades visuellt; Inventory förblev tillgängligt under sjukhusvistelse.
+
+Verifierat vid grundimplementationen:
+
+- Lint, typkontroll, 93 enhetstester och produktionsbygge passerade.
+- 568 databasassertioner passerade, inklusive 61 nya för inventory.
+- 49 kontroller med alternativ config passerade i en återställd transaktion.
+  De täcker även beständiga itemstats, oförändrade stackar, sidstorlek,
+  avaktiverade definitioner, citattecken och förbjudna katalogändringar.
+- Alla 11 relevanta webbläsarscenarier passerade i samma körning: sex för inventory,
+  fyra för Hospital/profiler och ett för navigation. Inventory täcker flera flikar,
+  återinloggning, medicinsk kategori i Hospital, stridslås, nätverksavbrott,
+  samtidiga raderingar, tomt innehav och radering av sista resultatsidan.
+- 320, 375, 768 och 1280 px kontrollerades utan horisontellt överflöde.
+  Miniatyrerna ryms inom raderna och alla sex bilder laddas.
+- Lokalt fixturekommando verifierades med ett separat testkonto: sju poster skapas
+  och en upprepning bevarar redan ändrade mängder. Testkontot togs bort.
+- Supabase security advisors rapporterade inga problem. Localhost svarar med HTTP 200.
+
+Den tidigare dokumenterade Next.js-diagnostiken "The destination stream closed early"
+förekommer fortfarande vid avbrutna RSC-strömmar. De verifierade flödena passerar;
+diagnostiken döljs inte.
+
+# Inventory: implementationsplan, 2026-09-19
+
+[Inventoryplanen](INVENTORY_PLAN.md) är klar. Ingen inventoryfunktion är implementerad ännu.
+
+- Första etappen är beständiga items, kategorifilter, kompakta rader och utfällbara detaljer.
+- Crew-vapen och kanoner är de första utrustningstyperna.
+- Equip och Use visas men väntar med faktisk spelpåverkan till nästa etapp.
+- Trash fungerar i första etappen, med antal och bekräftelse.
+- Inventory får läsas på sjukhuset. Medicinska items får användas där när Use införs.
+  Trash och andra itemhandlingar är spärrade under sjukhusvistelsen.
+- Value och antal i cirkulation införs senare.
+- Planen bygger på ägarens referensbilder, förtydliganden och Torns officiella wiki.
+- Detta är en dokumentationsändring. Inga migrationer, itemtilldelningar eller speländringar har gjorts.
+
+# Profiler tillgängliga under sjukhusvistelse, 2026-09-19
+
+- My Profile är alltid tillgänglig. Sjukhuspatienter kan läsa sin egen och andra spelares profiler.
+- Patientnamnen i Hospital länkar till profilerna. Tillbaka-länken på profilen leder till Hospital under vistelsen.
+- Profiler visar Hospital, In hospital och en nedräkning för alla registrerade spelare.
+  Statusen uppdateras vid intagning och tas bort efter utskrivning, även när patienten är offline.
+- Sjukhussidan och profilen delar samma nedräkningskomponent. Databastid styr återstående tid.
+- get_hospital_status läser den befintliga RLS-skyddade patientprojektionen och lämnar bara
+  sluttid och observationstid. Profilens fyra identitetsfält och privata karaktärsrader är oförändrade.
+- Sidundantaget delas av proxy och klientens navigationsskydd. Aktiva stridslås gäller fortfarande.
+- Träning, uppgraderingar, bank, attack och ändring av försvarsorder förblir spärrade i databasen.
+  Attack och försvarsformulär är också inaktiva där de visas på profilerna.
+- Migration 20260919061624_central_gameplay_config_ac5f1398a9f8.sql är applicerad lokalt.
+
+Verifierat: lint, typkontroll, 71 enhetstester, produktionsbygge, 507 databasassertioner
+och samtliga 10 webbläsarscenarier för strid, sjukhus och profiler passerade.
+Profilscenariot täcker två spelare, liveintagning, nedräkning, direktlänk, omladdning,
+ny flik, egna/andras profiler, fortsatt handlingsspärr samt online- och offlineutskrivning.
+320, 375 och 1280 px kontrollerades utan överflöde; desktop och mobil granskades visuellt.
+Security advisors rapporterade inga problem. Dokumentlänkar och git diff --check passerade.
+Den tidigare dokumenterade Next.js-diagnostiken vid avbrutna RSC-strömmar finns kvar.
+Localhost svarar på http://127.0.0.1:3000/login.
+
+# Hospital och beständig karaktär, 2026-09-19
+
+[Hospital](HOSPITAL.md) är implementerat i Harbor-panelen och ersätter den tidigare
+idén om hardcore och permanent karaktärsdöd.
+
+- Noll Crew Health ger fem minuter i Hospital. Noll Ship Health sätter också Crew Health till 0.
+- Alla nya spelhandlingar spärras i både gränssnitt och databas: crew-träning, skeppsarbete,
+  nivåköp, banköverföringar, försvarsorder och strid. Patienter kan inte attackeras.
+- Direktlänkar, cachad navigation, nya flikar och återinloggning leder tillbaka till sjukhuset.
+- Sjukhuset visar alla aktuella patienter, även offline, med paginering och liveuppdateringar.
+- Utskrivning sker automatiskt med full hälsa, även offline. Karaktär, stats, progression och pengar behålls.
+- Passiv Energy och redan påbörjade skeppsjobb fortsätter under vistelsen.
+- Intagningen täcker både PvP och andra serverstyrda skadeorsaker. Extern död under ett aktivt
+  möte frigör deltagarna utan att tilldela en påhittad PvP-seger.
+- hospital.durationSeconds är 300 i config. Redan sparade sluttider ändras inte av configbyte.
+- Migrationerna 20260919052625_hospital_recovery.sql,
+  20260919053041_central_gameplay_config_87100bb68e0a.sql och
+  20260919053954_central_gameplay_config_6a8bd1163a61.sql är applicerade lokalt utan reset.
+- Tidigare designbeskrivningar av permanent död är ersatta eller markerade historiska.
+
+Verifierat:
+
+- Lint, typkontroll, 71 enhetstester och produktionsbygge passerade.
+- 501 databasassertioner och 39 kontroller med alternativ config passerade.
+  Alternativkonfigurationen återställdes genom rollback.
+- Hela dåvarande webbläsarsviten passerade: 22 scenarier. Efter slutjusteringarna passerade
+  alla sex bank- och sjukhusscenarier, inklusive det nya fallet där en frisk besökare
+  besegras medan sjukhussidan redan är öppen.
+- Ett befintligt navigationstest hade timingberoende antaganden om förladdning.
+  Det kontrollerar nu både Nexts innehållsladdare och dess länkindikator utan
+  ögonblicksbilder som kan bli inaktuella. Testet passerade tre upprepningar i följd.
+  Det jämför också bevarad faktisk träningsstat så att Perfect Drill inte orsakar ett slumpfel.
+- Sjukhusvyn kontrollerades vid 320, 375, 768 och 1280 px utan horisontellt överflöde.
+  Desktop- och mobilskärmbilder granskades visuellt.
+- Supabase security advisors rapporterade inga problem.
+- Dokumentlänkar och git diff --check passerade. Localhost svarar på http://127.0.0.1:3000/login.
+
+Den redan dokumenterade Next.js-diagnostiken "The destination stream closed early"
+förekommer vid avbrutna navigationer/förladdningar. Den döljs inte och gav inga
+JavaScript-fel i de verifierade sjukhusflödena.
+
+# Träningsprogression visas endast i procent, 2026-09-19
+
+- Crew Training och Ship Upgrades visar en 0-100 %-mätare i stället för synliga XP-tal.
+- Intjänad XP, krav, återstående XP och XP-belöningar är dolda i gränssnittet och statusmeddelandena.
+- Mätarens tillgänglighetsvärden använder också procent. 100 % visas först vid upplåsning eller slutnivån.
+- Intern XP, priser och köpkrav är oförändrade.
+- Lint, typkontroll, 71 enhetstester och produktionsbygge passerade.
+- Alla fyra webbläsarscenarier för träning passerade, inklusive båda vyerna, köp och återförsök.
+- Crew-vyn granskades visuellt och git diff --check passerade.
+
+# Energy +5 var femte minut, 2026-09-19
+
+- Energy återhämtas nu med 5 per helt femminutersintervall, även offline, till max 100.
+- Mängden styrs av resources.energyRecoveryAmount. Tidsankaret följer intervall, inte poäng.
+- Sidopanelen, träningstexten och dokumentationens progressionstider är uppdaterade.
+- Migration 20260919020734_central_gameplay_config_f70b531a82c5.sql är applicerad lokalt.
+- Typkontroll, 71 enhetstester, 443 databasassertioner och 38 kontroller med alternativ config passerade.
+- Kontrollerna täcker intervallgränsen, offlineåterhämtning, kvarvarande delintervall och klippning vid full Energy.
+- Denna ändring har inte krävt en ny full webbläsarkörning.
+
+# Träningsprogression implementerad, 2026-09-19
+
+Kärnan i [träningsplanen](TRAINING_PROGRESSION_PLAN.md) är implementerad lokalt enligt
+ägarens senare avgränsning utan items. Aktuella regler och balans finns i
+[träningssystemet](TRAINING_FOUNDATION.md).
+
+- Crew tränas direkt, får XP och har 1 % Perfect Drill med dubbla stats.
+- Crew och skepp har separata XP-spår och tio köpta övningar/workshops.
+- Endast Gold Coins på karaktären betalar nivåköp. XP förbrukas inte och nivåer kan inte hoppas över.
+- Skeppet har ett arbete åt gången: 5/25/50 Energy och 5/25/50 minuter. Stats och XP ges automatiskt vid färdigställande.
+- Arbeten fortsätter offline och under strid. Ett workshop- eller configbyte ändrar inte ett sparat jobb.
+- Förfallna arbeten tillgodoräknas även för offlineförsvarare före ny stridssnapshot.
+  Pågående strider behåller sina snapshots.
+- Databasen styr tid, ägare, kostnad, XP och slump. Gemensamma deltagarlås och privata kvitton skyddar samtidighet och återförsök.
+- Ändringssignaler uppdaterar andra flikar; sidans tidsstyrda uppdatering fångar jobbets sluttid.
+- Befintliga karaktärsvärden bevaras. Progression börjar på första nivån med 0 XP, utan retroaktiv uppskattning.
+- Statkolumner och XP använder säkra bigint-värden. Gamla public/private train_stat är borttagna.
+- Migrationerna 20260919013000_training_progression.sql och 20260919013751_central_gameplay_config_26c391f022e6.sql är applicerade lokalt utan reset.
+- Items, consumables, material och intjäning ingår inte. HP och stridsformler är oförändrade.
+  Nivåpriser och XP-trappa är justerbara första balansvärden.
+
+Verifierat efter implementation:
+
+- Lint, typkontroll, 70 enhetstester och produktionsbygge passerade.
+- 441 databasassertioner passerade. Bland annat: kontoavskiljning, RNG-gräns,
+  guldköp, återförsök, säker heltalsgräns, offlineförsvarare och oförändrade aktiva snapshots.
+- 37 kontroller med alternativ config passerade i transaktion. Originalconfig återställdes.
+  Ändrade katalogvärden påverkar inte befintliga saldon eller jobbets kostnad, gain, XP och tid.
+  Katalogtext med apostrof och dollaravgränsare verifierades.
+- Hela webbläsarsviten passerade i samma körning: 20 av 20 scenarier.
+  Träningen omfattar två flikar, alla arbetsstorlekar, automatisk färdigställning,
+  ut-/inloggning, samtidiga anrop och ett förlorat crew-svar utan ny debitering eller slumpning.
+- Ett etikettproblem på storleksvalet hittades och rättades innan den gröna slutkörningen.
+- Skärmbilder för crew och skepp granskade på desktop och mobil. Layoutkontroller vid 320, 375, 768 och 1280 px passerade.
+- Supabase security advisors rapporterade inga problem.
+- 53 dokumentlänkar, git diff --check och slutlig config:check passerade.
+- Localhost svarar på http://127.0.0.1:3000/login.
+
+Den tidigare dokumenterade Next.js-diagnostiken "The destination stream closed early"
+förekommer fortfarande vid avbrutna svar/navigation. Alla scenarier passerar.
+Inga molnändringar, commits eller pushar har gjorts.
+
+Följande avsnitt är historiska leveransanteckningar.
+
+# Gold Coins och banken, 2026-09-19
+
+Implementerat och migrerat lokalt före träningsprogressionen:
+
+- Gold Coins på karaktären visas ovanför resursmätarna.
+- Bank finns i Harbor med separat banksaldo, ett beloppsfält samt Deposit och Withdraw.
+- Nya och tidigare karaktärer får 0 i de nya saldona. Befintliga stats, resurser och historik bevaras.
+- Endast gold_coins är tillgängligt för framtida köp. bank_gold_coins kräver uttryckligt uttag.
+- Positiva heltal, saldokontroller, säkra heltalsgränser och atomiska överföringar.
+- Privata kvitton gör återförsök idempotenta. Ett förlorat svar kan kontrolleras med Retry transfer utan dubbel debitering.
+- Ägarskyddade ändringssignaler uppdaterar saldo i andra flikar.
+- Items, material, consumables och intjäning har inte införts. Träningsplanen är uppdaterad med den nya ordningen.
+- Migrationerna 20260919010606_add_gold_coins_and_bank.sql och 20260919010900_central_gameplay_config_6f7dc499f0c0.sql är applicerade utan reset.
+- Lokal databas och utvecklingsserver är igång på http://127.0.0.1:3000.
+
+Verifierat:
+
+- Lint, typkontroll, 64 enhetstester och produktionsbygge passerade.
+- 398 databasassertioner passerade, inklusive 51 bankkontroller.
+- 26 kontroller med alternativ gameplayconfig passerade i en transaktion; originalkonfigurationen återställdes.
+- Hela webbläsarsviten passerade: 18 av 18 scenarier i samma körning.
+- Banktester täcker insättning, deluttag, helt uttag, överdrag, flera flikar, samtidiga anrop, förlorat svar, ut-/inloggning och kontoavskiljning.
+- Beloppsfältets etikett rättades efter den första webbläsarkörningen. Slutligt bygge och hela sviten passerade efter rättningen.
+- Mobil/desktop-skärmbilder granskade; ingen horisontell överströmning vid 320, 375, 768 eller 1280 px.
+- Supabase security advisors: inga anmärkningar. Dokumentlänkar och git diff --check passerade.
+
+Den tidigare dokumenterade Next.js-diagnostiken om avbrutna RSC-strömmar förekommer
+fortfarande i strids-/navigationsregressionen; samtliga scenarier passerar.
+Inga molnändringar, commits eller pushar har gjorts.
+
+[Systembeskrivning](GOLD_COINS_AND_BANK.md).
+
+# Plan för träningsprogression, 2026-09-19
+
+[Implementationsplanen](TRAINING_PROGRESSION_PLAN.md) beskriver den accepterade
+grunden: köpta crew-övningar, 1 % Perfect Drill med tillfälliga consumable-effekter,
+samt köpta workshops och tidsstyrda skeppsarbeten. Den skiljer ägarens beslut
+från föreslagna balansvärden och beskriver ekonomi/inventarium, offlinefärdigställande,
+stridsintegration, migration och verifiering i fem etapper.
+
+Detta är en dokumentationsleverans. Ingen spelkod, config eller databas har ändrats.
+Grunddesignen är accepterad; implementationsplanens detaljer är arbetsförslag.
+Implementationskontrollerna i planen är framtida arbete och har inte körts i detta planarbete.
+
+Verifierat för dokumentleveransen: git diff --check passerade. En separat dokumentkontroll
+verifierade 39 lokala länkar i fem filer och åtta kontroller av planens struktur och centrala regler.
+
 # Central konfiguration och organiserade källor, 2026-09-17
 
 - config/ samlar gameplay, frontend, tema/CSS, auth, server, Supabase, Next.js och testinställningar.

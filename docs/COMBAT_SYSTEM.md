@@ -2,7 +2,7 @@
 
 # PvP och gemensamma attacker
 
-Uppdaterat 2026-09-16. Detta dokument beskriver den implementerade versionen.
+Uppdaterat 2026-09-19. Detta dokument beskriver den implementerade versionen.
 [FIRST_COMBAT_PLAN.md](FIRST_COMBAT_PLAN.md) är den historiska planen för version 1.
 
 ## Flöde och sidlås
@@ -13,7 +13,7 @@ Uppdaterat 2026-09-16. Detta dokument beskriver den implementerade versionen.
 - Adressen ändras inte vid start eller join. Varje besökare ser sin egen förberedelse eller pågående attack.
 - En delad länk ger Join battle när målet redan angrips. Att bara öppna länken kostar ingen Energy och ansluter inte automatiskt.
 - Aktuellt möte hämtas från spelarens serverdata. Strids-ID finns endast i rapportadressen, /combatlog/<battle-id>.
-- När mötet avslutas skickas deltagare i attackvyn till rapporten. Ett nytt besök på målets attacklänk visar åter förberedelsen.
+- När mötet avslutas skickas överlevande deltagare i attackvyn till rapporten. Besegrade deltagare skickas till Hospital. Ett nytt besök på målets attacklänk visar åter förberedelsen.
 - Attackvyn använder hela spelutrymmet utan hamnens sidopanel, masthead eller footer. Energy och båda hälsomätarna finns i vyn.
 - Före start kan spelaren gå tillbaka fritt.
 - En aktiv angripare skickas tillbaka till sitt sparade möte vid andra sidbesök, reload, ny flik och bakåtnavigering. Proxy kontrollerar serverns lås; rotlayouten fångar även klientens cachade navigation.
@@ -53,7 +53,8 @@ Försvararen flyttas inte till attackvyn och får inga manuella försvarsval und
 Hälsomätarna uppdateras i vanliga spelvyer. Träning och ändrade försvarsorder gäller kommande möten;
 pågående möte använder sin sparade ögonblicksbild.
 
-Supabase Realtime publicerar endast public.player_game_events: en ägarbegränsad revisionssignal.
+Stridens Realtime använder public.player_game_events, en ägarbegränsad revisionssignal.
+Hamn- och sjukhuslistorna har separata begränsade namnprojektioner.
 Efter en signal hämtar appen auktoritativa serverdata och uppdaterar befintlig vy utan dokumentomladdning.
 Alla angripare och försvararen signaleras vid start, anslutning, order och avslut.
 Återanslutning, återvunnet fokus och en 15-sekunders reservkontroll stämmer av missade signaler.
@@ -65,13 +66,16 @@ Råa karaktärsrader, stats, försvarsförval och stridsögonblicksbilder public
 ## Hälsa och återhämtning
 
 Både angripare och mål behöver minst 1 Ship Health och 1 Crew Health. Full hälsa krävs inte.
-Start återställer aldrig hälsa. PvP förstör inte permanent kapten, skepp, besättning eller tränade stats.
+Start återställer aldrig hälsa. Permanent karaktärsdöd finns inte, oavsett skadeorsak.
+Noll Crew Health ger fem minuter i [Hospital](HOSPITAL.md); noll Ship Health sätter också Crew Health till 0.
+Patienter kan inte spela eller attackeras under vistelsen och återkommer med båda hälsomätarna fulla.
+Karaktär, skepp, besättning, tränade stats och pengar behålls.
 
 - Ship Health: +1 per 30 sekunder efter deltagarens avslut.
 - Crew Health: +1 per 10 sekunder efter deltagarens avslut.
-- Båda återhämtas parallellt, även offline, högst 100.
+- Överlevande återhämtar båda parallellt, även offline, högst 100. Sjukhuspatienter får full hälsa vid utskrivning.
 - Hälsa återhämtas inte för aktiva deltagare. En tillbakadragen angripare kan börja återhämta sig medan mötet fortsätter.
-- Energy: +1 per fem minuter, högst 100.
+- Energy: +5 per fem minuter, högst 100, även under sjukhusvistelse.
 - Fem minuters skydd mot inkommande attacker efter deltagarens avslut.
 - Skyddet hindrar inte egna attacker. Ett eget anfall avslutar skyddet.
 
@@ -152,7 +156,7 @@ Sätt x = log10(Attack). Grundskadan är 7*x*x + 27*x + 30.
 Detta använder den offentliga Torn-approximationens form med en skalenhet där
 en av våra statpoäng motsvarar tio Torn-poäng. Nya karaktärer börjar med 10 i alla åtta stats
 och 100 HP. Detta ger 32 skada vid en träff mellan två nya kaptener. Befintliga karaktärers
-stats och tidigare träning behålls. Träning kostar fortfarande 5 Energy för +1 stat.
+stats och tidigare träning behålls. Första crew-övningen kostar 5 Energy för +1 stat; köpta nivåer och Perfect Drill kan öka utfallet.
 
 - Vid full blockering (q >= 25): 0 skada.
 - Annars: max(1, round(grundskada * (1 - m))).
@@ -223,12 +227,11 @@ Migration 20260916064805_combat_stats_start_at_ten.sql ändrar endast kolumnerna
 
 ## Verifiering
 
-npm run check: lint, TypeScript, 24 enhetstester och produktionsbygge passerade.
-npm run test:db: 347 assertioner passerade, inklusive 66 för statkurvor och deras resolverintegration,
-91 tidigare stridskontroller och 53 kontroller för delade attacker och skadeuppdelning.
-Alla fem Playwright-scenarier i tests/e2e/combat.spec.ts och båda träningsscenarierna passerade tillsammans. De täcker attackflöde/sidlås,
-samtidiga order/sluthits, kopierade länkar och livehälsa, gemensam rapport samt garanterade missar och
-blockerade träffar i båda stridsfaserna. Mobilbredd 320, 375 och 768 px kontrollerades utan överflöde.
-Supabase security advisors rapporterade inga problem. git diff --check passerade.
-Den tidigare kända Next.js-varningen om avbrutna RSC-strömmar syntes vid navigation; samtliga scenarier passerade.
-Se IMPLEMENTATION_STATUS.md för tidigare breda webbläsarkörningar och kända begränsningar.
+Verifierat 2026-09-19 med Hospital: lint, TypeScript, 71 enhetstester, produktionsbygge,
+501 databasassertioner och 39 kontroller med alternativ config passerade.
+Webbläsartester täcker aktiva och delade strider, slutträffar, livehälsa, sjukhusintagning
+för båda sidor, spärrade länkar, ut-/inloggning och automatisk utskrivning även offline.
+Se [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) för senaste slutkörningen.
+
+Supabase security advisors rapporterade inga problem. Den tidigare dokumenterade
+Next.js-diagnostiken om avbrutna RSC-strömmar förekommer vid navigation.

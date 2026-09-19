@@ -65,6 +65,7 @@ hides them by default and can conceal this type of layout shift.
 | `/auth/link-error` | Recovery from expired, reused or invalid account links. |
 | `/reset-password` | Sets a new password for an authenticated session. |
 | `/create-character` | Compatibility path for older unfinished accounts only; all new registrations already have a character and return to the harbor. |
+| `/inventory` | Owned item stacks and equipment instances, category/search filters, inline details and confirmed Trash. Readable in Hospital. |
 | `/characters/[characterId]` | Identity profile, Attack link, own defence orders and latest combat report. |
 | `/attack/<characterId>` | Shareable target URL, unchanged during preparation, start and join. |
 | `/combatlog/[battleId]` | Public completed combat report, readable without login. |
@@ -72,8 +73,8 @@ hides them by default and can conceal this type of layout shift.
 | `/harbor` | Saved character, harbor overview and live captain directory. |
 | `/harbor/marketplace` | Placeholder view. |
 | `/harbor/shipyard` | Placeholder view. |
-| `/harbor/crew-training` | Spend five Energy for one point in a crew stat. |
-| `/harbor/ship-upgrades` | Spend five Energy for one point in a ship stat. |
+| `/harbor/crew-training` | Immediate drills, training XP, purchased exercises and Perfect Drill. |
+| `/harbor/ship-upgrades` | Timed work, automatic offline completion, XP and purchased workshops. |
 
 ## Authentication
 
@@ -107,7 +108,8 @@ fixed start location and creation timestamp. Account and character IDs are separ
 The same row now also stores Energy, its recovery timestamp, Ship Health, Crew
 Health and four stats each for the persistent ship and crew. It also holds defence
 orders, health recovery anchors and incoming attack protection. Shared PvP is
-implemented. Economy, inventory and permanent death remain future work.
+implemented. Carried Gold Coins and bank balances are also stored on this row.
+Training tier purchases and inventory viewing/destruction are implemented. Income, equipment effects and consumable use remain future work. Permanent character death has been removed; defeat leads to Hospital.
 
 An `auth.users` insert trigger creates the character in the same transaction as
 registration. It reads only `character_name` from user metadata, validates it via
@@ -160,34 +162,55 @@ function. It locks the caller and any combat peer, settles an expired encounter,
 and reads health alongside the current engagement. Ordinary Energy and health
 recovery are computed from database time, capped at 100. The shared
 `private.energy_snapshot` function preserves incomplete five-minute intervals
-and discards banked time at the cap.
+and discards banked time at the cap. Energy recovers five points per complete five-minute interval,
+clamped to capacity; recovery amount and interval are independently configurable.
 
-`train_stat(group, stat)` invokes an authenticated, narrowly scoped private
-security-definer function. The function accepts no owner, cost, timestamp or
-increment from clients. It verifies the Auth record, validates both arguments,
-locks the caller's character row, calculates recovery and atomically spends five
-Energy for one stat point. Client UPDATE permissions remain revoked. Health
-values and the other seven stats are unaffected. Public and anonymous function
-execution is explicitly revoked; search paths are fixed and empty.
+Training uses public train_crew, purchase_training_tier and start_ship_upgrade RPCs.
+A private authenticated mutator owns validation, RNG, Energy, carried-gold debits and XP.
+The old public/private train_stat functions are removed. All eight stats and XP use bigint
+within JavaScript's safe integer range. Character row types are separate from derived game state.
 
-Server Actions validate the session and inputs before invoking the RPC, then
-revalidate the shared game layout. A shared client context keeps the bars and buttons
-on the same server snapshot. It refreshes at the next recovery boundary and when
-the browser returns to the foreground. No browser clock decides resource grants.
-Training uses the same ordered participant locks as combat and is rejected while
-an attacking engagement remains active. Defenders may continue training. Health recovery, incoming protection and injuries
-do not prevent training. The game context also refreshes on health recovery,
-combat deadlines and protection expiry.
-See [the implemented training scope](TRAINING_FOUNDATION.md).
+Private catalogs, per-character progression, idempotency receipts and ship jobs are protected by
+RLS and revoked client table access. Stable tier IDs and positions are guarded during config sync.
+The highest purchased tier applies automatically. Same-request retries return the stored receipt
+without rerolling, debiting or awarding twice; payload mismatches are rejected.
+
+Ship jobs snapshot their workshop, cost, gain, XP, revision and timestamps at start. A partial
+unique index permits one unapplied job per captain. Internal settlement runs under combat locks
+before game-state reads and new actions. Combat preview and actual start settle both captains
+using the same observed_at as the fresh snapshots. Completion during an encounter only updates
+durable character stats; existing participant and defender snapshots remain frozen.
+
+The client shows separate crew and ship panels. Actions revalidate the shared layout, while
+owner-only revision events update other tabs. The game context refreshes at ship deadlines,
+resource recovery, protection/combat deadlines and focus/reconnection. Its clock never grants
+rewards. Pending work completes logically offline and is materialized on server access without
+a worker. Only active attackers are blocked from new manual training and purchases.
+
+See [the implemented training scope and balance](TRAINING_FOUNDATION.md).
+
+## Gold Coins and banking
+
+Carried Gold Coins and bank balances are separate nonnegative bigint fields on the
+owner-only character row. Only carried gold may fund purchases; bank funds
+must be explicitly withdrawn. Both start at zero. Values remain within the configured
+safe JavaScript integer range. See [the bank specification](GOLD_COINS_AND_BANK.md).
+
+The authenticated transfer_gold RPC calls a private mutator with fixed search_path.
+It uses the existing ordered combat locks, validates the amount and destination limit,
+and changes both balances atomically. A private transfer receipt keyed by character
+and request ID makes retries idempotent. Direct client writes remain revoked.
+Only the owner's revision signal is broadcast through player_game_events.
+The shared game state and resource sidebar reflect successful transfers across tabs.
 
 ## Shared PvP encounters
 
 /attack/<characterId> is the full-width preparation and attack screen. The URL always identifies the target;
 opening another attacker\'s copied URL shows the current viewer\'s preparation and Join battle. The server resolves
 the viewer\'s own encounter from game state, never from a shared attacker-specific URL. AttackSession remembers the
-encounter during this visit and opens its public report on completion. Fresh visits show preparation again.
+encounter during this visit and opens its public report on completion if the captain survives. Hospital takes precedence for a defeated captain. Fresh visits show preparation again.
 Legacy target/battle query URLs redirect to the target path. The root AppFrame removes regular game chrome. Active attackers have a persistent
-database reservation; Proxy checks get_attack_lock for page requests and AppFrame also guards cached
+database reservation; Proxy checks get_navigation_lock for page requests and AppFrame also guards cached
 client navigation. Ordinary mutations independently enforce their own permissions. Attack Server Actions
 revalidate the root layout. Defenders have no navigation lock.
 
@@ -289,3 +312,75 @@ browser history all passed, with no browser JavaScript errors. This matches the
 [upstream client-aborted RSC stream report](https://github.com/vercel/next.js/issues/96704).
 The diagnostic is retained; no log filter or dependency patch hides it. Recheck
 it when adopting an upstream fix.
+
+## Hospital and persistent characters
+
+Hospital at `/harbor/hospital` replaces permanent death for every damage source. A private
+health trigger admits a character at zero Crew Health and also zeros Crew Health when the
+ship sinks. The stay is stored as server timestamps and lasts `hospital.durationSeconds`
+(default 300). Discharge restores both health resources to their configured maximum while
+preserving identity, stats, progression and gold. Passive Energy and existing ship jobs continue.
+
+The common combat-context settlement acquires ordered participant locks, ends encounters
+interrupted by external lethal damage and discharges expired patients. Manual mutations assert
+that the owner is not hospitalized; target eligibility also rejects patients. `get_navigation_lock`
+combines hospital and attack state, with hospital taking precedence in proxy and root layout.
+Server page guards and client updates cover cached navigation and direct routes.
+
+`public.hospital_patients` exposes only character ID, name and expiry to registered users,
+with read-only RLS and Realtime. The paged RPC filters expiry using database time, so offline
+patients disappear without a worker. Deadline refresh and focus/reconnect polling reconcile
+missing events. Character HP is persisted at next server access. See [HOSPITAL.md](HOSPITAL.md).
+
+Profile reading is permitted during hospital stays in both proxy and cached client navigation.
+`get_hospital_status` reads the existing RLS-protected patient projection and returns only
+an active deadline and database observation time. ProfileDetails subscribes to patient events,
+refreshes at expiry/focus/reconnection and shows the same countdown component as Hospital.
+All registered players see the status; anonymous profile access remains disabled. Defence
+editing and attacks remain blocked while hospitalized.
+
+## Inventory
+
+Inventory at /inventory has owner-only, database-backed item stacks and individual
+equipment instances. Category filters and literal name search apply before stable
+server pagination. Expanding a row shows its description, effect text, large image
+and saved stats. Equipment and consumable controls are present but disabled in
+this phase; Trash is functional.
+
+The catalog is validated under gameplay.inventory and synchronized through the
+canonical SQL template. Category/item IDs are durable; config sync rejects removal
+or changing an item's kind/slot, and preserves owned quantities and instance stats.
+All five tables live in private with RLS and no direct client grants. Invoker RPC
+wrappers delegate to private functions that verify the registered owner.
+
+Trash uses existing ordered combat/character locks followed by the inventory row
+lock. An owner-scoped request receipt and the mutation commit together. Replays
+return the previous result even after an item row has been removed; a changed
+payload fails. New destruction is blocked in Hospital and for active attackers.
+Owned entries remain private, and owner-only game revision events refresh other tabs.
+Circulation exposes only world totals and timestamps, without owner identities.
+
+Inventory joins profiles and Hospital in the shared hospital read-route exception.
+It does not bypass other gameplay restrictions. Future medical use will receive
+a specific action exception when actual consumable effects are implemented.
+
+New and existing characters have no automatic item grants. A local-only fixture
+command is available for an explicitly chosen test character. There is no public
+grant endpoint, shop, equipment effect or consumable effect yet.
+See [INVENTORY.md](INVENTORY.md) for schema, migration and local fixture details.
+
+
+### Item circulation
+
+World totals and transaction history are stored in two additional private tables
+with RLS and no direct client access. Statement triggers aggregate item ownership
+deltas and update counters/history atomically, including character-delete cascades.
+Owner/stat-only updates do not change circulation. Numeric totals cross JSON as
+decimal strings to preserve exact counts beyond JavaScript's safe integer range.
+
+The registered-player RPC exposes a bounded time series. A baseline carries the
+last known count into each requested range; no data is invented before tracking.
+Short histories return changes, while long histories use bounded indexed lookups.
+The full history remains durable. Inventory refreshes update counts; the chart is
+loaded only when expanded and refreshes through the existing visible-page cadence.
+See [ITEM_CIRCULATION.md](ITEM_CIRCULATION.md).

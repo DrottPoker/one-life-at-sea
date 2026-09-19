@@ -27,11 +27,12 @@ export const characterForUser = cache(async (userId: string) => {
   return data;
 });
 
-export async function requireCharacter() {
+export async function requireCharacter({ allowHospital = false }: { allowHospital?: boolean } = {}) {
   const user = await requireUser();
   await assertGameplayRevision();
   const character = await characterForUser(user.id);
   if (!character) redirect("/create-character");
+  if (!allowHospital && (await gameStateForPlayer()).hospital_until) redirect("/harbor/hospital");
   return character;
 }
 

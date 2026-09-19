@@ -1,3 +1,5 @@
+> Uppdatering 2026-09-19: detta är en historisk plan. Död crew eller sänkt skepp ger nu fem minuter i [Hospital](HOSPITAL.md). Alla skadeorsaker bevarar karaktären; äldre beskrivningar av fri återhämtning efter utslagning är ersatta.
+
 > Uppdatering 2026-09-16: aktuella stridsregler och implementation finns i [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md). Den nya versionen använder en gemensam /attack-vy, flera angripare, realtid och publika rapporter. Äldre beskrivningar av separata prepare-sidor, exklusiv tvåpartsstrid eller privata slutrapporter nedan är historiska.
 
 # One Life At Sea: första stridssystemet

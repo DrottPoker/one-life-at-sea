@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig } from "@/lib/env";
+import { isHospitalAccessiblePath } from "@/lib/hospital";
 import { attackUrl } from "@/lib/combat";
 import { withDatabaseRetry } from "@/lib/database-retry";
 import type { Database } from "@/lib/database.types";
@@ -23,15 +24,19 @@ export async function proxy(request: NextRequest) {
     });
     const { data } = await supabase.auth.getClaims();
     if (data?.claims && (request.method === "GET" || request.method === "HEAD")) {
-      const { data: lock, error } = await withDatabaseRetry(() => supabase.rpc("get_attack_lock"));
+      const { data: lock, error } = await withDatabaseRetry(() => supabase.rpc("get_navigation_lock"));
       if (error) {
         const unavailable = new NextResponse("Your game state could not be verified. Please reload.", { status: 503 });
         response.cookies.getAll().forEach(cookie => unavailable.cookies.set(cookie));
         response = unavailable;
-      } else if (lock && request.nextUrl.pathname !== attackUrl(lock.target_id)) {
-        const redirect = NextResponse.redirect(new URL(attackUrl(lock.target_id), request.url));
-        response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
-        response = redirect;
+      } else {
+        const destination = lock?.hospital_until ? "/harbor/hospital" : lock?.attack ? attackUrl(lock.attack.target_id) : null;
+        const allowedHospitalPage = !!lock?.hospital_until && isHospitalAccessiblePath(request.nextUrl.pathname);
+        if (destination && request.nextUrl.pathname !== destination && !allowedHospitalPage) {
+          const redirect = NextResponse.redirect(new URL(destination, request.url));
+          response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
+          response = redirect;
+        }
       }
     }
   }

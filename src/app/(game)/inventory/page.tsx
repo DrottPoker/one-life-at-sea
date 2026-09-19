@@ -1,0 +1,26 @@
+import { InventoryPanel } from "@/components/inventory-panel";
+import { Panel } from "@/components/shell";
+import { requireCharacter } from "@/lib/player";
+import { createClient } from "@/lib/supabase/server";
+import { withDatabaseRetry } from "@/lib/database-retry";
+import { inventoryFilters, inventoryCategoryName } from "@/lib/inventory";
+
+export const metadata = { title: "Inventory" };
+
+export default async function InventoryRoute({ searchParams }: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  await requireCharacter({ allowHospital: true });
+  const filters = inventoryFilters(await searchParams);
+  const client = await createClient();
+  const { data, error } = await withDatabaseRetry(() => client.rpc("list_inventory", {
+    category_id: filters.category ?? undefined, search_term: filters.query, requested_page: filters.page,
+  }));
+  if (error || !data) throw new Error("Your inventory could not be loaded. Please try again.");
+  return <>
+    <nav className="o-breadcrumb" aria-label="Breadcrumb"><span>Harbor</span><span aria-hidden="true">/</span><span>Inventory</span></nav>
+    <Panel title="Inventory" detail={inventoryCategoryName(filters.category)}>
+      <InventoryPanel inventory={data} filters={filters} />
+    </Panel>
+  </>;
+}

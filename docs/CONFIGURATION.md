@@ -31,6 +31,11 @@ config/gameplay.json är värdekällan för både app och databas. Privata SQL-f
 alla utfall och debiteringar. Webbläsaren kan inte välja kostnad, skadevärde eller slumpresultat.
 
 scripts/config läser supabase/templates/gameplay.sql och ersätter typkontrollerade skalära tokens.
+Training innehåller dessutom crewTiers, shipTiers och shipSizes. Generatorn skriver deterministiska
+SQL-kataloger från dessa listor. Nivå-ID och ordning får inte ändras eller tas bort när de har installerats.
+XP-krav och ökningar måste stiga, första nivån är gratis vid 0 XP och större jobb har proportionell tid.
+Perfect Drill-chansen anges i basispunkter: 100 är 1 %. Säkra heltalsgränser kontrolleras även för
+multiplicerade belöningar. Pågående skeppsjobb behåller sin sparade balans vid configbyten.
 Textvärden citeras och SQL-escapas. En ändring ger en ny migration via Supabase CLI; äldre migrationer
 skrivs aldrig om. Samma värden används för kolumndefaults, relevanta CHECK-gränser, RPC-validering,
 återhämtning, deltagarlogik och skadefunktioner.
@@ -40,8 +45,21 @@ rundräknare och hälsostaplarnas procent använder dem. Hälsomax är gemensamt
 deras starthälsa och återhämtningstakt kan ändras separat.
 
 private-funktionernas befintliga rättigheter och låsordning bevaras via CREATE OR REPLACE.
-Endast en ny publik läsfunktion tillkommer: get_gameplay_revision(), som returnerar en versionshash.
+get_gameplay_revision() returnerar en versionshash.
 Den innehåller inga konton, hemligheter eller spelarstats.
+
+Gold Coins använder economy.initialGoldCoins (0) och economy.maxGoldCoins
+(9 007 199 254 740 991 per saldo). Bankkontot börjar alltid på 0. Startsaldoändringar
+gäller nya karaktärer; tidigare saldon bevaras. Karaktärens saldo och banksaldot
+är separata även i RPC och UI. Se [bankreglerna](GOLD_COINS_AND_BANK.md).
+
+Energy använder resources.energyRecoveryAmount (5) per resources.energyRecoverySeconds (300).
+Återhämtningen sker i hela intervall och kapas vid energyMax (100). Tidsankaret följer antalet
+intervall, inte antalet tilldelade poäng.
+
+Hospital använder hospital.durationSeconds (300). Intagningen sparar start- och sluttid;
+ett configbyte påverkar nya vistelser, inte redan sparade sluttider. Utskrivning ger full
+Ship Health och Crew Health enligt resources.healthMax. Se [Hospital](HOSPITAL.md).
 
 ### Skydd mot config som inte stämmer
 
@@ -127,8 +145,17 @@ De exponeras inte som godtyckliga balansvärden. Nya mekaniker kräver implement
 - De befintliga databastesterna kontrollerar den fastställda standardbalansen och behörigheterna.
 - test:config:db använder en alternativ konfiguration i en enda lokal transaktion, kontrollerar faktisk
   skapande-/tränings-/stridslogik och gör ROLLBACK. Aktuella configfiler och sparade konton ändras inte.
-- Webbläsartester täcker registrering, träning, navigation, profiler, hamnlista och strid.
+- Webbläsartester täcker registrering, träning, navigation, profiler, hamnlista, strid och inventory.
+- Inventorys kategorier, definitioner och sidstorlek finns i gameplay.inventory. Tidigare ID:n,
+  itemtyp och utrustningsplats bevaras vid synk. Avaktivera definitioner i stället för att ta bort dem.
+  Ägda antal och individuella stats skrivs inte över. Se [Inventory](INVENTORY.md).
 - Exakta körresultat dokumenteras i IMPLEMENTATION_STATUS.md.
 
 Referenstester med fasta förväntade värden beskriver en avsiktlig balans. Vid ett senare balansbeslut
 behöver dessa förväntningar uppdateras medvetet; de ersätts inte automatiskt med implementationens värden.
+
+### Cirkulationsdiagram
+
+inventory.historyMaxPoints styr maximalt antal interna historikpunkter (500) plus
+vänster och höger ändpunkt. Den fullständiga historiken sparas i databasen; stora
+perioder hämtar begränsade stickprov genom ett tidsindex. Se [Item Circulation](ITEM_CIRCULATION.md).

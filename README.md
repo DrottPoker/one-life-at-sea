@@ -1,6 +1,6 @@
 # One Life At Sea
 
-Ett browserbaserat, socialt pirat-RPG med ett liv per karaktär.
+Ett browserbaserat, socialt pirat-RPG med beständig karaktär och progression.
 
 ## Första grunden
 
@@ -17,17 +17,28 @@ Ett browserbaserat, socialt pirat-RPG med ett liv per karaktär.
 - The Harbor visar kaptener som är i hamnen, med namn, antal och realtidsuppdatering.
   Listan omfattar även utloggade kaptener och har 20 namn per sida.
 - **My Profile** öppnar din karaktärsprofil. Klicka på ett namn i hamnen för att se en annan kaptens profil.
+- **Inventory** i sidopanelens Harbor-meny: kategorier, namnsökning, itemrader med egna bilder och stats,
+  utfällbara detaljer och fungerande Trash. Equip och Use väntar på nästa etapp.
+  Inventory kan läsas i Hospital, men items kan inte förstöras under vistelsen.
+  **Circ.** visar globalt antal med [historikdiagram](docs/ITEM_CIRCULATION.md), sex perioder
+  och datum/antal när man pekar på kurvan.
+- **Gold Coins** visas ovanför resursmätarna. Nya karaktärer börjar med 0.
+- **Bank** i The Harbor visar banksaldo och låter dig sätta in och ta ut Gold Coins. Endast pengar på karaktären kan användas till köp.
+- **Hospital**: fem minuters återhämtning när crew dör eller skeppet sjunker. Spelhandlingar är låsta tills du skrivs ut med full hälsa. Karaktär och progression behålls. Patientlistan visar även offlinekaptener. Profiler är tillgängliga under vistelsen och visar sjukhusstatus med återstående tid för andra spelare.
 - **Energy**, **Ship Health** och **Crew Health** visas i hamnen, med maxvärdet 100.
-- **Crew Training** och **Ship Upgrades**: nya karaktärer börjar med 10 i varje stat. 5 Energy ger +1 Attack, Defense, Speed eller Accuracy.
-- Energy återhämtas med 1 var femte minut, även offline, upp till 100.
+- **Crew Training**: övningar med XP, guldköp och 1 % Perfect Drill. Första övningen ger +1 för 5 Energy.
+- **Ship Upgrades**: välj stat och arbetsstorlek. Ett arbete åt gången, färdigt efter 5, 25 eller 50 minuter även offline. XP och köpta workshops ger större ökningar.
+- Båda har tio justerbara nivåer. Nya karaktärer börjar med 10 i varje stat.
+- Energy återhämtas med 5 var femte minut, även offline, upp till 100.
 - Lösenordsåterställning, valideringsfel och skyddad åtkomst mellan konton.
 - **Attack**: fullskärmsvy med kanonstrid och boarding. Dela `/attack/<motståndarens-id>` så kan andra ansluta mot gemensam hälsa. Adressen är samma före och under striden.
 - Aktiva angripare stannar i sin strid tills de vinner, förlorar eller lämnar. Försvararens hälsa uppdateras i realtid.
 - Torn-inspirerade statkurvor: Accuracy mot Speed för träffchans, Attack mot Defense för skada. Extrem Speed kan undvika alla träffar; 25 gånger Defense blockerar all skada.
 - **Combat log**: offentligt delbar logg med servertid, final blow, assist och separata värden för Ship damage och Crew damage. Alla deltagarnamn länkar till profiler.
 
-Spelets gränssnitt är på engelska. Expeditioner, ekonomi, PvE och permadöd
-kommer i senare etapper.
+Spelets gränssnitt är på engelska. [Inventory](docs/INVENTORY.md) har införts med visning och Trash.
+Expeditioner, intjäning, itemhandel, aktiva itemeffekter och PvE
+kommer i senare etapper. Permanent karaktärsdöd har tagits bort och ersatts av [Hospital](docs/HOSPITAL.md). Gold Coins, banköverföringar och köp av träningsnivåer är implementerade. Se [träningsregler och balans](docs/TRAINING_FOUNDATION.md).
 
 ## Konfiguration
 
@@ -131,7 +142,9 @@ En Linux-VPS kan användas senare.
 - [Karaktärsprofiler](docs/CHARACTER_PROFILES.md)
 - [PvP: kanonstrid, boarding och återhämtning](docs/COMBAT_SYSTEM.md)
 - [Godkänd plan för första stridssystemet](docs/FIRST_COMBAT_PLAN.md)
+- [Gold Coins och banken](docs/GOLD_COINS_AND_BANK.md)
 - [Resurser och första träningssystemet](docs/TRAINING_FOUNDATION.md)
+- [Plan: träningsprogression, tillfälliga crew-bonusar och tidsstyrda skeppsarbeten](docs/TRAINING_PROGRESSION_PLAN.md)
 - [Hamnens spelarlista och realtid](docs/HARBOR_ROSTER.md)
 - [Arkitektur och åtkomstregler](docs/ARCHITECTURE.md)
 - [Bildstil och karibisk färgriktning](docs/design/STYLE_REFERENCE.md)

@@ -53,7 +53,7 @@ select set_config('request.jwt.claims','{"sub":"d4000000-0000-4000-8000-00000000
 select is(public.get_attack_lock(),null::jsonb,'Defender is not route locked');
 select is((public.get_game_state()->>'ship_health')::integer,85,'Defender sees actual hull damage');
 select is((public.get_game_state()->>'crew_health')::integer,85,'Defender sees actual crew damage');
-select lives_ok($$select public.train_stat('crew','attack')$$,'Defender continues training');
+select lives_ok($$select public.train_crew('attack','crew_1',gen_random_uuid())$$,'Defender continues training');
 select is((select count(*)::integer from public.player_game_events),1,'Only own realtime signal is readable');
 select throws_ok('update public.player_game_events set revision=99','42501',null,'Players cannot forge signals');
 reset role;
@@ -70,7 +70,7 @@ select is(public.get_attack_lock(),null::jsonb,'Winner is unlocked');
 select set_config('request.jwt.claims','{"sub":"d4000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select is((select public.get_combat((value#>>'{battle,id}')::uuid)->>'participant_status' from results where name='start'),'assist','Other active attacker earns assist');
 select is(public.get_attack_lock(),null::jsonb,'Assist is unlocked');
-select is((select public.submit_combat_order((value#>>'{battle,id}')::uuid,2,'crew_attack',gen_random_uuid())#>>'{battle,defender,crew_health}' from results where name='start'),'85','Late order cannot damage completed defender');
+select is((select public.submit_combat_order((value#>>'{battle,id}')::uuid,2,'crew_attack',gen_random_uuid())#>>'{battle,defender,crew_health}' from results where name='start'),'0','Sinking kills crew and late orders cannot damage completed defender');
 set local role anon;
 select set_config('request.jwt.claims','{}',true);
 insert into results select 'public',public.get_combat_log((value#>>'{battle,id}')::uuid) from results where name='start';
@@ -90,7 +90,7 @@ select ok((select value::text not like '%24681357%' and value::text not like '%@
 select throws_ok('select * from public.player_game_events','42501',null,'Anonymous visitors cannot watch private signals');
 reset role;
 select is((select count(*)::integer from private.combat_engagements where combat_id=(select (value#>>'{battle,id}')::uuid from results where name='start')),0,'Completion releases everyone');
-update public.characters set protected_until=null,ship_health=100,crew_health=100,ship_recovery_at=clock_timestamp(),crew_recovery_at=clock_timestamp() where id in(select a from f union select b from f union select d from f);
+update public.characters set hospital_started_at=null,hospital_until=null,protected_until=null,ship_health=100,crew_health=100,ship_recovery_at=clock_timestamp(),crew_recovery_at=clock_timestamp() where id in(select a from f union select b from f union select d from f);
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"d4000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 insert into results select 'second',public.start_combat(d,gen_random_uuid()) from f;
@@ -102,7 +102,7 @@ select is((select value#>>'{battle,status}' from results where name='left'),'act
 select is((select value#>>'{battle,participant_status}' from results where name='left'),'retreated','Only leaving attacker retreats');
 select is(public.get_attack_lock(),null::jsonb,'Retreat unlocks attacker');
 select is((select public.start_combat(d,gen_random_uuid())->>'error' from f),'ALREADY_PARTICIPATED','Cannot reset rounds by rejoining');
-select lives_ok($$select public.train_stat('crew','attack')$$,'Retreated attacker resumes game actions');
+select lives_ok($$select public.train_crew('attack','crew_1',gen_random_uuid())$$,'Retreated attacker resumes game actions');
 reset role;
 update private.combat_participants set deadline=clock_timestamp()-interval '3 minutes' where combat_id=(select (value#>>'{battle,id}')::uuid from results where name='second') and status='active';
 set local role authenticated;

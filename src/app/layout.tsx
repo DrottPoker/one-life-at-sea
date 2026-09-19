@@ -16,6 +16,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const character = user ? await characterForUser(user.id) : null;
   const state = character ? await gameStateForPlayer() : null;
   return <html lang={frontend.site.language}><body><a href="#main" className="skip-link">Skip to content</a>
-    <AppFrame characterId={character?.id ?? null} attack={state?.active_attack ?? null}>{children}</AppFrame>
+    <AppFrame hospitalUntil={state?.hospital_until ?? null} characterId={character?.id ?? null} attack={state?.active_attack ?? null}>{children}</AppFrame>
   </body></html>;
 }

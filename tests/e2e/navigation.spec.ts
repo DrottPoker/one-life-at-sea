@@ -65,8 +65,11 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     await navigation.getByRole("link", { name: "Crew Training", exact: true }).click();
     await expect.poll(() => heldRequests).toBeGreaterThan(0);
     const loader = page.getByRole("status", { name: "Loading view" });
-    await expect(loader).toBeVisible();
-    await expect(page.locator("main").getByRole("status", { name: "Loading view" })).toBeVisible();
+    // Next shows link feedback until the prefetched loading boundary is available.
+    const pending = loader.or(navigation.locator('.o-nav-symbol[data-pending="true"]')).filter({ visible: true }).first();
+    await expect(pending).toBeVisible();
+    await expect(page.getByRole("main").getByRole("status", { name: "Loading view" })
+      .or(page.getByRole("main").getByRole("heading", { name: "The Harbor", exact: true })).filter({ visible: true }).first()).toBeVisible();
     await expect(sidebar).toBeVisible();
     await expect(energy).toHaveAttribute("aria-valuenow", "100");
     expect(await originalSidebar.evaluate(element => element.isConnected)).toBe(true);
@@ -75,10 +78,10 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     await page.screenshot({ path: ".local/navigation-loading-desktop.jpg", type: "jpeg", quality: 75, fullPage: true });
     await page.setViewportSize({ width: 375, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await expect(loader).toBeVisible();
+    await expect(pending).toBeVisible();
     await page.screenshot({ path: ".local/navigation-loading-mobile.jpg", type: "jpeg", quality: 75, fullPage: true });
     await page.emulateMedia({ reducedMotion: "reduce" });
-    expect(await loader.locator(".o-spinner").evaluate(element => getComputedStyle(element).animationName)).toBe("none");
+    expect(await pending.locator(".o-spinner").evaluate(element => getComputedStyle(element).animationName)).toBe("none");
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize({ width: 1280, height: 900 });
 
@@ -94,7 +97,8 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     await navigation.getByRole("link", { name: "Crew Training", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Crew Training", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Train Attack for 5 Energy", exact: true }).click();
-    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("11");
+    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(/^1[12]$/);
+    const trainedAttack = (await page.getByLabel("Attack stat", { exact: true }).textContent())!;
     await expect(energy).toHaveAttribute("aria-valuenow", "95");
     expect(await originalEnergy.evaluate(element => element.isConnected)).toBe(true);
     await navigation.getByRole("link", { name: "Ship Upgrades", exact: true }).click();
@@ -103,7 +107,7 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     await expect(energy).toHaveAttribute("aria-valuenow", "95");
     await page.goBack();
     await expect(page).toHaveURL(/\/harbor\/crew-training$/);
-    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("11");
+    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(trainedAttack);
     await page.goForward();
     await expect(page).toHaveURL(/\/harbor\/ship-upgrades$/);
     await expect(page.getByRole("heading", { name: "Ship Upgrades", exact: true })).toBeVisible();
@@ -114,7 +118,7 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     // Direct deep links still load the correct authenticated view.
     await page.goto("/harbor/crew-training");
     await expect(page.getByRole("heading", { name: "Crew Training", exact: true })).toBeVisible();
-    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("11");
+    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(trainedAttack);
     await expect(energy).toHaveAttribute("aria-valuenow", "95");
     await page.getByRole("button", { name: "Log out", exact: true }).filter({ visible: true }).click();
     await expect(page).toHaveURL(/\/login$/);

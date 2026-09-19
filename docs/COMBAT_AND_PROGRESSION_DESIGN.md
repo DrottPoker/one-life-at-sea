@@ -2,26 +2,22 @@
 
 # One Life At Sea: combat och progression
 
-Datum: 2026-09-16. Version: 0.5.
+Datum: 2026-09-16. Uppdaterad: 2026-09-19. Version: 0.8.
 
-Status: **Resurser, träning och första PvP-versionen är implementerade lokalt. Övrig progression, ekonomi, PvE och flottor är fortsatt design.**
+Status: **Resurser, träningsprogression, första PvP-versionen samt Gold Coins, banken och Hospital är implementerade lokalt. Intjäning, items, PvE och flottor är fortsatt design.**
 
 Dokumentet skiljer mellan ägarens valda riktning, arbetsförslag och öppna frågor.
 Den ursprungliga första etappen med konto, karaktär och hamn är färdig.
 
 ## Första implementerade spelsteget
 
-Ägaren har valt att börja med tre resursmätare och enkel träning:
 Energy, Ship Health och Crew Health börjar på 100/100. Energy återhämtas med
-1 var femte minut, även offline, upp till 100. Crew Training och Ship Upgrades
-har vardera Attack, Defense, Speed och Accuracy, som börjar på 10 för nya karaktärer. Ett klick
-kostar exakt 5 Energy och höjer vald stat med 1.
-
-Materialkostnader och skill-XP ingår inte i denna första version. Hälsovärdena
-sparas och visas. Strid, skada och automatisk återhämtning har nu tillkommit i
-[första PvP-systemet](COMBAT_SYSTEM.md). Detaljer och
-avgränsning finns i [träningsgrunden](TRAINING_FOUNDATION.md). Detta är den
-implementerade omfattningen; senare arbetsförslag nedan utökar den inte.
+5 var femte minut även offline. Crew och skepp börjar på 10 i sina fyra stats.
+Crew tränas direkt med 1 % Perfect Drill; skeppet har tidsstyrda arbeten.
+Båda får separat tränings-XP och bättre nivåer som köps för Gold Coins på karaktären.
+Items, materialkostnader och consumables är uppskjutna. Se
+[aktuella träningsregler och balans](TRAINING_FOUNDATION.md) och [PvP-systemet](COMBAT_SYSTEM.md).
+Senare förslag nedan utökar inte den implementerade omfattningen.
 
 ## Grundmodell: kapten, eget skepp och besättning
 
@@ -34,10 +30,10 @@ karaktärsliv hör ett eget skepp och en besättning som alltid följer kaptenen
 - Uppgraderingarna hör till skeppet och besättningen.
 - Crew Health är spelarens livsmätare. Crew condition var ett tidigare namn på
   samma värde. Modellen har ingen separat hälsostapel för kaptenen.
-- Utanför PvP innebär död besättning att kaptenen dör. Noll Crew Health är den
-  dödliga gränsen i strid där permadöd gäller.
-- I PvP innebär noll Crew Health nederlag och återhämtning i hamnen, aldrig
-  permanent död. Även besättningen överlever PvP-förlusten.
+- Noll Crew Health innebär död besättning och fem minuter i Hospital, oavsett skadeorsak.
+- Permanent karaktärsdöd och hardcore är borttagna. Karaktär, skepp, progression och pengar behålls.
+- Under vistelsen är spelhandlingar låsta. Utskrivning sker automatiskt, även offline,
+  med full Ship Health och Crew Health. Se [sjukhusreglerna](HOSPITAL.md).
 - Ship Health, även kallat Hull HP, är skeppets skick och hålls åtskilt från Crew Health.
 - Ett utslaget skepp i PvP repareras som samma skepp. En separat ersättningsbåt
   eller ett skeppsbyte ingår inte i denna modell.
@@ -46,9 +42,8 @@ Detta ersätter assistentens tidigare förslag om skeppsbyten och kaptenstränin
 som flyttas mellan olika fartyg. Skill levels, skeppsuppgraderingar,
 besättningsuppgraderingar och utrustning är olika delar av samma karaktärsliv.
 
-Hur noll Hull HP i PvE påverkar Crew Health, flykt och kaptenens överlevnad är
-fortfarande öppet. Det ska inte automatiskt likställas med noll Crew Health.
-Grundkonceptets krav på begriplig, självvald dödsrisk gäller fortsatt.
+Noll Ship Health sätter också Crew Health till 0: besättningen går under med skeppet.
+Samma femminutersvistelse gäller PvP och andra skadeorsaker; ingen ny karaktär skapas.
 
 ## Överlevnad och resurser
 
@@ -59,9 +54,9 @@ Crew Health fyller nu rollen som spelarens liv enligt grundmodellen ovan.
 | Resurs | Riktning från samtalet | Återstår att bestämma |
 | --- | --- | --- |
 | Hunger | Börjar på 100, sjunker över tid och återställs genom att äta | Takt, offlineförbrukning, gränsvärden och följder av hunger |
-| Energy | Max 100, +1 var femte minut även offline; första träningen kostar 5 | Kostnader för framtida handlingar |
+| Energy | Max 100, +5 var femte minut även offline; första träningen kostar 5 | Kostnader för framtida handlingar |
 | Crew Health | Besättningens och kaptenens gemensamma livsmätare; första versionen 100/100 | Läkning och återhämtningstider |
-| Ship Health / Hull HP | Skeppets HP; första versionen 100/100 | Reparationskostnader och följder av noll Hull HP i PvE |
+| Ship Health / Hull HP | Skeppets HP; första versionen 100/100 | Framtida reparationskostnader; noll HP ger Hospital |
 
 Det är inte bestämt om hunger kan orsaka död eller hur hunger fungerar offline.
 Grundkonceptet ska inte kräva daglig inloggning för att överleva. Tidigare exempel
@@ -71,38 +66,35 @@ Energy-reglerna för första versionen är däremot fastställda ovan.
 ## 1. Ägarens valda PvP-riktning
 
 - PvP kan ske även när försvararen är offline. Båda spelarna behöver inte vara aktiva samtidigt.
-- En karaktär kan aldrig dö av PvP. Förloraren återvänder till The Harbor.
+- Besegrad besättning eller sänkt skepp leder till Hospital i The Harbor. Karaktären behålls.
 - Föremål kan inte stjälas från andra spelare. Gold coins är den valuta som kan plundras.
 - Kanonseger ger ingen möjlighet att plundra guld.
 - Kanoner förbrukar ammunition.
-- Att skjuta ut motståndarens skepp ger en lång väntetid i hamnen för reparation.
+- Sänkt skepp ger samma sjukhusvistelse som död besättning: fem minuter för nu.
 - Bordningsseger ger möjlighet att plundra guld.
 - Bordning orsakar normalt mindre skrovskada men skadar Crew Health.
-- Besättningen återhämtar sig snabbare än ett utslaget skepp repareras.
+- Överlevande crew läker snabbare än skrov; patienter återfår båda hälsomätarna vid utskrivning.
 - De olika handlingarna och segerformerna kan ge olika XP. Exakta belopp är inte bestämda.
 
 Detta ersätter det tidigare arbetsförslaget om samma guldutbyte vid båda segerformerna.
-Ingen PvP-förlust får skapa en oundviklig indirekt död efter striden.
+Ingen förlust kan permanent radera karaktären.
 
 ## 2. Taktiskt syfte
 
 | Segerväg | Vad besegras? | Ekonomiskt utbyte för vinnaren | Följd för förloraren |
 | --- | --- | --- | --- |
-| Kanoner | Skeppets skrov | Inget plundrat guld; sjöstrids-XP enligt kommande regler | Skadat eller utslaget skepp med lång reparation |
-| Bordning | Besättningens motstånd | Möjlighet att plundra gold coins; bordnings-XP enligt kommande regler | Besättningsåterhämtning och reparation av eventuella skrovskador |
+| Kanoner | Skeppets skrov | Inget plundrat guld; sjöstrids-XP enligt kommande regler | Hospital i fem minuter, därefter full hälsa |
+| Bordning | Besättningens motstånd | Möjlighet att plundra gold coins; bordnings-XP enligt kommande regler | Hospital i fem minuter, därefter full hälsa |
 
-Kanoner kan användas för att slå ut en rival under längre tid. Bordning kan
-användas för ekonomiskt utbyte. Färdigheter, utrustning, försvar och resurskostnader
+Båda segerformerna ger samma sjukhustid i utvecklingsversionen. Bordning kan
+senare användas för ekonomiskt utbyte. Färdigheter, utrustning, försvar och resurskostnader
 påverkar vilken väg som är rimlig mot ett visst mål.
 
 ### Föreslagen regel för blandade strider
 
-Skrovskador finns kvar även om striden slutar med bordning. Väntetid beräknas
-utifrån de faktiska skadorna och Crew Health. En slutlig bordningsseger
-läker inte kanonskador som redan har uppstått.
-
-Fulla reparationstider, återhämtningstider och eventuell parallell återhämtning
-är fortfarande öppna beslut.
+Skrovskador följer med mellan stridsfaserna. Överlevande återhämtar båda hälsovärdena
+parallellt. Vid död återställs båda först efter sjukhusvistelsen. Dessa regler ersätter
+förslaget om olika väntetid beroende på segerform.
 
 ## 3. Ägarens valda progressionsriktning
 
@@ -122,11 +114,9 @@ De engelska namnen är arbetsnamn.
 | Sea Battle | Meningsfulla insatser i sjöstrid | Bättre användning av kanoner och nya sjöstridstaktiker |
 | Crew Battle | Meningsfulla insatser i bordning | Bättre bordningsförmåga och nya besättningstaktiker |
 
-Färdigheterna hör till spelarens karaktärsliv. Samma skepp och besättning
-utvecklas under hela livet. PvP-förlust raderar inte färdighetsprogressionen eller
-innebär byte till ett annat skepp. Det ursprungliga permadödskonceptet innebär
-att en ny kapten börjar om; framtida döds- och historikhantering behöver
-fortfarande specificeras.
+Färdigheterna hör till spelarens beständiga karaktär. Samma skepp och besättning
+utvecklas över tid. Ingen förlust raderar progression eller innebär ett skeppsbyte.
+Den tidigare idén om permanent död och att börja om med ny kapten är borttagen.
 
 ## 4. Arbetsförslag för nivåer och XP
 
@@ -203,9 +193,40 @@ Ship Upgrades; framtida koppling till andra hamnaktiviteter återstår.
 - De uppgraderade stridsstatsen avgör grundläggande prestanda.
 - Utrustning bidrar med bonusar, avvägningar och förmågor.
 
-Exakta direkta bonusar från levels och hur träning ger XP är inte beslutade.
+Träningens egna XP-spår har nu en vald riktning enligt avsnittet nedan. Kopplingen
+till Sea Battle/Crew Battle och direkta bonusar från deras levels är fortfarande öppen.
 Tidigare exempel med separata Gunnery, Seamanship, Strength och andra färdigheter
 ska inte automatiskt läggas till som ytterligare nivåsystem.
+
+### Gold Coins före träningsprogressionen, 2026-09-19
+
+Ägaren har valt att först införa Gold Coins och en enkel bank i Harbor. Saldo på
+karaktären visas ovanför mätarna; pengar på banken måste tas ut före köp. Nya
+karaktärer börjar med 0. [Gold Coins och banken](GOLD_COINS_AND_BANK.md) beskriver
+implementationen. Items skjuts upp, inklusive materialkrav och consumable-buffar;
+de är fortsatt framtida design och ska inte implementeras i denna etapp.
+
+### Vald träningsprogression, 2026-09-19
+
+Följande grund är implementerad; nämnda itemeffekter är uppskjutna:
+
+- Crew tränas direkt och får stats samt ett separat tränings-XP-spår, gemensamt för dess fyra stats.
+- Tränings-XP låser upp nästa övning, som måste köpas för guld för att ge bättre utbyte.
+- Perfect Drill har 1 % grundchans och ger dubbla stats. Consumables höjer chansen under en begränsad tid; sedan återgår den till 1 %. Höjningen är inte permanent.
+- Skeppet utvecklas med tidsstyrda arbeten i valfri stat. Spelaren väljer storlek och betalar Energy vid start.
+- Ett skeppsarbete åt gången, med automatisk stat-/XP-belöning när det är färdigt, även efter offline-tid.
+- Skeppet har ett eget uppgraderings-XP-spår och workshops som köps för guld och kan kräva material.
+- Större arbete ger proportionellt fler stats, inte bättre utbyte per Energy. Bättre workshop höjer utbytet.
+- Spelaren kan fortsätta spela under arbetet. Ingen återkommande Major Upgrade-bonus ingår.
+
+XP från träning och uppgradering baseras på investerad Energy. Dessa två spår
+ersätter inte de framtida stridsfärdigheterna och ger inte automatiskt Sea Battle-
+eller Crew Battle-XP. Exakta priser, steg, arbetstider och consumable-effekter är
+fortfarande balansarbete.
+
+[Implementationsplanen](TRAINING_PROGRESSION_PLAN.md) beskriver designunderlaget.
+[Träningssystemet](TRAINING_FOUNDATION.md) beskriver den implementerade kärnan utan items,
+provisorisk balans och högstatskonsekvenser för strid.
 
 ## 6. Stridsflöde som fortfarande är arbetsförslag
 
@@ -214,8 +235,7 @@ ska inte automatiskt läggas till som ytterligare nivåsystem.
 - Hull HP och Crew Health är separata värden. De fyra uppgraderingsbara statsen
   och utrustningen påverkar effektiviteten, medan Crew Health visar återstående liv.
 - Bordningsrundor minskar Crew Health tills en sida besegras eller lyckas dra
-  sig ur. Noll Crew Health hanteras enligt stridstyp: PvP-nederlag utan död,
-  respektive död i PvE-strid där permadöd gäller.
+  sig ur. Noll Crew Health ger Hospital oavsett stridstyp.
 - Förslag för Break away: ingen egen attack, en motattack, därefter frigörelse
   om besättningen står kvar. Sjöstriden fortsätter efter frigörelsen.
 - Flott-PvE använder samma stridsregler med förhandsgodkända order som körs
@@ -225,12 +245,12 @@ ska inte automatiskt läggas till som ytterligare nivåsystem.
 De tidigare klickbara exemplen illustrerar stridsflödet. Deras skadevärden,
 tidsordning och rundor är inte fastställda regler eller en implementerad stridsmotor.
 Äldre beskrivningar av Crew condition som ett generellt icke-dödligt stridsvärde
-är ersatta av Crew Health-modellen ovan. Undantaget från död gäller PvP.
+är ersatta av Crew Health-modellen ovan. Sjukhusreglerna gäller alla skadeorsaker.
 
 ## 7. Viktiga återstående beslut
 
 1. Vilka färdigheter ingår, vad påverkar de och vad är nivåtaket?
-2. Hur förbättras de fyra statsen per grupp, vad kostar det och hur samverkar de med levels och utrustning?
+2. Vilka steg, priser, XP-krav, arbetstider och tillfälliga itemeffekter ska den valda träningsmodellen ha, och hur samverkar den med framtida skills och utrustning?
 3. Hur delas XP mellan handlingar, segerbonus, försvar och flottans deltagare?
 4. Hur mycket guld får bordningsvinnaren ta, och vilken del av valutan är utsatt?
 5. Behåller den besegrade sitt guld vid kanonseger, eller går något förlorat?

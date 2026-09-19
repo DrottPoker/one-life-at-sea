@@ -2,11 +2,14 @@ import { gameplay } from "@/config/public";
 export const MAX_ENERGY = gameplay.resources.energyMax;
 export const MAX_HEALTH = gameplay.resources.healthMax;
 export const TRAINING_COST = gameplay.training.energyCost;
-export const TRAINING_GAIN = gameplay.training.statGain;
 export const STATS = ["attack", "defense", "speed", "accuracy"] as const;
 export type Stat = typeof STATS[number];
 export type TrainingGroup = "crew" | "ship";
 export type GameState = Record<`${TrainingGroup}_${Stat}`, number> & {
+  training: import("@/lib/training").TrainingState;
+  gold_coins: number;
+  bank_gold_coins: number;
+  hospital_until: string | null;
   energy: number;
   energy_next_at: string | null;
   observed_at: string;
@@ -20,7 +23,6 @@ export type GameState = Record<`${TrainingGroup}_${Stat}`, number> & {
   defence_order: "cannon" | "boarding";
   protected_until: string | null;
 };
-export type TrainingResult = { message?: string; error?: boolean };
 
 export const STAT_LABELS: Record<Stat, string> = {
   attack: "Attack", defense: "Defense", speed: "Speed", accuracy: "Accuracy",

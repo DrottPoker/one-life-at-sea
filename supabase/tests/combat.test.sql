@@ -105,7 +105,7 @@ select is((select value#>>'{battle,defender,ammo}' from combat_results where nam
 select ok((select public.start_combat(d,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1')#>>'{battle,id}' =
   (select value#>>'{battle,id}' from combat_results where name='start') from combat_fixtures),'Start retry returns the original battle');
 select is((public.get_game_state()->>'energy')::integer,90,'Start retry does not spend energy twice');
-select throws_ok($$select public.train_stat('crew','attack')$$,'P0001','IN_COMBAT','Training blocked only during active combat');
+select throws_ok($$select public.train_crew('attack','crew_1',gen_random_uuid())$$,'P0001','IN_COMBAT','Training blocked only during active combat');
 select is((select public.start_combat(outsider,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2')->>'error' from combat_fixtures),'IN_COMBAT','One active encounter per captain');
 
 insert into combat_results select 'round',public.submit_combat_order((value#>>'{battle,id}')::uuid,0,'fire','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1')
@@ -142,7 +142,7 @@ select is((select value->>'status' from combat_results where name='timeout'),'co
 select is((select value#>>'{events,2,timed_out}' from combat_results where name='timeout'),'true','Timeout persists an automatic retreat');
 select is(public.get_game_state()->>'active_combat_id',null,'Timeout releases the captain');
 select ok(public.get_game_state()->>'protected_until' is not null,'Completion grants incoming attack protection');
-select lives_ok($$select public.train_stat('crew','attack')$$,'Training allowed while damaged and protected');
+select lives_ok($$select public.train_crew('attack','crew_1',gen_random_uuid())$$,'Training allowed while damaged and protected');
 select ok((select public.start_combat(outsider,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4') ? 'battle' from combat_fixtures),'Own attack protection does not block outgoing attacks');
 select is(public.get_game_state()->>'protected_until',null,'Starting an attack relinquishes protection');
 
@@ -166,15 +166,15 @@ update public.characters set ship_health=1,crew_health=1,protected_until=null,
   where id=(select d from combat_fixtures);
 set local role authenticated;
 select is((select public.start_combat(d,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa5')->>'error' from combat_fixtures),
-  'NO_HEALTH','Zero hull cannot start combat');
+  'IN_HOSPITAL','Zero hull sends captain to hospital');
 select is((public.get_game_state()->>'energy')::integer,100,'Zero-health rejection spends nothing');
 reset role;
 update public.characters set ship_health=1,crew_health=0 where id=(select a from combat_fixtures);
 set local role authenticated;
 select is((select public.start_combat(d,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa5')->>'error' from combat_fixtures),
-  'NO_HEALTH','Zero crew cannot start combat');
+  'IN_HOSPITAL','Zero crew sends captain to hospital');
 reset role;
-update public.characters set crew_health=1,protected_until=clock_timestamp()+interval '5 minutes' where id=(select a from combat_fixtures);
+update public.characters set hospital_started_at=null,hospital_until=null,ship_health=1,crew_health=1,protected_until=clock_timestamp()+interval '5 minutes' where id=(select a from combat_fixtures);
 update public.characters set protected_until=clock_timestamp()+interval '5 minutes' where id=(select d from combat_fixtures);
 set local role authenticated;
 select is((select public.start_combat(d,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa5')->>'error' from combat_fixtures),
@@ -183,9 +183,9 @@ reset role;
 update public.characters set protected_until=null,crew_health=0 where id=(select d from combat_fixtures);
 set local role authenticated;
 select is((select public.start_combat(d,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa5')->>'error' from combat_fixtures),
-  'TARGET_NO_HEALTH','Zero-health defenders cannot be farmed');
+  'TARGET_IN_HOSPITAL','Hospitalized defenders cannot be farmed');
 reset role;
-update public.characters set crew_health=1 where id=(select d from combat_fixtures);
+update public.characters set hospital_started_at=null,hospital_until=null,ship_health=1,crew_health=1 where id=(select d from combat_fixtures);
 update public.characters set energy=9,energy_updated_at=clock_timestamp() where id=(select a from combat_fixtures);
 set local role authenticated;
 select is((select public.start_combat(d,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa5')->>'error' from combat_fixtures),

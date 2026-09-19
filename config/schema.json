@@ -54,6 +54,12 @@
               "integer": true,
               "minimum": 1,
               "maximum": 2147483647
+            },
+            "energyRecoveryAmount": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
             }
           }
         },
@@ -66,11 +72,113 @@
               "minimum": 1,
               "maximum": 2147483647
             },
-            "statGain": {
+            "xpPerEnergy": {
               "type": "number",
               "integer": true,
               "minimum": 1,
-              "maximum": 2147483647
+              "maximum": 9007199254740991
+            },
+            "perfectChanceBps": {
+              "type": "number",
+              "integer": true,
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "perfectMultiplier": {
+              "type": "number",
+              "integer": true,
+              "minimum": 2,
+              "maximum": 100
+            },
+            "crewTiers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "xpRequired": {
+                    "type": "number",
+                    "integer": true,
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "goldCost": {
+                    "type": "number",
+                    "integer": true,
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "statGain": {
+                    "type": "number",
+                    "integer": true,
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                }
+              }
+            },
+            "shipTiers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "xpRequired": {
+                    "type": "number",
+                    "integer": true,
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "goldCost": {
+                    "type": "number",
+                    "integer": true,
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "statGain": {
+                    "type": "number",
+                    "integer": true,
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                }
+              }
+            },
+            "shipSizes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "units": {
+                    "type": "number",
+                    "integer": true,
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "durationSeconds": {
+                    "type": "number",
+                    "integer": true,
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  }
+                }
+              }
             }
           }
         },
@@ -203,7 +311,7 @@
                 "exponent": {
                   "type": "number",
                   "integer": false,
-                  "minimum": 1E-06,
+                  "minimum": 0.000001,
                   "maximum": 1
                 }
               }
@@ -316,6 +424,98 @@
               "integer": true,
               "minimum": 1,
               "maximum": 2147483647
+            }
+          }
+        },
+        "economy": {
+          "type": "object",
+          "properties": {
+            "initialGoldCoins": {
+              "type": "number",
+              "integer": true,
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "maxGoldCoins": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "hospital": {
+          "type": "object",
+          "properties": {
+            "durationSeconds": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        },
+        "inventory": {
+          "type": "object",
+          "properties": {
+            "historyMaxPoints": { "type": "number", "integer": true, "minimum": 50, "maximum": 2000 },
+            "pageSize": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "icon": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "categoryId": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "slot": {
+                    "type": "string"
+                  },
+                  "imagePath": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "effectDescription": {
+                    "type": "string"
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                }
+              }
             }
           }
         }

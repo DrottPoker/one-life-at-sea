@@ -16,7 +16,7 @@ export type AttackLock = { battle_id: string; target_id: string };
 export type ParticipantStatus = "active" | "victory" | "assist" | "defeated" | "retreated" | "draw";
 export type CombatOutcome = "hull_victory" | "boarding_victory" | "retreated" | "draw" | "defended";
 export type CombatEvent = {
-  kind: "started" | "joined" | "round"; sequence: number; actor_id: string; actor_name: string;
+  kind: "started" | "joined" | "round" | "hospital"; sequence: number; actor_id: string; actor_name: string;
   round: number; phase: "sea" | "boarding"; attacker_order: CombatOrder; defender_order: CombatOrder;
   attacker_hit: boolean; defender_hit: boolean; attacker_damage: number; defender_damage: number;
   transition: "boarded" | "boarding_failed" | "disengaged" | null;
@@ -49,6 +49,8 @@ export const ORDER_LABELS: Record<CombatOrder, string> = {
   disengage: "Disengage", retreat: "Retreat",
 };
 const ERROR_MESSAGES: Record<string, string> = {
+  IN_HOSPITAL: "You cannot fight while in hospital.",
+  TARGET_IN_HOSPITAL: "This captain is in hospital.",
   SELF_ATTACK: "You cannot attack your own character.",
   IN_COMBAT: "Finish your current fight before starting another.",
   DEFENDING: "Your crew is defending against an attack. You can start another encounter once it ends.",

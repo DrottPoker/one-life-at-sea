@@ -17,3 +17,4 @@ export function revision(config: Configuration): string;
 export function migrationSql(config: Configuration): string;
 export function latestConfigMigration(): string | undefined;
 export function generatedFiles(config: Configuration): Record<string, string>;
+export function inventoryCatalogSql(config: Configuration): string;

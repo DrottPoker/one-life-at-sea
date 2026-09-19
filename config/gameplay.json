@@ -7,11 +7,178 @@
     "shipHealthInitial": 100,
     "crewHealthInitial": 100,
     "shipRecoverySeconds": 30,
-    "crewRecoverySeconds": 10
+    "crewRecoverySeconds": 10,
+    "energyRecoveryAmount": 5
   },
   "training": {
     "energyCost": 5,
-    "statGain": 1
+    "xpPerEnergy": 1,
+    "perfectChanceBps": 100,
+    "perfectMultiplier": 2,
+    "crewTiers": [
+      {
+        "id": "crew_1",
+        "name": "Deck Drills",
+        "xpRequired": 0,
+        "goldCost": 0,
+        "statGain": 1
+      },
+      {
+        "id": "crew_2",
+        "name": "Harbor Exercises",
+        "xpRequired": 100,
+        "goldCost": 250,
+        "statGain": 2
+      },
+      {
+        "id": "crew_3",
+        "name": "Sailor Training",
+        "xpRequired": 500,
+        "goldCost": 1000,
+        "statGain": 4
+      },
+      {
+        "id": "crew_4",
+        "name": "Veteran Drills",
+        "xpRequired": 1500,
+        "goldCost": 4000,
+        "statGain": 8
+      },
+      {
+        "id": "crew_5",
+        "name": "Boarding Practice",
+        "xpRequired": 4000,
+        "goldCost": 15000,
+        "statGain": 20
+      },
+      {
+        "id": "crew_6",
+        "name": "Officer Training",
+        "xpRequired": 10000,
+        "goldCost": 50000,
+        "statGain": 50
+      },
+      {
+        "id": "crew_7",
+        "name": "Elite Exercises",
+        "xpRequired": 20000,
+        "goldCost": 150000,
+        "statGain": 125
+      },
+      {
+        "id": "crew_8",
+        "name": "Master Drills",
+        "xpRequired": 40000,
+        "goldCost": 500000,
+        "statGain": 300
+      },
+      {
+        "id": "crew_9",
+        "name": "Legendary Training",
+        "xpRequired": 65000,
+        "goldCost": 1500000,
+        "statGain": 750
+      },
+      {
+        "id": "crew_10",
+        "name": "Admiral Exercises",
+        "xpRequired": 100000,
+        "goldCost": 5000000,
+        "statGain": 1500
+      }
+    ],
+    "shipTiers": [
+      {
+        "id": "ship_1",
+        "name": "Deck Workbench",
+        "xpRequired": 0,
+        "goldCost": 0,
+        "statGain": 1
+      },
+      {
+        "id": "ship_2",
+        "name": "Harbor Workshop",
+        "xpRequired": 100,
+        "goldCost": 250,
+        "statGain": 2
+      },
+      {
+        "id": "ship_3",
+        "name": "Shipwright Workshop",
+        "xpRequired": 500,
+        "goldCost": 1000,
+        "statGain": 4
+      },
+      {
+        "id": "ship_4",
+        "name": "Reinforced Workshop",
+        "xpRequired": 1500,
+        "goldCost": 4000,
+        "statGain": 8
+      },
+      {
+        "id": "ship_5",
+        "name": "Advanced Workshop",
+        "xpRequired": 4000,
+        "goldCost": 15000,
+        "statGain": 20
+      },
+      {
+        "id": "ship_6",
+        "name": "Master Shipwright",
+        "xpRequired": 10000,
+        "goldCost": 50000,
+        "statGain": 50
+      },
+      {
+        "id": "ship_7",
+        "name": "Naval Workshop",
+        "xpRequired": 20000,
+        "goldCost": 150000,
+        "statGain": 125
+      },
+      {
+        "id": "ship_8",
+        "name": "Grand Workshop",
+        "xpRequired": 40000,
+        "goldCost": 500000,
+        "statGain": 300
+      },
+      {
+        "id": "ship_9",
+        "name": "Royal Dockworks",
+        "xpRequired": 65000,
+        "goldCost": 1500000,
+        "statGain": 750
+      },
+      {
+        "id": "ship_10",
+        "name": "Admiral Dockworks",
+        "xpRequired": 100000,
+        "goldCost": 5000000,
+        "statGain": 1500
+      }
+    ],
+    "shipSizes": [
+      {
+        "id": "small",
+        "name": "Small",
+        "units": 1,
+        "durationSeconds": 300
+      },
+      {
+        "id": "medium",
+        "name": "Medium",
+        "units": 5,
+        "durationSeconds": 1500
+      },
+      {
+        "id": "large",
+        "name": "Large",
+        "units": 10,
+        "durationSeconds": 3000
+      }
+    ]
   },
   "startingStats": {
     "ship": {
@@ -66,5 +233,116 @@
   },
   "harbor": {
     "pageSize": 20
+  },
+  "economy": {
+    "initialGoldCoins": 0,
+    "maxGoldCoins": 9007199254740991
+  },
+  "hospital": {
+    "durationSeconds": 300
+  },
+  "inventory": {
+    "pageSize": 25,
+    "historyMaxPoints": 500,
+    "categories": [
+      {
+        "id": "crew_weapons",
+        "name": "Crew Weapons",
+        "icon": "swords"
+      },
+      {
+        "id": "cannons",
+        "name": "Cannons",
+        "icon": "cannon"
+      },
+      {
+        "id": "medical",
+        "name": "Medical",
+        "icon": "cross"
+      },
+      {
+        "id": "boosters",
+        "name": "Boosters",
+        "icon": "flask"
+      },
+      {
+        "id": "materials",
+        "name": "Materials",
+        "icon": "boxes"
+      },
+      {
+        "id": "miscellaneous",
+        "name": "Miscellaneous",
+        "icon": "compass"
+      }
+    ],
+    "items": [
+      {
+        "id": "cutlass",
+        "name": "Sailor's Cutlass",
+        "categoryId": "crew_weapons",
+        "kind": "equipment",
+        "slot": "crew_weapon",
+        "imagePath": "/images/items/cutlass.png",
+        "description": "A broad, curved blade with a brass guard and a salt-worn leather grip. A dependable companion in the close quarters of a boarding action.",
+        "effectDescription": "Crew weapon. Its individual Damage and Accuracy are shown below.",
+        "active": true
+      },
+      {
+        "id": "deck_cannon",
+        "name": "Deck Cannon",
+        "categoryId": "cannons",
+        "kind": "equipment",
+        "slot": "cannons",
+        "imagePath": "/images/items/cannon.png",
+        "description": "A compact iron cannon mounted on a sturdy oak carriage. Built to bring a broadside to bear without crowding the deck.",
+        "effectDescription": "Ship armament. Its individual Damage and Accuracy are shown below.",
+        "active": true
+      },
+      {
+        "id": "linen_bandages",
+        "name": "Linen Bandages",
+        "categoryId": "medical",
+        "kind": "consumable",
+        "slot": "none",
+        "imagePath": "/images/items/bandages.png",
+        "description": "Clean linen, rolled and tucked away from the spray. An essential part of a ship surgeon's supplies.",
+        "effectDescription": "Medical supply intended for treating wounded crew. Medical use will be available later.",
+        "active": true
+      },
+      {
+        "id": "drill_tonic",
+        "name": "Drill Tonic",
+        "categoryId": "boosters",
+        "kind": "consumable",
+        "slot": "none",
+        "imagePath": "/images/items/tonic.png",
+        "description": "An herbal preparation in a stout green bottle. Quartermasters keep it aside for the most demanding practice sessions.",
+        "effectDescription": "Intended to temporarily improve the chance of a Perfect Drill. Training effects will be available later.",
+        "active": true
+      },
+      {
+        "id": "oak_planks",
+        "name": "Oak Planks",
+        "categoryId": "materials",
+        "kind": "passive",
+        "slot": "none",
+        "imagePath": "/images/items/timber.png",
+        "description": "Seasoned oak boards bound with hemp rope. Their close grain and solid weight make them prized by shipwrights.",
+        "effectDescription": "Shipbuilding material. No active effect.",
+        "active": true
+      },
+      {
+        "id": "brass_compass",
+        "name": "Brass Compass",
+        "categoryId": "miscellaneous",
+        "kind": "passive",
+        "slot": "none",
+        "imagePath": "/images/items/compass.png",
+        "description": "A brass compass worn smooth by years in a captain's coat. The needle still finds north, whatever the sea has in store.",
+        "effectDescription": "A keepsake from life at sea. No active effect.",
+        "active": true
+      }
+    ]
   }
 }

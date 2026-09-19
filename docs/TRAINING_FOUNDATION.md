@@ -1,61 +1,119 @@
-> Config 2026-09-17: justerbara värden har sin källa i [config/gameplay.json](../config/gameplay.json). Värdena nedan beskriver nuvarande standardbalans. Se [konfigurationsguiden](CONFIGURATION.md) för hur ändringar appliceras.
+# Träning och progression
 
-> Uppdatering 2026-09-16: aktuella stridsregler och implementation finns i [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md). Den nya versionen använder en gemensam /attack-vy, flera angripare, realtid och publika rapporter. Äldre beskrivningar av separata prepare-sidor, exklusiv tvåpartsstrid eller privata slutrapporter nedan är historiska.
+Implementerat lokalt 2026-09-19. Balansen kommer från [gameplayconfig](../config/gameplay.json).
+[Implementationsplanen](TRAINING_PROGRESSION_PLAN.md) är designunderlaget; items är uppskjutna.
 
-# Första spelsteget: resurser och träning
+## Spelregler
 
-Datum: 2026-09-16. Uppdaterad med koppling till första PvP-systemet.
+Crew och skeppet behåller fyra stats: Attack, Defense, Speed och Accuracy.
+Nya karaktärer börjar med 10 i varje stat. Befintliga stats, hälsa, Energy och guld bevaras.
+Energy återhämtas med +5 var femte minut, även offline, till högst 100.
 
-## Omfattning
+- Crew: 5 Energy ger aktuell övnings statökning direkt och 5 XP. Perfect Drill har 1 % chans
+  att dubbla statökningen, utan extra XP.
+- Skepp: välj stat och Small, Medium eller Large. Betala Energy vid start och få stats/XP
+  vid sluttiden. Ett pågående arbete åt gången, utan kö, avbryt eller automatisk upprepning.
+- Small: 5 Energy, 5 minuter, en basökning. Medium: 25 Energy, 25 minuter, fem basökningar.
+  Large: 50 Energy, 50 minuter, tio basökningar. Samma utbyte per Energy.
+- Crew och skepp har separata kumulativa XP-spår. Varje spår delas av gruppens fyra stats.
+  Ett XP per investerad Energy. XP förbrukas inte vid köp.
+- Nästa övning/workshop kräver både XP och Gold Coins på karaktären. Bankpengar räknas inte.
+  Steg köps i ordning och den högsta köpta nivån används automatiskt.
+- En workshop kan köpas under ett arbete. Jobbet behåller sin ursprungliga ökning, XP och tid.
+- Aktiva angripare och sjukhuspatienter kan inte träna, starta arbete eller köpa nivåer.
+  Försvarare kan använda hamnen tills de besegras och hamnar i [Hospital](HOSPITAL.md).
+  Redan startat arbete fortsätter under strid, sjukhusvistelse och offline.
 
-- Energy, Ship Health och Crew Health visas i hamnens gemensamma panel.
-- Alla tre börjar på 100 av 100. Nya och befintliga karaktärer får dessa startvärden.
-- Energy återhämtas med 1 per fem hela minuter, även offline, till högst 100.
-- Tid vid full Energy sparas inte som extra framtida återhämtning.
-- Crew Training och Ship Upgrades är två nya val i hamnmenyn.
-- Båda visar Attack, Defense, Speed och Accuracy. Nya karaktärer börjar på 10 i varje stat. Befintliga karaktärers stats behålls.
-- Ett klick kostar exakt 5 Energy och ger exakt +1 i vald stat.
-- Uppgraderingar kostar inga material i detta första steg och ger ännu ingen skill-XP.
-- Samma skepp och besättning följer karaktären. Spelaren byter inte skepp.
-- Stats och resurser sparas i PostgreSQL och följer med mellan inloggningar.
+Items, material, consumables, intjäning och utrustningsbonusar ingår inte.
+Första träningen är gratis utöver Energy, och nya karaktärer börjar med 0 Gold Coins.
+Ingen publik funktion för att skapa testpengar har införts.
 
-## Gränssnitt
+## Progressionsvisning
 
-Den befintliga blå hamnlayouten används. Tre mätare visar både färgfält och
-aktuellt värde. På mobil visas mätarna ovanför navigationen. Träningsvyerna har
-fyra kompakta rader med beskrivning, aktuellt värde och en uppgraderingsknapp.
+Crew och skepp visar endast en progressionsmätare från 0 till 100 % för upplåsning.
+Intjänad XP, XP-krav, återstående XP och XP-belöningar visas inte i spelgränssnittet,
+inklusive träningsresultat och pågående/färdiga skeppsjobb. Vid slutnivån visas 100 %.
+XP räknas fortfarande internt och köpkraven är oförändrade. Mätaren når 100 % först
+när nästa nivå är upplåst; tidigare procenttal avrundas nedåt.
 
-Knapparna spärras medan en uppgradering sparas, när Energy är under 5 eller
-under en aktiv strid. Skada, återhämtning och attackskydd blockerar inte träning.
-Resultatet visas med en tillgänglig statusrad. Serverns nästa återhämtningstid
-styr uppdateringen av mätarna, och resurserna hämtas också när fliken återfår fokus.
+## Provisorisk balans
 
-## Databas och samtidighet
+Båda spåren använder följande trappa, men har egna namn och egna XP.
+Priserna är per köp. Dagarna visar XP / 1 440 vid maximal daglig Energyåterhämtning,
+om all Energy används på ett spår. Startens 100 Energy, missad återhämtning vid full mätare,
+annan Energyförbrukning och tid att få tag på guld ingår inte.
 
-Resurserna och de åtta statsen lagras på den befintliga karaktärsraden. Den
-befintliga modellen med en karaktär per konto gäller fortsatt. Migrationen lägger
-till standardvärden utan att återställa konton eller karaktärer.
+| Nivå | XP-krav | Gold Coins | Stats per 5 Energy | Teoretiska dagar |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 0 | 0 | 1 | 0 |
+| 2 | 100 | 250 | 2 | 0,07 |
+| 3 | 500 | 1 000 | 4 | 0,35 |
+| 4 | 1 500 | 4 000 | 8 | 1,04 |
+| 5 | 4 000 | 15 000 | 20 | 2,78 |
+| 6 | 10 000 | 50 000 | 50 | 6,94 |
+| 7 | 20 000 | 150 000 | 125 | 13,89 |
+| 8 | 40 000 | 500 000 | 300 | 27,78 |
+| 9 | 65 000 | 1 500 000 | 750 | 45,14 |
+| 10 | 100 000 | 5 000 000 | 1 500 | 69,44 |
 
-`get_game_state()` kontrollerar det registrerade kontot och läser dess resurser
-tillsammans med eventuell stridsreservation under samma deltagarlås. Läsningen
-kan avsluta en utgången strid. Energy räknas från sparad tid; delar av ett
-femminutersintervall bevaras mellan uppgraderingar. Hälsa återhämtas också offline,
-men pausas under aktiv strid.
+Första nivåköpet kan låsas upp med startens 100 Energy, alltså 20 crew-pass.
+På nivå 10 ger en Perfect Drill 3 000 stats, och ett Large skeppsarbete 15 000 stats.
+Tabellen är en justerbar första balans, inte en färdig ekonomimodell.
 
-`train_stat(group, stat)` accepterar endast gruppen och statens namn. Databasen
-bestämmer ägare, kostnad, ökning och tid. Den låser spelarens rad, räknar fram
-återhämtad energi och genomför kostnaden och ökningen i samma transaktion.
-Den privata skrivfunktionen kontrollerar det registrerade kontot; det publika
-anropet körs med anroparens behörighet. Direkta ändringar av resurser och stats
-är inte tillåtna via Data API.
+## Stridsbalans vid höga stats
 
-## Avgränsning
+HP och skadeformeln har inte ändrats. Med samma Attack och Defense ger den befintliga
+formeln följande skada per lyckad träff mot 100 HP:
 
-Träningen har fortfarande inga materialkostnader, utrustningsbonusar eller
-färdighetsnivåer. Strid, skada och automatisk återhämtning har tillkommit i
-[första PvP-systemet](COMBAT_SYSTEM.md). Hunger och permadöd är fortsatt framtida
-funktioner i [designunderlaget](COMBAT_AND_PROGRESSION_DESIGN.md).
+| Attack / Defense | Skada | Träffar för att slå ut |
+| --- | ---: | ---: |
+| 10 / 10 | 32 | 4 |
+| 100 / 100 | 56 | 2 |
+| 1 000 / 1 000 | 87 | 2 |
+| 10 000 / 10 000 | 125 | 1 |
+| 1 000 000 / 1 000 000 | 222 | 1 |
+| 1 000 / 10 | 174 | 1 |
+| 10 / 250 | 0 | Ingen skada |
 
-## Verifiering
+Lika Accuracy och Speed ger fortsatt 50 % träffchans. Tabellen gäller lyckade träffar,
+inte rundor. Den starka sena träningen gör alltså också jämna högstatsstrider korta med dagens
+100 HP. HP, skala och skadebalans behöver ett separat balansbeslut före långsiktig lansering.
 
-Utförda kontroller och resultat finns i [implementationsstatus](IMPLEMENTATION_STATUS.md).
+## Databas och offline
+
+Åtta statkolumner använder bigint med taket 9 007 199 254 740 991, samma säkra heltalsområde
+som klienten. XP har samma tak. Kostnader och sammansatta belöningar valideras i config.
+Privata tabeller lagrar nivådefinitioner, två progressionsrader per karaktär,
+aktionskvitton och skeppsjobb. Befintliga spelare börjar på första nivån med 0 XP;
+historiska stats används inte för att hitta på tidigare XP.
+
+Publika RPC:
+- train_crew(stat, expected_tier_id, request_id)
+- purchase_training_tier(training_group, tier_id, request_id)
+- start_ship_upgrade(stat, size_id, expected_workshop_id, request_id)
+
+Alla mutatorer autentiserar kontot, använder stridens ordnade deltagarlås och debiterar atomiskt.
+Klienten kan inte välja ägare, kostnad, tid, XP, ökning eller slumpresultat.
+Ett återförsök returnerar originalkvittot. Återanvänd request_id med annat innehåll avvisas.
+Den tidigare train_stat-funktionen är borttagen i både public och private.
+
+Skeppsjobbet lagrar sluttid och belöningssnapshot. En partiell unik nyckel på karaktären
+där applied_at är null håller platsen upptagen tills jobbet tillgodoräknats.
+Servern färdigställer förfallna arbeten vid läsning av spelstatus, nya träningshandlingar
+och köp samt före både stridsförhandsvisning och faktisk stridsstart.
+Både angripare och offlineförsvarare färdigställs före en ny snapshot, med samma observed_at.
+Befintliga stridssnapshots och rapporter ändras aldrig av träning.
+
+Det behövs ingen bakgrundsarbetare: jobbet är logiskt klart vid sluttiden och tillgodoräknas
+vid nästa relevant serverkontakt. UI uppdaterar vid sluttiden och återanslutning.
+Karaktärens ändringssignal uppdaterar andra flikar. Oförändrade läsningar skickar ingen ny signal.
+Sidan visar senaste färdiga arbetet även efter återinloggning.
+
+## Konfiguration och verifiering
+
+Ändra training i gameplayconfig, kör config:sync och db:migrate. Nivå-ID och ordning
+är beständiga; befintliga nivåer får inte tas bort eller flyttas av en configmigration.
+Balansändringar gäller nya handlingar. Sparade skeppsarbeten behåller alla sina värden.
+Kvitton behålls för stabila återförsök; ingen rensningspolicy har införts.
+
+Utförda kontroller redovisas i [implementationsstatus](IMPLEMENTATION_STATUS.md).

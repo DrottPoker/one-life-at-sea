@@ -6,9 +6,10 @@ import { Suspense, useEffect, useId, useRef, useTransition, type ReactNode } fro
 import { usePathname, useRouter } from "next/navigation";
 import { Masthead } from "@/components/shell";
 import { createClient } from "@/lib/supabase/browser";
+import { isHospitalAccessiblePath } from "@/lib/hospital";
 import { attackUrl, type AttackLock } from "@/lib/combat";
 
-function SessionFrame({ children, characterId, attack }: { children: ReactNode; characterId: string | null; attack: AttackLock | null }) {
+function SessionFrame({ children, characterId, attack, hospitalUntil }: { children: ReactNode; characterId: string | null; attack: AttackLock | null; hospitalUntil: string | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const instance = useId();
@@ -17,11 +18,12 @@ function SessionFrame({ children, characterId, attack }: { children: ReactNode; 
   const dirty = useRef(false);
   const requestRefresh = useRef<() => void>(() => {});
   const attackScreen = pathname === "/attack" || pathname.startsWith("/attack/");
-  const blocked = !!attack && pathname !== attackUrl(attack.target_id);
+  const destination = hospitalUntil ? "/harbor/hospital" : attack ? attackUrl(attack.target_id) : null;
+  const blocked = !!destination && pathname !== destination && !(hospitalUntil && isHospitalAccessiblePath(pathname));
 
   useEffect(() => {
-    if (blocked && attack) router.replace(attackUrl(attack.target_id));
-  }, [blocked, attack, router]);
+    if (blocked && destination) router.replace(destination);
+  }, [blocked, destination, router]);
 
   useEffect(() => {
     refreshing.current = pending;
@@ -71,7 +73,7 @@ function SessionFrame({ children, characterId, attack }: { children: ReactNode; 
     };
   }, [characterId, instance, router]);
 
-  if (blocked) return <main id="main" className="o-attack-loading"><span className="o-spinner" /> Returning to your battle...</main>;
+  if (blocked) return <main id="main" className="o-attack-loading"><span className="o-spinner" /> {hospitalUntil ? "Returning to hospital..." : "Returning to your battle..."}</main>;
   return <div className={attackScreen ? "o-attack-shell" : "game-shell"}>
     {!attackScreen && <Masthead />}
     {children}
@@ -79,6 +81,6 @@ function SessionFrame({ children, characterId, attack }: { children: ReactNode; 
   </div>;
 }
 
-export function AppFrame(props: { children: ReactNode; characterId: string | null; attack: AttackLock | null }) {
+export function AppFrame(props: { children: ReactNode; characterId: string | null; attack: AttackLock | null; hospitalUntil: string | null }) {
   return <Suspense fallback={<main id="main" className="o-attack-loading">Loading...</main>}><SessionFrame {...props} /></Suspense>;
 }
