@@ -87,7 +87,7 @@ test("crew XP, carried-gold purchases, two tabs, login and responsive layout", a
   await own.api.auth.signOut();
 });
 
-test("ship sizes complete automatically, preserve work after login and update another tab", async ({ page, context }) => {
+test("variable ship jobs complete automatically, preserve work after login and update another tab", async ({ page, context }) => {
   test.setTimeout(120_000);
   const own = await account();
   await login(page, own);
@@ -95,16 +95,19 @@ test("ship sizes complete automatically, preserve work after login and update an
   const other = await context.newPage();
   await other.goto("/harbor/ship-upgrades");
   let attack = 10, xp = 0, energy = 100;
-  for (const [size, cost, gain] of [["small", 5, 1], ["medium", 25, 5], ["large", 50, 10]] as const) {
+  for (const [cost, gain] of [[5, 1], [26, 5.2], [50, 10]] as const) {
     await expect(page.getByRole("main")).not.toContainText(/\bXP\b|earned|more XP required/);
-    await page.getByLabel("Work size", { exact: true }).selectOption(size);
+    const slider = page.getByRole("slider", { name: "Work size", exact: true });
+    await slider.focus();
+    await slider.press("Home");
+    for (let amount = 5; amount < cost; amount++) await slider.press("ArrowRight");
     await page.getByRole("button", { name: "Start work", exact: true }).click();
     energy -= cost;
     await expect(page.getByRole("region", { name: "Ship work in progress" })).toBeVisible();
     await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(String(attack));
     await expect(page.getByRole("progressbar", { name: "Energy", exact: true })).toHaveAttribute("aria-valuenow", String(energy));
     await expect(other.getByRole("region", { name: "Ship work in progress" })).toBeVisible();
-    if (size === "small") {
+    if (cost === 5) {
       await page.reload();
       await expect(page.getByRole("region", { name: "Ship work in progress" })).toBeVisible();
       for (const width of [1280, 768, 375, 320]) {
@@ -130,7 +133,7 @@ test("ship sizes complete automatically, preserve work after login and update an
   await expect(page).toHaveURL(/\/login$/);
   await login(page, own);
   await page.goto("/harbor/ship-upgrades");
-  await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("26");
+  await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("26.2");
   await own.api.auth.signOut();
 });
 
@@ -162,7 +165,7 @@ test("concurrent drills, purchases and ship starts cannot overspend or duplicate
   expect(drills.every(r => !r.error && JSON.stringify(r.data) === JSON.stringify(drills[0].data))).toBe(true);
   expect((await own.api.rpc("get_game_state")).data.energy).toBe(95);
   const starts = await Promise.all(Array.from({ length: 8 }, () => own.api.rpc("start_ship_upgrade", {
-    stat: "attack", size_id: "large", expected_workshop_id: "ship_1", request_id: randomUUID(),
+    stat: "attack", energy_amount: 50, expected_workshop_id: "ship_1", request_id: randomUUID(),
   })));
   expect(starts.filter(r => !r.error)).toHaveLength(1);
   expect(starts.filter(r => r.error?.message === "SHIP_WORK_ACTIVE")).toHaveLength(7);
@@ -197,5 +200,59 @@ test("a lost crew response retries the original drill without a second charge or
   expect(after.energy).toBe(95);
   expect(after.crew_attack).toBe(before.crew_attack);
   expect(after.training.progress.crew.xp).toBe(5);
+  await own.api.auth.signOut();
+});
+
+test("ship slider tracks available Energy and awards fractional stats", async ({ page }) => {
+  test.setTimeout(90_000);
+  const own = await account(), errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  fixture(own.id, "update public.characters set energy=0,energy_updated_at=clock_timestamp() where id=:captain;");
+  await login(page, own);
+  await page.goto("/harbor/ship-upgrades");
+  const slider = page.getByRole("slider", { name: "Work size", exact: true });
+  const start = page.getByRole("button", { name: "Start work", exact: true });
+  await expect(slider).toHaveAttribute("min", "5");
+  await expect(slider).toBeDisabled();
+  await expect(start).toBeDisabled();
+  for (const energy of [4, 5, 37]) {
+    fixture(own.id, "update public.characters set energy=" + energy + ",energy_updated_at=clock_timestamp() where id=:captain; select private.notify_training(:captain);");
+    await expect(page.getByText(energy + " Energy available", { exact: true })).toBeVisible();
+    if (energy < 5) {
+      await expect(slider).toBeDisabled();
+      await expect(start).toBeDisabled();
+    } else {
+      await expect(slider).toBeEnabled();
+      await expect(start).toBeEnabled();
+      await expect(slider).toHaveAttribute("max", String(energy));
+      await slider.press("End");
+      await expect(slider).toHaveValue(String(energy));
+    }
+  }
+  fixture(own.id, "update public.characters set energy=7,energy_updated_at=clock_timestamp() where id=:captain; select private.notify_training(:captain);");
+  await expect(slider).toHaveAttribute("max", "7");
+  await expect(slider).toHaveValue("7");
+  await slider.press("ArrowLeft");
+  await expect(slider).toHaveValue("6");
+  await expect(page.getByText("+1.2 Attack", { exact: true })).toBeVisible();
+  await expect(page.getByText("6 Energy · 6 minutes", { exact: true })).toBeVisible();
+  for (const width of [1280, 375, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (width !== 320) await page.screenshot({ path: ".local/ship-slider-" + width + ".png", fullPage: true });
+  }
+  await start.click();
+  await expect(page.getByRole("region", { name: "Ship work in progress" })).toContainText("+1.2 Attack");
+  const state = (await own.api.rpc("get_game_state")).data;
+  expect(state.energy).toBe(1);
+  expect(state.ship_attack).toBe(10);
+  expect(state.training.ship_job).toMatchObject({ energy_cost: 6, stat_gain: 1.2, xp_gain: 6 });
+  expect(Date.parse(state.training.ship_job.finishes_at) - Date.parse(state.training.ship_job.started_at)).toBe(360_000);
+  fixture(own.id, "update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '7 minutes',finishes_at=clock_timestamp()-interval '1 second' where character_id=:captain and applied_at is null;");
+  await page.reload();
+  await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("11.2");
+  await expect(slider).toBeDisabled();
+  await expect(start).toBeDisabled();
+  expect(errors).toEqual([]);
   await own.api.auth.signOut();
 });

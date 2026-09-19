@@ -11,10 +11,15 @@ Energy återhämtas med +5 var femte minut, även offline, till högst 100.
 
 - Crew: 5 Energy ger aktuell övnings statökning direkt och 5 XP. Perfect Drill har 1 % chans
   att dubbla statökningen, utan extra XP.
-- Skepp: välj stat och Small, Medium eller Large. Betala Energy vid start och få stats/XP
-  vid sluttiden. Ett pågående arbete åt gången, utan kö, avbryt eller automatisk upprepning.
-- Small: 5 Energy, 5 minuter, en basökning. Medium: 25 Energy, 25 minuter, fem basökningar.
-  Large: 50 Energy, 50 minuter, tio basökningar. Samma utbyte per Energy.
+- Skepp: välj stat och Energy med en slider från 5 till aktuell Energy, i heltalssteg.
+  Varje Energy tar en minut. Betala vid start och få stats/XP vid sluttiden.
+  Ett pågående arbete åt gången, utan kö eller automatisk upprepning.
+- Slidern följer saldot när det ändras och låses tillsammans med startknappen under 5 Energy.
+  Kostnad, tid och statökning visas direkt. Servern kontrollerar det återhämtade saldot vid start.
+- Samma utbyte per Energy som tidigare: första workshopen ger 0,2 stats per Energy.
+  Exempelvis ger 6 Energy +1,2 stats efter 6 minuter. Decimalerna bevaras vid färdigställande.
+  Stats per Energy avrundas en gång till sex decimaler och multipliceras sedan med Energy;
+  uppdelning i flera små arbeten förändrar därför inte den sammanlagda belöningen.
 - Crew och skepp har separata kumulativa XP-spår. Varje spår delas av gruppens fyra stats.
   Ett XP per investerad Energy. XP förbrukas inte vid köp.
 - Nästa övning/workshop kräver både XP och Gold Coins på karaktären. Bankpengar räknas inte.
@@ -57,7 +62,7 @@ annan Energyförbrukning och tid att få tag på guld ingår inte.
 | 10 | 100 000 | 5 000 000 | 1 500 | 69,44 |
 
 Första nivåköpet kan låsas upp med startens 100 Energy, alltså 20 crew-pass.
-På nivå 10 ger en Perfect Drill 3 000 stats, och ett Large skeppsarbete 15 000 stats.
+På nivå 10 ger en Perfect Drill 3 000 stats, och ett skeppsarbete för 50 Energy 15 000 stats.
 Tabellen är en justerbar första balans, inte en färdig ekonomimodell.
 
 ## Stridsbalans vid höga stats
@@ -81,8 +86,9 @@ inte rundor. Den starka sena träningen gör alltså också jämna högstatsstri
 
 ## Databas och offline
 
-Åtta statkolumner använder bigint med taket 9 007 199 254 740 991, samma säkra heltalsområde
-som klienten. XP har samma tak. Kostnader och sammansatta belöningar valideras i config.
+Crew-stats och XP använder bigint. Skeppets fyra stats och jobbens stat_gain använder numeric
+så att decimaler inte försvinner. Alla har fortsatt taket 9 007 199 254 740 991.
+Kostnader, varaktighet och sammansatta belöningar valideras i config.
 Privata tabeller lagrar nivådefinitioner, två progressionsrader per karaktär,
 aktionskvitton och skeppsjobb. Befintliga spelare börjar på första nivån med 0 XP;
 historiska stats används inte för att hitta på tidigare XP.
@@ -90,10 +96,11 @@ historiska stats används inte för att hitta på tidigare XP.
 Publika RPC:
 - train_crew(stat, expected_tier_id, request_id)
 - purchase_training_tier(training_group, tier_id, request_id)
-- start_ship_upgrade(stat, size_id, expected_workshop_id, request_id)
+- start_ship_upgrade(stat, energy_amount, expected_workshop_id, request_id)
 
 Alla mutatorer autentiserar kontot, använder stridens ordnade deltagarlås och debiterar atomiskt.
-Klienten kan inte välja ägare, kostnad, tid, XP, ökning eller slumpresultat.
+Klienten väljer en heltalsmängd Energy men kan inte välja ägare, prisregel, tid, XP,
+statökning eller slumpresultat. Ogiltig mängd och otillräckligt saldo avvisas utan debitering.
 Ett återförsök returnerar originalkvittot. Återanvänd request_id med annat innehåll avvisas.
 Den tidigare train_stat-funktionen är borttagen i både public och private.
 

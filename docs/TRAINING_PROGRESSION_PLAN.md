@@ -9,6 +9,10 @@ Aktuella regler, tio provisoriska nivåer och den faktiska datamodellen finns i
 [implementationsstatus](IMPLEMENTATION_STATUS.md). Plantexten nedan bevarar även framtida
 itemförslag; dessa delar är inte implementerade.
 
+Senare ändring 2026-09-19: Small/Medium/Large har ersatts av en slider från 5 till aktuell
+Energy, med en minut per Energy och proportionella decimalstats. Reglerna i
+[träningssystemet](TRAINING_FOUNDATION.md) gäller framför de äldre storlekarna nedan.
+
 Första itemetappen implementerad 2026-09-19: [Inventory](INVENTORY.md) innehåller
 beständigt innehav, visning och Trash. Equip, Use och träningsbuffar kommer senare.
 Avgränsningen utan items nedan gäller den redan levererade träningskärnan.

@@ -31,9 +31,13 @@ config/gameplay.json är värdekällan för både app och databas. Privata SQL-f
 alla utfall och debiteringar. Webbläsaren kan inte välja kostnad, skadevärde eller slumpresultat.
 
 scripts/config läser supabase/templates/gameplay.sql och ersätter typkontrollerade skalära tokens.
-Training innehåller dessutom crewTiers, shipTiers och shipSizes. Generatorn skriver deterministiska
-SQL-kataloger från dessa listor. Nivå-ID och ordning får inte ändras eller tas bort när de har installerats.
-XP-krav och ökningar måste stiga, första nivån är gratis vid 0 XP och större jobb har proportionell tid.
+Training innehåller crewTiers och shipTiers. Generatorn skriver deterministiska SQL-kataloger
+från dessa listor. Nivå-ID och ordning får inte ändras eller tas bort när de har installerats.
+XP-krav och ökningar måste stiga och första nivån är gratis vid 0 XP.
+Skeppsarbete använder shipMinEnergy (5), shipEnergyPerUnit (5) och shipSecondsPerEnergy (60).
+Sliderns maxvärde är aktuell Energy. Statökning per Energy är workshopens statGain dividerat
+med shipEnergyPerUnit, avrundat till sex decimaler före multiplikation med vald Energy.
+De gamla storleksdefinitionerna bevaras endast som historik i den privata databaskatalogen.
 Perfect Drill-chansen anges i basispunkter: 100 är 1 %. Säkra heltalsgränser kontrolleras även för
 multiplicerade belöningar. Pågående skeppsjobb behåller sin sparade balans vid configbyten.
 Textvärden citeras och SQL-escapas. En ändring ger en ny migration via Supabase CLI; äldre migrationer

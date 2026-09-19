@@ -180,7 +180,7 @@ test("admin remains accessible in hospital and combat, and revocation is immedia
     const log = await admin.api.rpc("get_combat_log", { battle_id: combatId });
     expect(log.error).toBeNull();
     expect(log.data?.events.some(event => event.kind === "admin_end")).toBe(true);
-    const job = await admin.api.rpc("start_ship_upgrade", { stat: "attack", size_id: "small", expected_workshop_id: "ship_1", request_id: randomUUID() });
+    const job = await admin.api.rpc("start_ship_upgrade", { stat: "attack", energy_amount: 5, expected_workshop_id: "ship_1", request_id: randomUUID() });
     expect(job.error).toBeNull();
     await page.reload();
     const cancellation = page.locator("form").filter({ has: page.getByRole("button", { name: "Review job cancellation" }) });

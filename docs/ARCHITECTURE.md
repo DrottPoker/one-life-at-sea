@@ -21,6 +21,12 @@ validation feedback, password visibility, pending states and the active navigati
 Server Actions perform account and character mutations. No browser storage or
 mock data substitutes for the database.
 
+Modal dialogs are centered horizontally and vertically in the viewport by the shared
+CSS default, unless a specific design explicitly overrides placement. Dialogs constrain
+height to the viewport and scroll internally. Use DialogCloseButton for the small upper-right
+close control and o-dialog-title on the heading to reserve space for it. Inventory destruction
+and admin record dialogs follow this convention; closing does not submit their forms.
+
 ## Navigation and loading
 
 The game uses Next.js client-side navigation with normal URLs. The shared
@@ -167,8 +173,14 @@ clamped to capacity; recovery amount and interval are independently configurable
 
 Training uses public train_crew, purchase_training_tier and start_ship_upgrade RPCs.
 A private authenticated mutator owns validation, RNG, Energy, carried-gold debits and XP.
-The old public/private train_stat functions are removed. All eight stats and XP use bigint
-within JavaScript's safe integer range. Character row types are separate from derived game state.
+The old public/private train_stat functions are removed. Crew stats and XP use bigint;
+ship stats and job stat_gain use numeric to retain fractional improvements. Their existing
+safe-integer ceiling is preserved. Character row types are separate from derived game state.
+The ship RPC accepts energy_amount instead of a size ID. A whole amount from the configured
+minimum (5) through recovered current Energy determines cost, duration (60 seconds per Energy)
+and proportional rewards. The per-Energy stat rate is rounded to six decimal places before
+multiplication, so splitting work does not change efficiency. Old jobs retain their snapshots;
+the nullable size_id and old size catalog remain historical metadata only.
 
 Private catalogs, per-character progression, idempotency receipts and ship jobs are protected by
 RLS and revoked client table access. Stable tier IDs and positions are guarded during config sync.

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ChartLine, Boxes, CircleDot, ChevronDown, ChevronLeft, ChevronRight, Compass, Cross, Crosshair, FlaskConical, Package, Search, Swords, Trash2, X, Zap } from "lucide-react";
+import { DialogCloseButton } from "@/components/dialog-close-button";
 import { ItemCirculationChart } from "@/components/item-circulation-chart";
 import { formatCirculation } from "@/lib/circulation";
 import { trashInventoryItem } from "@/app/inventory-actions";
@@ -203,7 +204,8 @@ export function InventoryPanel({ inventory, filters }: { inventory: InventoryPag
       onCancel={event => { if (pending) event.preventDefault(); else setDialogOpen(false); }}
       onClose={() => setDialogOpen(false)}>
       {selected && <form onSubmit={destroy} aria-busy={pending}>
-        <h2 id="trash-title">Destroy {selected.name}?</h2>
+        <DialogCloseButton onClose={() => setDialogOpen(false)} disabled={pending} />
+        <h2 id="trash-title" className="o-dialog-title">Destroy {selected.name}?</h2>
         <p id="trash-warning">These items will be permanently destroyed. You will not receive Gold Coins.</p>
         {selected.stats && <p className="o-copy">Damage {formatItemStat(selected.stats.damage)} · Accuracy {formatItemStat(selected.stats.accuracy)}</p>}
         {selected.entry_type === "stack" ? <div className="o-field">

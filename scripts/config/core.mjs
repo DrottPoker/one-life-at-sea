@@ -58,15 +58,12 @@ export function validateConfig(config) {
       check(Number.isSafeInteger(tier.statGain * g.training.perfectMultiplier), "Perfect Drill gain exceeds the safe integer limit.");
     }
   }
-  check(new Set(g.training.shipSizes.map(s => s.id)).size === g.training.shipSizes.length, "Ship size IDs must be unique.");
-  const firstSize = g.training.shipSizes[0];
-  check(firstSize.units === 1, "The first ship size must be one base unit.");
-  for (const size of g.training.shipSizes) {
-    check(/^[a-z][a-z0-9_]{0,47}$/.test(size.id), "Size IDs must be stable lowercase identifiers.");
-    check(size.units * g.training.energyCost <= g.resources.energyMax, "Ship work costs more than maximum Energy.");
-    check(BigInt(size.durationSeconds) * BigInt(firstSize.units) === BigInt(firstSize.durationSeconds) * BigInt(size.units), "Ship sizes must take the same time per unit.");
-    check(Number.isSafeInteger(size.units * g.training.energyCost * g.training.xpPerEnergy), "Ship XP exceeds the safe integer limit.");
-    for (const tier of g.training.shipTiers) check(Number.isSafeInteger(tier.statGain * size.units), "Ship gain exceeds the safe integer limit.");
+  check(g.training.shipMinEnergy <= g.resources.energyMax, "Minimum ship work exceeds maximum Energy.");
+  check(Number.isSafeInteger(g.resources.energyMax * g.training.shipSecondsPerEnergy), "Ship duration exceeds the safe integer limit.");
+  check(Number.isSafeInteger(g.resources.energyMax * g.training.xpPerEnergy), "Ship XP exceeds the safe integer limit.");
+  for (const tier of g.training.shipTiers) {
+    const rate = Math.round(tier.statGain * 1_000_000 / g.training.shipEnergyPerUnit);
+    check(rate > 0 && Number.isSafeInteger(rate * g.resources.energyMax), "Ship gain exceeds supported decimal precision.");
   }
   check(Number.isSafeInteger(g.training.energyCost * g.training.xpPerEnergy), "Crew XP exceeds the safe integer limit.");
   check(g.economy.initialGoldCoins <= g.economy.maxGoldCoins, "Initial Gold Coins exceeds the balance limit.");
@@ -108,18 +105,13 @@ export function trainingCatalogSql(config) {
   const rows = [["crew", config.gameplay.training.crewTiers], ["ship", config.gameplay.training.shipTiers]]
     .flatMap(([group, tiers]) => tiers.map((t, i) =>
       "(" + [quote(group), quote(t.id), i, quote(t.name), t.xpRequired, t.goldCost, t.statGain].join(",") + ")")).join(",\n");
-  const sizes = config.gameplay.training.shipSizes.map(s =>
-    "(" + [quote(s.id), quote(s.name), s.units, s.durationSeconds].join(",") + ")").join(",\n");
   let delimiter = "$catalog$";
   while (rows.includes(delimiter)) delimiter = delimiter.slice(0, -1) + "_$";
   return "do " + delimiter + " begin if exists(select 1 from private.training_tiers old left join (values\n" + rows +
     "\n) incoming(training_group,id,position,name,xp_required,gold_cost,stat_gain) using(training_group,id) " +
     "where incoming.id is null or incoming.position<>old.position) then raise exception 'Existing tier IDs and positions must be preserved'; end if; end " + delimiter + ";\n" +
     "insert into private.training_tiers(training_group,id,position,name,xp_required,gold_cost,stat_gain) values\n" + rows +
-    "\non conflict(training_group,id) do update set name=excluded.name,xp_required=excluded.xp_required,gold_cost=excluded.gold_cost,stat_gain=excluded.stat_gain;\n" +
-    "insert into private.ship_work_sizes(id,name,units,duration_seconds) values\n" + sizes +
-    "\non conflict(id) do update set name=excluded.name,units=excluded.units,duration_seconds=excluded.duration_seconds;\n" +
-    "delete from private.ship_work_sizes where id not in (" + config.gameplay.training.shipSizes.map(s => quote(s.id)).join(",") + ");\n";
+    "\non conflict(training_group,id) do update set name=excluded.name,xp_required=excluded.xp_required,gold_cost=excluded.gold_cost,stat_gain=excluded.stat_gain;\n";
 }
 export function gameplaySql(config) {
   return render(read("supabase/templates/gameplay.sql")

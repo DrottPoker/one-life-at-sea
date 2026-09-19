@@ -7,14 +7,14 @@ import { withDatabaseRetry } from "@/lib/database-retry";
 import { isUuid } from "@/lib/combat";
 import { isStat, isTrainingGroup, STAT_LABELS } from "@/lib/game";
 import { formatGold } from "@/lib/bank";
-import type { TrainingResult } from "@/lib/training";
+import { parseShipEnergy, formatStat, type TrainingResult } from "@/lib/training";
 
 const errors: Record<string, string> = {
   INVALID_REQUEST: "Reload the page and try again.",
   REQUEST_CONFLICT: "This request has changed. Reload the page.",
   INVALID_GROUP: "Choose Crew or Ship.",
   INVALID_STAT: "Choose a valid stat.",
-  INVALID_SIZE: "Choose an available work size.",
+  INVALID_ENERGY: "Choose an available whole Energy amount.",
   INVALID_TIER: "Only the next tier can be purchased.",
   STALE_TIER: "Your training tier changed. Please try again with the updated tier.",
   NOT_ENOUGH_XP: "Keep training to unlock this tier.",
@@ -31,13 +31,13 @@ const errors: Record<string, string> = {
 export async function trainingAction(form: FormData): Promise<TrainingResult> {
   await requireCharacter();
   const action = form.get("action"), stat = form.get("stat"), group = form.get("group");
-  const tier = form.get("tier_id"), size = form.get("size_id"), requestId = form.get("request_id");
+  const tier = form.get("tier_id"), energy = parseShipEnergy(form.get("energy_amount")), requestId = form.get("request_id");
   if (!isUuid(requestId) || typeof tier !== "string" || !tier) return { error: true, message: errors.INVALID_REQUEST };
   const client = await createClient();
   const call = () => {
     if (action === "crew" && isStat(stat)) return client.rpc("train_crew", { stat, expected_tier_id: tier, request_id: requestId });
-    if (action === "ship" && isStat(stat) && typeof size === "string") return client.rpc("start_ship_upgrade", {
-      stat, size_id: size, expected_workshop_id: tier, request_id: requestId,
+    if (action === "ship" && isStat(stat) && energy !== null) return client.rpc("start_ship_upgrade", {
+      stat, energy_amount: energy, expected_workshop_id: tier, request_id: requestId,
     });
     if (action === "purchase" && isTrainingGroup(group)) return client.rpc("purchase_training_tier", {
       training_group: group, tier_id: tier, request_id: requestId,
@@ -46,7 +46,7 @@ export async function trainingAction(form: FormData): Promise<TrainingResult> {
   };
   if (!["crew", "ship", "purchase"].includes(String(action)) ||
     (action === "purchase" ? !isTrainingGroup(group) : !isStat(stat)) ||
-    (action === "ship" && typeof size !== "string")) return { error: true, message: errors.INVALID_REQUEST };
+    (action === "ship" && energy === null)) return { error: true, message: errors.INVALID_REQUEST };
   const response = await withDatabaseRetry(() => call()!);
   revalidatePath("/(game)", "layout");
   const { data, error } = response;
@@ -55,7 +55,7 @@ export async function trainingAction(form: FormData): Promise<TrainingResult> {
     return { error: true, retry: !message, message: message ?? "The action could not be confirmed. Retry it safely below." };
   }
   if (data.kind === "purchase") return { message: data.tier_name + " purchased for " + formatGold(data.gold_cost) + " Gold Coins." };
-  if (data.kind === "ship") return { message: "Work started. Ship " + STAT_LABELS[data.stat] + " +" + formatGold(data.stat_gain) +
+  if (data.kind === "ship") return { message: "Work started. Ship " + STAT_LABELS[data.stat] + " +" + formatStat(data.stat_gain) +
     " when complete." };
   return { message: (data.perfect ? "Perfect Drill! " : "") + "Crew " + STAT_LABELS[data.stat] + " +" + formatGold(data.stat_gain) +
     ". Spent " + data.energy_cost + " Energy." };

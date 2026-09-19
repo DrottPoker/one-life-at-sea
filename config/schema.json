@@ -154,31 +154,23 @@
                 }
               }
             },
-            "shipSizes": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "units": {
-                    "type": "number",
-                    "integer": true,
-                    "minimum": 1,
-                    "maximum": 9007199254740991
-                  },
-                  "durationSeconds": {
-                    "type": "number",
-                    "integer": true,
-                    "minimum": 1,
-                    "maximum": 2147483647
-                  }
-                }
-              }
+            "shipMinEnergy": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "shipEnergyPerUnit": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "shipSecondsPerEnergy": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
             }
           }
         },
@@ -458,7 +450,12 @@
         "inventory": {
           "type": "object",
           "properties": {
-            "historyMaxPoints": { "type": "number", "integer": true, "minimum": 50, "maximum": 2000 },
+            "historyMaxPoints": {
+              "type": "number",
+              "integer": true,
+              "minimum": 50,
+              "maximum": 2000
+            },
             "pageSize": {
               "type": "number",
               "integer": true,

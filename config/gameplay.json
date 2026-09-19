@@ -159,26 +159,9 @@
         "statGain": 1500
       }
     ],
-    "shipSizes": [
-      {
-        "id": "small",
-        "name": "Small",
-        "units": 1,
-        "durationSeconds": 300
-      },
-      {
-        "id": "medium",
-        "name": "Medium",
-        "units": 5,
-        "durationSeconds": 1500
-      },
-      {
-        "id": "large",
-        "name": "Large",
-        "units": 10,
-        "durationSeconds": 3000
-      }
-    ]
+    "shipMinEnergy": 5,
+    "shipEnergyPerUnit": 5,
+    "shipSecondsPerEnergy": 60
   },
   "startingStats": {
     "ship": {

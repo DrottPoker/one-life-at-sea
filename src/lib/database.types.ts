@@ -66,7 +66,7 @@ export type Database = {
       get_game_state: { Args: Record<string, never>; Returns: GameState | null };
       transfer_gold: { Args: { direction: BankDirection; amount: number; request_id: string }; Returns: BankTransfer };
       train_crew: { Args: { stat: Stat; expected_tier_id: string; request_id: string }; Returns: TrainingReceipt };
-      start_ship_upgrade: { Args: { stat: Stat; size_id: string; expected_workshop_id: string; request_id: string }; Returns: TrainingReceipt };
+      start_ship_upgrade: { Args: { stat: Stat; energy_amount: number; expected_workshop_id: string; request_id: string }; Returns: TrainingReceipt };
       purchase_training_tier: { Args: { training_group: TrainingGroup; tier_id: string; request_id: string }; Returns: TrainingReceipt };
       get_combat_preview: { Args: { target_id: string }; Returns: CombatPreview | CombatError };
       start_combat: { Args: { target_id: string; request_id: string }; Returns: CombatResponse };

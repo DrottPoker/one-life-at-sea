@@ -11,7 +11,9 @@ Object.assign(config.gameplay.training, { energyCost: 7, perfectChanceBps: 0 });
 for (const tier of [...config.gameplay.training.crewTiers, ...config.gameplay.training.shipTiers]) tier.statGain *= 3;
 config.gameplay.training.xpPerEnergy = 2;
 config.gameplay.training.shipTiers[0].name = "Captain\'s $catalog$ Workshop";
-for (const size of config.gameplay.training.shipSizes) size.durationSeconds *= 2;
+config.gameplay.training.shipSecondsPerEnergy *= 2;
+config.gameplay.training.shipEnergyPerUnit = 7;
+config.gameplay.training.shipMinEnergy = 7;
 for (const group of Object.values(config.gameplay.startingStats)) for (const stat of Object.keys(group)) group[stat] = 12;
 Object.assign(config.gameplay.combat, { energyCost: 13, maxRounds: 7, startingAmmo: 6, ammoPerShot: 2,
   minimumHealth: 2, idleSeconds: 90, maxDurationSeconds: 360, protectionSeconds: 45 });
@@ -43,12 +45,12 @@ const checks = [
 "select is((select extract(epoch from(hospital_until-hospital_started_at))::int from public.characters where user_id=(select id from hospital_config_fixture)),19,'Hospital duration is configurable');",
 
 "select is((select energy from private.energy_snapshot(50,\'2026-01-01Z\',\'2026-01-01 00:02Z\')),56,\'Alternative recovery amount applies to every interval\');",
-"select is((select stat_gain from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),10::bigint,'Old job keeps its original gain after config change');",
+"select is((select stat_gain from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),10::numeric,'Old job keeps its original gain after config change');",
 "select is((select xp_gain from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),50::bigint,'Old job keeps its original XP');",
 "select is((select energy_cost from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),50,'Old job keeps its original Energy cost');",
 "select is((select extract(epoch from(finishes_at-started_at))::int from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),3000,'Old job keeps its original duration');",
 "select is((select bank_gold_coins from public.characters where id=(select captain from old_training_fixture)),123::bigint,'Config migration preserves existing bank coins');",
-"select is((select ship_attack from public.characters where id=(select captain from old_training_fixture)),10::bigint,'Config migration preserves existing stats');",
+"select is((select ship_attack from public.characters where id=(select captain from old_training_fixture)),10::numeric,'Config migration preserves existing stats');",
 "select is(public.get_gameplay_revision(),'" + revision(config) + "','Alternative revision is installed within transaction');",
 "select is((select energy from private.energy_snapshot(118,'2026-01-01Z','2026-01-01 00:02Z')),120,'Energy interval and cap are configurable');",
 "select is(private.health_snapshot(149,'2026-01-01Z','2026-01-02Z',7),150,'Health cap is configurable');",
@@ -60,7 +62,7 @@ const checks = [
 "create temporary table config_users as select gen_random_uuid() a,gen_random_uuid() d;",
 "insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','Config '||id::text) from config_users cross join lateral(values(a),(d)) u(id);",
 "create temporary table config_captains as select (select id from public.characters where user_id=u.a) a,(select id from public.characters where user_id=u.d) d from config_users u;",
-"select is((select ship_attack from public.characters where id=(select a from config_captains)),12::bigint,'Creation uses changed starting stats');",
+"select is((select ship_attack from public.characters where id=(select a from config_captains)),12::numeric,'Creation uses changed starting stats');",
 "select is((select ship_health from public.characters where id=(select a from config_captains)),120,'Creation uses changed ship health');",
 "select is((select crew_health from public.characters where id=(select a from config_captains)),110,'Creation uses changed crew health');",
 "select set_config('request.jwt.claims',jsonb_build_object('sub',a,'role','authenticated')::text,true) from config_users;",
@@ -71,11 +73,11 @@ const checks = [
 "select public.train_crew('attack','crew_1',gen_random_uuid());",
 "select is((select crew_attack from public.characters where id=(select a from config_captains)),15::bigint,'Training applies configured gain');",
 "select is(public.get_game_state()#>>'{training,progress,crew,xp}','14','Crew XP uses the configured rate');",
-"select public.start_ship_upgrade('speed','small','ship_1',gen_random_uuid());",
-"select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','3','New ship gain uses changed catalog');",
+"select public.start_ship_upgrade('speed',7,'ship_1',gen_random_uuid());",
+"select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','2.999997','New ship gain uses the configured per-Energy rate');",
 "select is(public.get_game_state()#>>'{training,ship_job,xp_gain}','14','New ship XP uses changed rate');",
 "select is(public.get_game_state()#>>'{training,ship_job,workshop_name}','Captain''s $catalog$ Workshop','Catalog strings safely escape quotes and dollar delimiters');",
-"select is((select extract(epoch from(finishes_at-started_at))::int from private.ship_upgrade_jobs where character_id=(select a from config_captains) and applied_at is null),600,'New ship duration uses changed config');",
+"select is((select extract(epoch from(finishes_at-started_at))::int from private.ship_upgrade_jobs where character_id=(select a from config_captains) and applied_at is null),840,'New ship duration uses changed config');",
 "select is((select energy from public.characters where id=(select a from config_captains)),86,'Training applies configured cost');",
 "update public.characters set ship_health=1,ship_recovery_at=clock_timestamp()+interval '1 hour' where id=(select a from config_captains);",
 "select is((select public.get_combat_preview(d)->>'reason' from config_captains),'NO_HEALTH','Minimum attack health is configurable');",
@@ -99,7 +101,7 @@ const sql = "begin;\ncreate extension if not exists pgtap with schema extensions
   "create temporary table old_training_fixture as select c.id captain from public.characters c join old_training_user u on c.user_id=u.id;\n" +
   "update public.characters set bank_gold_coins=123 where id=(select captain from old_training_fixture);\n" +
   "select set_config(\'request.jwt.claims\',jsonb_build_object(\'sub\',id,\'role\',\'authenticated\')::text,true) from old_training_user;\n" +
-  "select public.start_ship_upgrade(\'attack\',\'large\',\'ship_1\',gen_random_uuid());\n" +
+  "select public.start_ship_upgrade(\'attack\',50,\'ship_1\',gen_random_uuid());\n" +
   "insert into private.item_stacks(character_id,item_id,quantity) select captain,'linen_bandages',7 from old_training_fixture;\n" +
   "insert into private.item_instances(character_id,item_id,damage,accuracy) select captain,'cutlass',d,50 from old_training_fixture cross join(values(32.15),(35.20),(48.70)) v(d);\n" +
   migrationSql(config) + "\nselect no_plan();\n" + checks.join("\n") + "\nselect * from finish();\nrollback;\n" +

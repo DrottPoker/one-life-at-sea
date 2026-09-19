@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { changedValues, rowKey, type AdminResource, type AdminRow, type AdminValues } from "@/lib/admin";
+import { DialogCloseButton } from "@/components/dialog-close-button";
 import { MutationForm } from "@/components/admin/mutation-form";
 
 function EditorDialog({ resource, row, close }: { resource: AdminResource; row: AdminRow; close: () => void }) {
@@ -11,7 +12,8 @@ function EditorDialog({ resource, row, close }: { resource: AdminResource; row: 
   useEffect(() => { dialog.current?.showModal(); }, []);
   const changes = changedValues(row.values, values);
   return <dialog ref={dialog} className="admin-dialog" onCancel={close} onClose={close}>
-    <div className="admin-header"><h2>{resource.name}: {row.values.display_name ?? row.values.item_id ?? "Record"}</h2><button type="button" onClick={close}>Close</button></div>
+    <DialogCloseButton onClose={close} label="Close" />
+    <div className="admin-header"><h2 className="o-dialog-title">{resource.name}: {row.values.display_name ?? row.values.item_id ?? "Record"}</h2></div>
     <p>{resource.note}</p>
     {resource.editable.length > 0 && <MutationForm action="update" payload={{ resource: resource.name, key: rowKey(resource, row), version: row.version, changes }}
       label="Review changes" summary={"Update " + resource.name + ". Only the listed changed fields will be saved."} disabled={!Object.keys(changes).length}>

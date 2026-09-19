@@ -441,6 +441,12 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-ship-order legend { padding:0 8px; }
 .o-ship-choices { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .o-ship-choices .o-field { min-width:0; }
+.o-work-size-label, .o-work-size-limits { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.o-work-size-label output { color:var(--o-text); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.o-work-size input[type="range"] { display:block; width:100%; min-width:0; height:var(--o-touch-height); margin:0; padding:0; accent-color:var(--o-gold); cursor:pointer; }
+.o-work-size input[type="range"]:disabled { cursor:default; opacity:0.5; }
+.o-work-size input[type="range"]:focus-visible { outline:2px solid var(--o-gold); outline-offset:2px; }
+.o-work-size-limits { color:var(--o-muted); font-size:11px; }
 .o-ship-choices select { width:100%; min-width:0; min-height:var(--o-touch-height); padding:8px; color:var(--o-text); background:var(--o-inset); border:1px solid var(--o-line); }
 .o-work-preview { display:grid; gap:6px; margin:16px 0; }
 .o-work-preview span { color:var(--o-muted); font-size:12px; }
@@ -531,6 +537,13 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-inventory-footer [aria-disabled] { opacity:0.35; }
 .o-inventory-feedback:not(:empty) { padding:10px 12px; border-top:1px solid var(--o-line); }
 .o-inventory-feedback p { margin:0; }
+/* Modal dialogs are centered in the viewport unless explicitly overridden. */
+dialog { position:fixed; inset:0; margin:auto; max-width:calc(100vw - 32px); max-height:calc(100dvh - 32px); overflow:auto; }
+dialog .o-dialog-title { padding-right:36px; }
+dialog button.o-dialog-close { position:absolute; top:10px; right:10px; display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; min-height:0; margin:0; padding:6px; border:0; border-radius:3px; color:inherit; background:transparent; cursor:pointer; }
+dialog button.o-dialog-close:hover { background:color-mix(in srgb,currentColor 10%,transparent); }
+dialog button.o-dialog-close:disabled { opacity:0.5; cursor:not-allowed; }
+dialog button.o-dialog-close svg { width:18px; height:18px; }
 .o-item-dialog { width:min(440px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); padding:20px; border:1px solid var(--o-line); border-radius:3px; color:var(--o-text); background:var(--o-bg); box-shadow:0 10px 50px var(--o-palette-0006); }
 .o-item-dialog::backdrop { background:var(--o-palette-0009); }
 .o-item-dialog h2 { font:400 21px/1.4 var(--o-display-font); margin:0 0 10px; overflow-wrap:anywhere; }

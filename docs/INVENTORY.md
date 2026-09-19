@@ -72,7 +72,10 @@ JavaScripts säkra heltalsgräns. Ett utrustningsexemplar kan bara raderas med a
 
 Ägarskyddade player_game_events meddelar andra flikar. Befintlig uppdatering vid
 återanslutning, fokus och intervall används också. Bekräftelsedialogen visar
-aktuellt tillgängligt antal. Vid oklart nätverkssvar behålls samma begäran för
+aktuellt tillgängligt antal. Den centreras i skärmens synliga yta, även när sidan är
+scrollad. Ett kryss uppe till höger stänger utan att förstöra items, liksom Cancel
+eller Escape. Under pågående radering är stängning låst tills svaret kommit.
+Vid oklart nätverkssvar behålls samma begäran för
 Retry; dialogen kan stängas och öppnas igen utan att skapa en ny radering.
 
 ## Konfiguration och migrationer

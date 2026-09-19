@@ -18,7 +18,7 @@ select set_config('request.jwt.claims','{"sub":"f6000000-0000-4000-8000-00000000
 select is(public.get_game_state()->>'hospital_until',null,'Healthy captains are not hospitalized');
 select is(public.get_navigation_lock()->>'hospital_until',null,'Healthy navigation is unlocked');
 select is((select public.get_hospital_status(a)->>'hospital_until' from h),null,'Healthy profile has no hospital stay');
-select public.start_ship_upgrade('attack','small','ship_1',gen_random_uuid());
+select public.start_ship_upgrade('attack',5,'ship_1',gen_random_uuid());
 reset role;
 update public.characters set crew_health=0 where id=(select a from h);
 select is((select extract(epoch from(hospital_until-hospital_started_at))::int from public.characters where id=(select a from h)),300,'Crew death starts exactly five minutes');
@@ -28,7 +28,7 @@ select ok(public.get_navigation_lock()->>'hospital_until' is not null,'Hospital 
 select is(public.get_game_state()->>'crew_health','0','Hospital keeps the dead crew at zero');
 select is(public.get_game_state()->>'health_next_at',null,'Normal health recovery does not bypass hospital');
 select throws_ok($$select public.train_crew('attack','crew_1',gen_random_uuid())$$,'P0001','IN_HOSPITAL','Crew training is blocked');
-select throws_ok($$select public.start_ship_upgrade('attack','small','ship_1',gen_random_uuid())$$,'P0001','IN_HOSPITAL','New ship work is blocked');
+select throws_ok($$select public.start_ship_upgrade('attack',5,'ship_1',gen_random_uuid())$$,'P0001','IN_HOSPITAL','New ship work is blocked');
 select throws_ok($$select public.purchase_training_tier('crew','crew_2',gen_random_uuid())$$,'P0001','IN_HOSPITAL','Exercise purchases are blocked');
 select throws_ok($$select public.purchase_training_tier('ship','ship_2',gen_random_uuid())$$,'P0001','IN_HOSPITAL','Workshop purchases are blocked');
 select throws_ok($$select public.transfer_gold('deposit',10,gen_random_uuid())$$,'P0001','IN_HOSPITAL','Bank deposits are blocked');

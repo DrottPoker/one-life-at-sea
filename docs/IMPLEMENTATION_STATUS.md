@@ -1,3 +1,36 @@
+# Centrerade popupfönster, 2026-09-19
+
+Alla modala dialoger centreras som standard i skärmens synliga yta, om ingen särskild
+placering anges. Trash och adminpanelens dialoger använder ett gemensamt litet kryss
+uppe till höger. Krysset stänger utan att skicka formuläret; Trash behåller befintligt
+skydd mot stängning medan en radering pågår.
+
+Verifierat: lint och produktionsbygge med TypeScript passerade. Båda befintliga
+Trash-webbläsartesterna passerade. En separat webbläsarkontroll bekräftade centrering,
+kryss, Escape, återställt fokus och oförändrat itemantal efter avbrytning.
+Trash kontrollerades vid 1280, 375 och 320 px bredd, och admin vid 1280 och 375 px,
+även med sidan scrollad. Skärmbilder granskades på desktop och mobil.
+
+# Energy-slider för skeppsarbete, 2026-09-19
+
+Work size använder nu en slider från 5 till aktuell Energy, i steg om 1.
+En Energy tar en minut. Förhandsvisningen uppdaterar tid, kostnad och statökning direkt.
+Slidern följer ändrat saldo och arbete går inte att starta med mindre än 5 Energy.
+Första workshopen ger fortsatt 1 stat per 5 Energy; exempelvis ger 6 Energy +1,2 stats.
+
+- RPC tar energy_amount och validerar heltal, minimum, tak och aktuellt återhämtat saldo.
+- Skeppsstatistik och sparade jobb använder numeric för att bevara decimaler.
+- Befintliga jobb behåller sina kostnader, belöningar och sluttider. Crew-balansen är oförändrad.
+- Nya jobb använder en fast statökning per Energy så att uppdelning inte ger avrundningsbonus.
+- Två migrationer applicerade lokalt utan återställning av databasen.
+
+Verifierat: lint, typkontroll, 121 enhetstester och produktionsbygge passerade.
+724 databasassertioner och 49 kontroller med alternativ konfiguration passerade.
+Fem webbläsartester för träning passerade, inklusive saldoförändringar, minimum,
+decimalbelöningar, återförsök, samtidighet och automatisk färdigställning i flera flikar.
+Slidern kontrollerades visuellt på desktop och mobil; 320 px ger ingen horisontell overflow.
+Supabase security advisors rapporterade inga problem. Localhost svarade HTTP 200.
+
 # Adminpanel implementerad, 2026-09-19
 
 [Adminpanelen](ADMIN_PANEL.md) finns på `/admin`, med Ludorex som lokal administratör.

@@ -22,7 +22,9 @@ Alla justerbara spelregler och drift-/UI-inställningar samlas här. Nuvarande v
 3. Kör `npm run db:migrate` för att applicera den nya migrationen i lokal Supabase.
 4. Ladda om spelet. Produktionsbyggen behöver byggas och driftsättas igen.
 
-Exempel: `training.energyCost` styr både serverdebiteringen, knappens tillgänglighet och dess text.
+Exempel: `training.energyCost` styr crew-träningens kostnad och knapptext.
+`training.shipMinEnergy` styr sliderns minimum (5), `shipSecondsPerEnergy` arbetstiden per Energy (60)
+och `shipEnergyPerUnit` hur många Energy som motsvarar workshopens basökning (5).
 `combat.mitigation.fullReductionDefenseRatio` styr när Defense blockerar all skada.
 `startingStats.ship.attack` påverkar nya karaktärer; redan tränade stats skrivs inte om.
 

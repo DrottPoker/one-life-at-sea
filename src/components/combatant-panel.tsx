@@ -1,7 +1,8 @@
-import { gameplay, frontend } from "@/config/public";
+import { gameplay } from "@/config/public";
 import Link from "next/link";
 import { Ship, Swords, Crosshair, HelpCircle } from "lucide-react";
 import { STATS, STAT_LABELS } from "@/lib/game";
+import { formatStat } from "@/lib/training";
 import type { Combatant } from "@/lib/combat";
 
 export function CombatantPanel({ captain, own, phase }: { captain: Combatant; own: boolean; phase: "sea" | "boarding" }) {
@@ -42,7 +43,7 @@ export function CombatantPanel({ captain, own, phase }: { captain: Combatant; ow
       </div>
     </dl>
     <dl className="o-combat-stats" aria-label={prefix + " " + (phase === "sea" ? "ship" : "crew") + " stats"}>
-      {STATS.map(stat => <div key={stat}><dt>{STAT_LABELS[stat]}</dt><dd>{stats ? stats[stat].toLocaleString(frontend.site.locale) : "?"}</dd></div>)}
+      {STATS.map(stat => <div key={stat}><dt>{STAT_LABELS[stat]}</dt><dd>{stats ? formatStat(stats[stat]) : "?"}</dd></div>)}
     </dl>
   </section>;
 }
