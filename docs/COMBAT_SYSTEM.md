@@ -235,3 +235,13 @@ Se [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) för senaste slutkörnin
 
 Supabase security advisors rapporterade inga problem. Den tidigare dokumenterade
 Next.js-diagnostiken om avbrutna RSC-strömmar förekommer vid navigation.
+
+## Administrative interruption
+
+An authorized administrator can end an active encounter through /admin.
+The operation holds the existing ordered combat locks, completes all active
+participants as draws, closes the encounter and releases engagement rows.
+It does not resolve another round, roll damage, change health or assign a winner.
+Previous events and snapshots remain intact. A public admin_end log entry
+identifies the interruption; the private admin audit retains the reason and actor.
+No new protection period is awarded by this administrative operation.

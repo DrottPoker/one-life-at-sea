@@ -17,7 +17,7 @@ export function CombatEvents({ events, defenderId, defenderName, newestFirst = f
   return <section className="o-combat-log" aria-labelledby="combat-log-heading">
     <div className="o-section-bar"><h2 id="combat-log-heading">Combat log</h2><span>Server time ({frontend.site.logTimeZone})</span></div>
     {ordered.length ? <ol>{ordered.map(event => <li key={event.sequence}>
-      <header><strong>{event.kind === "round" ? event.phase === "sea" ? "Cannon combat" : "Boarding" : event.kind === "hospital" ? "Hospital admission" : event.kind === "started" ? "Battle started" : "Joined battle"}</strong>
+      <header><strong>{event.kind === "round" ? event.phase === "sea" ? "Cannon combat" : "Boarding" : event.kind === "admin_end" ? "Ended by administrator" : event.kind === "hospital" ? "Hospital admission" : event.kind === "started" ? "Battle started" : "Joined battle"}</strong>
         <time dateTime={event.at} title={new Date(event.at).toISOString()}>{new Date(event.at).toLocaleTimeString(frontend.site.locale, { timeZone: frontend.site.logTimeZone })} {frontend.site.logTimeZone}</time>
         {event.timed_out && <span>Automatic retreat</span>}
       </header>
@@ -35,7 +35,7 @@ export function CombatEvents({ events, defenderId, defenderName, newestFirst = f
           <span>{event.participant_result === "victory" ? "Final blow" : event.participant_result}.</span>
         </p>}
         {event.outcome && <p className="o-log-transition">{outcomeLabel(event.outcome)}</p>}
-      </> : event.kind === "hospital" ? <p><CaptainName id={event.actor_id} name={event.actor_name} /> was admitted to hospital. The encounter ended.</p> : <p>
+      </> : event.kind === "admin_end" ? <p>An administrator ended this encounter in a draw. No additional damage was dealt.</p> : event.kind === "hospital" ? <p><CaptainName id={event.actor_id} name={event.actor_name} /> was admitted to hospital. The encounter ended.</p> : <p>
         <strong><CaptainName id={event.actor_id} name={event.actor_name} /></strong>
         <span>{event.kind === "started" ? "started an attack against" : "joined the attack against"} <CaptainName id={defenderId} name={defenderName} />.</span>
       </p>}

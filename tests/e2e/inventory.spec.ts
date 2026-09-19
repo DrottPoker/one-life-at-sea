@@ -302,6 +302,7 @@ test("circulation chart shows world totals, periods, inspection, refresh and hos
         response.request().postDataJSON()?.period === period);
       await chart.getByRole("radio", { name: label, exact: true }).check();
       await loaded;
+      await expect(chart.locator(".o-chart-viewport")).toHaveAttribute("aria-busy", "false");
       await expect(plot).toBeVisible();
       await expect(chart.getByRole("radio", { name: label, exact: true })).toBeChecked();
     }
@@ -331,7 +332,9 @@ test("circulation chart shows world totals, periods, inspection, refresh and hos
     await expect(chart.getByRole("tooltip")).toContainText("Total in circulation: " + numbers.format(expected), { timeout: 20000 });
     await details.getByRole("button", { name: "Hide circulation history for Linen Bandages", exact: true }).click();
     await expect(chart).toHaveCount(0);
-    await page.route("**/rest/v1/rpc/get_item_circulation", route => route.abort());
+    await page.route("**/rest/v1/rpc/get_item_circulation", route => route.fulfill({
+      status: 503, contentType: "application/json", body: JSON.stringify({ code: "TEST_UNAVAILABLE", message: "Temporarily unavailable" }),
+    }));
     await details.getByRole("button", { name: "Show circulation history for Linen Bandages", exact: true }).click();
     await expect(chart.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
     await page.unroute("**/rest/v1/rpc/get_item_circulation");

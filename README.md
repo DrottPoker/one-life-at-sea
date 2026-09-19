@@ -40,6 +40,21 @@ Spelets gränssnitt är på engelska. [Inventory](docs/INVENTORY.md) har infört
 Expeditioner, intjäning, itemhandel, aktiva itemeffekter och PvE
 kommer i senare etapper. Permanent karaktärsdöd har tagits bort och ersatts av [Hospital](docs/HOSPITAL.md). Gold Coins, banköverföringar och köp av träningsnivåer är implementerade. Se [träningsregler och balans](docs/TRAINING_FOUNDATION.md).
 
+## Adminpanel
+
+Ludorex har adminbehörighet lokalt. Öppna [Admin panel](http://127.0.0.1:3000/admin)
+via länken i sidhuvudet.
+
+- Sök spelare och ändra namn, stats, hälsa, Energy, Gold Coins, banksaldo och träningsprogression.
+- Generera items med antal och individuella utrustningsstats. Ändra eller ta bort innehav.
+- Läs spelets databastabeller med sökning, filtrering och sidindelning.
+- Skriv ut patienter, avsluta strider utan extra skada och avbryt skeppsjobb.
+- Alla ändringar kräver orsak, kan granskas före sparande och loggas med före/efter-värden.
+
+Configkataloger, automatiskt beräknade tabeller och historiska kvitton är skrivskyddade
+i panelen. [Adminpanelens dokumentation](docs/ADMIN_PANEL.md) beskriver åtkomst,
+återförsök och lokal behörighetshantering.
+
 ## Konfiguration
 
 Justerbara värden finns samlade i [config/](config/README.md): gameplay, frontend, tema, auth, server och tester.

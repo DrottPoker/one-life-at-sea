@@ -1,3 +1,4 @@
+import type { AdminResource, AdminPage, AdminPayload, AdminReceipt } from "@/lib/admin";
 import type { CirculationHistory, CirculationPeriod } from "@/lib/circulation";
 import type { InventoryEntryType, InventoryPage, TrashReceipt } from "@/lib/inventory";
 import type { TrainingReceipt } from "@/lib/training";
@@ -46,6 +47,11 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      is_admin: { Args: Record<string, never>; Returns: boolean };
+      admin_catalog: { Args: Record<string, never>; Returns: AdminResource[] };
+      admin_overview: { Args: Record<string, never>; Returns: Record<string, string> };
+      admin_read: { Args: { resource: string; search_term?: string; requested_page?: number; filters?: Record<string, string | null> }; Returns: AdminPage };
+      admin_mutate: { Args: { action: string; payload: AdminPayload; request_id: string; reason: string }; Returns: AdminReceipt };
       get_item_circulation: { Args: { target_item: string; period?: CirculationPeriod }; Returns: CirculationHistory };
       list_inventory: { Args: { category_id?: string; search_term?: string; requested_page?: number }; Returns: InventoryPage };
       trash_inventory_item: { Args: { entry_id: string; entry_type: InventoryEntryType; quantity: number; request_id: string }; Returns: TrashReceipt };

@@ -1,6 +1,7 @@
 import { frontend } from "@/config/public";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { currentUserIsAdmin } from "@/lib/admin-server";
 import { AppFrame } from "@/components/app-frame";
 import { currentUser, characterForUser, gameStateForPlayer } from "@/lib/player";
 import "./globals.css";
@@ -13,9 +14,10 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const user = await currentUser();
+  const isAdmin = user ? await currentUserIsAdmin() : false;
   const character = user ? await characterForUser(user.id) : null;
   const state = character ? await gameStateForPlayer() : null;
   return <html lang={frontend.site.language}><body><a href="#main" className="skip-link">Skip to content</a>
-    <AppFrame hospitalUntil={state?.hospital_until ?? null} characterId={character?.id ?? null} attack={state?.active_attack ?? null}>{children}</AppFrame>
+    <AppFrame isAdmin={isAdmin} hospitalUntil={state?.hospital_until ?? null} characterId={character?.id ?? null} attack={state?.active_attack ?? null}>{children}</AppFrame>
   </body></html>;
 }

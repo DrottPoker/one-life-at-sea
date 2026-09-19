@@ -16,7 +16,7 @@ export type AttackLock = { battle_id: string; target_id: string };
 export type ParticipantStatus = "active" | "victory" | "assist" | "defeated" | "retreated" | "draw";
 export type CombatOutcome = "hull_victory" | "boarding_victory" | "retreated" | "draw" | "defended";
 export type CombatEvent = {
-  kind: "started" | "joined" | "round" | "hospital"; sequence: number; actor_id: string; actor_name: string;
+  kind: "started" | "joined" | "round" | "hospital" | "admin_end"; sequence: number; actor_id: string; actor_name: string;
   round: number; phase: "sea" | "boarding"; attacker_order: CombatOrder; defender_order: CombatOrder;
   attacker_hit: boolean; defender_hit: boolean; attacker_damage: number; defender_damage: number;
   transition: "boarded" | "boarding_failed" | "disengaged" | null;

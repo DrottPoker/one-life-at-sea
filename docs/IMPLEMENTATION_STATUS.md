@@ -1,3 +1,49 @@
+# Adminpanel implementerad, 2026-09-19
+
+[Adminpanelen](ADMIN_PANEL.md) finns på `/admin`, med Ludorex som lokal administratör.
+Funktionalitet har prioriterats enligt ägarens instruktion.
+
+- Spelarsökning, resurs-/stat-/saldoändringar och träningsprogression.
+- Itemgenerering med antal och individuella utrustningsstats, mängdändringar och radering.
+- Databasvy för samtliga 25 nuvarande spel-/admintabeller med sökning,
+  exakta filter, kolumntyper, fullständiga värden och 50 rader per sida.
+- Utskrivning från Hospital, avslut av strid utan extra skaderunda och avbrytning
+  av skeppsjobb utan återbetalning. Adminvyn fungerar även vid egna spellås.
+- Databasägd behörighet, HTTP 403 för inloggade icke-administratörer och skydd
+  i både serverfunktioner och RPC:er. Ingen service-nyckel behövs.
+- Orsak, förhandsgranskning, samtidighetskontroll och atomär före/efter-logg.
+  Sparade anrops-ID:n kan återanvändas efter nätverksfel och omladdning.
+- Resursändringar sätter nya återhämtningstider. Gamla tidsankare kan därför inte
+  omedelbart återställa manuellt ändrad Energy eller hälsa.
+- Tre adminmigrationer är applicerade lokalt utan databasåterställning.
+  Kataloger, projektioner, historiska kvitton och audit är skrivskyddade i panelen.
+  Kontoborttagning, behörighetstilldelning och schemaändringar är fortsatt ägaroperationer.
+
+Verifierat:
+
+- Lint, typkontroll, 105 enhetstester och produktionsbygge passerade.
+- 698 databasassertioner passerade, varav 81 för administration.
+  Tre nya resurstester misslyckades före den sista korrigeringen och passerade efteråt.
+- 49 kontroller med alternativ konfiguration passerade och rullades tillbaka.
+- Hela webbläsarsviten passerade: 37 av 37 scenarier i samma körning.
+  Efter den sista resursmigrationen passerade alla fyra adminscenarier igen.
+  De täcker även förlorat svar följt av omladdning, samtidiga tilldelningar,
+  stale edits, återkallad behörighet, stridslogg och avbrutet skeppsjobb.
+- 320, 375, 768 och 1280 px kontrollerades utan sidöverflöde.
+  Dator- och mobilbilder granskades visuellt.
+- Supabase security advisors rapporterade inga problem. Samtliga befintliga
+  public/private-tabeller har en post i adminvyns tillåtna tabellregister.
+- Audit-testet avgränsar numera till sitt eget konto, eftersom tidigare auditposter
+  avsiktligt finns kvar efter kontoborttagning.
+  Diagramtestet inväntar färdigrenderat periodbyte och använder ett bestämt HTTP
+  503-svar vid test av API-fel och Retry.
+- Den vanliga lokala utvecklingsservern kör på port 3000 och har adminrutten.
+
+Next.js rapporterar fortfarande den tidigare dokumenterade diagnostiken för
+avbrutna RSC-strömmar. Vid avsiktligt avbrutna anrop förekommer också en
+MaxListenersExceededWarning från serverns Gzip-ström. Dessa har inte dolts;
+ovanstående funktionstester passerar. Ingen commit eller publicering har gjorts av agenten.
+
 # Stabilt periodbyte i cirkulationsdiagrammet, 2026-09-19
 
 - Felet reproducerades på 1280 och 375 px: ett nytt periodval tog bort diagrammets

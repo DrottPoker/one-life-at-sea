@@ -1,0 +1,39 @@
+.admin-shell { background: #f3f5f7; color: #17212b; padding: 24px; min-width: 0; font: 14px/1.5 Arial, sans-serif; }
+.admin-shell *, .admin-dialog * { box-sizing: border-box; }
+.admin-shell h1 { font-size: 25px; font-weight: 700; }.admin-shell h2 { font-size: 19px; font-weight: 700; margin: 18px 0 12px; }
+.admin-shell h3 { font-size: 16px; font-weight: 700; }.admin-shell p { margin: 10px 0; }
+.admin-shell a { color: #175c98; text-decoration: underline; overflow-wrap: anywhere; }
+.admin-header { display: flex; justify-content: space-between; gap: 15px; align-items: center; }
+.admin-nav, .admin-pagination, .admin-links { display: flex; flex-wrap: wrap; gap: 18px; margin: 14px 0; }
+.admin-nav { border-bottom: 1px solid #b4c3cf; padding-bottom: 12px; }
+.admin-shell button, .admin-dialog button { border: 1px solid #235875; border-radius: 3px; padding: 7px 12px; color: #fff; background: #215773; cursor: pointer; margin: 5px 8px 5px 0; white-space: nowrap; }
+.admin-shell button:disabled, .admin-dialog button:disabled { opacity: .55; cursor: not-allowed; }
+.admin-shell input, .admin-shell select, .admin-dialog input, .admin-dialog select { border: 1px solid #889ba9; border-radius: 3px; background: white; color: #17212b; padding: 8px; width: 100%; min-width: 0; }
+.admin-shell label, .admin-dialog label { display: grid; gap: 5px; margin: 8px 0; font-weight: 600; }
+.admin-shell small, .admin-dialog small { color: #51606b; font-weight: 400; }
+.admin-shell fieldset, .admin-dialog fieldset { border: 0; padding: 0; min-width: 0; }
+.admin-shell :focus-visible, .admin-dialog :focus-visible { outline: 3px solid #268bd2; outline-offset: 2px; }
+.admin-search { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }.admin-search label { flex: 1 1 160px; }
+.admin-metrics { display: grid; grid-template-columns: repeat(auto-fit,minmax(145px,1fr)); gap: 12px; margin: 14px 0; }
+.admin-metrics > * { padding: 16px; border: 1px solid #c9d3dc; border-radius: 3px; background: #fff; }
+.admin-metrics span, .admin-metrics strong { display: block; }.admin-metrics strong, .admin-metrics dd { font-size: 23px; font-weight: 700; }
+.admin-card { background: #fff; border: 1px solid #c9d3dc; padding: 16px; margin: 18px 0; min-width: 0; }
+.admin-card > a { display: inline-block; margin: 10px 10px 0 0; }
+.admin-table-wrap { overflow: auto; max-width: 100%; border: 1px solid #c9d3dc; }
+.admin-shell table { border-collapse: collapse; font-size: 12px; width: 100%; background: #fff; }
+.admin-shell th, .admin-shell td { border: 1px solid #d6dfe6; padding: 8px; text-align: left; vertical-align: top; }
+.admin-shell th { background: #e6edf3; white-space: nowrap; }.admin-cell { display: block; min-width: 80px; max-width: 250px; max-height: 85px; overflow: auto; overflow-wrap: anywhere; }
+.admin-database { display: grid; grid-template-columns: 205px minmax(0,1fr); gap: 20px; }.admin-database nav a { display: block; padding: 5px; }
+.admin-database a[aria-current="page"] { background: #d7e8f3; font-weight: 700; }
+.admin-dialog { position: fixed; inset: 0; margin: auto; background: #fff; color: #17212b; width: min(900px,94vw); max-height: 90vh; overflow: auto; padding: 24px; border: 1px solid #8399aa; border-radius: 5px; font: 14px/1.5 Arial,sans-serif; }
+.admin-dialog::backdrop { background: #0009; }.admin-dialog h2 { font-size: 21px; font-weight: 700; }
+.admin-fields { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 8px 18px; }
+.admin-null { display: flex; gap: 8px; align-items: center; }.admin-null input { width: auto; }
+.admin-confirm { background: #fff7df; border: 1px solid #cbb465; padding: 14px; margin: 10px 0; }
+.admin-shell pre, .admin-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.admin-record > div { padding: 10px 0; border-bottom: 1px solid #d6dfe6; }.admin-record dt { font-weight: 700; }
+.admin-danger { margin-top: 24px; padding-top: 15px; border-top: 2px solid #b54f49; }.admin-danger button { background: #972c2c; }
+.admin-notice { background: #e3f4e8; padding: 12px; border: 1px solid #69a97b; margin: 12px 0; overflow-wrap: anywhere; }
+.admin-shell details, .admin-dialog details { margin: 15px 0; }.admin-shell summary, .admin-dialog summary { cursor: pointer; font-weight: 700; }
+@media (max-width: 700px) { .admin-shell { padding: 12px; }.admin-database { grid-template-columns: minmax(0,1fr); }.admin-database aside nav { max-height: 160px; overflow: auto; display: flex; flex-wrap: wrap; gap: 4px; }.admin-header { flex-wrap: wrap; }.admin-dialog { padding: 14px; }.admin-fields { grid-template-columns: minmax(0,1fr); } }
+

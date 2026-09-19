@@ -365,7 +365,7 @@ It does not bypass other gameplay restrictions. Future medical use will receive
 a specific action exception when actual consumable effects are implemented.
 
 New and existing characters have no automatic item grants. A local-only fixture
-command is available for an explicitly chosen test character. There is no public
+command is available for an explicitly chosen test character. The admin panel has a membership-protected item grant RPC. There is no player-accessible
 grant endpoint, shop, equipment effect or consumable effect yet.
 See [INVENTORY.md](INVENTORY.md) for schema, migration and local fixture details.
 
@@ -384,3 +384,20 @@ Short histories return changes, while long histories use bounded indexed lookups
 The full history remains durable. Inventory refreshes update counts; the chart is
 loaded only when expanded and refreshes through the existing visible-page cadence.
 See [ITEM_CIRCULATION.md](ITEM_CIRCULATION.md).
+
+## Administration
+
+The separate /admin route provides player tools, a 25-table database browser and
+audit history. Database-owned membership is rechecked on every RPC; immutable
+request receipts commit with writes. Public wrappers are invokers and private
+definers use fixed search paths and explicit authorization. No service credential
+is needed. Row editing uses ordered combat locks and optimistic row fingerprints.
+Inventory changes retain existing circulation triggers and owner notifications.
+
+Admin navigation bypasses gameplay navigation locks only for verified admins.
+Player resource edits require combat to be ended first. Administrative combat
+interruption records a public admin_end event, completes active participants as
+draws and releases engagement locks without resolving a damage round. The browser
+retains unconfirmed request IDs in per-account session storage for safe replay.
+Config catalogs, projections and historical receipts remain read-only.
+See [ADMIN_PANEL.md](ADMIN_PANEL.md) for operations and boundaries.
