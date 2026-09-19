@@ -1,10 +1,11 @@
+import { isLocalTestApi, localDatabaseContainer } from "../support/local";
 import { test, expect } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
 
 process.loadEnvFile(".env.local");
 const databaseUrl = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!);
-if (databaseUrl.hostname !== "127.0.0.1" || databaseUrl.port !== "55321") {
+if (!isLocalTestApi(databaseUrl.href)) {
   throw new Error("Navigation tests require this project's local Supabase.");
 }
 
@@ -93,7 +94,7 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     await navigation.getByRole("link", { name: "Crew Training", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Crew Training", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Train Attack for 5 Energy", exact: true }).click();
-    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("2");
+    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("11");
     await expect(energy).toHaveAttribute("aria-valuenow", "95");
     expect(await originalEnergy.evaluate(element => element.isConnected)).toBe(true);
     await navigation.getByRole("link", { name: "Ship Upgrades", exact: true }).click();
@@ -102,7 +103,7 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     await expect(energy).toHaveAttribute("aria-valuenow", "95");
     await page.goBack();
     await expect(page).toHaveURL(/\/harbor\/crew-training$/);
-    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("2");
+    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("11");
     await page.goForward();
     await expect(page).toHaveURL(/\/harbor\/ship-upgrades$/);
     await expect(page.getByRole("heading", { name: "Ship Upgrades", exact: true })).toBeVisible();
@@ -113,7 +114,7 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     // Direct deep links still load the correct authenticated view.
     await page.goto("/harbor/crew-training");
     await expect(page.getByRole("heading", { name: "Crew Training", exact: true })).toBeVisible();
-    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("2");
+    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("11");
     await expect(energy).toHaveAttribute("aria-valuenow", "95");
     await page.getByRole("button", { name: "Log out", exact: true }).filter({ visible: true }).click();
     await expect(page).toHaveURL(/\/login$/);
@@ -122,7 +123,7 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     blockedPath = null;
     release?.();
     await page.unrouteAll({ behavior: "wait" });
-    execFileSync("docker", ["exec", "supabase_db_one-life-at-sea", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
+    execFileSync("docker", ["exec", localDatabaseContainer, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
       `delete from auth.users where email='${email}'`], { stdio: ["ignore", "pipe", "pipe"] });
   }
 });

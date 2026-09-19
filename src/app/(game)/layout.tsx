@@ -1,3 +1,4 @@
+import { frontend } from "@/config/public";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { requireCharacter, gameStateForPlayer } from "@/lib/player";
@@ -10,7 +11,7 @@ import { logOut } from "@/app/actions";
 export default async function GameLayout({ children }: { children: ReactNode }) {
   const character = await requireCharacter();
   const state = await gameStateForPlayer();
-  const created = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(character.created_at));
+  const created = new Intl.DateTimeFormat(frontend.site.locale, { day: "numeric", month: "short", year: "numeric", timeZone: frontend.site.logTimeZone }).format(new Date(character.created_at));
   return <GameStateProvider state={state}><div className="o-workspace">
     <aside className="o-sidebar" aria-label="Character and harbor navigation">
       <section className="o-side-module"><h2 className="o-side-title">Character</h2><div className="o-character">

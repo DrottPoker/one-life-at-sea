@@ -1,0 +1,26 @@
+{
+  "local": {
+    "host": "127.0.0.1",
+    "appPort": 3000,
+    "testPort": 3100,
+    "supabaseProjectId": "one-life-at-sea",
+    "supabaseApiPort": 55321,
+    "supabaseDbPort": 55322,
+    "supabaseShadowPort": 55320,
+    "supabaseStudioPort": 55323,
+    "supabaseMailPort": 55324
+  },
+  "databaseRetry": {
+    "retries": 3,
+    "delayMs": 30
+  },
+  "playerWindows": {
+    "defaultCount": 3,
+    "maxCount": 6,
+    "browserChannel": "msedge",
+    "launchTimeoutMs": 15000,
+    "navigationTimeoutMs": 20000,
+    "healthTimeoutMs": 5000,
+    "profileDirectory": ".local/player-browsers"
+  }
+}

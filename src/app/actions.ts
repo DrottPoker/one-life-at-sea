@@ -1,5 +1,7 @@
 "use server";
 
+import { auth } from "@/config/public";
+
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser, characterForUser } from "@/lib/player";
@@ -48,7 +50,7 @@ export async function register(_previous: FormState, data: FormData): Promise<Fo
 export async function logIn(_previous: FormState, data: FormData): Promise<FormState> {
   const email = value(data, "email").trim();
   const password = value(data, "password");
-  if (validateEmail(email) || !password || password.length > 128) return { message: "Enter your email address and password.", email };
+  if (validateEmail(email) || !password || password.length > auth.passwordMaxLength) return { message: "Enter your email address and password.", email };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { message: error.code === "invalid_credentials" ? "The email or password is incorrect." : authMessage(error.code), email };
@@ -68,9 +70,9 @@ export async function sendReset(_previous: FormState, data: FormData): Promise<F
   if (emailError) return { errors: { email: emailError }, email };
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${siteUrl()}/auth/callback?next=/reset-password` });
-  if (error?.code === "over_request_rate_limit" || error?.code === "over_email_send_rate_limit") return { message: authMessage(error.code), email, retryAfter: 60 };
+  if (error?.code === "over_request_rate_limit" || error?.code === "over_email_send_rate_limit") return { message: authMessage(error.code), email, retryAfter: auth.resetCooldownSeconds };
   if (error && error.status && error.status >= 500) return { message: authMessage(), email };
-  return { success: true, email, retryAfter: 60, message: "If an account exists for this address, a password reset link will arrive shortly. Check your inbox and spam folder." };
+  return { success: true, email, retryAfter: auth.resetCooldownSeconds, message: "If an account exists for this address, a password reset link will arrive shortly. Check your inbox and spam folder." };
 }
 
 export async function changePassword(_previous: FormState, data: FormData): Promise<FormState> {

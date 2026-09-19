@@ -31,6 +31,7 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      get_gameplay_revision: { Args: Record<string, never>; Returns: string };
       list_harbor_players: { Args: { requested_page?: number }; Returns: HarborRoster };
       is_character_name_available: { Args: { candidate: string }; Returns: boolean };
       get_attack_lock: { Args: Record<string, never>; Returns: AttackLock | null };

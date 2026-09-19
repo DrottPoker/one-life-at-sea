@@ -1,3 +1,4 @@
+import { assertGameplayRevision } from "@/config/revision";
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
@@ -28,6 +29,7 @@ export const characterForUser = cache(async (userId: string) => {
 
 export async function requireCharacter() {
   const user = await requireUser();
+  await assertGameplayRevision();
   const character = await characterForUser(user.id);
   if (!character) redirect("/create-character");
   return character;
@@ -35,6 +37,7 @@ export async function requireCharacter() {
 
 export const gameStateForPlayer = cache(async () => {
   await requireUser();
+  await assertGameplayRevision();
   const supabase = await createClient();
   const { data, error } = await withDatabaseRetry(() => supabase.rpc("get_game_state"));
   if (error || !data) throw new Error("Your resources could not be loaded. Please try again.");

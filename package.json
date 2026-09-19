@@ -6,10 +6,10 @@
     "node": ">=22.14.0"
   },
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1",
+    "dev": "node scripts/run-next.mjs dev",
     "dev:players": "node scripts/dev-players.mjs",
     "build": "next build",
-    "start": "next start --hostname 127.0.0.1",
+    "start": "node scripts/run-next.mjs start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
@@ -20,7 +20,18 @@
     "db:stop": "supabase stop",
     "db:migrate": "supabase migration up --local",
     "db:status": "node scripts/local-status.mjs",
-    "setup:local": "node scripts/setup-local.mjs"
+    "setup:local": "node scripts/setup-local.mjs",
+    "config:check": "node scripts/config/manage.mjs check",
+    "config:sync": "node scripts/config/manage.mjs sync",
+    "predev": "npm run config:check",
+    "prestart": "npm run config:check",
+    "prebuild": "npm run config:check",
+    "predb:migrate": "npm run config:check",
+    "predb:start": "npm run config:check",
+    "pretest:db": "npm run config:check",
+    "test:config:db": "node scripts/config/test-database.mjs",
+    "pretest:config:db": "npm run config:check",
+    "pretest:e2e": "npm run config:check"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

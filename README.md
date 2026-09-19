@@ -29,6 +29,13 @@ Ett browserbaserat, socialt pirat-RPG med ett liv per karaktär.
 Spelets gränssnitt är på engelska. Expeditioner, ekonomi, PvE och permadöd
 kommer i senare etapper.
 
+## Konfiguration
+
+Justerbara värden finns samlade i [config/](config/README.md): gameplay, frontend, tema, auth, server och tester.
+Ändra rätt configfil, kör `npm run config:sync` och applicera eventuella gameplaymigrationer med `npm run db:migrate`.
+Hemligheter och miljöanslutningar ligger i den ignorerade `.env.local`.
+Se [konfigurationsguiden](docs/CONFIGURATION.md) för exempel, omstarter och hur app/databas hålls i synk.
+
 ## Starta lokalt
 
 Kräver Node.js 22.14 eller senare, npm och Docker Desktop med Linux-containrar.

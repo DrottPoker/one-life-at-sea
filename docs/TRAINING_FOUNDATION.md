@@ -1,3 +1,5 @@
+> Config 2026-09-17: justerbara värden har sin källa i [config/gameplay.json](../config/gameplay.json). Värdena nedan beskriver nuvarande standardbalans. Se [konfigurationsguiden](CONFIGURATION.md) för hur ändringar appliceras.
+
 > Uppdatering 2026-09-16: aktuella stridsregler och implementation finns i [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md). Den nya versionen använder en gemensam /attack-vy, flera angripare, realtid och publika rapporter. Äldre beskrivningar av separata prepare-sidor, exklusiv tvåpartsstrid eller privata slutrapporter nedan är historiska.
 
 # Första spelsteget: resurser och träning

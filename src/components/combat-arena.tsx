@@ -1,5 +1,7 @@
 "use client";
 
+import { gameplay, frontend } from "@/config/public";
+
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -10,7 +12,7 @@ import { CombatEvents, CombatPeople } from "@/components/combat-log";
 import { MAX_ROUNDS, type Battle, type CombatOrder, ORDER_LABELS } from "@/lib/combat";
 
 const orderDetails: Record<CombatOrder, string> = {
-  fire: "1 salvo. Damage the opposing hull.",
+  fire: `${gameplay.combat.ammoPerShot} salvo${gameplay.combat.ammoPerShot === 1 ? "" : "s"}. Damage the opposing hull.`,
   board: "Give up your shot to attempt boarding.",
   crew_attack: "Attack the opposing crew.",
   disengage: "Take a counterattack, then return to sea.",
@@ -23,7 +25,7 @@ function FightClock({ deadline, observedAt }: { deadline: string; observedAt: st
   const [remaining, setRemaining] = useState(Math.ceil(duration / 1000));
   useEffect(() => {
     const started = performance.now();
-    const timer = setInterval(() => setRemaining(Math.max(0, Math.ceil((duration - (performance.now() - started)) / 1000))), 1000);
+    const timer = setInterval(() => setRemaining(Math.max(0, Math.ceil((duration - (performance.now() - started)) / 1000))), frontend.refresh.countdownTickMs);
     return () => clearInterval(timer);
   }, [duration]);
   return <span className="o-fight-clock">Next order within <strong>{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}</strong></span>;
@@ -72,7 +74,7 @@ export function CombatArena({ battle }: { battle: Battle }) {
       <div className="o-section-bar"><h2 id="orders-heading">Your next order</h2><span>Both sides act together</span></div>
       <div className="o-order-buttons">{orders.map(order => {
         const Icon = orderIcons[order];
-        return <button key={order} onClick={() => giveOrder(order)} disabled={pending || (order === "fire" && battle.attacker.ammo === 0)}>
+        return <button key={order} onClick={() => giveOrder(order)} disabled={pending || (order === "fire" && (battle.attacker.ammo ?? 0) < gameplay.combat.ammoPerShot)}>
           <span>{pending && selected === order ? <span className="o-spinner" aria-hidden="true" /> : <Icon aria-hidden="true" />}<strong>{ORDER_LABELS[order]}</strong></span>
           <small>{orderDetails[order]}</small>
         </button>;

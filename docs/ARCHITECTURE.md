@@ -1,5 +1,15 @@
 # First foundation architecture
 
+## Central configuration
+
+Editable settings live under `config/`. The app imports browser-safe JSON through `src/config/public.ts`;
+server settings use a separate server-only module. `supabase/templates/gameplay.sql` is the maintained SQL
+source, rendered with validated gameplay values into append-only migrations. Root tool configuration files
+are thin adapters. UI styles are generated from `config/interface.css.template`; theme tokens are direct CSS.
+A public revision fingerprint and request-scoped server check prevent an app build from silently using a
+different gameplay configuration than its database. Existing data, snapshots, grants and historical migrations
+are preserved. See [CONFIGURATION.md](CONFIGURATION.md) for workflow and deploy constraints.
+
 ## Application
 
 Next.js App Router, React, TypeScript and Tailwind. The accepted Caribbean harbor

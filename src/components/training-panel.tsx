@@ -1,9 +1,11 @@
 "use client";
 
+import { gameplay, durationLabel } from "@/config/public";
+
 import { useActionState } from "react";
 import { trainStat } from "@/app/training-actions";
 import { useGameState } from "@/components/game-state";
-import { STATS, STAT_LABELS, TRAINING_COST, type TrainingGroup, type TrainingResult } from "@/lib/game";
+import { STATS, STAT_LABELS, TRAINING_COST, TRAINING_GAIN, type TrainingGroup, type TrainingResult } from "@/lib/game";
 
 const descriptions = {
   crew: { attack: "Weapon drills and striking power.", defense: "Guard drills and protection.", speed: "Footwork and coordinated movement.", accuracy: "Target practice and steady aim." },
@@ -18,7 +20,7 @@ export function TrainingPanel({ group }: { group: TrainingGroup }) {
   return <>
     <div className="o-training-intro">
       <p className="o-training-heading">{group === "crew" ? "A sharper crew, one drill at a time." : "Make your ship your own."}</p>
-      <p className="o-copy">Spend <strong>5 Energy</strong> to increase one stat by <strong>1 point</strong>.</p>
+      <p className="o-copy">Spend <strong>{TRAINING_COST} Energy</strong> to increase one stat by <strong>{TRAINING_GAIN} {TRAINING_GAIN === 1 ? "point" : "points"}</strong>.</p>
     </div>
     <form action={action} aria-label={group === "crew" ? "Crew training" : "Ship upgrades"} aria-busy={pending}>
       <input type="hidden" name="group" value={group} />
@@ -27,20 +29,20 @@ export function TrainingPanel({ group }: { group: TrainingGroup }) {
         <div><h2>{STAT_LABELS[stat]}</h2><p>{descriptions[group][stat]}</p></div>
         <output aria-label={`${STAT_LABELS[stat]} stat`}>{state[`${group}_${stat}`]}</output>
         <button className="o-training-button" type="submit" name="stat" value={stat}
-          aria-label={`${verb} ${STAT_LABELS[stat]} for 5 Energy`}
+          aria-label={`${verb} ${STAT_LABELS[stat]} for ${TRAINING_COST} Energy`}
           aria-describedby="training-cost" disabled={pending || !ready}>
-          {verb} +1
+          {verb} +{TRAINING_GAIN}
         </button>
       </div>)}</div>
       <div className="o-panel-foot o-training-foot">
-        <span id="training-cost">Each {group === "crew" ? "drill" : "upgrade"} costs 5 Energy.</span>
+        <span id="training-cost">Each {group === "crew" ? "drill" : "upgrade"} costs {TRAINING_COST} Energy.</span>
         <span>{state.energy} Energy available</span>
       </div>
     </form>
     <div className="o-training-feedback" aria-live="polite" aria-atomic="true">
       {pending ? <p>Saving your progress...</p> : result.message ? <p className={result.error ? "o-field-error" : ""}>{result.message}</p> : null}
       {state.active_attack && <p className="o-copy">Training is paused during your current fight.</p>}
-      {state.energy < TRAINING_COST && !pending && <p className="o-copy">Not enough Energy. You recover 1 every five minutes, even while away.</p>}
+      {state.energy < TRAINING_COST && !pending && <p className="o-copy">Not enough Energy. You recover 1 every {durationLabel(gameplay.resources.energyRecoverySeconds)}, even while away.</p>}
     </div>
   </>;
 }

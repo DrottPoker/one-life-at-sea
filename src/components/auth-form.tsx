@@ -1,5 +1,7 @@
 "use client";
 
+import { auth } from "@/config/public";
+
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { register, logIn, sendReset, changePassword } from "@/app/actions";
@@ -37,13 +39,13 @@ export function AuthForm({ mode, initialEmail = "" }: { mode: Mode; initialEmail
           <small className="o-field-error" id="name-error" role="alert">{state.errors?.name}</small>
         </label>}
         {mode !== "reset" && <label className="o-field" htmlFor="email"><span className="o-field-label" id="email-label">Email address</span>
-          <input aria-labelledby="email-label" id="email" name="email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required maxLength={254}
+          <input aria-labelledby="email-label" id="email" name="email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required maxLength={auth.emailMaxLength}
             aria-invalid={!!state.errors?.email} aria-describedby={state.errors?.email ? "email-error" : undefined} />
           {state.errors?.email && <small id="email-error" className="o-field-error" role="alert">{state.errors.email}</small>}
         </label>}
         {hasPassword && <label className="o-field" htmlFor="password"><span className="o-field-label" id="password-label">{mode === "reset" ? "New password" : "Password"}</span>
           <span className="o-password-row"><input aria-labelledby="password-label" id="password" name="password" type={showPassword ? "text" : "password"}
-            autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={mode === "login" ? 1 : 6} maxLength={128}
+            autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={mode === "login" ? 1 : auth.passwordMinLength} maxLength={auth.passwordMaxLength}
             aria-invalid={!!state.errors?.password} aria-describedby="password-hint" />
             <button type="button" className="o-password-toggle" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-controls="password">{showPassword ? "Hide" : "Show"}</button>
           </span><small id="password-hint" className={state.errors?.password ? "o-field-error" : "o-form-hint"} role={state.errors?.password ? "alert" : undefined}>
@@ -51,7 +53,7 @@ export function AuthForm({ mode, initialEmail = "" }: { mode: Mode; initialEmail
           </small>
         </label>}
         {hasConfirmation && <label className="o-field" htmlFor="confirm-password"><span className="o-field-label" id="confirm-password-label">Confirm password</span>
-          <input aria-labelledby="confirm-password-label" id="confirm-password" name="confirmPassword" type={showPassword ? "text" : "password"} autoComplete="new-password" required minLength={6} maxLength={128}
+          <input aria-labelledby="confirm-password-label" id="confirm-password" name="confirmPassword" type={showPassword ? "text" : "password"} autoComplete="new-password" required minLength={auth.passwordMinLength} maxLength={auth.passwordMaxLength}
             aria-invalid={!!state.errors?.confirmPassword} aria-describedby={state.errors?.confirmPassword ? "confirm-error" : undefined} />
           {state.errors?.confirmPassword && <small className="o-field-error" id="confirm-error" role="alert">{state.errors.confirmPassword}</small>}
         </label>}

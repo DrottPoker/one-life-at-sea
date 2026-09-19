@@ -1,3 +1,36 @@
+# Central konfiguration och organiserade källor, 2026-09-17
+
+- config/ samlar gameplay, frontend, tema/CSS, auth, server, Supabase, Next.js och testinställningar.
+- Hemligheter, anslutningar och miljöspecifik SITE_URL ligger i ignorerad .env.local, enligt ägarens instruktion.
+- Appen läser gemensamma publika JSON-värden; serverinställningar hålls bakom server-only.
+- SQL-funktionernas underhållbara källa finns i supabase/templates/gameplay.sql.
+  Configvalidering och generering skapar nya migrationer med samma gameplayvärden som UI använder.
+- Migration 20260917060236_central_gameplay_config.sql är applicerad lokalt. Balans, startstats,
+  befintliga karaktärer, tidigare migrationer, behörigheter och stridshistorik bevaras.
+- Resource bars, texter, träningsknappar, validering och stridsvisning följer nu configvärdena.
+- Native verktygsfiler är adaptrar. CSS- och Supabasefiler som genereras kontrolleras mot källorna.
+- Serverns gameplayrevision jämförs med databasens före resursläsningar och spelhandlingar.
+- config:sync är idempotent och skriver aldrig om tidigare configmigrationer.
+- config/README.md och docs/CONFIGURATION.md beskriver filindelning, exempel, omstarter och deployordning.
+- Ett tidigare navigationstest förväntade stat 2 efter träning. Det har korrigerats till 11 enligt startstats 10.
+
+Verifiering:
+- npm run check passerade: lint, typkontroll, 43 enhetstester och produktionsbygge.
+- npm run test:db passerade med 347 assertioner.
+- Alternativ gameplayconfig: 23 faktiska databaskontroller passerade i en transaktion;
+  ändringarna rullades tillbaka och den installerade configrevisionen återställdes.
+- Enhetstester renderar dessutom UI med alternativa kostnader, ökningar, HP-/Energymax och återhämtningstider.
+- Hela Playwright-körningen klarade 14 scenarier; navigationstestets föråldrade förväntningar rättades
+  och det femtonde scenariot passerade separat. Samtliga 15 scenarier är därmed verifierade.
+- Supabase security advisors rapporterade inga problem. config:check och git diff --check passerade.
+- Upprepad config:sync skapade ingen extra migration.
+- Den tidigare dokumenterade Next.js-varningen om avbrutna RSC-strömmar kvarstår vid navigation.
+
+Tillämpning: ändra config, kör config:sync och applicera genererad gameplaymigration med db:migrate.
+Frontend-/Nextändringar behöver nytt produktionsbygge; lokala Supabaseinställningar kräver omstart.
+Resursmax kan inte sänkas under sparade värden utan en separat, avsiktlig datamigration.
+Inga hemligheter flyttades in i config, inga molnändringar gjordes och inget har committats eller pushats.
+
 # Startstats på 10, 2026-09-16
 
 - Nya karaktärer börjar med 10 i Attack, Defense, Speed och Accuracy för både skepp och crew.

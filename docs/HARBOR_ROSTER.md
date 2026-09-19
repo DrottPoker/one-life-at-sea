@@ -1,3 +1,5 @@
+> Config 2026-09-17: justerbara värden har sin källa i [config/gameplay.json](../config/gameplay.json). Värdena nedan beskriver nuvarande standardbalans. Se [konfigurationsguiden](CONFIGURATION.md) för hur ändringar appliceras.
+
 # Hamnens spelarlista
 
 Datum: 2026-09-15.

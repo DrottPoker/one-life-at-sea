@@ -1,3 +1,5 @@
+> Config 2026-09-17: justerbara värden har sin källa i [config/gameplay.json](../config/gameplay.json). Värdena nedan beskriver nuvarande standardbalans. Se [konfigurationsguiden](CONFIGURATION.md) för hur ändringar appliceras.
+
 # PvP och gemensamma attacker
 
 Uppdaterat 2026-09-16. Detta dokument beskriver den implementerade versionen.

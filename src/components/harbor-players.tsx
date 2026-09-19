@@ -1,5 +1,7 @@
 "use client";
 
+import { frontend } from "@/config/public";
+
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 import { Anchor } from "lucide-react";
@@ -59,7 +61,7 @@ export function HarborPlayers({ initial, characterId }: { initial: HarborRoster 
 
     function schedule() {
       if (timer) return;
-      timer = setTimeout(() => { timer = undefined; void refresh(); }, 100);
+      timer = setTimeout(() => { timer = undefined; void refresh(); }, frontend.refresh.realtimeDebounceMs);
     }
 
     const channel = client.channel(`harbor-roster-${instance}-${page}-${attempt}`, { config: { postgres_changes_options: { wait: true } } })

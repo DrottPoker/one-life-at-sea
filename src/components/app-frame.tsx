@@ -1,5 +1,7 @@
 "use client";
 
+import { frontend } from "@/config/public";
+
 import { Suspense, useEffect, useId, useRef, useTransition, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Masthead } from "@/components/shell";
@@ -40,7 +42,7 @@ function SessionFrame({ children, characterId, attack }: { children: ReactNode; 
         dirty.current = false;
         refreshing.current = true;
         startTransition(() => router.refresh());
-      }, 100);
+      }, frontend.refresh.realtimeDebounceMs);
     }
     requestRefresh.current = schedule;
     const channel = client.channel("game-state-" + instance, { config: { postgres_changes_options: { wait: true } } })
@@ -55,7 +57,7 @@ function SessionFrame({ children, characterId, attack }: { children: ReactNode; 
     window.addEventListener("popstate", foreground);
     window.addEventListener("pageshow", foreground);
     document.addEventListener("visibilitychange", foreground);
-    const fallback = setInterval(foreground, 15000);
+    const fallback = setInterval(foreground, frontend.refresh.fallbackMs);
     return () => {
       disposed = true;
       clearTimeout(timer);
@@ -73,7 +75,7 @@ function SessionFrame({ children, characterId, attack }: { children: ReactNode; 
   return <div className={attackScreen ? "o-attack-shell" : "game-shell"}>
     {!attackScreen && <Masthead />}
     {children}
-    {!attackScreen && <footer className="o-bottom"><span>One Life At Sea</span><span>A life to remember.</span></footer>}
+    {!attackScreen && <footer className="o-bottom"><span>{frontend.site.name}</span><span>A life to remember.</span></footer>}
   </div>;
 }
 

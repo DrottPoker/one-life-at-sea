@@ -1,3 +1,4 @@
+import { isLocalTestApi, localAppUrl, localMailUrl } from "../support/local";
 import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
@@ -5,7 +6,7 @@ import { randomBytes } from "node:crypto";
 process.loadEnvFile(".env.local");
 const apiUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const apiKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-if (new URL(apiUrl).hostname !== "127.0.0.1" || new URL(apiUrl).port !== "55321") {
+if (!isLocalTestApi(apiUrl)) {
   throw new Error("These tests only run against this project's local Supabase instance.");
 }
 const suffix = () => [...randomBytes(10)].map(value => String.fromCharCode(97 + value % 26)).join("");
@@ -35,13 +36,13 @@ async function login(page: Page, email: string, secret: string) {
 async function recoveryLink(email: string) {
   let messageId: string | undefined;
   await expect.poll(async () => {
-    const response = await fetch("http://127.0.0.1:55324/api/v1/messages");
+    const response = await fetch(localMailUrl + "/api/v1/messages");
     const body = await response.json();
     messageId = body.messages.find((message: { ID: string; To: { Address: string }[]; Subject: string }) =>
       message.To.some(recipient => recipient.Address === email) && /reset/i.test(message.Subject))?.ID;
     return !!messageId;
   }, { message: "A recovery email should reach the local test inbox" }).toBe(true);
-  const message = await (await fetch(`http://127.0.0.1:55324/api/v1/message/${messageId}`)).json();
+  const message = await (await fetch(`${localMailUrl}/api/v1/message/${messageId}`)).json();
   const link = (message.HTML as string).match(/href="([^"]*\/auth\/v1\/verify[^"]*)"/)?.[1]?.replaceAll("&amp;", "&");
   if (!link) throw new Error("The test email did not contain a recovery link.");
   return link;
@@ -87,7 +88,7 @@ test("registration creates the character and returns to the same harbor after lo
   await expect(page).toHaveURL(/\/harbor$/);
   await expect(page.getByRole("heading", { name: `Welcome ashore, ${name}.` })).toBeVisible();
 
-  const otherContext = await browser.newContext({ baseURL: "http://127.0.0.1:3100" });
+  const otherContext = await browser.newContext({ baseURL: localAppUrl });
   const other = await otherContext.newPage();
   const otherEmail = `voyage-${suffix()}@example.test`;
   const otherSecret = password();

@@ -1,7 +1,8 @@
+import { gameplay } from "@/config/public";
 import type { Stat } from "@/lib/game";
 
-export const COMBAT_COST = 10;
-export const MAX_ROUNDS = 25;
+export const COMBAT_COST = gameplay.combat.energyCost;
+export const MAX_ROUNDS = gameplay.combat.maxRounds;
 export const ORDERS = ["fire", "board", "crew_attack", "disengage", "retreat"] as const;
 export type CombatOrder = typeof ORDERS[number];
 export type DefenceOrder = "cannon" | "boarding";
@@ -54,9 +55,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   ALREADY_PARTICIPATED: "You have already left this encounter and cannot rejoin it.",
   TARGET_IN_COMBAT: "This captain is currently attacking another ship.",
   TARGET_PROTECTED: "This captain is protected from incoming attacks.",
-  NO_HEALTH: "You need at least 1 Ship Health and 1 Crew Health to attack.",
-  TARGET_NO_HEALTH: "This captain needs to recover at least 1 Ship Health and 1 Crew Health.",
-  NOT_ENOUGH_ENERGY: "You need 10 Energy to start or join a fight.",
+  NO_HEALTH: `You need at least ${gameplay.combat.minimumHealth} Ship Health and ${gameplay.combat.minimumHealth} Crew Health to attack.`,
+  TARGET_NO_HEALTH: `This captain needs to recover at least ${gameplay.combat.minimumHealth} Ship Health and ${gameplay.combat.minimumHealth} Crew Health.`,
+  NOT_ENOUGH_ENERGY: `You need ${COMBAT_COST} Energy to start or join a fight.`,
   CHARACTER_NOT_FOUND: "This captain could not be found.",
   COMBAT_NOT_FOUND: "This fight is not available to you.",
   NO_AMMO: "No salvos left. You can board or retreat.",

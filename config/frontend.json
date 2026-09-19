@@ -1,0 +1,34 @@
+{
+  "site": {
+    "name": "One Life At Sea",
+    "brandTop": "ONE LIFE",
+    "brandBottom": "AT SEA",
+    "description": "A name to make. A life to remember. Your journey begins in The Harbor.",
+    "language": "en",
+    "locale": "en-GB",
+    "logTimeZone": "UTC",
+    "allowSearchIndexing": false
+  },
+  "refresh": {
+    "realtimeDebounceMs": 100,
+    "fallbackMs": 15000,
+    "combatPreviewMs": 5000,
+    "resourceMinimumMs": 500,
+    "resourceGraceMs": 150,
+    "countdownTickMs": 1000
+  },
+  "art": {
+    "harborPath": "/images/harbor.webp",
+    "width": 1672,
+    "height": 941,
+    "desktopDisplayWidth": 900,
+    "alt": "A sunlit Caribbean harbor with clear blue sea, a sandy beach, green palms and wooden sailing ships."
+  },
+  "layout": {
+    "wideBreakpointPx": 900,
+    "combatBreakpointPx": 800,
+    "mobileBreakpointPx": 760,
+    "compactBreakpointPx": 600,
+    "narrowBreakpointPx": 420
+  }
+}

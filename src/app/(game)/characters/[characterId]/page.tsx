@@ -1,3 +1,4 @@
+import { frontend } from "@/config/public";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Anchor, MapPin, Swords } from "lucide-react";
@@ -21,7 +22,7 @@ export default async function CharacterProfilePage({ params }: { params: Promise
 
   const ownProfile = viewer.id === profile.character_id;
   const created = new Date(profile.created_at);
-  const joined = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(created);
+  const joined = new Intl.DateTimeFormat(frontend.site.locale, { day: "numeric", month: "long", year: "numeric", timeZone: frontend.site.logTimeZone }).format(created);
   const days = Math.max(0, Math.floor((Date.now() - created.getTime()) / 86_400_000));
   const age = days === 0 ? "Less than a day" : days === 1 ? "1 day" : days + " days";
   const location = profile.location === "the_harbor" ? "The Harbor" : "At sea";
@@ -30,7 +31,7 @@ export default async function CharacterProfilePage({ params }: { params: Promise
     <nav className="o-breadcrumb" aria-label="Breadcrumb"><Link href="/harbor">The Harbor</Link><span aria-hidden="true">/</span><span>Profile</span></nav>
     <Panel title="Profile" detail={ownProfile ? "Your character" : "Captain"}>
       <div className="o-profile">
-        <div className="o-profile-portrait" aria-hidden="true"><Anchor /><span>ONE LIFE AT SEA</span></div>
+        <div className="o-profile-portrait" aria-hidden="true"><Anchor /><span>{frontend.site.name.toUpperCase()}</span></div>
         <div className="o-profile-info">
           <header className="o-profile-identity"><h2>{profile.display_name}</h2><p>Captain</p></header>
           <dl className="o-profile-details">

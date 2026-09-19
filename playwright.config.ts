@@ -1,21 +1,25 @@
 import { defineConfig, devices } from "@playwright/test";
+import server from "./config/server.json" with { type: "json" };
+import testing from "./config/testing.json" with { type: "json" };
 
 delete process.env.NO_COLOR;
+const host = server.local.host.includes(":") ? "[" + server.local.host + "]" : server.local.host;
+const baseURL = "http://" + host + ":" + server.local.testPort;
 
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
-  workers: 1,
-  timeout: 60_000,
-  expect: { timeout: 10_000 },
+  workers: testing.workers,
+  timeout: testing.testTimeoutMs,
+  expect: { timeout: testing.expectTimeoutMs },
   reporter: "list",
-  use: { baseURL: "http://127.0.0.1:3100", trace: "off", screenshot: "off", video: "off" },
-  projects: [{ name: "edge", use: { ...devices["Desktop Chrome"], channel: "msedge" } }],
+  use: { baseURL, trace: "off", screenshot: "off", video: "off" },
+  projects: [{ name: testing.browserChannel, use: { ...devices["Desktop Chrome"], channel: testing.browserChannel } }],
   webServer: {
-    command: "npm run start -- --port 3100",
-    url: "http://127.0.0.1:3100/login",
+    command: "npm run start -- --port " + server.local.testPort,
+    url: baseURL + "/login",
     reuseExistingServer: false,
-    timeout: 120_000,
-    env: { SITE_URL: "http://127.0.0.1:3100", NEXT_TELEMETRY_DISABLED: "1" },
+    timeout: testing.serverTimeoutMs,
+    env: { SITE_URL: baseURL, NEXT_TELEMETRY_DISABLED: "1" },
   },
 });

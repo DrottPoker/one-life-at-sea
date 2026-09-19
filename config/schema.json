@@ -1,0 +1,647 @@
+{
+  "type": "object",
+  "properties": {
+    "gameplay": {
+      "type": "object",
+      "properties": {
+        "resources": {
+          "type": "object",
+          "properties": {
+            "energyMax": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "energyInitial": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "energyRecoverySeconds": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "healthMax": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "shipHealthInitial": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "crewHealthInitial": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "shipRecoverySeconds": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "crewRecoverySeconds": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        },
+        "training": {
+          "type": "object",
+          "properties": {
+            "energyCost": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "statGain": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        },
+        "startingStats": {
+          "type": "object",
+          "properties": {
+            "ship": {
+              "type": "object",
+              "properties": {
+                "attack": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "defense": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "speed": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "accuracy": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 1,
+                  "maximum": 2147483647
+                }
+              }
+            },
+            "crew": {
+              "type": "object",
+              "properties": {
+                "attack": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "defense": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "speed": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "accuracy": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 1,
+                  "maximum": 2147483647
+                }
+              }
+            }
+          }
+        },
+        "combat": {
+          "type": "object",
+          "properties": {
+            "energyCost": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "maxRounds": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "startingAmmo": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "ammoPerShot": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "minimumHealth": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "idleSeconds": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "maxDurationSeconds": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "protectionSeconds": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "defaultDefenceOrder": {
+              "type": "string"
+            },
+            "hitChance": {
+              "type": "object",
+              "properties": {
+                "extremeRatio": {
+                  "type": "number",
+                  "integer": false,
+                  "minimum": 1.000001,
+                  "maximum": 2147483647
+                },
+                "exponent": {
+                  "type": "number",
+                  "integer": false,
+                  "minimum": 1E-06,
+                  "maximum": 1
+                }
+              }
+            },
+            "mitigation": {
+              "type": "object",
+              "properties": {
+                "zeroReductionAttackRatio": {
+                  "type": "number",
+                  "integer": false,
+                  "minimum": 1.000001,
+                  "maximum": 2147483647
+                },
+                "fullReductionDefenseRatio": {
+                  "type": "number",
+                  "integer": false,
+                  "minimum": 1.000001,
+                  "maximum": 2147483647
+                },
+                "equalStatsReduction": {
+                  "type": "number",
+                  "integer": false,
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            },
+            "damage": {
+              "type": "object",
+              "properties": {
+                "statScale": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "quadratic": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 0,
+                  "maximum": 2147483647
+                },
+                "linear": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 0,
+                  "maximum": 2147483647
+                },
+                "constant": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 0,
+                  "maximum": 2147483647
+                },
+                "minimum": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 1,
+                  "maximum": 2147483647
+                }
+              }
+            },
+            "boarding": {
+              "type": "object",
+              "properties": {
+                "baseChance": {
+                  "type": "number",
+                  "integer": false,
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "speedInfluence": {
+                  "type": "number",
+                  "integer": false,
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "minimumChance": {
+                  "type": "number",
+                  "integer": false,
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "maximumChance": {
+                  "type": "number",
+                  "integer": false,
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            },
+            "equipment": {
+              "type": "object",
+              "properties": {
+                "cannons": {
+                  "type": "string"
+                },
+                "crewWeapon": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "harbor": {
+          "type": "object",
+          "properties": {
+            "pageSize": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "emailMaxLength": {
+          "type": "number",
+          "integer": true,
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "passwordMinLength": {
+          "type": "number",
+          "integer": true,
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "passwordMaxLength": {
+          "type": "number",
+          "integer": true,
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "resetCooldownSeconds": {
+          "type": "number",
+          "integer": true,
+          "minimum": 1,
+          "maximum": 2147483647
+        }
+      }
+    },
+    "frontend": {
+      "type": "object",
+      "properties": {
+        "site": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "brandTop": {
+              "type": "string"
+            },
+            "brandBottom": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "language": {
+              "type": "string"
+            },
+            "locale": {
+              "type": "string"
+            },
+            "logTimeZone": {
+              "type": "string"
+            },
+            "allowSearchIndexing": {
+              "type": "boolean"
+            }
+          }
+        },
+        "refresh": {
+          "type": "object",
+          "properties": {
+            "realtimeDebounceMs": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "fallbackMs": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "combatPreviewMs": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "resourceMinimumMs": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "resourceGraceMs": {
+              "type": "number",
+              "integer": true,
+              "minimum": 0,
+              "maximum": 2147483647
+            },
+            "countdownTickMs": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        },
+        "art": {
+          "type": "object",
+          "properties": {
+            "harborPath": {
+              "type": "string"
+            },
+            "width": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "height": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "desktopDisplayWidth": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "alt": {
+              "type": "string"
+            }
+          }
+        },
+        "layout": {
+          "type": "object",
+          "properties": {
+            "wideBreakpointPx": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "combatBreakpointPx": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "mobileBreakpointPx": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "compactBreakpointPx": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "narrowBreakpointPx": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        }
+      }
+    },
+    "server": {
+      "type": "object",
+      "properties": {
+        "local": {
+          "type": "object",
+          "properties": {
+            "host": {
+              "type": "string"
+            },
+            "appPort": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "testPort": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "supabaseProjectId": {
+              "type": "string"
+            },
+            "supabaseApiPort": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "supabaseDbPort": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "supabaseShadowPort": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "supabaseStudioPort": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "supabaseMailPort": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        },
+        "databaseRetry": {
+          "type": "object",
+          "properties": {
+            "retries": {
+              "type": "number",
+              "integer": true,
+              "minimum": 0,
+              "maximum": 2147483647
+            },
+            "delayMs": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        },
+        "playerWindows": {
+          "type": "object",
+          "properties": {
+            "defaultCount": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "maxCount": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "browserChannel": {
+              "type": "string"
+            },
+            "launchTimeoutMs": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "navigationTimeoutMs": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "healthTimeoutMs": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "profileDirectory": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "testing": {
+      "type": "object",
+      "properties": {
+        "browserChannel": {
+          "type": "string"
+        },
+        "workers": {
+          "type": "number",
+          "integer": true,
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "testTimeoutMs": {
+          "type": "number",
+          "integer": true,
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "expectTimeoutMs": {
+          "type": "number",
+          "integer": true,
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "serverTimeoutMs": {
+          "type": "number",
+          "integer": true,
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "unitInclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

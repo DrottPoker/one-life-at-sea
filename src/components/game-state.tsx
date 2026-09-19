@@ -1,5 +1,7 @@
 "use client";
 
+import { frontend } from "@/config/public";
+
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { GameState } from "@/lib/game";
@@ -12,7 +14,7 @@ export function GameStateProvider({ state, children }: { state: GameState; child
     const refresh = () => { if (document.visibilityState === "visible") router.refresh(); };
     const next = [state.energy_next_at, state.health_next_at, state.combat_next_at, state.protected_until]
       .filter((value): value is string => Boolean(value)).map(value => Date.parse(value));
-    const delay = next.length ? Math.max(500, Math.min(...next) - Date.parse(state.observed_at) + 150) : null;
+    const delay = next.length ? Math.max(frontend.refresh.resourceMinimumMs, Math.min(...next) - Date.parse(state.observed_at) + frontend.refresh.resourceGraceMs) : null;
     const timer = delay === null ? undefined : window.setTimeout(refresh, delay);
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);

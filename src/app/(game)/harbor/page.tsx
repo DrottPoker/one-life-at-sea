@@ -1,3 +1,4 @@
+import { gameplay } from "@/config/public";
 import Link from "next/link";
 import { Store, Hammer, Swords, Ship } from "lucide-react";
 import { requireCharacter } from "@/lib/player";
@@ -21,8 +22,8 @@ export default async function Harbor() {
     <HarborPlayers initial={roster} characterId={character.id} />
     <section className="o-panel" aria-label="Harbor directory"><header className="o-panel-title"><h2>Around the harbor</h2></header>
       <div className="o-directory-head" aria-hidden="true"><span>Location</span><span>Status</span></div>
-      <Link href="/harbor/crew-training" className="o-directory-row"><Swords aria-hidden="true" /><span><strong>Crew Training</strong><small>Train the crew that sails with you.</small></span><span className="o-directory-status">5 Energy / +1</span></Link>
-      <Link href="/harbor/ship-upgrades" className="o-directory-row"><Ship aria-hidden="true" /><span><strong>Ship Upgrades</strong><small>Improve your ship&apos;s four stats.</small></span><span className="o-directory-status">5 Energy / +1</span></Link>
+      <Link href="/harbor/crew-training" className="o-directory-row"><Swords aria-hidden="true" /><span><strong>Crew Training</strong><small>Train the crew that sails with you.</small></span><span className="o-directory-status">{gameplay.training.energyCost} Energy / +{gameplay.training.statGain}</span></Link>
+      <Link href="/harbor/ship-upgrades" className="o-directory-row"><Ship aria-hidden="true" /><span><strong>Ship Upgrades</strong><small>Improve your ship&apos;s four stats.</small></span><span className="o-directory-status">{gameplay.training.energyCost} Energy / +{gameplay.training.statGain}</span></Link>
       <Link href="/harbor/marketplace" className="o-directory-row"><Store aria-hidden="true" /><span><strong>Marketplace</strong><small>Trade along the waterfront.</small></span><span className="o-directory-status">Coming later</span></Link>
       <Link href="/harbor/shipyard" className="o-directory-row"><Hammer aria-hidden="true" /><span><strong>Shipyard</strong><small>The shipwright&apos;s workshop.</small></span><span className="o-directory-status">Coming later</span></Link>
     </section>

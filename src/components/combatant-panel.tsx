@@ -1,3 +1,4 @@
+import { gameplay, frontend } from "@/config/public";
 import Link from "next/link";
 import { Ship, Swords, Crosshair, HelpCircle } from "lucide-react";
 import { STATS, STAT_LABELS } from "@/lib/game";
@@ -16,10 +17,10 @@ export function CombatantPanel({ captain, own, phase }: { captain: Combatant; ow
         const hp = kind === "ship" ? captain.ship_health : captain.crew_health;
         const label = kind === "ship" ? "Ship Health" : "Crew Health";
         return <div className={"o-combat-health-row " + (phase === (kind === "ship" ? "sea" : "boarding") ? "is-current" : "")} key={kind}>
-          <div><span>{label}</span><strong>{hp} / 100</strong></div>
+          <div><span>{label}</span><strong>{hp} / {gameplay.resources.healthMax}</strong></div>
           <div className={"o-resource-track o-resource-" + kind} role="progressbar" aria-label={prefix + " " + label}
-            aria-valuenow={hp} aria-valuemin={0} aria-valuemax={100}>
-            <span style={{ width: hp + "%" }} />
+            aria-valuenow={hp} aria-valuemin={0} aria-valuemax={gameplay.resources.healthMax}>
+            <span style={{ width: (hp / gameplay.resources.healthMax * 100) + "%" }} />
           </div>
         </div>;
       })}
@@ -41,7 +42,7 @@ export function CombatantPanel({ captain, own, phase }: { captain: Combatant; ow
       </div>
     </dl>
     <dl className="o-combat-stats" aria-label={prefix + " " + (phase === "sea" ? "ship" : "crew") + " stats"}>
-      {STATS.map(stat => <div key={stat}><dt>{STAT_LABELS[stat]}</dt><dd>{stats ? stats[stat].toLocaleString("en-GB") : "?"}</dd></div>)}
+      {STATS.map(stat => <div key={stat}><dt>{STAT_LABELS[stat]}</dt><dd>{stats ? stats[stat].toLocaleString(frontend.site.locale) : "?"}</dd></div>)}
     </dl>
   </section>;
 }

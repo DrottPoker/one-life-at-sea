@@ -1,3 +1,4 @@
+import { gameplay, frontend } from "@/config/public";
 import Link from "next/link";
 import { ORDER_LABELS, type CombatEvent, type CombatOrder, type CombatPerson } from "@/lib/combat";
 
@@ -14,10 +15,10 @@ function EventAction({ id, name, order, hit, damage, phase }: { id: string; name
 export function CombatEvents({ events, defenderId, defenderName, newestFirst = false }: { events: CombatEvent[]; defenderId: string; defenderName: string; newestFirst?: boolean }) {
   const ordered = newestFirst ? [...events].reverse() : events;
   return <section className="o-combat-log" aria-labelledby="combat-log-heading">
-    <div className="o-section-bar"><h2 id="combat-log-heading">Combat log</h2><span>Server time (UTC)</span></div>
+    <div className="o-section-bar"><h2 id="combat-log-heading">Combat log</h2><span>Server time ({frontend.site.logTimeZone})</span></div>
     {ordered.length ? <ol>{ordered.map(event => <li key={event.sequence}>
       <header><strong>{event.kind === "round" ? event.phase === "sea" ? "Cannon combat" : "Boarding" : event.kind === "started" ? "Battle started" : "Joined battle"}</strong>
-        <time dateTime={event.at} title={new Date(event.at).toISOString()}>{new Date(event.at).toLocaleTimeString("en-GB", { timeZone: "UTC" })} UTC</time>
+        <time dateTime={event.at} title={new Date(event.at).toISOString()}>{new Date(event.at).toLocaleTimeString(frontend.site.locale, { timeZone: frontend.site.logTimeZone })} {frontend.site.logTimeZone}</time>
         {event.timed_out && <span>Automatic retreat</span>}
       </header>
       {event.kind === "round" ? <>
@@ -58,7 +59,7 @@ export function CombatPeople({ people, winnerId }: { people: CombatPerson[]; win
     <ul>{people.map(person => <li key={person.id} data-result={person.status}>
       <div><strong><CaptainName id={person.id} name={person.name} /></strong><span className="o-person-result">{person.id === winnerId && person.role === "attacker" ? "Final blow" : person.status === "active" ? person.role === "defender" ? "Defending" : person.phase === "sea" ? "At sea" : "Boarding" : person.status}</span></div>
       <dl><div><dt>Hits</dt><dd>{person.hits}</dd></div><div><dt>Ship damage</dt><dd>{person.ship_damage}</dd></div><div><dt>Crew damage</dt><dd>{person.crew_damage}</dd></div></dl>
-      <div className="o-person-condition"><span>Ship {person.ship_health}/100</span><span>Crew {person.crew_health}/100</span></div>
+      <div className="o-person-condition"><span>Ship {person.ship_health}/{gameplay.resources.healthMax}</span><span>Crew {person.crew_health}/{gameplay.resources.healthMax}</span></div>
     </li>)}</ul>
   </section>;
 }

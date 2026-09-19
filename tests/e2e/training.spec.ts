@@ -1,3 +1,4 @@
+import { isLocalTestApi, localDatabaseContainer } from "../support/local";
 import { test, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
@@ -6,7 +7,7 @@ import { execFileSync } from "node:child_process";
 process.loadEnvFile(".env.local");
 const apiUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const apiKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-if (new URL(apiUrl).hostname !== "127.0.0.1" || new URL(apiUrl).port !== "55321") {
+if (!isLocalTestApi(apiUrl)) {
   throw new Error("Training tests require this project's local Supabase.");
 }
 const suffix = () => [...randomBytes(10)].map(value => String.fromCharCode(97 + value % 26)).join("");
@@ -78,7 +79,7 @@ test("training updates both tabs and bars, persists after login, and fits small 
   const characterId = own.data!.id as string;
   if (!/^[0-9a-f-]{36}$/.test(characterId)) throw new Error("Invalid local test character ID.");
   // Move only this test fixture near its next recovery boundary.
-  execFileSync("docker", ["exec", "supabase_db_one-life-at-sea", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
+  execFileSync("docker", ["exec", localDatabaseContainer, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
     `update public.characters set energy=4, energy_updated_at=clock_timestamp()-interval '4 minutes 45 seconds' where id='${characterId}'`],
     { stdio: ["ignore", "pipe", "pipe"] });
   await page.reload();

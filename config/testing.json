@@ -1,0 +1,10 @@
+{
+  "browserChannel": "msedge",
+  "workers": 1,
+  "testTimeoutMs": 60000,
+  "expectTimeoutMs": 10000,
+  "serverTimeoutMs": 120000,
+  "unitInclude": [
+    "tests/unit/**/*.test.ts"
+  ]
+}

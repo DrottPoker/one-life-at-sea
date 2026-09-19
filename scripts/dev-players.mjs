@@ -5,6 +5,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const { loadConfig, localOrigin } = await import("./config/core.mjs");
+const config = loadConfig();
+const windowsConfig = config.server.playerWindows;
 
 export function localGameUrl(value) {
   const url = new URL(value);
@@ -16,26 +19,26 @@ export function localGameUrl(value) {
   return new URL("/login", url).href;
 }
 
-export async function openPlayerWindow({ player, url, headless = false, directory = resolve(projectRoot, ".local", "player-browsers") }) {
-  if (!Number.isInteger(player) || player < 1 || player > 6) throw new Error("Choose player 1-6.");
+export async function openPlayerWindow({ player, url, headless = false, directory = resolve(projectRoot, windowsConfig.profileDirectory) }) {
+  if (!Number.isInteger(player) || player < 1 || player > windowsConfig.maxCount) throw new Error("Choose player 1-" + windowsConfig.maxCount + ".");
   const destination = localGameUrl(url);
   const profile = resolve(directory, "player-" + player);
   await mkdir(profile, { recursive: true });
   let context;
   try {
     context = await chromium.launchPersistentContext(profile, {
-      channel: "msedge",
+      channel: windowsConfig.browserChannel,
       headless,
       viewport: null,
       ignoreDefaultArgs: ["--hide-scrollbars"],
-      timeout: 15000,
+      timeout: windowsConfig.launchTimeoutMs,
     });
   } catch (cause) {
     throw new Error("Player " + player + " could not open. Close its existing test window and check that Microsoft Edge is installed.", { cause });
   }
   try {
     const page = context.pages()[0] ?? await context.newPage();
-    await page.goto(destination, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await page.goto(destination, { waitUntil: "domcontentloaded", timeout: windowsConfig.navigationTimeoutMs });
     return { context, page, player };
   } catch (cause) {
     await context.close();
@@ -45,20 +48,20 @@ export async function openPlayerWindow({ player, url, headless = false, director
 
 async function main() {
   const { values } = parseArgs({ options: {
-    count: { type: "string", short: "c", default: "3" },
-    url: { type: "string", default: "http://127.0.0.1:3000" },
+    count: { type: "string", short: "c", default: String(windowsConfig.defaultCount) },
+    url: { type: "string", default: localOrigin(config) },
     help: { type: "boolean", short: "h", default: false },
   } });
   if (values.help) {
-    console.log("npm run dev:players -- [--count 1-6] [--url http://127.0.0.1:3000]");
-    console.log("Opens independent Edge windows with saved local test profiles.");
+    console.log("npm run dev:players -- [--count 1-" + windowsConfig.maxCount + "] [--url " + localOrigin(config) + "]");
+    console.log("Opens independent " + windowsConfig.browserChannel + " windows with saved local test profiles.");
     return;
   }
   const count = Number(values.count);
-  if (!Number.isInteger(count) || count < 1 || count > 6) throw new Error("Choose between 1 and 6 test windows.");
+  if (!Number.isInteger(count) || count < 1 || count > windowsConfig.maxCount) throw new Error("Choose between 1 and " + windowsConfig.maxCount + " test windows.");
   const url = localGameUrl(values.url);
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(5000), redirect: "error" });
+    const response = await fetch(url, { signal: AbortSignal.timeout(windowsConfig.healthTimeoutMs), redirect: "error" });
     if (!response.ok) throw new Error("Unavailable");
   } catch {
     throw new Error("The local game is unavailable. Start npm run dev first.");

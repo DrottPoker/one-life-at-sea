@@ -1,0 +1,70 @@
+{
+  "resources": {
+    "energyMax": 100,
+    "energyInitial": 100,
+    "energyRecoverySeconds": 300,
+    "healthMax": 100,
+    "shipHealthInitial": 100,
+    "crewHealthInitial": 100,
+    "shipRecoverySeconds": 30,
+    "crewRecoverySeconds": 10
+  },
+  "training": {
+    "energyCost": 5,
+    "statGain": 1
+  },
+  "startingStats": {
+    "ship": {
+      "attack": 10,
+      "defense": 10,
+      "speed": 10,
+      "accuracy": 10
+    },
+    "crew": {
+      "attack": 10,
+      "defense": 10,
+      "speed": 10,
+      "accuracy": 10
+    }
+  },
+  "combat": {
+    "energyCost": 10,
+    "maxRounds": 25,
+    "startingAmmo": 10,
+    "ammoPerShot": 1,
+    "minimumHealth": 1,
+    "idleSeconds": 120,
+    "maxDurationSeconds": 600,
+    "protectionSeconds": 300,
+    "defaultDefenceOrder": "cannon",
+    "hitChance": {
+      "extremeRatio": 64,
+      "exponent": 0.5
+    },
+    "mitigation": {
+      "zeroReductionAttackRatio": 32,
+      "fullReductionDefenseRatio": 25,
+      "equalStatsReduction": 0.5
+    },
+    "damage": {
+      "statScale": 1,
+      "quadratic": 7,
+      "linear": 27,
+      "constant": 30,
+      "minimum": 1
+    },
+    "boarding": {
+      "baseChance": 0.7,
+      "speedInfluence": 0.3,
+      "minimumChance": 0.2,
+      "maximumChance": 0.9
+    },
+    "equipment": {
+      "cannons": "Basic cannons",
+      "crewWeapon": "Cutlasses"
+    }
+  },
+  "harbor": {
+    "pageSize": 20
+  }
+}

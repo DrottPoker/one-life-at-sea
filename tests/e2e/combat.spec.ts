@@ -1,3 +1,4 @@
+import { isLocalTestApi, localDatabaseContainer, localAppUrl } from "../support/local";
 import { test, expect, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { execFileSync } from "node:child_process";
@@ -8,7 +9,7 @@ import type { CombatResponse } from "../../src/lib/combat";
 process.loadEnvFile(".env.local");
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-if (new URL(url).hostname !== "127.0.0.1" || new URL(url).port !== "55321") throw new Error("Combat tests require local Supabase.");
+if (!isLocalTestApi(url)) throw new Error("Combat tests require local Supabase.");
 const client = () => createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 const suffix = () => [...randomBytes(10)].map(value => String.fromCharCode(97 + value % 26)).join("");
 function uuid(value: string) {
@@ -16,7 +17,7 @@ function uuid(value: string) {
   return value;
 }
 function sql(statement: string) {
-  execFileSync("docker", ["exec", "supabase_db_one-life-at-sea", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c", statement],
+  execFileSync("docker", ["exec", localDatabaseContainer, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c", statement],
     { stdio: ["ignore", "pipe", "pipe"] });
 }
 async function captain() {
@@ -133,7 +134,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     const anonymous = await browser.newContext();
     try {
       const tab = await anonymous.newPage();
-      await tab.goto("http://127.0.0.1:3100/combatlog/" + battleId);
+      await tab.goto(localAppUrl + "/combatlog/" + battleId);
       await expect(tab.getByRole("heading", { name: "People (2)", exact: true })).toBeVisible();
       await expect(tab.getByRole("heading", { name: "Combat log", exact: true }).first()).toBeVisible();
       const log = tab.getByRole("region", { name: "Combat log", exact: true });

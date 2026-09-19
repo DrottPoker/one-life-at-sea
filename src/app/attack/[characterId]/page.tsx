@@ -1,3 +1,4 @@
+import { gameplay, frontend } from "@/config/public";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireCharacter, gameStateForPlayer } from "@/lib/player";
@@ -34,8 +35,8 @@ export default async function AttackPage({ params }: { params: Promise<{ charact
     preview = data;
   }
   return <GameStateProvider state={state}><main id="main" className="o-attack-main">
-    <header className="o-attack-heading"><div><span className="o-attack-brand">ONE LIFE AT SEA</span><h1>Attacking</h1></div>
-      <div><span>Energy <strong>{state.energy} / 100</strong></span>
+    <header className="o-attack-heading"><div><span className="o-attack-brand">{frontend.site.name.toUpperCase()}</span><h1>Attacking</h1></div>
+      <div><span>Energy <strong>{state.energy} / {gameplay.resources.energyMax}</strong></span>
         {!state.active_attack && <Link href="/harbor">Back to The Harbor</Link>}
       </div></header>
     <AttackSession battle={battle} preview={preview} key={characterId} />

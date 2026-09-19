@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
-import { combatError, isCombatOrder, isUuid, type CombatActionResult } from "@/lib/combat";
+import { combatError, MAX_ROUNDS, isCombatOrder, isUuid, type CombatActionResult } from "@/lib/combat";
 
 export async function startFight(targetId: string, requestId: string): Promise<CombatActionResult> {
   await requireCharacter();
@@ -19,7 +19,7 @@ export async function startFight(targetId: string, requestId: string): Promise<C
 
 export async function submitOrder(battleId: string, round: number, order: string, requestId: string): Promise<CombatActionResult> {
   await requireCharacter();
-  if (!isUuid(battleId) || !isUuid(requestId) || !isCombatOrder(order) || !Number.isInteger(round) || round < 0 || round >= 25) {
+  if (!isUuid(battleId) || !isUuid(requestId) || !isCombatOrder(order) || !Number.isInteger(round) || round < 0 || round >= MAX_ROUNDS) {
     return { message: "Choose a valid order." };
   }
   const client = await createClient();

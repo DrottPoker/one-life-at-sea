@@ -1,5 +1,7 @@
 "use client";
 
+import { gameplay, frontend } from "@/config/public";
+
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -14,7 +16,7 @@ export function CombatPreparation({ preview }: { preview: CombatPreview }) {
   const request = useRef<string | null>(null);
   const inFlight = useRef(false);
   useEffect(() => {
-    const timer = setInterval(() => { if (document.visibilityState === "visible" && !inFlight.current) router.refresh(); }, 5000);
+    const timer = setInterval(() => { if (document.visibilityState === "visible" && !inFlight.current) router.refresh(); }, frontend.refresh.combatPreviewMs);
     return () => clearInterval(timer);
   }, [router]);
 
@@ -44,7 +46,7 @@ export function CombatPreparation({ preview }: { preview: CombatPreview }) {
     </div>
     <div className="o-combat-start">
       <div><h2>Give the order</h2><p>Both captains act each round. Your opponent follows saved defence orders.</p>
-        <p className="o-copy">You can attack while injured. At least 1 Ship Health and 1 Crew Health are required.</p></div>
+        <p className="o-copy">You can attack while injured. At least {gameplay.combat.minimumHealth} Ship Health and {gameplay.combat.minimumHealth} Crew Health are required.</p></div>
       <button className="o-training-button o-combat-start-button" disabled={pending || !preview.can_start} onClick={start}>
         {pending && <span className="o-spinner" aria-hidden="true" />}
         {pending ? "Entering battle..." : preview.join_combat_id ? "Join battle" : "Start battle"}
@@ -54,7 +56,7 @@ export function CombatPreparation({ preview }: { preview: CombatPreview }) {
     {!preview.can_start && <div className="o-combat-message">
       <p>{combatError(preview.reason ?? "")}</p>
       {preview.target_protected_until && <p>Protection ends at <time dateTime={preview.target_protected_until}>
-        {new Date(preview.target_protected_until).toLocaleTimeString("en-GB", { timeZone: "UTC" })} UTC</time>.</p>}
+        {new Date(preview.target_protected_until).toLocaleTimeString(frontend.site.locale, { timeZone: frontend.site.logTimeZone })} {frontend.site.logTimeZone}</time>.</p>}
       <button className="o-text-button" onClick={() => router.refresh()}>Check availability</button>
     </div>}
     <p className="o-combat-feedback" role="status">{message}</p>

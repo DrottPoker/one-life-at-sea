@@ -1,3 +1,4 @@
+import { isLocalTestApi, localDatabaseContainer } from "../support/local";
 import { test, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
@@ -6,13 +7,13 @@ import { execFileSync } from "node:child_process";
 process.loadEnvFile(".env.local");
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-if (new URL(url).hostname !== "127.0.0.1" || new URL(url).port !== "55321") {
+if (!isLocalTestApi(url)) {
   throw new Error("Roster tests require the local One Life At Sea database.");
 }
 const suffix = () => [...randomBytes(8)].map(value => String.fromCharCode(97 + value % 26)).join("");
 const apiClient = () => createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 function localSql(sql: string) {
-  execFileSync("docker", ["exec", "supabase_db_one-life-at-sea", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c", sql],
+  execFileSync("docker", ["exec", localDatabaseContainer, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c", sql],
     { stdio: ["ignore", "pipe", "pipe"] });
 }
 function uuid(value: string) {

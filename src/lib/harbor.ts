@@ -1,7 +1,8 @@
+import { gameplay } from "@/config/public";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
-export const HARBOR_PAGE_SIZE = 20;
+export const HARBOR_PAGE_SIZE = gameplay.harbor.pageSize;
 export type HarborPlayer = { character_id: string; display_name: string };
 export type HarborRoster = { players: HarborPlayer[]; total: number; page: number };
 

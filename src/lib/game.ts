@@ -1,5 +1,8 @@
-export const MAX_RESOURCE = 100;
-export const TRAINING_COST = 5;
+import { gameplay } from "@/config/public";
+export const MAX_ENERGY = gameplay.resources.energyMax;
+export const MAX_HEALTH = gameplay.resources.healthMax;
+export const TRAINING_COST = gameplay.training.energyCost;
+export const TRAINING_GAIN = gameplay.training.statGain;
 export const STATS = ["attack", "defense", "speed", "accuracy"] as const;
 export type Stat = typeof STATS[number];
 export type TrainingGroup = "crew" | "ship";
