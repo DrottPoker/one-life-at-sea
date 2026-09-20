@@ -102,3 +102,12 @@ Migrations:
 See [implementation status](IMPLEMENTATION_STATUS.md) for executed checks.
 Tests use disposable local accounts; the SQL suite rolls back its fixtures.
 
+
+## Sea travel integration
+
+Verified admins retain access while traveling. Travel fields are not editable
+through the generic player editor. Energy edits preserve whole-number balances and
+reset the settlement checkpoint without changing global tick boundaries. Lethal
+administrative damage ends the journey through Hospital, clears route choices
+and switches to harbor recovery from admission or an earlier actual homecoming.
+See [sea travel](SEA_TRAVEL.md).

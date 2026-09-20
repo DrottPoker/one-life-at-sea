@@ -1,8 +1,8 @@
 "use client";
 
-import { frontend } from "@/config/public";
+import { createSnapshotPoller, snapshotRefreshDelay } from "@/lib/snapshot-poller";
 
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import { useEffect, useId, useState } from "react";
 import { Anchor } from "lucide-react";
 import { subscribeToForeground } from "@/lib/browser-events";
@@ -28,49 +28,28 @@ export function HarborPlayers({ initial, characterId }: { initial: HarborRoster 
 
   useEffect(() => {
     const client = createClient();
-    const abort = new AbortController();
     let disposed = false;
-    let fetching = false;
-    let dirty = false;
     let joined = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-
-    // Serialize snapshots so an older request cannot replace a newer list.
-    async function refresh() {
-      if (disposed) return;
-      if (fetching) { dirty = true; return; }
-      fetching = true;
-      dirty = false;
-      setLoading(true);
-      try {
-        const next = await loadHarborRoster(client, page, abort.signal);
-        if (!disposed) {
-          setRoster(next);
-          setPage(next.page);
-          setError(false);
-        }
-      } catch {
-        if (!disposed) setError(true);
-      } finally {
-        fetching = false;
-        if (!disposed) {
-          setLoading(false);
-          if (dirty) schedule();
-        }
-      }
-    }
-
-    function schedule() {
-      if (timer) return;
-      timer = setTimeout(() => { timer = undefined; void refresh(); }, frontend.refresh.realtimeDebounceMs);
-    }
+    const poller = createSnapshotPoller({
+      async load(signal) {
+        setLoading(true);
+        return loadHarborRoster(client, page, signal);
+      },
+      onData(next) {
+        setRoster(next); setPage(next.page); setError(false); setLoading(false);
+      },
+      onError() { setError(true); setLoading(false); },
+      nextDelay: data => snapshotRefreshDelay(data.next_arrival_at, data.observed_at),
+    });
+    const schedule = () => poller.schedule();
 
     const channel = client.channel(`harbor-roster-${instance}-${page}-${attempt}`, { config: { postgres_changes_options: { wait: true } } })
       .on("postgres_changes", { event: "*", schema: "public", table: "harbor_players" }, payload => {
         if (disposed) return;
         if (payload.errors?.length) { setError(true); return; }
         schedule();
-      });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "character_profiles" }, schedule);
 
     async function connect() {
       try {
@@ -107,8 +86,7 @@ export function HarborPlayers({ initial, characterId }: { initial: HarborRoster 
 
     return () => {
       disposed = true;
-      abort.abort();
-      clearTimeout(timer);
+      poller.dispose();
       unsubscribeForeground();
       window.removeEventListener("offline", offline);
       void client.removeChannel(channel);

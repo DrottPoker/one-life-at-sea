@@ -6,6 +6,7 @@ export const STATS = ["attack", "defense", "speed", "accuracy"] as const;
 export type Stat = typeof STATS[number];
 export type TrainingGroup = "crew" | "ship";
 export type GameState = Record<`${TrainingGroup}_${Stat}`, number> & {
+  sea: import("@/lib/sea-travel").SeaState;
   training: import("@/lib/training").TrainingState;
   gold_coins: number;
   bank_gold_coins: number;

@@ -1,12 +1,12 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { transferGold } from "@/app/bank-actions";
+import { useEconomyRequests } from "@/components/economy-requests";
 import { useGameState } from "@/components/game-state";
 import { formatGold, parseGoldAmount, type BankActionResult } from "@/lib/bank";
 
 export function BankPanel() {
-  const state = useGameState();
+  const state = useGameState(), journal = useEconomyRequests();
   const [amount, setAmount] = useState("");
   const request = useRef<{ id: string; direction: string; amount: string } | null>(null);
   const [result, action, pending] = useActionState<BankActionResult, FormData>(async (_previous, form) => {
@@ -19,7 +19,7 @@ export function BankPanel() {
     form.set("amount", attempt.amount);
     let response: BankActionResult;
     try {
-      response = await transferGold(form);
+      response = await journal.bank(form);
     } catch {
       response = { error: true, retry: true, message: "The transfer could not be confirmed. Retry the same transfer to check it safely." };
     }
@@ -28,7 +28,7 @@ export function BankPanel() {
     return response;
   }, {});
   const parsed = parseGoldAmount(amount);
-  const blocked = pending || !!state.active_attack || !!state.hospital_until;
+  const blocked = pending || (journal.unconfirmed && !result.retry) || !!state.active_combat_id || !!state.hospital_until || state.sea.state !== "in_harbor";
   return <div className="o-bank">
     <p className="o-copy">Store your Gold Coins here. Withdraw them to your character before making purchases.</p>
     <dl className="o-bank-balances">
@@ -39,7 +39,7 @@ export function BankPanel() {
       <label className="o-field" htmlFor="bank-amount"><span className="o-field-label">Amount</span>
         <input id="bank-amount" name="amount" type="text" inputMode="numeric" pattern="[0-9]+"
           maxLength={16} autoComplete="off" required value={amount}
-          readOnly={pending || !!result.retry} onChange={event => setAmount(event.target.value)}
+          readOnly={blocked || !!result.retry} onChange={event => setAmount(event.target.value)}
           aria-describedby="bank-amount-hint" />
       </label>
       <p id="bank-amount-hint" className="o-form-hint">Enter a whole number of Gold Coins. No fees or waiting time.</p>
@@ -54,7 +54,7 @@ export function BankPanel() {
     </form>
     <div className="o-bank-feedback" aria-live="polite" aria-atomic="true">
       {pending ? <p>Saving your transfer...</p> : result.message && <p className={result.error ? "o-field-error" : ""}>{result.message}</p>}
-      {state.active_attack && <p className="o-copy">Finish your current fight before using the bank.</p>}
+      {state.active_combat_id && <p className="o-copy">Finish your current fight before using the bank.</p>}
     </div>
   </div>;
 }

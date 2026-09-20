@@ -12,7 +12,7 @@ const descriptions = { attack: "Weapon drills and striking power.", defense: "Gu
 
 export function CrewTrainingPanel() {
   const state = useGameState(), tier = trainingTier("crew", state.training.progress.crew.tier_id);
-  const ready = state.energy >= TRAINING_COST && !state.active_attack && !state.hospital_until;
+  const ready = state.energy >= TRAINING_COST && !state.active_combat_id && !state.hospital_until;
   return <>
     <TrainingTierProgress group="crew" />
     <div className="o-training-intro">
@@ -32,7 +32,7 @@ export function CrewTrainingPanel() {
         <div className="o-panel-foot o-training-foot"><span>Each drill costs {TRAINING_COST} Energy.</span><span>{state.energy} Energy available</span></div>
       </>}
     </TrainingActionForm>
-    {state.active_attack && <p className="o-training-feedback o-copy">Finish your current fight before training.</p>}
-    {state.energy < TRAINING_COST && <p className="o-training-feedback o-copy">Not enough Energy. Recover {gameplay.resources.energyRecoveryAmount} every {durationLabel(gameplay.resources.energyRecoverySeconds)}, even while away.</p>}
+    {state.active_combat_id && <p className="o-training-feedback o-copy">Finish your current fight before training.</p>}
+    {state.energy < TRAINING_COST && <p className="o-training-feedback o-copy">Not enough Energy. Recover {gameplay.resources.energyRecoveryAmount} every {durationLabel(gameplay.resources.energyRecoverySeconds)} on the server clock, even while offline.</p>}
   </>;
 }

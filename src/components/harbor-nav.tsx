@@ -1,13 +1,14 @@
 "use client";
 
-import Link, { useLinkStatus } from "next/link";
-import { usePathname } from "next/navigation";
-import { Anchor, Store, Hammer, Swords, Ship, Landmark, HeartPulse, Package, type LucideIcon } from "lucide-react";
+import { GameLink as Link, useNavigationPathname } from "@/components/game-navigation";
+import { Anchor, Store, Hammer, Swords, Ship, Landmark, HeartPulse, Package, Compass } from "lucide-react";
 
 import { useGameState } from "@/components/game-state";
 import { isHospitalAccessiblePath } from "@/lib/hospital";
+import { isSeaAccessiblePath } from "@/lib/sea-travel";
 
 const locations = [
+  { href: "/sea", label: "At Sea", Icon: Compass },
   { href: "/harbor", label: "The Harbor", Icon: Anchor },
   { href: "/inventory", label: "Inventory", Icon: Package },
   { href: "/harbor/crew-training", label: "Crew Training", Icon: Swords },
@@ -18,21 +19,13 @@ const locations = [
   { href: "/harbor/shipyard", label: "Shipyard", Icon: Hammer },
 ];
 
-function NavigationIcon({ Icon }: { Icon: LucideIcon }) {
-  const { pending } = useLinkStatus();
-  return <span className="o-nav-symbol" data-pending={pending} aria-hidden="true">
-    <Icon />
-    {pending && <span className="o-spinner" />}
-  </span>;
-}
-
 export function HarborNav() {
-  const pathname = usePathname();
+  const pathname = useNavigationPathname();
   const state = useGameState();
-  return <nav className="o-location-nav" aria-label="Harbor locations">{locations.map(({ href, label, Icon }) =>
-    state.hospital_until && !isHospitalAccessiblePath(href) ? <span className="o-nav" aria-disabled="true" key={href}><span className="o-nav-symbol"><Icon aria-hidden="true" /></span>{label}</span> :
-    <Link className="o-nav" key={href} href={href} prefetch="auto" aria-current={pathname === href ? "page" : undefined}>
-      <NavigationIcon Icon={Icon} />{label}<span className="o-nav-tail" aria-hidden="true">›</span>
+  return <nav className="o-location-nav" aria-label="Harbor locations">{locations.filter(item => item.href !== "/sea" || state.sea.state !== "in_harbor").map(({ href, label, Icon }) =>
+    (state.hospital_until && !isHospitalAccessiblePath(href)) || !isSeaAccessiblePath(href, state.sea.state) ? <span className="o-nav" aria-disabled="true" key={href}><span className="o-nav-symbol"><Icon aria-hidden="true" /></span>{label}</span> :
+    <Link className="o-nav" key={href} href={href} prefetch="auto" aria-current={pathname === href || (href === "/harbor/marketplace" && pathname.startsWith(href + "/")) ? "page" : undefined}>
+      <span className="o-nav-symbol" aria-hidden="true"><Icon /></span>{label}<span className="o-nav-tail" aria-hidden="true">›</span>
     </Link>)}
   </nav>;
 }

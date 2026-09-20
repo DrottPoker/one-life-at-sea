@@ -2,7 +2,7 @@
 
 # PvP och gemensamma attacker
 
-Uppdaterat 2026-09-19. Detta dokument beskriver den implementerade versionen.
+Uppdaterat 2026-09-20. Detta dokument beskriver den implementerade versionen.
 [FIRST_COMBAT_PLAN.md](FIRST_COMBAT_PLAN.md) är den historiska planen för version 1.
 
 ## Flöde och sidlås
@@ -17,7 +17,7 @@ Uppdaterat 2026-09-19. Detta dokument beskriver den implementerade versionen.
 - Attackvyn använder hela spelutrymmet utan hamnens sidopanel, masthead eller footer. Energy och båda hälsomätarna finns i vyn.
 - Före start kan spelaren gå tillbaka fritt.
 - En aktiv angripare skickas tillbaka till sitt sparade möte vid andra sidbesök, reload, ny flik och bakåtnavigering. Proxy kontrollerar serverns lås; rotlayouten fångar även klientens cachade navigation.
-- Tränings-RPC:n nekar aktiva angripare även vid direkta API-anrop.
+- Alla vanliga spelmutationer nekar aktiva stridsdeltagare, även försvarare och direkta API-anrop.
 - Vinst, nederlag, reträtt, rundgräns eller timeout frigör deltagaren. Stängd flik avslutar inte striden direkt.
 - Avslutade möten har /combatlog/<battle-id>. Alla med länken kan läsa rapporten utan konto.
 - Äldre /attack?target=<id>&battle=<id>, /combat/prepare/<id> och /combat/<id> är enbart kompatibilitetsomdirigeringar.
@@ -44,14 +44,25 @@ motattack även om den avgörande träffen kommer i samma runda. I version 2 beh
 
 Om en angripare flyr eller besegras fortsätter de andra. När sista angriparen lämnar avslutas mötet.
 Samma kapten kan inte återansluta till samma möte och därmed återställa ammunition eller rundor.
-En kapten kan delta i ett möte åt gången. Den som försvarar kan använda vanliga spelsidor och träna,
-men måste avsluta sitt försvar innan ett separat anfall kan startas.
+En kapten kan delta i ett möte åt gången. Försvararen kan läsa vanliga spelsidor, inventory,
+profiler och sparade scoutingresultat, men kan inte utföra handlingar som flyttar eller ändrar
+karaktären. Resor, scouting, föremålsändringar, träning, nya skeppsarbeten, nivåköp,
+banköverföringar, ändrade försvarsorder och separata anfall är spärrade tills mötet avslutas.
+Om flera angripare deltar kvarstår låset tills den sista lämnar eller hela mötet avslutas.
 
 ## Onlineförsvar och realtid
 
 Försvararen flyttas inte till attackvyn och får inga manuella försvarsval under pågående möte.
-Hälsomätarna uppdateras i vanliga spelvyer. Träning och ändrade försvarsorder gäller kommande möten;
+Hälsomätarna och handlingslåsen uppdateras i vanliga spelvyer. Redan öppna formulär, inklusive
+bekräftelser och återförsök, låses vid attackstart och öppnas igen när striden slutar.
+Läsning, filtrering och navigering för försvararen fungerar fortfarande.
+Redan startat skeppsarbete och vanlig passiv återhämtning följer sina befintliga regler;
 pågående möte använder sin sparade ögonblicksbild.
+
+Servern kontrollerar deltagarskapet under samma ordnade lås som attackstart. Träning,
+bank, inventory och försvarsorder använder private.assert_can_act; resor och scouting
+kontrollerar samma deltagartabell i sina respektive platsflöden. Tidigare sparade kvitton
+kan fortfarande läsas med samma request-ID utan att en ny handling utförs.
 
 Stridens Realtime använder public.player_game_events, en ägarbegränsad revisionssignal.
 Hamn- och sjukhuslistorna har separata begränsade namnprojektioner.
@@ -75,7 +86,8 @@ Karaktär, skepp, besättning, tränade stats och pengar behålls.
 - Crew Health: +1 per 10 sekunder efter deltagarens avslut.
 - Överlevande återhämtar båda parallellt, även offline, högst 100. Sjukhuspatienter får full hälsa vid utskrivning.
 - Hälsa återhämtas inte för aktiva deltagare. En tillbakadragen angripare kan börja återhämta sig medan mötet fortsätter.
-- Energy: +5 per fem minuter, högst 100, även under sjukhusvistelse.
+- Energy: +5 vid fasta femminutersticks i hamnen och Hospital, samt vid fasta
+  tiominutersticks till havs och under resor. Högst 100, alltid heltal. Se [Energy](ENERGY_RECOVERY.md).
 - Fem minuters skydd mot inkommande attacker efter deltagarens avslut.
 - Skyddet hindrar inte egna attacker. Ett eget anfall avslutar skyddet.
 
@@ -245,3 +257,21 @@ It does not resolve another round, roll damage, change health or assign a winner
 Previous events and snapshots remain intact. A public admin_end log entry
 identifies the interruption; the private admin audit retains the reason and actor.
 No new protection period is awarded by this administrative operation.
+
+## Koppling till resor
+
+PvP fungerar i hamnen och på havsplatser. Till havs behöver angriparen först
+upptäcka målet genom [scouting](SEA_SCOUTING.md) för 5 Energy. Båda måste vara
+kvar vid samma Sea distance, oavsett platstyp, och målets besök får inte ha ändrats.
+Samma villkor gäller den som ansluter till ett befintligt möte.
+Start/join kostar fortfarande separat 10 Energy.
+
+Preview, start och join avvisar resande skepp, andra avstånd och mål som saknas
+i angriparens senaste scouting. Förfallna resor färdigställs före prövningen,
+även för offlineförsvarare. Profiler använder samma plats- och upptäcktsregel.
+Varken angripare eller försvarare kan scouta eller resa under pågående strid.
+
+Gemensamma sorterade deltagarlås gör samtidig attack och avfärd ömsesidigt
+uteslutande. Resor skapar inget nytt attackskydd. En överlevande kapten stannar
+på havsplatsen med fortsatt återhämtning på fasta tiominutersticks. Nederlag skickar kaptenen till
+Hospital i hamnen och bevarar distansrekordet. Se [resor](SEA_TRAVEL.md).

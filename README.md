@@ -15,13 +15,27 @@ Kodens ansvarsfördelning och fortsatt utveckling beskrivs i [kodstrukturen](doc
 - Karibisk pixelart, havsblå paneler och kompakt vänstermeny.
 - Hamnens vyer delar samma spellayout. Vid sidbyten ligger menyn och resursmätarna kvar,
   med en liten laddningsindikator i innehållet medan serverdata hämtas.
-- **Marketplace** och **Shipyard** är klickbara platshållarvyer.
+- **Marketplace**: Torn-inspirerat itemrutnät med Most Popular för senaste 12 timmarna,
+  kategorier, utfällbara detaljer och köp. Lägg upp flera items, välj antal/styckpris
+  och återta osålda listings. Försäljningar betalar 5 % avgift avrundat nedåt.
+  Se [marknaden](docs/MARKETPLACE.md).
+- **Item Value**: viktat snittpris från genomförda köp under 12 timmar, bredvid Circ.
+  Senaste Value behålls när inga nya köp finns i tidsfönstret.
+  Samma utfällbara historikdiagram i Inventory och Marketplace. Se [värdehistoriken](docs/ITEM_MARKET_VALUE.md).
+- **Shipyard** är en klickbar platshållarvy.
+- **Set sail**: lämna hamnen för 5 Energy, öka Sea distance med 1 per minut och välj mellan två sparade platstyper.
+  **Return to The Harbor** tar Sea distance gånger en minut. Resan fortsätter offline och Energy återhämtas med 5 var tionde minut till havs.
+- **Max sea distance** på profilen visar ditt längsta nådda avstånd och sparas även när du återvänder till hamnen.
+  Skeppsarbete och strid måste vara klara före avfärd. Fler platsaktiviteter införs senare.
+- **Scout nearby ships** kostar 5 Energy och sparar alla andra kaptener på samma Sea distance.
+  Klicka på ett namn för profil och Attack. Målet måste fortfarande vara kvar; stridsstart kostar separat 10 Energy.
+  Se [resesystemet](docs/SEA_TRAVEL.md).
 - The Harbor visar kaptener som är i hamnen, med namn, antal och realtidsuppdatering.
   Listan omfattar även utloggade kaptener och har 20 namn per sida.
 - **My Profile** öppnar din karaktärsprofil. Klicka på ett namn i hamnen för att se en annan kaptens profil.
 - **Inventory** i sidopanelens Harbor-meny: kategorier, namnsökning, itemrader med egna bilder och stats,
   utfällbara detaljer och fungerande Trash. Equip och Use väntar på nästa etapp.
-  Inventory kan läsas i Hospital, men items kan inte förstöras under vistelsen.
+  Inventory kan läsas i Hospital och på havsplatser, men items kan bara förstöras i hamnen.
   **Circ.** visar globalt antal med [historikdiagram](docs/ITEM_CIRCULATION.md), sex perioder
   och datum/antal när man pekar på kurvan.
 - **Gold Coins** visas ovanför resursmätarna. Nya karaktärer börjar med 0.
@@ -31,15 +45,15 @@ Kodens ansvarsfördelning och fortsatt utveckling beskrivs i [kodstrukturen](doc
 - **Crew Training**: övningar med XP, guldköp och 1 % Perfect Drill. Första övningen ger +1 för 5 Energy.
 - **Ship Upgrades**: välj stat och arbetsstorlek. Ett arbete åt gången, färdigt efter 5, 25 eller 50 minuter även offline. XP och köpta workshops ger större ökningar.
 - Båda har tio justerbara nivåer. Nya karaktärer börjar med 10 i varje stat.
-- Energy återhämtas med 5 var femte minut, även offline, upp till 100.
+- Energy är alltid heltal: +5 vid fasta klockslag var femte minut i hamnen och var tionde minut till havs, även under resor och offline, upp till 100. Nästa tick visas i sidopanelen. Se [Energy](docs/ENERGY_RECOVERY.md).
 - Lösenordsåterställning, valideringsfel och skyddad åtkomst mellan konton.
 - **Attack**: fullskärmsvy med kanonstrid och boarding. Dela `/attack/<motståndarens-id>` så kan andra ansluta mot gemensam hälsa. Adressen är samma före och under striden.
-- Aktiva angripare stannar i sin strid tills de vinner, förlorar eller lämnar. Försvararens hälsa uppdateras i realtid.
+- Aktiva angripare stannar i sin strid tills de vinner, förlorar eller lämnar. Försvarare kan läsa sidor och inventory, men alla handlingar som flyttar eller ändrar karaktären är låsta under striden. Hälsa och handlingslås uppdateras i realtid.
 - Torn-inspirerade statkurvor: Accuracy mot Speed för träffchans, Attack mot Defense för skada. Extrem Speed kan undvika alla träffar; 25 gånger Defense blockerar all skada.
 - **Combat log**: offentligt delbar logg med servertid, final blow, assist och separata värden för Ship damage och Crew damage. Alla deltagarnamn länkar till profiler.
 
 Spelets gränssnitt är på engelska. [Inventory](docs/INVENTORY.md) har införts med visning och Trash.
-Expeditioner, intjäning, itemhandel, aktiva itemeffekter och PvE
+Platsaktiviteter, fler intjäningssystem, aktiva itemeffekter och PvE
 kommer i senare etapper. Permanent karaktärsdöd har tagits bort och ersatts av [Hospital](docs/HOSPITAL.md). Gold Coins, banköverföringar och köp av träningsnivåer är implementerade. Se [träningsregler och balans](docs/TRAINING_FOUNDATION.md).
 
 ## Adminpanel
@@ -123,6 +137,7 @@ Stäng testfönstren före nästa start. Vanliga flikar i samma profil delar for
 npm run check
 npm run test:db
 npm run test:e2e
+npm run audit:economy
 ```
 
 `check` kör lint, typkontroll, enhetstester och produktionsbygge. Databastesterna
@@ -159,9 +174,12 @@ En Linux-VPS kan användas senare.
 - [Karaktärsprofiler](docs/CHARACTER_PROFILES.md)
 - [PvP: kanonstrid, boarding och återhämtning](docs/COMBAT_SYSTEM.md)
 - [Godkänd plan för första stridssystemet](docs/FIRST_COMBAT_PLAN.md)
+- [Marketplace och itemhandel](docs/MARKETPLACE.md)
 - [Gold Coins och banken](docs/GOLD_COINS_AND_BANK.md)
 - [Resurser och första träningssystemet](docs/TRAINING_FOUNDATION.md)
 - [Plan: träningsprogression, tillfälliga crew-bonusar och tidsstyrda skeppsarbeten](docs/TRAINING_PROGRESSION_PLAN.md)
+- [Scouting och PvP till havs](docs/SEA_SCOUTING.md)
+- [Plan: stegvisa resor till havs](docs/SEA_TRAVEL_PLAN.md)
 - [Hamnens spelarlista och realtid](docs/HARBOR_ROSTER.md)
 - [Arkitektur och åtkomstregler](docs/ARCHITECTURE.md)
 - [Bildstil och karibisk färgriktning](docs/design/STYLE_REFERENCE.md)

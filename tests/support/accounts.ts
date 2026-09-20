@@ -30,6 +30,8 @@ export async function createTestAccount(prefix: string, metadata: Record<string,
   expect(own.error).toBeNull();
   const id = own.data!.id, userId = signup.data.user!.id;
   if (![id, userId].every(value => /^[0-9a-f-]{36}$/.test(value))) throw new Error("Invalid fixture ID.");
+  // Isolate action-cost tests from real clock ticks; recovery tests set explicit past checkpoints.
+  testSql("update public.characters set energy_updated_at=clock_timestamp()+interval '1 day' where id='" + id + "';");
   return { api, id, userId, email, password, name };
 }
 

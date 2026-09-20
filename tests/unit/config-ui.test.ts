@@ -12,13 +12,14 @@ vi.mock("@/config/public", async importOriginal => {
 vi.mock("@/components/game-state", () => ({
   useGameState: () => ({
     training: { progress: { crew: { xp: 0, tier_id: "crew_1" } }, ship_job: null },
+    sea: { state: "in_harbor" },
     gold_coins: 1234, bank_gold_coins: 500,
     energy: 50, ship_health: 50, crew_health: 125, health_next_at: "2026-09-17T00:00:00Z",
     crew_attack: 10, crew_defense: 10, crew_speed: 10, crew_accuracy: 10,
     active_attack: null, protected_until: null,
   }),
 }));
-vi.mock("@/app/training-actions", () => ({ trainingAction: async () => ({}) }));
+vi.mock("@/components/economy-requests", () => ({ useEconomyRequests: () => ({ unconfirmed: false, training: async () => ({}) }) }));
 
 import { ResourceBars } from "../../src/components/resource-bars";
 import { CrewTrainingPanel } from "../../src/components/crew-training-panel";

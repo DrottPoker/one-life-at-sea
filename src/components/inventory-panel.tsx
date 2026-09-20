@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Boxes, CircleDot, ChevronDown, ChevronLeft, ChevronRight, Compass, Cross, Crosshair, FlaskConical, Package, Search, Swords, Trash2, Zap } from "lucide-react";
 import { DialogCloseButton } from "@/components/dialog-close-button";
 import { ItemImage } from "@/components/inventory/item-image";
 import { ItemDetails } from "@/components/inventory/item-details";
-import { trashInventoryItem } from "@/app/inventory-actions";
+import { useEconomyRequests } from "@/components/economy-requests";
 import { useGameState } from "@/components/game-state";
 import { formatItemCount, formatItemStat, inventoryCategories, inventoryCategoryName, inventoryEntryKey,
   inventoryHref, parseItemQuantity, type InventoryEntry, type InventoryFilters, type InventoryPage, type TrashResult } from "@/lib/inventory";
@@ -18,7 +18,7 @@ const categoryIcons: Record<string, typeof Package> = {
 
 export function InventoryPanel({ inventory, filters }: { inventory: InventoryPage; filters: InventoryFilters }) {
   const router = useRouter();
-  const state = useGameState();
+  const state = useGameState(), journal = useEconomyRequests();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selected, setSelected] = useState<InventoryEntry | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -28,7 +28,7 @@ export function InventoryPanel({ inventory, filters }: { inventory: InventoryPag
   const [filterPending, startFilter] = useTransition();
   const dialog = useRef<HTMLDialogElement>(null);
   const request = useRef<{ id: string; entry: InventoryEntry; amount: string } | null>(null);
-  const blocked = !!state.hospital_until || !!state.active_attack;
+  const blocked = (journal.unconfirmed && !result.retry && !pending) || !!state.hospital_until || !!state.active_combat_id || state.sea.state !== "in_harbor";
   const quantity = parseItemQuantity(amount);
   const available = selected ? inventory.items.find(item => inventoryEntryKey(item) === inventoryEntryKey(selected))?.quantity ?? 0 : 0;
   const pages = Math.max(1, Math.ceil(inventory.total / inventory.page_size));
@@ -56,7 +56,7 @@ export function InventoryPanel({ inventory, filters }: { inventory: InventoryPag
 
   function destroy(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selected || pending) return;
+    if (!selected || pending || blocked) return;
     const attempt = request.current ?? { id: crypto.randomUUID(), entry: selected, amount };
     request.current = attempt;
     const form = new FormData();
@@ -66,7 +66,7 @@ export function InventoryPanel({ inventory, filters }: { inventory: InventoryPag
     form.set("request_id", attempt.id);
     startTrash(async () => {
       let response: TrashResult;
-      try { response = await trashInventoryItem(form); }
+      try { response = await journal.inventory(form); }
       catch { response = { error: true, retry: true, message: "The result could not be confirmed. Retry this action to check it safely." }; }
       setResult(response);
       if (!response.retry) request.current = null;
@@ -108,6 +108,8 @@ export function InventoryPanel({ inventory, filters }: { inventory: InventoryPag
       {filterPending && <span role="status">Searching...</span>}
     </div>
     <p className="o-inventory-note">Equipping and using items will be available later.</p>
+    {state.active_combat_id && <p className="o-inventory-notice">Your inventory is read-only during combat. You can inspect items, but cannot change them.</p>}
+    {state.sea.state !== "in_harbor" && <p className="o-inventory-notice">Your inventory is read-only at sea. Return to The Harbor to use it.</p>}
     {state.hospital_until && <p className="o-inventory-notice">You can view your inventory while in hospital. Items cannot be destroyed during your stay.</p>}
     <ul className="o-item-list" aria-label="Your items" aria-busy={filterPending}>
       {inventory.items.map(item => {
@@ -158,7 +160,7 @@ export function InventoryPanel({ inventory, filters }: { inventory: InventoryPag
     </div>
     <div className="o-inventory-feedback" role="status" aria-live="polite">
       {!dialogOpen && result.message && <p className={result.error ? "o-field-error" : ""}>{result.message}</p>}
-      {!dialogOpen && result.retry && <button type="button" className="o-text-button" onClick={() => setDialogOpen(true)}>Retry last trash action</button>}
+      {!dialogOpen && result.retry && <button type="button" className="o-text-button" disabled={blocked} onClick={() => setDialogOpen(true)}>Retry last trash action</button>}
     </div>
     <dialog ref={dialog} className="o-item-dialog" aria-labelledby="trash-title" aria-describedby="trash-warning"
       onCancel={event => { if (pending) event.preventDefault(); else setDialogOpen(false); }}
@@ -171,19 +173,19 @@ export function InventoryPanel({ inventory, filters }: { inventory: InventoryPag
         {selected.entry_type === "stack" ? <div className="o-field">
           <label className="o-field-label" htmlFor="trash-quantity">Quantity to destroy</label>
           <input id="trash-quantity" type="text" inputMode="numeric" pattern="[0-9]+" maxLength={16} required
-            value={amount} readOnly={pending || !!result.retry} onChange={event => setAmount(event.target.value)} aria-describedby="trash-available" />
+            value={amount} readOnly={blocked || pending || !!result.retry} onChange={event => setAmount(event.target.value)} aria-describedby="trash-available" />
           <span className="o-form-hint" id="trash-available" aria-live="polite">{formatItemCount(available)} currently available.</span>
         </div> : <p>Quantity: 1</p>}
         <div className="o-item-dialog-actions">
           <button type="button" className="o-item-action" data-cancel disabled={pending} onClick={() => setDialogOpen(false)}>{result.retry ? "Close" : "Cancel"}</button>
-          <button className="o-primary o-item-destroy" type="submit" disabled={pending || (!result.retry && (blocked || quantity === null || quantity > available))}>
+          <button className="o-primary o-item-destroy" type="submit" disabled={blocked || pending || (!result.retry && (quantity === null || quantity > available))}>
             {pending ? "Confirming..." : result.retry ? "Retry trash action" : "Destroy " + (quantity === null ? "items" : formatItemCount(quantity) + (quantity === 1 ? " item" : " items"))}
           </button>
         </div>
         {dialogOpen && <div role="status" aria-live="polite">
           {result.message && <p className="o-field-error">{result.message}</p>}
           {!available && !result.retry && <p className="o-field-error">This item is no longer available.</p>}
-          {blocked && !result.retry && <p className="o-field-error">{state.hospital_until ? "You cannot destroy items while in hospital." : "Finish your current fight first."}</p>}
+          {blocked && <p className="o-field-error">{state.hospital_until ? "You cannot destroy items while in hospital." : state.sea.state !== "in_harbor" ? "Return to The Harbor to destroy items." : "Finish your current fight first."}</p>}
         </div>}
       </form>}
     </dialog>

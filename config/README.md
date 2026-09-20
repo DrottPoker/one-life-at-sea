@@ -4,7 +4,7 @@ Alla justerbara spelregler och drift-/UI-inställningar samlas här. Nuvarande v
 
 | Fil | Vad du ändrar |
 | --- | --- |
-| gameplay.json | Energy, hälsa, återhämtning, träningskostnad och ökning, åtta startstats, stridskostnad, ammunition, rundor, tidsgränser, skydd, träff-/skadekurvor, boarding, grundutrustning och hamnens sidstorlek. |
+| gameplay.json | Energy, hälsa, återhämtning, träningskostnad och ökning, åtta startstats, stridskostnad, ammunition, rundor, tidsgränser, skydd, träff-/skadekurvor, boarding, grundutrustning hamnens sidstorlek samt seaTravel med avgångskostnad, restider, platstyper samt scoutingens pris och sidstorlek. Marketplace styr avgift, popularitetsfönster, sidstorlekar och batchgräns; inventory styr katalog och handelsbarhet. |
 | frontend.json | Spelnamn, språk-/datumformat, metadata, loggens tidszon, laddning/uppdateringsintervall, hamnbild och responsiva brytpunkter. |
 | theme.css | Färger, typsnitt, sidbredd, stridsbredd, sidopanel, bildhöjd, sidmarginal, touchstorlek och spinnerhastighet. |
 | interface.css.template | Detaljerad CSS för gränssnittet; brytpunkter hämtas från frontend.json. |
@@ -22,11 +22,21 @@ Alla justerbara spelregler och drift-/UI-inställningar samlas här. Nuvarande v
 3. Kör `npm run db:migrate` för att applicera den nya migrationen i lokal Supabase.
 4. Ladda om spelet. Produktionsbyggen behöver byggas och driftsättas igen.
 
+`resources.energyRecoverySeconds` anger fasta servergränser i hamnen (300 sekunder).
+Till havs och under resor används dubbla intervallet (600). `energyRecoveryAmount` är
+samma heltalsbelopp (5) på varje tick. Se [Energy](../docs/ENERGY_RECOVERY.md).
+
 Exempel: `training.energyCost` styr crew-träningens kostnad och knapptext.
 `training.shipMinEnergy` styr sliderns minimum (5), `shipSecondsPerEnergy` arbetstiden per Energy (60)
 och `shipEnergyPerUnit` hur många Energy som motsvarar workshopens basökning (5).
 `combat.mitigation.fullReductionDefenseRatio` styr när Defense blockerar all skada.
 `startingStats.ship.attack` påverkar nya karaktärer; redan tränade stats skrivs inte om.
+
+Marketplace har `feeBps` (500 = 5 %), `popularityHours` (12), `valueWindowHours` (12), `pageSize` (30),
+`listingsPageSize` (20 per expansion eller sida i egna listings) och `maxBatchSize` (25). Avgiften sparas per listing;
+ändringar gäller nya erbjudanden. `inventory.items[].tradable` styr tillsammans
+med `active` om ett item får säljas. Återtagning av befintliga listings är kvar.
+Se [Marketplace](../docs/MARKETPLACE.md).
 
 ## Ändra UI eller server
 

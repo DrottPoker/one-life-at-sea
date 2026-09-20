@@ -6,7 +6,7 @@ export type InventoryEntry = {
   name: string; category_id: string; kind: "equipment" | "consumable" | "passive";
   description: string; effect_description: string; image_path: string;
   stats: { damage: number; accuracy: number } | null;
-  circulation: string;
+  circulation: string; market_value: string | null;
 };
 export type InventoryPage = { items: InventoryEntry[]; total: number; page: number; page_size: number };
 export type InventoryFilters = { category: string | null; query: string; page: number };

@@ -1,5 +1,5 @@
 import { frontend } from "@/config/public";
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import { notFound } from "next/navigation";
 import { Anchor } from "lucide-react";
 import { Panel } from "@/components/shell";
@@ -12,7 +12,7 @@ import { isUuid } from "@/lib/validation";
 export const metadata = { title: "Character profile" };
 
 export default async function CharacterProfilePage({ params }: { params: Promise<{ characterId: string }> }) {
-  const viewer = await requireCharacter({ allowHospital: true });
+  const viewer = await requireCharacter({ allowHospital: true, allowSea: true });
   const state = await gameStateForPlayer();
   const { characterId } = await params;
   if (!isUuid(characterId)) notFound();
@@ -22,15 +22,15 @@ export default async function CharacterProfilePage({ params }: { params: Promise
   if (error) throw new Error("The character profile could not be loaded.");
   if (!profile) notFound();
 
-  const { data: hospital, error: hospitalError } = await supabase.rpc("get_hospital_status", { target_id: characterId });
+  const { data: hospital, error: hospitalError } = await supabase.rpc("get_character_status", { target_id: characterId });
   if (hospitalError || !hospital) throw new Error("The hospital status could not be loaded.");
   const ownProfile = viewer.id === profile.character_id;
   const created = new Date(profile.created_at);
   const joined = new Intl.DateTimeFormat(frontend.site.locale, { day: "numeric", month: "long", year: "numeric", timeZone: frontend.site.logTimeZone }).format(created);
   const days = Math.max(0, Math.floor((Date.now() - created.getTime()) / 86_400_000));
   const age = days === 0 ? "Less than a day" : days === 1 ? "1 day" : days + " days";
-  const backUrl = state.hospital_until ? "/harbor/hospital" : "/harbor";
-  const backLabel = state.hospital_until ? "Hospital" : "The Harbor";
+  const backUrl = state.hospital_until ? "/harbor/hospital" : state.sea.state !== "in_harbor" ? "/sea" : "/harbor";
+  const backLabel = state.hospital_until ? "Hospital" : state.sea.state !== "in_harbor" ? "At Sea" : "The Harbor";
 
   return <>
     <nav className="o-breadcrumb" aria-label="Breadcrumb"><Link href={backUrl}>{backLabel}</Link><span aria-hidden="true">/</span><span>Profile</span></nav>
@@ -39,7 +39,7 @@ export default async function CharacterProfilePage({ params }: { params: Promise
         <div className="o-profile-portrait" aria-hidden="true"><Anchor /><span>{frontend.site.name.toUpperCase()}</span></div>
         <div className="o-profile-info">
           <header className="o-profile-identity"><h2>{profile.display_name}</h2><p>Captain</p></header>
-          <ProfileDetails key={profile.character_id} profile={profile} initialHospital={hospital} joined={joined} age={age} ownProfile={ownProfile} />
+          <ProfileDetails key={profile.character_id} profile={profile} initialStatus={hospital} joined={joined} age={age} ownProfile={ownProfile} />
         </div>
       </div>
       {ownProfile && <DefenceOrders />}

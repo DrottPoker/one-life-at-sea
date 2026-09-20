@@ -8,7 +8,7 @@ import { combatError, MAX_ROUNDS, isCombatOrder, type CombatActionResult } from 
 import { isUuid } from "@/lib/validation";
 
 export async function startFight(targetId: string, requestId: string): Promise<CombatActionResult> {
-  await requireCharacter();
+  await requireCharacter({ allowSea: true });
   if (!isUuid(targetId) || !isUuid(requestId)) return { message: "Choose a valid captain." };
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("start_combat", { target_id: targetId, request_id: requestId }));
@@ -19,7 +19,7 @@ export async function startFight(targetId: string, requestId: string): Promise<C
 }
 
 export async function submitOrder(battleId: string, round: number, order: string, requestId: string): Promise<CombatActionResult> {
-  await requireCharacter();
+  await requireCharacter({ allowSea: true });
   if (!isUuid(battleId) || !isUuid(requestId) || !isCombatOrder(order) || !Number.isInteger(round) || round < 0 || round >= MAX_ROUNDS) {
     return { message: "Choose a valid order." };
   }
@@ -40,5 +40,5 @@ export async function saveDefence(_previous: { message?: string }, form: FormDat
   const client = await createClient();
   const { error } = await withDatabaseRetry(() => client.rpc("save_defence_orders", { preset }));
   revalidatePath("/", "layout");
-  return { message: error ? "Your defence orders could not be saved." : "Defence orders saved. Changes apply to your next fight." };
+  return { message: error ? error.message === "IN_COMBAT" ? "Finish your current fight before changing defence orders." : "Your defence orders could not be saved." : "Defence orders saved. Changes apply to your next fight." };
 }

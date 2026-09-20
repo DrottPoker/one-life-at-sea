@@ -21,8 +21,9 @@ const errors: Record<string, string> = {
   NOT_AUTHORIZED: "Please sign in again to use the bank.",
 };
 
-export async function transferGold(form: FormData): Promise<BankActionResult> {
-  await requireCharacter();
+export async function transferGold(form: FormData, characterId: string): Promise<BankActionResult> {
+  const character = await requireCharacter({ allowHospital: true, allowSea: true });
+  if (character.id !== characterId) return { error: true, retry: true, message: "Your signed-in character changed. Sign back in to check this saved action." };
   const direction = form.get("direction");
   const amount = parseGoldAmount(form.get("amount"));
   const requestId = form.get("request_id");

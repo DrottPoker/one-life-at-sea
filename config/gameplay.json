@@ -269,7 +269,8 @@
         "imagePath": "/images/items/cutlass.png",
         "description": "A broad, curved blade with a brass guard and a salt-worn leather grip. A dependable companion in the close quarters of a boarding action.",
         "effectDescription": "Crew weapon. Its individual Damage and Accuracy are shown below.",
-        "active": true
+        "active": true,
+        "tradable": true
       },
       {
         "id": "deck_cannon",
@@ -280,7 +281,8 @@
         "imagePath": "/images/items/cannon.png",
         "description": "A compact iron cannon mounted on a sturdy oak carriage. Built to bring a broadside to bear without crowding the deck.",
         "effectDescription": "Ship armament. Its individual Damage and Accuracy are shown below.",
-        "active": true
+        "active": true,
+        "tradable": true
       },
       {
         "id": "linen_bandages",
@@ -291,7 +293,8 @@
         "imagePath": "/images/items/bandages.png",
         "description": "Clean linen, rolled and tucked away from the spray. An essential part of a ship surgeon's supplies.",
         "effectDescription": "Medical supply intended for treating wounded crew. Medical use will be available later.",
-        "active": true
+        "active": true,
+        "tradable": true
       },
       {
         "id": "drill_tonic",
@@ -302,7 +305,8 @@
         "imagePath": "/images/items/tonic.png",
         "description": "An herbal preparation in a stout green bottle. Quartermasters keep it aside for the most demanding practice sessions.",
         "effectDescription": "Intended to temporarily improve the chance of a Perfect Drill. Training effects will be available later.",
-        "active": true
+        "active": true,
+        "tradable": true
       },
       {
         "id": "oak_planks",
@@ -313,7 +317,8 @@
         "imagePath": "/images/items/timber.png",
         "description": "Seasoned oak boards bound with hemp rope. Their close grain and solid weight make them prized by shipwrights.",
         "effectDescription": "Shipbuilding material. No active effect.",
-        "active": true
+        "active": true,
+        "tradable": true
       },
       {
         "id": "brass_compass",
@@ -324,8 +329,46 @@
         "imagePath": "/images/items/compass.png",
         "description": "A brass compass worn smooth by years in a captain's coat. The needle still finds north, whatever the sea has in store.",
         "effectDescription": "A keepsake from life at sea. No active effect.",
-        "active": true
+        "active": true,
+        "tradable": true
       }
     ]
+  },
+  "seaTravel": {
+    "departureEnergyCost": 5,
+    "outwardDurationSeconds": 60,
+    "returnSecondsPerStep": 60,
+    "locationTypes": [
+      {
+        "id": "deserted_island",
+        "name": "Deserted island",
+        "active": true
+      },
+      {
+        "id": "village_island",
+        "name": "Island village",
+        "active": true
+      },
+      {
+        "id": "deep_water",
+        "name": "Deep water",
+        "active": true
+      },
+      {
+        "id": "sharp_rocks",
+        "name": "Sharp rocks",
+        "active": true
+      }
+    ],
+    "scoutEnergyCost": 5,
+    "scoutPageSize": 25
+  },
+  "marketplace": {
+    "feeBps": 500,
+    "popularityHours": 12,
+    "pageSize": 30,
+    "listingsPageSize": 20,
+    "maxBatchSize": 25,
+    "valueWindowHours": 12
   }
 }

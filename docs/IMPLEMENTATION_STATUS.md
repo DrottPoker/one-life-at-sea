@@ -1,3 +1,486 @@
+# Omedelbara sidbyten och återanvändning, 2026-09-21
+
+Sidval visar nu vänteläget direkt i innehållsytan. Menyikonerna ligger kvar och
+vald destination markeras direkt, även innan sidans första serversvar kommit.
+Menyn är fortsatt användbar medan nästa sida laddas.
+
+- GameLink följer Next.js navigationslivscykel. Bara den senaste väntande länken
+  får ta bort indikatorn; tangentbord, Ctrl-klick och historik fungerar som tidigare.
+- Föregående innehåll döljs och görs inaktivt utan tidig avmontering. Pågående
+  ekonomihandlingar och den beständiga journalen behåller sin livscykel.
+- Befintlig återanvändning av layout, kod och förladdade laddningsgränser behålls.
+  Serverklienten återanvänds inom samma rendering och oberoende kontroller körs
+  parallellt. Ingen beständig cache införs för privata saldon, inventory eller spärrar.
+- Bakgrundsuppdateringar väntar under navigation. Databasens lås, autentisering,
+  versionskontroll, mutationernas omvalidering och realtime fungerar som tidigare.
+
+Verifierat:
+
+- `npm run check`: lint, TypeScript, 178 enhetstester och produktionsbygge passerade.
+- Lint och typkontroll kördes igen efter det sista tillagda navigationstestet.
+- `npm run test:e2e`: samtliga 64 tester passerade i en helhetskörning med Edge
+  på 7,8 minuter, utan omkörningar.
+- Navigation verifierades med blockerade serversvar, en helt oförladdad sida,
+  flera snabba val, profillänkar, tangentbord, Ctrl-klick, bakåt/framåt och fokus.
+- Desktop- och mobilbilder granskades; ingen horisontell overflow vid 375 px.
+  Reduced-motion-inställningen och oförändrade sidebar/resurskomponenter verifierades.
+- Localhost på port 3000 svarade HTTP 200. `git diff --check` passerade.
+
+De sedan tidigare dokumenterade Next.js-varningarna för avbrutna RSC-strömmar
+och Gzip-lyssnare förekom även i denna körning. De är inte dolda eller rättade här.
+Ingen databasändring, commit, push eller extern driftsättning gjordes.
+
+Se [navigationens dokumentation](NAVIGATION.md).
+
+# Ekonomigranskning och säkra återförsök, 2026-09-21
+
+Inventory, marketplace, escrow, Gold Coins, bank, nivåköp, Trash, adminändringar,
+kontoradering, cirkulation och Value-historik har granskats. Detaljer, rättade
+fynd och avgränsningar finns i [ekonomigranskningen](ECONOMY_AUDIT.md).
+
+Rättningar:
+
+- Request-ID och payload sparas före ekonomihandlingar och kan kontrolleras efter
+  omladdning, navigation eller omstart. Andra flikar ser den olösta begäran.
+  Web Locks skyddar journalen; databasens domänspecifika kvitton skyddar själva
+  affären. Nya ekonomihandlingar väntar tills den sparade begäran är utredd.
+- Serverhandlingarna binder formuläret till den karaktär som visades. Ett
+  kontobyte kan inte debitera eller ändra en annan karaktär från en gammal flik.
+- Det lokala inventoryverktyget återskapar inte längre utrustning som ligger
+  till salu. Utrustning som redan köpts av en annan spelare förblir där.
+- Banktester städar egna konton även vid testfel. Administratörstestet för
+  återkallad behörighet använder en ny flik för att undvika konkurrens med den
+  gamla sidans pågående uppdatering.
+
+Verifierat:
+
+- `npm run check`: lint, TypeScript, 178 enhetstester och produktionsbygge passerade.
+- `npm run test:db`: 1 129 assertioner i 21 filer passerade, inklusive 24 nya
+  kontroller av atomiska fel, kapacitetsgränser och köpkvitton efter kontoradering.
+- `npm run test:config:db`: 74 assertioner passerade; originalkonfigurationen återställdes.
+- 63 distinkta webbläsartester verifierades med Edge. Första helhetskörningen
+  gav 58 passerade och två testfel. Testinteraktionerna rättades; berörda sviter
+  och tre tillagda återhämtningsfall kördes igen. Sista kvarvarande testet
+  försökte skriva i ett korrekt låst bankfält och rättades. Det passerade därefter
+  två gånger. Inga funktionella testfel återstår.
+- Blandade samtidighetstester bevarade antal items och total Gold Coins inklusive
+  avgifter efter åtta omgångar. Köp, listning, återtagning, bank, Trash och nivåköp
+  provades med tappade serversvar efter commit och efterföljande omladdning.
+- `npm run audit:economy`: noll avvikelser i åtta kontroller, både före och efter tester.
+- SQL-lint för public/private och Supabases säkerhetskontroll rapporterade inga fel.
+- Mobilens återhämtningsvy granskades visuellt vid 375 px och hade ingen horisontell overflow.
+- Localhost svarade HTTP 200. Granskningens `economy-audit`-konton är borttagna.
+- `git diff --check` passerade.
+
+Den tidigare dokumenterade Next.js-diagnostiken för avbrutna RSC-svar och
+Gzip-strömmens MaxListeners-varning förekommer fortfarande i serverloggarna.
+De har inte dolts eller räknats som lösta av denna ekonomigranskning.
+Granskningen bevisar inte frånvaro av alla framtida fel eller produktionsproblem.
+
+Ingen databasreset, historikomskrivning, commit, push eller extern driftsättning
+har gjorts. Befintliga ändringar och vanlig speldata har bevarats.
+
+# Value behålls och räknas på 12 timmar, 2026-09-21
+
+Value använder nu genomförda köp under de senaste 12 timmarna, viktat efter antal.
+När fönstret blir tomt ligger senaste icke-tomma värde kvar i itemdetaljer och
+diagram. Endast items som aldrig sålts visar N/A. Nya köp ersätter det kvarvarande
+värdet med ett nytt snitt från det aktuella fönstret. Denna regel ersätter
+24-timmarsfönstret och N/A-beteendet från avsnittet nedan.
+
+Beräkningen behåller samma värde som precis före sista köpets utgång, även om
+flera köp har samma tidsstämpel. Ingen inloggning, cache eller schemalagd körning
+krävs för att bevara värdet. Historik, Inventory och Marketplace använder samma
+serverberäkning. [Item Market Value](ITEM_MARKET_VALUE.md) beskriver regeln.
+
+Lokalt applicerad migration:
+`20260920220028_central_gameplay_config_782fb5de29c5.sql`.
+
+Verifierat:
+
+- `npm run check`: lint, TypeScript, 168 enhetstester och produktionsbygge passerade.
+- `npm run test:db`: 1 105 assertioner passerade, inklusive 54 Value-kontroller.
+- `npm run test:config:db`: 74 assertioner passerade och konfigurationen återställdes.
+- SQL-lint för public/private rapporterade inga schemafel.
+- Value-webbläsartestet passerade med riktiga köp, tolv timmars fönster och
+  kvarvarande värde i detaljer och diagram. Övriga webbläsarsviter kördes inte om
+  för denna avgränsade beräkningsändring.
+- Localhost svarade HTTP 200. `git diff --check` passerade.
+
+Testkonton och deras köp städades bort. Ingen commit, push eller extern
+driftsättning gjordes.
+
+# Item Value och marknadsvärdehistorik, 2026-09-20
+
+Value visas till vänster om Circ i både Inventory och Marketplace, med Gold
+Coins-ikon och samma diagramkomponent, sex periodval och pekar/tangentbordsstöd.
+Värdet är antalsviktat snittpris från genomförda köp under de senaste 24 timmarna,
+före avgift och avrundat nedåt. Inga köp i fönstret ger N/A.
+Se [Item Market Value](ITEM_MARKET_VALUE.md).
+
+Historiken använder beständiga köp och en privat kumulativ projektion.
+Befintliga köp ingår efter atomär backfill. Även när ingen ny affär sker syns
+värdeändringar när köp blir äldre än 24 timmar. Publika svar visar inga deltagare.
+Marknadens utfällda panel har dessutom stabil identitet när dess placering i
+rutnätet ändras, så historik, vald period och listings-expansion kan bevaras.
+
+Lokalt applicerade migrationer:
+
+- `20260920211844_item_market_value_history.sql`
+- `20260920212333_central_gameplay_config_911876fda4ce.sql`
+- `20260920212700_central_gameplay_config_6d7a583d4b03.sql`
+- `20260920212827_central_gameplay_config_1652e9905d88.sql`
+
+Verifierat för ändringen:
+
+- `npm run check`: lint, TypeScript, 168 enhetstester och produktionsbygge passerade.
+  Efter de sista UI-rättningarna kördes lint för ändrade filer och nytt
+  produktionsbygge med TypeScript.
+- `npm run test:db`: 1 095 assertioner passerade, inklusive 44 nya Value-kontroller.
+- `npm run test:config:db`: 74 assertioner passerade, inklusive ett alternativt
+  värdefönster på två timmar. Konfigurationen återställdes genom rollback.
+- SQL-lint för public/private hittade inga schemafel.
+- Inventorys nio webbläsartester och det nya Value-testet passerade tillsammans.
+  Efter sista rättningen av marknadspanelens identitet passerade Value-testet
+  och samtliga fem Marketplace-tester igen, totalt sex i den sista körningen.
+  Ingen fullständig omkörning av övriga spelflöden gjordes.
+- Riktiga köp, viktat värde, återförsök, utgång ur tidsfönstret, perioder, Retry,
+  Circ, Hospital och mobilbredd täcks. Skärmbilder av Inventory och Marketplace
+  granskades; 1280, 375 och 320 px kontrollerades utan sidledes overflow.
+- En separat jämförelse av den lokala projektionen mot samtliga sparade köp
+  hittade noll avvikelser.
+- Dokumentationens 254 lokala länkar och `git diff --check` passerade.
+- Utvecklingsservern startades om i bakgrunden; localhost:3000 svarade HTTP 200.
+
+Den tidigare dokumenterade Next.js stream-diagnostiken förekommer fortfarande
+vid avbrutna sidströmmar i testloggen. Testkonton och deras köpdata städades bort.
+Inga normala spelarkonton ändrades för testningen. Ingen commit, push eller extern
+driftsättning har gjorts.
+
+# Kompakt Marketplace och expansion i grupper om 20, 2026-09-20
+
+Itemkorten visar nu Gold Coins-ikon, pris och tillgängligt antal inom parentes
+på samma rad. Texten sold / 12h är borttagen. Most Popular använder fortfarande
+faktiskt sålda exemplar under de senaste 12 timmarna för sorteringen.
+
+Köplistan har lägre rader, mindre bilder/knappar och färre upprepade etiketter.
+Först visas högst 20 erbjudanden med lägsta pris överst. Show more listings
+utökar med upp till 20 och visas endast när det finns mer att hämta.
+Hela det öppna urvalet läses i en sorterad ögonblicksbild. Tidigare rader behålls
+under hämtning; nätverksfel ger Retry och spärrar köp tills data uppdaterats.
+
+Lokalt applicerad migration:
+`20260920191132_central_gameplay_config_ffd3fb7bac47.sql`.
+Befintliga listings, pengar och itemägande ändras inte av migrationen.
+Se [Marketplace](MARKETPLACE.md) för aktuella vyer och läsregler.
+
+Verifierat i denna ändring:
+
+- `npm run check`: lint, TypeScript, 164 enhetstester och produktionsbygge passerade.
+- `npm run test:db`: 1 051 assertioner passerade, inklusive åtta nya kontroller av
+  20/40/slutgrupp, bibehållna rader, uppdaterad prisordning och egna sidindelade listings.
+- `npm run test:config:db`: 73 kontroller passerade med alternativ konfiguration.
+- Databaslint hittade inga schemafel.
+- Utvecklingsservern startades i bakgrunden; localhost:3000 svarade HTTP 200 på marknadsvägen.
+- Marknadens fem webbläsartester passerade. Expansion, fel/återförsök, borttagen
+  billig listing, inga dubbletter, köp och stridslås ingår.
+- Dator- och mobilbilder granskades; bredd 1280, 375 och 320 testades utan sidledes overflow.
+- Hela webbläsarsviten kördes inte om för denna avgränsade marknadsändring.
+  Föregående fullständiga körning med 53 tester är dokumenterad nedan.
+
+Den tidigare dokumenterade Next.js stream-diagnostiken finns kvar i testloggen.
+Ingen commit, push eller extern driftsättning har gjorts.
+
+# Marketplace implementerad, 2026-09-20
+
+Marknaden i The Harbor använder Torn-upplägget med spelets havsblå färger och
+befintliga itembilder. [Marketplace](MARKETPLACE.md) beskriver regler och källor.
+
+- Most Popular sorterar faktiskt sålda exemplar under senaste 12 timmarna.
+- Kategorier till vänster sorterar efter lägsta aktuella pris. Sökning och sidindelning ingår.
+- Öga och varukorg visas över bilden; detaljer respektive listings fälls ut under itemraden.
+- Add Listings stöder flera items, mängd och styckpris, med bevarat urval mellan filter.
+- View Your Listings visar eget lager och återför osålda items vid avbruten listing.
+- Gold Coins flyttas mellan burna saldon. Säljaren betalar 5 % kumulativ avgift per
+  listing, avrundat nedåt; delade köp ändrar inte totalavgiften.
+- Separat marknadslager, individuella item-ID:n/stats, ägarskydd, cirkulation,
+  samtidiga köp, försvararlås och säkra återförsök hanteras i databasen.
+
+Lokalt applicerade migrationer:
+
+- `20260920084639_marketplace_foundation.sql`
+- `20260920085645_central_gameplay_config_0d45ca6e00a0.sql`
+
+Historiska migrationer och befintliga karaktärer/innehav bevarades.
+Ingen commit, push eller extern driftsättning har gjorts.
+
+Verifierat:
+
+- `npm run check`: lint, TypeScript, 164 enhetstester och produktionsbygge passerade.
+- `npm run test:db`: 1 043 assertioner passerade, inklusive 62 marknadskontroller.
+- `npm run test:config:db`: 72 kontroller passerade. Äldre avgifter bevaras medan
+  nya listings, sidstorlekar, batchgräns och popularitetsfönster följer ändrad config.
+- Databaslint för public/private hittade inga schemafel; security advisors hittade inga problem.
+- `npm run test:e2e`: hela sviten passerade, 53 av 53 tester, efter testisoleringen.
+  Marknadens fem scenarier omfattar köp/avgift/återtagning, urval över filter,
+  samtidiga köpare, tappat svar, paginering och försvararens handlingslås.
+- Marknadens desktop- och mobilbilder granskades. Bredd 1280, 375 och 320
+  kontrollerades utan sidledes overflow.
+- Lint och TypeScript passerade även efter sista testjusteringen.
+- Relativa dokumentlänkar och `git diff --check` kontrollerades.
+- Localhost svarade HTTP 200 på marknadsvägen (inloggning krävs).
+
+Första fullständiga webbläsarkörningen gav 51 av 53 godkända. Två marknadstester
+antog felaktigt att inga andra spelarannonser fanns. Kontrollerna följer nu sina
+egna testlistings och tillåter annat lager. SQL-testerna använder separata
+itemdefinitioner inom en tillbakarullad transaktion. Ordinarie annonser bevaras.
+
+Tidigare dokumenterad Next.js stream-/Gzip-diagnostik förekommer fortfarande i
+testserverns logg. Se [frameworkdiagnostik](ARCHITECTURE.md#nextjs-stream-cancellation-diagnostic).
+
+# Energy på fasta serverklockslag, 2026-09-20
+
+Energy återhämtas nu på gemensamma servergränser:
+- Hamnen och Hospital: +5 vid :00, :05, :10 och så vidare.
+- Havsplatser och resor i båda riktningarna: +5 vid :00, :10, :20 och så vidare.
+- Energy är alltid heltal, högst 100. Offlineåterhämtning räknas med samma klockslag.
+- Hemkomst byter takt vid faktisk ankomst. Gränsen vid ankomst räknas en gång.
+- Scouting kan använda nyligen intjänad Energy. Resor och strid behåller sina handlingslås.
+- Sidopanelen visar aktuell takt och nästa Energy-tick med tidszon.
+
+Se [Energy-regler och serverberäkning](ENERGY_RECOVERY.md). Detta ersätter tidigare
+uppgifter nedan om fryst Energy till havs eller individuella återhämtningstimers.
+
+Lokalt applicerad migration: `20260920040446_central_gameplay_config_51219ed7af39.sql`.
+Övergången verifierades först i en tillbakarullad transaktion mot befintliga rader.
+Intjänad Energy och distansrekord bevarades. Det gamla pausfältet är borttaget.
+Ingen push eller extern driftsättning har gjorts.
+
+Verifierat:
+
+- `npm run check`: lint, TypeScript, 154 enhetstester och produktionsbygge passerade.
+- `npm run test:db`: 981 assertioner passerade, inklusive 35 nya Energy-kontroller.
+- `npm run test:config:db`: 60 kontroller med alternativ konfiguration passerade.
+- Databaslint hittade inga schemafel; security advisors hittade inga problem.
+- Det nya webbläsartestet för Energy passerade separat.
+- `npm run test:e2e`: hela sviten passerade, 48 av 48 tester. Resor, scouting,
+  strid, handlingslås, träning, profiler och mobilbredder omfattas.
+- Dokumentlänkar och `git diff --check` kontrollerades; localhost svarade HTTP 200.
+
+Kostnadstesterna använder isolerade avräkningstider för att inte bero på när
+serverklockan passerar en tick under körningen. Återhämtningstester provar
+uttryckligen fasta gränser och verkliga RPC-anrop.
+
+Den tidigare dokumenterade Next.js stream-/Gzip-diagnostiken syns fortfarande
+i testserverns logg. Se [frameworkdiagnostik](ARCHITECTURE.md#nextjs-stream-cancellation-diagnostic).
+
+# Handlingslås för försvarare implementerat, 2026-09-20
+
+En spelare som blir attackerad kan fortfarande läsa sidor, inventory, profiler
+och sparade scoutingresultat. Alla vanliga handlingar som flyttar eller ändrar
+karaktären är däremot låsta under striden, både i gränssnittet och vid direkta API-anrop.
+
+- Spärren omfattar resor i båda riktningar, scouting, föremålsändringar, träning,
+  nya skeppsarbeten, nivåköp, banköverföringar, försvarsorder och separata attacker.
+- Gemensam serverkontroll använder alla aktiva stridsdeltagare, inklusive försvarare,
+  under samma ordnade deltagarlås som attackstart. Äldre kvitton kan läsas utan ny mutation.
+- Öppna formulär, bekräftelser och återförsök låses när attacken börjar.
+  Läsning, filtrering och navigering för försvararen är kvar.
+- Vid flera angripare kvarstår försvararens lås tills hela mötet är slut.
+  Kontrollerna blir tillgängliga igen via vanliga realtidssignaler.
+- Redan startat skeppsarbete och passiv återhämtning behåller sina tidigare regler.
+  Stridens sparade stats ändras inte av att ett tidigare skeppsarbete blir färdigt.
+
+Reglerna ersätter äldre beskrivningar nedan där försvarare kunde träna och använda banken.
+Se [stridssystemet](COMBAT_SYSTEM.md) för aktuellt beteende.
+
+Lokalt applicerad migration: `20260920031448_central_gameplay_config_84f32a8c4fc9.sql`.
+Historiska migrationer och befintliga speldata bevarades.
+
+Verifierat:
+
+- `npm run check`: lint, TypeScript, 154 enhetstester och produktionsbygge passerade.
+- `npm run test:db`: 946 assertioner passerade, inklusive lås, oförändrad data vid
+  nekade handlingar, läsåtkomst och upplåsning efter sista angriparen.
+- `npm run test:config:db`: 60 kontroller med alternativ konfiguration passerade.
+- Databaslint för `public,private` hittade inga schemafel; security advisors hittade inga problem.
+- De två nya webbläsartesterna passerade: öppna formulär över flera flikar,
+  inventoryläsning, reload, hamnaktiviteter, resor, scouting och upplåsning till havs.
+- `npm run test:e2e`: 46 av 47 passerade i den fullständiga körningen. Det enda felet
+  var en reproducerad kapplöpning i diagramtestets simulerade nätåterställning:
+  bakgrundsuppdateringen kunde ta bort Retry-knappen innan testets klick.
+  Testet håller nu lyckade svar tills Retry klickats; ingen produktkod eller tidsgräns ändrades.
+  Efter rättningen passerade testet tre av tre riktade upprepningar.
+  Därmed har samtliga 47 scenarier passerat, men hela sviten kördes inte om efter testjusteringen.
+- Lint och TypeScript kördes om och passerade efter den sista testjusteringen.
+- `http://localhost:3000/login` svarade med HTTP 200.
+
+Next.js tidigare dokumenterade stream-/Gzip-diagnostik förekommer fortfarande i
+testserverns logg. Se [känd frameworkdiagnostik](ARCHITECTURE.md#nextjs-stream-cancellation-diagnostic).
+
+# Scouting och havs-PvP implementerat, 2026-09-20
+
+Vid en havsplats finns **Scout nearby ships** för **5 Energy**. Sökningen sparar
+alla andra kaptener på samma Sea distance, oavsett platstyp eller inloggningsstatus.
+Listan har profil-länkar och sidindelning. Omladdning och sidbyten är gratis.
+
+Ägarens förtydligande är implementerat: listan är en ögonblicksbild och scouting
+krävs före attack. Målet måste fortfarande finnas på samma Sea distance och vid
+samma besök som vid upptäckten. Nya ankomster kräver en ny betald sökning.
+Start/join behåller den separata kostnaden 10 Energy.
+
+- Betalning och resultat sparas atomiskt. Identiska återförsök debiteras en gång.
+- Scoutingen är privat och serverstyrd. Endast senaste medlemslistan lagras;
+  historiska kvitton behålls för idempotens. Ett nytt besök kan inte återanvända gamla fynd.
+- Preview, profilens Attack och start/join delar plats- och upptäcktsvillkor.
+  Resande, olika avstånd och ej upptäckta mål kan inte angripas.
+- Stridsorder, gemensamma attacker, skydd, reträtt och Hospital fungerar till havs.
+  Ingen stridsdeltagare kan scouta eller börja resa. Överlevande stannar på havsplatsen.
+- Ett reproducerat deadlock vid samtidiga scoutingar rättades. Upptäckter refererar
+  stabila profilidentiteter i stället för att låsa andra kaptenernas privata spelrader.
+
+Nya lokalt applicerade migrationer:
+
+- `20260920023849_sea_scouting_foundation.sql`
+- `20260920024333_central_gameplay_config_0b2bcd4361a2.sql`
+- `20260920024733_central_gameplay_config_64ca1945a605.sql`
+- `20260920024848_central_gameplay_config_4e669087fd49.sql`
+- `20260920025539_sea_scout_identity_reference.sql`
+
+Verifierat:
+
+- `npm run check`: lint, TypeScript, 154 enhetstester och produktionsbygge passerade.
+- `npm run test:db`: 915 assertioner passerade, inklusive 75 nya scoutingkontroller.
+- `npm run test:config:db`: 60 kontroller passerade med alternativ konfiguration.
+- Databaslint för `public,private` hittade inga schemafel. Supabase security advisors
+  med varningsnivå och högre hittade inga problem.
+- `npm run test:e2e`: hela sviten passerade, 45 av 45 tester.
+  De tre nya testerna omfattar scouting till strid, sparade resultat, kostnader,
+  profilåtkomst, samtidig attack/avfärd, idempotens och samtidiga scoutingar.
+- Det tidigare felande samtidighetstestet passerade tre riktade upprepningar,
+  vardera med fem par samtidiga sökningar.
+- Mobilbredder 375 och 320 samt datorbredd 1280 kontrollerades utan sidledes
+  overflow. Dator- och mobilbilder granskades visuellt.
+- Lint och TypeScript passerade även efter sista teständringen.
+- Dokumentlänkar och `git diff --check` kontrollerades.
+- Den lokala utvecklingsservern på port 3000 svarar HTTP 200.
+
+Tidigare dokumenterade Next.js-diagnostiker för avbrutna RSC-strömmar och
+Gzip-listeners förekom fortfarande i testserverns logg. Se
+[känd frameworkdiagnostik](ARCHITECTURE.md#nextjs-stream-cancellation-diagnostic).
+
+Aktuella regler finns i [scouting](SEA_SCOUTING.md), [resor](SEA_TRAVEL.md),
+[strid](COMBAT_SYSTEM.md) och [profiler](CHARACTER_PROFILES.md).
+Det tidigare uppskjutna havs-PvP-beslutet i historiska avsnitt nedan är därmed ersatt.
+
+# Sea distance och profilrekord, 2026-09-20
+
+Resevyn använder nu **Sea distance**. Den egna och andra kapteners profil visar
+**Max sea distance**, det största avstånd som karaktären har nått.
+
+- Rekordet ökar vid ankomst, inklusive offlineankomst, och bevaras efter hemkomst,
+  kortare senare resor och Hospital. En ännu inte avslutad färd ger inget rekord.
+- Servern lagrar rekordet och skyddar det mot klientskrivningar och oavsiktlig sänkning.
+  Profilens tidsstyrda projektion kan visa rätt rekord utan att ägaren loggar in.
+- Migrationens startvärde är nuvarande nått avstånd eller en redan förfallen utresa.
+  Äldre avslutade resor utan sparat rekord återskapas inte.
+- Befintliga interna fältnamn med `step` behålls för kompatibilitet.
+
+Följande nya migrationer är applicerade i den lokala databasen:
+`20260920011728_sea_distance_record.sql` och
+`20260920011921_central_gameplay_config_4697f396f8a4.sql`.
+
+Verifierat för ändringen:
+
+- `npm run check`: lint, typkontroll, 148 enhetstester och produktionsbygge passerade.
+- `npm run test:db`: 840 assertioner passerade, inklusive 26 nya rekordkontroller.
+- `npm run test:config:db`: 57 kontroller passerade med alternativ konfiguration.
+- Databaslint för `public,private`: inga schemafel.
+- Riktade Playwright-tester för profiler och havsresor: 5 av 5 passerade, inklusive
+  verklig 60-sekundersresa, offlineankomst, offentlig/egen profil och hemkomst.
+  Testets profilväljare korrigerades för Next.js dolda sidkopior.
+- Lint och TypeScript kördes igen efter testjusteringen och passerade.
+- Profilen kontrollerades vid 1280, 375 och 320 pixlar utan sidledes overflow;
+  dator- och mobilbilder granskades visuellt.
+- `git diff --check` och dokumentlänkar kontrollerades.
+
+Den tidigare dokumenterade Next.js-diagnostiken för avbrutna RSC-strömmar
+förekom fortfarande i webbläsartesternas serverlogg.
+Se [reseregler](SEA_TRAVEL.md), [profiler](CHARACTER_PROFILES.md) och
+[känd frameworkdiagnostik](ARCHITECTURE.md#nextjs-stream-cancellation-diagnostic).
+
+# Stegvisa havsresor implementerade, 2026-09-20
+
+Reseloopen från [planen](SEA_TRAVEL_PLAN.md) är implementerad. Aktuellt kontrakt
+och spelbeteende finns i [resesystemet](SEA_TRAVEL.md).
+
+- Set sail kostar 5 Energy. Första 60-sekundersresan går till Outside the harbor,
+  steg 1. Varje havsbesök visar två olika, sparade platstyper.
+- Nästa steg är gratis och tar 60 sekunder. Direkt hemresa är gratis och tar
+  steg gånger 60 sekunder. Under resa visas destination och vänteläge.
+- Servern äger tid, slumpning, steg och pris. Versioner, kvitton och gemensamma
+  stridslås skyddar mot gamla flikar, återförsök och samtidiga kommandon.
+- Energy är pausad under hela frånvaron. Delintervall bevaras; återhämtning efter
+  offlinehemkomst räknas från den faktiska ankomsttiden.
+- Hamnaktiviteter och havs-PvP är spärrade. Både angripare och försvarare måste
+  avsluta striden före avfärd. Skeppsarbete måste vara klart.
+- Profiler och inventory är läsbara vid en havsplats. Profiler och hamnlistan visar
+  korrekt offlineankomst via tidsmedvetna publika projektioner och deadlines.
+- Adminredigerad Energy och Hospital-intagning håller resan och energipausen konsekventa.
+- En reproducerad navigationskapplöpning rättades: bakgrundsuppdatering vid fokus
+  köas när en vy laddas. Länkar och laddningsgräns delar kö med resurs-/reseuppdatering.
+
+Tre nya migrationer har applicerats lokalt utan återställning av spelardata:
+`20260920001431_sea_travel_foundation.sql`,
+`20260920002303_central_gameplay_config_a163841e8c41.sql` och
+`20260920003353_central_gameplay_config_dea2f0672d05.sql`.
+Äldre migrationer är oförändrade. Ingen extern driftsättning har genomförts.
+
+Verifierat:
+
+- `npm run check`: lint, TypeScript, 148 enhetstester och produktionsbygge passerade.
+- `npm run test:db`: 814 assertioner passerade, varav 90 för resor.
+- `npm run test:config:db`: 57 kontroller passerade i återställd transaktion,
+  inklusive ändrade resetider och bevarade pågående färder/alternativ.
+- `supabase db lint --local --schema public,private --level error --fail-on error`:
+  inga schemafel.
+- `npm run test:e2e`: hela sviten passerade, 41 av 41 tester. Reseflödet omfattar
+  en faktisk 60-sekundersresa, två flikar, utloggning, offlinehemkomst och samtidiga
+  rese-/stridskommandon. Det reproducerade fokus-/navigationsfallet passerade.
+  Efter testhjälparens hantering av serialiseringskonflikter passerade även tre
+  riktade upprepningar av samtidighetstestet.
+- Mobilbredder 375 och 320 samt datorbredd 1280 kontrollerades utan sidledes
+  overflow. Dator- och mobilbilder granskades visuellt.
+- `git diff --check` och lokala dokumentlänkar passerade.
+- Lokal spelserver på port 3000 svarar 200 och serverar den nya resestatusen.
+
+De tidigare dokumenterade Next.js-diagnostikerna för avbrutna RSC-strömmar och
+Gzip-listeners förekommer fortfarande i webbläsarsvitens serverlogg. De döljs inte.
+Se [arkitekturdokumentets kända frameworkdiagnostik](ARCHITECTURE.md#nextjs-stream-cancellation-diagnostic).
+
+Platsaktiviteter och havets framtida PvP-system ingår inte. Besök är ännu privata
+reseidentiteter utan en gemensam geografisk världskarta.
+
+# Plan för stegvisa havsresor, 2026-09-20
+
+[Reseplanen](SEA_TRAVEL_PLAN.md) beskriver avfärd för 5 Energy, två synliga
+slumpade destinationer, en minuts resa per steg utåt och hemresa på en minut
+per steg från hamnen. Energy återhämtas inte till havs.
+
+- Planen täcker lagring, serverstyrda ankomster, offlinebeteende, samtidighet,
+  energipaus, navigation, hamnlista och integration med befintliga spelhandlingar.
+- Skeppsarbete måste vara färdigt före avfärd. Varken angripare eller försvarare
+  får lämna en pågående strid.
+- PvP till havs väntar på ett separat framtida system. I denna etapp kan spelare
+  till havs varken attackera eller bli attackerade, även när de står still.
+- Beslutade regler skiljs från arbetsförslag. Genomförandet har fem etapper.
+
+Detta är en dokumentationsleverans. Ingen spelkod, config eller databas har ändrats.
+Implementationskontrollerna i planen är framtida arbete och har inte körts nu.
+
+Verifierat för dokumentleveransen: `git diff --check`, 54 lokala dokumentlänkar
+samt planens rubrikstruktur, kodblock och blankstegskontroll passerade.
+
 # Kodstädning, 2026-09-20
 
 Projektets kod, konfiguration, SQL-mallar, testhjälpare och dokumentation har gåtts igenom.

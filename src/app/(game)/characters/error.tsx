@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import { Panel } from "@/components/shell";
 
 export default function ProfileError({ reset }: { reset: () => void }) {

@@ -19,6 +19,8 @@ async function account() {
   expect((await api.auth.signUp({ email, password, options: { data: { character_name: "Sailor " + tag } } })).error).toBeNull();
   const own = await api.from("characters").select("id").single();
   expect(own.error).toBeNull();
+  // Recovery scenarios override this checkpoint with a real server-clock boundary.
+  fixture(own.data!.id, "update public.characters set energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain;");
   return { api, id: own.data!.id as string, email, password };
 }
 async function login(page: Page, own: Awaited<ReturnType<typeof account>>) {
@@ -77,7 +79,7 @@ test("crew XP, carried-gold purchases, two tabs, login and responsive layout", a
   await page.goto("/harbor/crew-training");
   await expect(page.getByRole("heading", { name: "Harbor Exercises", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Train Attack for 5 Energy", exact: true })).toBeDisabled();
-  fixture(own.id, "update public.characters set energy=4,energy_updated_at=clock_timestamp()-interval '4 minutes 55 seconds' where id=:captain;");
+  fixture(own.id, "update public.characters set energy=4,energy_updated_at=date_bin(interval '5 minutes',clock_timestamp(),'1970-01-01Z')-interval '1 second' where id=:captain;");
   await page.reload();
   await expect(page.getByRole("button", { name: "Train Attack for 5 Energy", exact: true })).toBeEnabled({ timeout: 15000 });
   const before = (await own.api.rpc("get_game_state")).data.crew_attack;
@@ -151,7 +153,7 @@ test("concurrent drills, purchases and ship starts cannot overspend or duplicate
     energy: 0, crew_attack: 10 + successful.reduce((sum, r) => sum + r.data.stat_gain, 0),
     training: { progress: { crew: { xp: 100, tier_id: "crew_1" }, ship: { xp: 0 } } },
   });
-  fixture(own.id, "update public.characters set gold_coins=1000,energy=100,energy_updated_at=clock_timestamp() where id=:captain;");
+  fixture(own.id, "update public.characters set gold_coins=1000,energy=100,energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain;");
   const request = randomUUID();
   const purchases = await Promise.all(Array.from({ length: 8 }, () => own.api.rpc("purchase_training_tier", {
     training_group: "crew", tier_id: "crew_2", request_id: request,
@@ -207,7 +209,7 @@ test("ship slider tracks available Energy and awards fractional stats", async ({
   test.setTimeout(90_000);
   const own = await account(), errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
-  fixture(own.id, "update public.characters set energy=0,energy_updated_at=clock_timestamp() where id=:captain;");
+  fixture(own.id, "update public.characters set energy=0,energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain;");
   await login(page, own);
   await page.goto("/harbor/ship-upgrades");
   const slider = page.getByRole("slider", { name: "Work size", exact: true });
@@ -216,7 +218,7 @@ test("ship slider tracks available Energy and awards fractional stats", async ({
   await expect(slider).toBeDisabled();
   await expect(start).toBeDisabled();
   for (const energy of [4, 5, 37]) {
-    fixture(own.id, "update public.characters set energy=" + energy + ",energy_updated_at=clock_timestamp() where id=:captain; select private.notify_training(:captain);");
+    fixture(own.id, "update public.characters set energy=" + energy + ",energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain; select private.notify_training(:captain);");
     await expect(page.getByText(energy + " Energy available", { exact: true })).toBeVisible();
     if (energy < 5) {
       await expect(slider).toBeDisabled();
@@ -229,7 +231,7 @@ test("ship slider tracks available Energy and awards fractional stats", async ({
       await expect(slider).toHaveValue(String(energy));
     }
   }
-  fixture(own.id, "update public.characters set energy=7,energy_updated_at=clock_timestamp() where id=:captain; select private.notify_training(:captain);");
+  fixture(own.id, "update public.characters set energy=7,energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain; select private.notify_training(:captain);");
   await expect(slider).toHaveAttribute("max", "7");
   await expect(slider).toHaveValue("7");
   await slider.press("ArrowLeft");

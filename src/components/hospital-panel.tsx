@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HeartPulse } from "lucide-react";

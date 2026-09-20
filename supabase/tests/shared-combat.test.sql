@@ -53,11 +53,11 @@ select set_config('request.jwt.claims','{"sub":"d4000000-0000-4000-8000-00000000
 select is(public.get_attack_lock(),null::jsonb,'Defender is not route locked');
 select is((public.get_game_state()->>'ship_health')::integer,85,'Defender sees actual hull damage');
 select is((public.get_game_state()->>'crew_health')::integer,85,'Defender sees actual crew damage');
-select lives_ok($$select public.train_crew('attack','crew_1',gen_random_uuid())$$,'Defender continues training');
+select throws_ok($$select public.train_crew('attack','crew_1',gen_random_uuid())$$,'P0001','IN_COMBAT','Defender cannot train during combat');
 select is((select count(*)::integer from public.player_game_events),1,'Only own realtime signal is readable');
 select throws_ok('update public.player_game_events set revision=99','42501',null,'Players cannot forge signals');
 reset role;
-select is((select state#>>'{defender,crew,attack}' from private.combats where id=(select (value#>>'{battle,id}')::uuid from results where name='start')),'1','Midfight training does not change saved combat stats');
+select is((select state#>>'{defender,crew,attack}' from private.combats where id=(select (value#>>'{battle,id}')::uuid from results where name='start')),'1','Blocked training leaves combat stats unchanged');
 update private.combats set state=jsonb_set(state,'{defender,ship_health}','1') where id=(select (value#>>'{battle,id}')::uuid from results where name='start');
 update public.characters set ship_health=1 where id=(select d from f);
 set local role authenticated;

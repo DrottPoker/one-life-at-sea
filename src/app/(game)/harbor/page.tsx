@@ -1,9 +1,10 @@
 import { gameplay } from "@/config/public";
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import { Store, Hammer, Swords, Ship, Landmark, HeartPulse } from "lucide-react";
 import { requireCharacter } from "@/lib/player";
 import { Panel, HarborArt } from "@/components/shell";
 
+import { SeaTravelPanel } from "@/components/sea-travel-panel";
 import { HarborPlayers } from "@/components/harbor-players";
 import { createClient } from "@/lib/supabase/server";
 import { loadHarborRoster } from "@/lib/harbor";
@@ -19,6 +20,7 @@ export default async function Harbor() {
     <Panel title="The Harbor" detail="A sheltered anchorage"><HarborArt priority /><div className="o-arrival">
       <h2>Welcome ashore, {character.display_name}.</h2><p className="o-copy">Salt in the air. Sunlight on the water. Beyond the palms, the open sea waits.</p>
     </div></Panel>
+    <SeaTravelPanel />
     <HarborPlayers initial={roster} characterId={character.id} />
     <section className="o-panel" aria-label="Harbor directory"><header className="o-panel-title"><h2>Around the harbor</h2></header>
       <div className="o-directory-head" aria-hidden="true"><span>Location</span><span>Status</span></div>

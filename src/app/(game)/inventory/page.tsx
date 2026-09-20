@@ -10,7 +10,7 @@ export const metadata = { title: "Inventory" };
 export default async function InventoryRoute({ searchParams }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireCharacter({ allowHospital: true });
+  await requireCharacter({ allowHospital: true, allowSea: true });
   const filters = inventoryFilters(await searchParams);
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("list_inventory", {

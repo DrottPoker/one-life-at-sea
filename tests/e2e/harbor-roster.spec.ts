@@ -69,27 +69,35 @@ test("harbor roster receives real events and recovers after a connection loss", 
     await expect(roster.getByText(visitorName, { exact: true })).toBeVisible();
     await expect(roster.getByRole("heading")).toHaveText(`Captains in The Harbor (${originalTotal + 1})`);
     await expect.poll(() => eventColumns.length).toBeGreaterThan(0);
-    expect(eventColumns.every(columns => JSON.stringify(columns) === JSON.stringify(["character_id", "display_name"]))).toBe(true);
+    expect(eventColumns.every(columns => JSON.stringify(columns) === JSON.stringify(["arrives_at", "character_id", "display_name"]))).toBe(true);
     expect((await observer.from("characters").select("*").eq("id", characterId)).data).toEqual([]);
     const publicRows = await observer.from("harbor_players").select("*").eq("character_id", characterId);
-    expect(Object.keys(publicRows.data![0]).sort()).toEqual(["character_id", "display_name"]);
+    expect(Object.keys(publicRows.data![0]).sort()).toEqual(["arrives_at", "character_id", "display_name"]);
 
     await visitor.auth.signOut();
     await expect(roster.getByText(visitorName, { exact: true })).toBeVisible();
 
-    // Simulate server-owned travel in the public read model for this fixture only.
-    localSql(`delete from public.harbor_players where character_id='${characterId}'`);
+    const claims = JSON.stringify({ sub: arrival.data.user!.id, role: "authenticated" });
+    const depart = () => localSql("begin; select set_config('request.jwt.claims','" + claims + "',true); " +
+      "select public.depart_harbor((public.get_game_state()#>>'{sea,version}')::uuid,gen_random_uuid()); commit;");
+    const returnHome = () => localSql("begin; select set_config('request.jwt.claims','" + claims + "',true); " +
+      "select private.settle_sea_travel(id,travel_arrives_at) from public.characters where id='" + characterId + "'; " +
+      "select public.return_to_harbor((public.get_game_state()#>>'{sea,version}')::uuid,gen_random_uuid()); " +
+      "update public.characters set travel_started_at=clock_timestamp()-interval '1 second'," +
+      "travel_arrives_at=clock_timestamp()+interval '2 seconds' where id='" + characterId + "'; commit;");
+    // Real travel projects scheduled offline arrivals into the roster.
+    depart();
     await expect(roster.getByText(visitorName, { exact: true })).toHaveCount(0);
-    localSql(`insert into public.harbor_players select id,display_name from public.characters where id='${characterId}'`);
+    returnHome();
     await expect(roster.getByText(visitorName, { exact: true })).toBeVisible();
 
     await context.setOffline(true);
     await expect(roster.getByRole("status", { name: "Player list connection" })).toHaveText("Reconnecting");
-    localSql(`delete from public.harbor_players where character_id='${characterId}'`);
+    depart();
     await context.setOffline(false);
     await expect(roster.getByText(visitorName, { exact: true })).toHaveCount(0, { timeout: 30_000 });
     await expect(roster.getByRole("status", { name: "Player list connection" })).toHaveText("Live", { timeout: 30_000 });
-    localSql(`insert into public.harbor_players select id,display_name from public.characters where id='${characterId}'`);
+    returnHome();
     await expect(roster.getByText(visitorName, { exact: true })).toBeVisible();
 
     if (originalTotal + 1 > 20) {

@@ -90,8 +90,6 @@ begin
   observed_at:=clock_timestamp();
   perform private.settle_ship_upgrade(viewer_id,observed_at);
   perform private.assert_can_act(viewer_id);
-  if exists(select 1 from private.combat_engagements where character_id=viewer_id and role='attacker') then
-    raise exception 'IN_COMBAT'; end if;
   select * into captain from public.characters where id=viewer_id for update;
   if captain.location<>'the_harbor' then raise exception 'NOT_IN_HARBOR'; end if;
   select * into progress from private.character_training where character_id=viewer_id and training_group=group_name for update;
@@ -122,7 +120,7 @@ begin
     xp_gain:=energy_cost::bigint*{{gameplay.training.xpPerEnergy}};
     if (to_jsonb(captain)->>(group_name||'_'||stat))::numeric>9007199254740991-gain
       or progress.xp>9007199254740991-xp_gain then raise exception 'PROGRESSION_LIMIT'; end if;
-    select * into recovered from private.energy_snapshot(captain.energy,captain.energy_updated_at,observed_at);
+    select * into recovered from private.character_energy_snapshot(captain,observed_at);
     if recovered.energy<energy_cost then raise exception 'NOT_ENOUGH_ENERGY'; end if;
     update public.characters set energy=recovered.energy-energy_cost,energy_updated_at=recovered.energy_updated_at where id=viewer_id;
     if action='crew' then

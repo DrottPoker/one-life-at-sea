@@ -118,7 +118,7 @@ select is((select public.submit_combat_order((value#>>'{battle,id}')::uuid,0,'bo
   from combat_results where name='start'),'REQUEST_CONFLICT','Request IDs cannot be reused with a different order');
 select is((select public.submit_combat_order((value#>>'{battle,id}')::uuid,0,'fire','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2')->>'error'
   from combat_results where name='start'),'STALE_ROUND','A second tab cannot replay an old round');
-select lives_ok($$select public.save_defence_orders('boarding')$$,'Defence changes can be saved for next battle');
+select throws_ok($$select public.save_defence_orders('boarding')$$,'P0001','IN_COMBAT','Defence orders cannot be changed during combat');
 select throws_ok($$select public.save_defence_orders('cheat')$$,'22023','INVALID_PRESET','Unknown defence presets are rejected');
 
 select set_config('request.jwt.claims','{"sub":"c3000000-0000-4000-8000-000000000002","role":"authenticated"}',true);

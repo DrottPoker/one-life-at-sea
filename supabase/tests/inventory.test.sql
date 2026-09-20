@@ -86,7 +86,11 @@ select public.start_combat((select character_id from public.character_profiles w
 select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000002','stack',1,gen_random_uuid())$$,'P0001','IN_COMBAT','Active attacker cannot bypass action lock');
 select set_config('request.jwt.claims','{"sub":"1e000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 select is(public.list_inventory('medical')#>>'{items,0,quantity}','77','Other inventory is unchanged');
-select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000002','stack',1,gen_random_uuid())$$,'P0001','ITEM_NOT_FOUND','Second player cannot delete first player items');
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000002','stack',1,gen_random_uuid())$$,'P0001','IN_COMBAT','Defender cannot bypass action lock');
+select set_config('request.jwt.claims','{"sub":"1e000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select public.submit_combat_order((public.get_game_state()->>'active_combat_id')::uuid,0,'retreat',gen_random_uuid());
+select set_config('request.jwt.claims','{"sub":"1e000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
+select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000002','stack',1,gen_random_uuid())$$,'P0001','ITEM_NOT_FOUND','Second player cannot delete first player items after combat');
 select set_config('request.jwt.claims','{"sub":"1e000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
 select throws_ok($$select public.list_inventory()$$,'42501','NOT_AUTHORIZED','Anonymous Auth users cannot read inventory');
 select throws_ok($$select public.trash_inventory_item(gen_random_uuid(),'stack',1,gen_random_uuid())$$,'42501','NOT_AUTHORIZED','Anonymous Auth users cannot trash');

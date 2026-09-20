@@ -41,20 +41,32 @@ The game uses Next.js client-side navigation with normal URLs. The shared
 while the main content changes. Deep links and browser back/forward continue
 to work.
 
-`(game)/loading.tsx` puts the loading boundary inside that layout. The harbor
-reuses it in `harbor/loading.tsx` so transitions between its child routes have
-their own boundary. A small spinner and a screen-reader status replace only
-the pending content. The menu
-remains usable, including choosing another destination while a response is
-pending. The clicked menu icon also shows pending feedback if the route's
-loading UI has not yet arrived. Both indicators respect reduced-motion settings.
+`GameNavigationProvider` and `GameLink` mirror Next.js's pending link state into
+the main content area before a slow server response or loading boundary arrives.
+The selected harbor destination updates immediately; menu icons stay unchanged.
+`GameContent` hides and disables the previous view while keeping its components
+mounted until the router commits, preserving in-flight action handling. The economy
+request journal stays mounted outside this switch. Only the latest pending link can
+clear the shared indicator. Modified clicks, keyboard navigation, history and
+prefetching remain owned by Next.js.
 
-Harbor navigation uses `Link` with `prefetch="auto"`. Next.js preloads what it
-can, including the loading boundary for dynamic views; current private data
-still comes from the authenticated server. This uses the router's cache, with
-no custom long-lived cache for resources, stats or account data. Existing
-training revalidation and resource refreshes merge server updates into the
-current UI without a browser document reload.
+`(game)/loading.tsx` and `harbor/loading.tsx` reuse `ContentLoading` when the router
+streams the next view. Loading stays in the content area, includes a screen-reader
+status and respects reduced motion. The menu remains usable while a response is
+pending. Both pending links and loading boundaries hold background refreshes so a
+focus or realtime update cannot override the chosen navigation.
+
+Harbor navigation uses `Link` with `prefetch="auto"`. Next.js reuses layouts,
+code and prefetched loading boundaries; private page snapshots are still checked
+on the server. There is no added persistent TTL cache for resources, inventory,
+listings or permissions. Realtime, mutation revalidation and resource deadlines
+continue to reconcile authoritative game state without a browser document reload.
+
+The server Supabase client is memoized with React `cache` within a server render,
+never shared between player requests. Existing request-scoped player/revision reads
+are reused. Independent admin/character and character/revision reads run concurrently
+to shorten serial server waits. Auth checks, gameplay revision checks and proxy
+navigation locks still run. See [NAVIGATION.md](NAVIGATION.md) for the verification scope.
 
 Automatic prefetching runs in production mode. Use `npm run build` and
 `npm run start` to assess it locally; `npm run dev` also has compilation
@@ -84,7 +96,9 @@ hides them by default and can conceal this type of layout shift.
 | `/combatlog/[battleId]` | Public completed combat report, readable without login. |
 | `/combat/prepare/[id]`, `/combat/[id]` | Legacy redirects to the attack screen or public report. |
 | `/harbor` | Saved character, harbor overview and live captain directory. |
-| `/harbor/marketplace` | Placeholder view. |
+| `/harbor/marketplace` | Most Popular, category/search grid, item details and offers expanded in batches of 20 with purchasing. |
+| `/harbor/marketplace/add` | Batch listing form for owned tradable items. |
+| `/harbor/marketplace/listings` | Own active offers and cancellation with inventory return. |
 | `/harbor/shipyard` | Placeholder view. |
 | `/harbor/crew-training` | Immediate drills, training XP, purchased exercises and Perfect Drill. |
 | `/harbor/ship-upgrades` | Timed work, automatic offline completion, XP and purchased workshops. |
@@ -117,12 +131,12 @@ Existing access tokens retain their normal expiry under Supabase's session model
 ## Character persistence
 
 `public.characters` stores ID, owning account ID, display name, generated name key,
-fixed start location and creation timestamp. Account and character IDs are separate.
+server-owned location and creation timestamp. Account and character IDs are separate.
 The same row now also stores Energy, its recovery timestamp, Ship Health, Crew
 Health and four stats each for the persistent ship and crew. It also holds defence
 orders, health recovery anchors and incoming attack protection. Shared PvP is
 implemented. Carried Gold Coins and bank balances are also stored on this row.
-Training tier purchases and inventory viewing/destruction are implemented. Income, equipment effects and consumable use remain future work. Permanent character death has been removed; defeat leads to Hospital.
+Training tier purchases, inventory viewing/destruction and player-to-player item trading are implemented. Other income sources, equipment effects and consumable use remain future work. Permanent character death has been removed; defeat leads to Hospital.
 
 An `auth.users` insert trigger creates the character in the same transaction as
 registration. It reads only `character_name` from user metadata, validates it via
@@ -174,9 +188,13 @@ The character row owns one ship and crew's stats for that character's life.
 function. It locks the caller and any combat peer, settles an expired encounter,
 and reads health alongside the current engagement. Ordinary Energy and health
 recovery are computed from database time, capped at 100. The shared
-`private.energy_snapshot` function preserves incomplete five-minute intervals
-and discards banked time at the cap. Energy recovers five points per complete five-minute interval,
-clamped to capacity; recovery amount and interval are independently configurable.
+`private.energy_tick_snapshot` function counts fixed UTC boundaries: +5 every five minutes
+at harbor and every ten minutes at sea, including travel. Energy is an integer, capped at 100,
+with no time banked at the cap. `energy_updated_at` is a settlement checkpoint, not a
+player-specific timer. Offline recovery uses the same boundaries; no per-player worker or cron
+is required. `energy_next_at` gives the next server boundary for UI refresh and display.
+Recovery amount and base interval are configurable; the sea interval is twice the base.
+See [Energy recovery](ENERGY_RECOVERY.md).
 
 Training uses public train_crew, purchase_training_tier and start_ship_upgrade RPCs.
 A private authenticated mutator owns validation, RNG, Energy, carried-gold debits and XP.
@@ -204,7 +222,7 @@ The client shows separate crew and ship panels. Actions revalidate the shared la
 owner-only revision events update other tabs. The game context refreshes at ship deadlines,
 resource recovery, protection/combat deadlines and focus/reconnection. Its clock never grants
 rewards. Pending work completes logically offline and is materialized on server access without
-a worker. Only active attackers are blocked from new manual training and purchases.
+a worker. Both active attackers and defenders are blocked from new manual training and purchases.
 
 See [the implemented training scope and balance](TRAINING_FOUNDATION.md).
 
@@ -231,7 +249,14 @@ encounter during this visit and opens its public report on completion if the cap
 Legacy target/battle query URLs redirect to the target path. The root AppFrame removes regular game chrome. Active attackers have a persistent
 database reservation; Proxy checks get_navigation_lock for page requests and AppFrame also guards cached
 client navigation. Ordinary mutations independently enforce their own permissions. Attack Server Actions
-revalidate the root layout. Defenders have no navigation lock.
+revalidate the root layout. Defenders have no navigation lock, but all character-changing actions
+are locked while engaged. Inventory inspection, profiles, bank balances, training pages and saved
+scouting lists remain readable. The shared assert_can_act guard rejects combat engagement for
+training, banking, item destruction, market mutations and defence orders under the same locks as attack start.
+Travel and scouting enforce engagement checks in their location-specific mutators. Existing
+receipt replays remain readable without performing new actions. Clients use active_combat_id,
+not the attacker-only route lock, and refresh disabled controls on owner revision events.
+A defender remains locked until the encounter ends, including when one of several attackers leaves.
 
 Private combat_participants stores per-attacker snapshots, rounds, phases, ammunition, deadlines and contribution.
 combats stores the shared defender and outcome. Ordered participant locks serialize each encounter, while unrelated
@@ -266,19 +291,22 @@ See [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md) for authoritative current rules, bounds
 ## Harbor roster and Realtime
 
 `public.harbor_players` is a server-maintained projection containing only
-`character_id` and `display_name` for characters in The Harbor. Authenticated,
+`character_id`, `display_name` and a nullable `arrives_at` for docked captains
+and scheduled returns. RLS hides returns until their database deadline. Authenticated,
 registered accounts may read it through RLS. Client writes are revoked. The
 private character table remains owner-only and is not in the Realtime publication.
 
 A private trigger synchronizes character insertion and name/location changes;
 a cascading foreign key handles removal. Training does not touch the projection.
 `list_harbor_players` is a security-invoker RPC returning an ordered page of up
-to 20 names plus count and a clamped page index from one database snapshot.
+to 20 names plus count, clamped page index, observation time and next arrival
+from one database snapshot. Due returns appear even without owner login.
 
 The Harbor server component renders the initial page. A cookie-aware Supabase
 browser client resolves cookie-backed Realtime authentication before subscribing,
 waits for replication readiness, and subscribes to Postgres Changes on the projection. It reloads the
-current page on changes, initial subscription and reconnection. Snapshot requests
+current page on changes, initial subscription, reconnection, next arrival and a
+fallback timer. Minimal profile events also announce scheduled returns. Snapshot requests
 are serialized, coalesced and cancelled on unmount. Connection problems retain
 the last snapshot with an explicit stale-state message and retry control.
 Realtime is enabled locally; only the projection is published. No Presence or
@@ -288,7 +316,11 @@ online-only semantics are used. See [the roster specification](HARBOR_ROSTER.md)
 
 Authenticated character profiles at `/characters/[characterId]` load only
 `character_id`, `display_name`, `location` and `created_at` from
-`public.character_profiles`. The table uses the existing registered-player
+`public.character_profiles`. The table also holds `arrives_at` and
+`arrival_location`, `max_sea_distance` and optional `arrival_max_sea_distance`.
+`get_character_status` resolves coarse location and the reached distance record
+against database time and combines them with Hospital status. These public fields are
+published to Realtime; private character and route fields are not. The table uses the existing registered-player
 RLS guard and grants authenticated SELECT only. A private trigger synchronizes
 identity fields from `characters`; the sixth migration backfills existing rows,
 and the foreign key cascades deletions. Private stats are not exposed or published.
@@ -359,8 +391,9 @@ patients disappear without a worker. Deadline refresh and focus/reconnect pollin
 missing events. Character HP is persisted at next server access. See [HOSPITAL.md](HOSPITAL.md).
 
 Profile reading is permitted during hospital stays in both proxy and cached client navigation.
-`get_hospital_status` reads the existing RLS-protected patient projection and returns only
-an active deadline and database observation time. ProfileDetails subscribes to patient events,
+`get_character_status` reads the RLS-protected patient and profile projections,
+returning coarse location, arrival, Hospital deadline and observation time.
+The older `get_hospital_status` remains for compatibility. ProfileDetails subscribes to both event streams,
 refreshes at expiry/focus/reconnection and shows the same countdown component as Hospital.
 All registered players see the status; anonymous profile access remains disabled. Defence
 editing and attacks remain blocked while hospitalized.
@@ -382,7 +415,7 @@ wrappers delegate to private functions that verify the registered owner.
 Trash uses existing ordered combat/character locks followed by the inventory row
 lock. An owner-scoped request receipt and the mutation commit together. Replays
 return the previous result even after an item row has been removed; a changed
-payload fails. New destruction is blocked in Hospital and for active attackers.
+payload fails. New destruction is blocked in Hospital, at sea and for all active combat participants.
 Owned entries remain private, and owner-only game revision events refresh other tabs.
 Circulation exposes only world totals and timestamps, without owner identities.
 
@@ -411,6 +444,37 @@ The full history remains durable. Inventory refreshes update counts; the chart i
 loaded only when expanded and refreshes through the existing visible-page cadence.
 See [ITEM_CIRCULATION.md](ITEM_CIRCULATION.md).
 
+## Marketplace
+
+The harbor market reuses inventory art, descriptions and circulation, with a
+responsive grid and full-row expansion for details or offers. Most Popular orders
+by actual units sold in a rolling 12-hour window; category views order by cheapest
+available unit price. Cards show price and available quantity on one line. Offers
+start with 20 compact rows and expand by 20 through Show more listings. Each refresh
+returns one ordered snapshot of the expanded prefix, avoiding gaps or duplicates
+when stock changes between requests. Add Listings supports a bounded batch with selections kept
+across filters. Own listings can be cancelled for their remaining stock.
+
+Private listings hold escrow outside inventory. Equipment retains its original
+instance ID, stats and creation time; stacks merge on transfer. Escrow uses the
+same circulation triggers, so listing, purchasing and cancellation conserve world
+totals. Sales history retains quantities and timestamps if a referenced account is
+later removed, without retaining the deleted identity.
+
+Buy/create/cancel RPCs enforce the registered actor, harbor access, combat and
+hospital restrictions. Existing offers can sell while their owner is away.
+Ordered participant locks precede listing and circulation locks; batch circulation
+locks use item ID order. Inventory, stock, carried balances, sales and receipts
+commit atomically. Bank balances never fund purchases. A captured fee in basis
+points is applied to cumulative listing revenue, rounded down, with the difference
+charged on each purchase so splitting a purchase cannot evade the fee.
+
+Clients cannot access private tables directly. Public item revision events carry
+no account or balance data; owner-only game events refresh inventory and proceeds.
+Retries keep the request UUID and replay a stored receipt, including when an offer
+has disappeared after a lost success response. See [Marketplace](MARKETPLACE.md)
+for rules, configuration and source files.
+
 ## Administration
 
 The separate /admin route provides player tools, a 25-table database browser and
@@ -427,3 +491,62 @@ draws and releases engagement locks without resolving a damage round. The browse
 retains unconfirmed request IDs in per-account session storage for safe replay.
 Config catalogs, projections and historical receipts remain read-only.
 See [ADMIN_PANEL.md](ADMIN_PANEL.md) for operations and boundaries.
+
+## Sea travel
+
+The private travel catalog, persisted route options and request receipts accompany
+owner-only character fields for location, sea distance, its record, visit, version, journey and Energy settlement time.
+`sea-travel.sql` is the canonical implementation. Departure, route choice and return
+use the combat system's ordered locks; neither participant can depart mid-battle.
+PvP requires both captains at harbor, or an attacker who discovered the target
+at the same sea distance and target visit through a paid scout. Shared settlement applies due
+journeys before eligibility checks. Server clocks and saved arrival times determine
+progress even while the owner is offline. Max sea distance increases only on arrival
+and never decreases on return, a shorter voyage or hospital admission. A public
+scheduled record resolves offline arrivals without locking or writing owner state.
+
+Energy uses ten-minute boundaries for every away state, including return. Offline
+return splits recovery at the saved arrival, counting a boundary exactly at arrival
+with the harbor rate once. Hospital admission settles earned Energy and changes to
+the harbor rate. Scouting and other costs settle recovery before checking affordability.
+The cutover migration settles the old model once and removes `energy_paused_at`.
+New character fields are not generically editable by admins.
+
+`src/lib/game-navigation.ts` shares hospital/combat/travel redirect policy between
+Proxy and AppFrame. Read-only inventory, profiles, attack preparation and combat reports are allowed at a sea stop;
+traveling allows the waiting screen and account flows. SQL still enforces every
+mutation guard. The sea page uses server deadlines and the shared countdown.
+
+Public projections store coarse planned arrivals; invoker RPCs and RLS compute
+effective location without locking or settling every owner. The roster and profiles
+refresh at deadlines, on public events and through fallback/focus/reconnect polling.
+See [sea travel](SEA_TRAVEL.md) for the complete contract and configuration.
+
+Paid scouting stores private receipts and a paged snapshot of every ship at the same
+sea distance, including due offline arrivals. Only the latest result membership is
+retained per captain; receipts remain durable. Profile status exposes a viewer-specific
+attack-location boolean without exposing other captains' distances or visit IDs.
+Sightings reference stable profile identities, so simultaneous scouts do not acquire
+crosswise locks on mutable character rows. See [scouting](SEA_SCOUTING.md).
+
+Background game refreshes share a navigation hold through `game-refresh.tsx`.
+Link pending state and the game loading boundary defer refresh until navigation
+completes. Resource and journey deadlines request the same serialized refresh.
+The navigation test explicitly requests a focus refresh while a route is held
+and verifies that a second destination remains reachable.
+
+### Item market value
+
+Item details share one history renderer for Circ and Value. Value is the floored,
+quantity-weighted gross unit price of executed purchases in the trailing 12 hours.
+An empty window retains the last nonempty rolling value, including in history.
+Only an item with no purchases at or before the observation time returns N/A. Read-only access follows
+the circulation authentication rules.
+
+Private sale triggers maintain a cumulative quantity/gross projection in the
+purchase transaction using the existing item circulation locks. Indexed prefix
+differences provide historical rolling values without scheduled snapshots.
+Backfill and trigger installation are atomic. Identity-only anonymization leaves
+the projection intact; corrected/deleted sale fixtures rebuild their affected
+suffix. Public responses never include sale or participant identifiers.
+See [Item Market Value](ITEM_MARKET_VALUE.md).

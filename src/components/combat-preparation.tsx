@@ -7,10 +7,12 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { startFight } from "@/app/combat-actions";
 import { CombatantPanel } from "@/components/combatant-panel";
+import { useGameState } from "@/components/game-state";
 import { COMBAT_COST, combatError, type CombatPreview } from "@/lib/combat";
 
 export function CombatPreparation({ preview }: { preview: CombatPreview }) {
   const router = useRouter();
+  const state = useGameState();
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
   const request = useRef<string | null>(null);
@@ -21,7 +23,7 @@ export function CombatPreparation({ preview }: { preview: CombatPreview }) {
   }, [router]);
 
   function start() {
-    if (inFlight.current) return;
+    if (inFlight.current || state.active_combat_id) return;
     inFlight.current = true;
     request.current ??= crypto.randomUUID();
     const requestId = request.current;
@@ -47,12 +49,13 @@ export function CombatPreparation({ preview }: { preview: CombatPreview }) {
     <div className="o-combat-start">
       <div><h2>Give the order</h2><p>Both captains act each round. Your opponent follows saved defence orders.</p>
         <p className="o-copy">You can attack while injured. At least {gameplay.combat.minimumHealth} Ship Health and {gameplay.combat.minimumHealth} Crew Health are required.</p></div>
-      <button className="o-training-button o-combat-start-button" disabled={pending || !preview.can_start} onClick={start}>
+      <button className="o-training-button o-combat-start-button" disabled={pending || !!state.active_combat_id || !preview.can_start} onClick={start}>
         {pending && <span className="o-spinner" aria-hidden="true" />}
         {pending ? "Entering battle..." : preview.join_combat_id ? "Join battle" : "Start battle"}
         <small>{COMBAT_COST} Energy</small>
       </button>
     </div>
+    {state.active_combat_id && <p className="o-combat-message">Finish your current fight before starting another.</p>}
     {!preview.can_start && <div className="o-combat-message">
       <p>{combatError(preview.reason ?? "")}</p>
       {preview.target_protected_until && <p>Protection ends at <time dateTime={preview.target_protected_until}>

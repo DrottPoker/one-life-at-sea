@@ -7,7 +7,8 @@ Implementerat lokalt 2026-09-19. Balansen kommer från [gameplayconfig](../confi
 
 Crew och skeppet behåller fyra stats: Attack, Defense, Speed och Accuracy.
 Nya karaktärer börjar med 10 i varje stat. Befintliga stats, hälsa, Energy och guld bevaras.
-Energy återhämtas med +5 var femte minut, även offline, till högst 100.
+Energy återhämtas med +5 på serverns fasta femminutersticks i hamnen, även offline, till högst 100.
+Till havs gäller fasta tiominutersticks. Energy lagras alltid som heltal. Se [Energy](ENERGY_RECOVERY.md).
 
 - Crew: 5 Energy ger aktuell övnings statökning direkt och 5 XP. Perfect Drill har 1 % chans
   att dubbla statökningen, utan extra XP.
@@ -25,8 +26,8 @@ Energy återhämtas med +5 var femte minut, även offline, till högst 100.
 - Nästa övning/workshop kräver både XP och Gold Coins på karaktären. Bankpengar räknas inte.
   Steg köps i ordning och den högsta köpta nivån används automatiskt.
 - En workshop kan köpas under ett arbete. Jobbet behåller sin ursprungliga ökning, XP och tid.
-- Aktiva angripare och sjukhuspatienter kan inte träna, starta arbete eller köpa nivåer.
-  Försvarare kan använda hamnen tills de besegras och hamnar i [Hospital](HOSPITAL.md).
+- Aktiva angripare, försvarare och sjukhuspatienter kan inte träna, starta arbete eller köpa nivåer.
+  Försvarare kan läsa träningssidorna medan formulären är låsta, även över flera flikar.
   Redan startat arbete fortsätter under strid, sjukhusvistelse och offline.
 
 Items, material, consumables, intjäning och utrustningsbonusar ingår inte.
@@ -84,6 +85,11 @@ Lika Accuracy och Speed ger fortsatt 50 % träffchans. Tabellen gäller lyckade 
 inte rundor. Den starka sena träningen gör alltså också jämna högstatsstrider korta med dagens
 100 HP. HP, skala och skadebalans behöver ett separat balansbeslut före långsiktig lansering.
 
+Planerad design, förtydligad av ägaren 2026-09-21: 100 är startvärdet för både
+Crew Health och Ship Health. Båda ska kunna ökas genom ett framtida system.
+Mekaniken och tillväxtkurvan är ännu inte bestämda. Långsiktig träningsbalans
+ska ta hänsyn till denna hälsoprogression. Dagens implementerade hälsotak är oförändrat.
+
 ## Databas och offline
 
 Crew-stats och XP använder bigint. Skeppets fyra stats och jobbens stat_gain använder numeric
@@ -124,3 +130,24 @@ Balansändringar gäller nya handlingar. Sparade skeppsarbeten behåller alla si
 Kvitton behålls för stabila återförsök; ingen rensningspolicy har införts.
 
 Utförda kontroller redovisas i [implementationsstatus](IMPLEMENTATION_STATUS.md).
+
+## Koppling till havsresor
+
+Träning, nivåköp och skeppsarbete kräver hamnposition även vid direkta RPC-anrop.
+Pågående skeppsarbete blockerar avfärd; en passerad sluttid tillgodoräknas före
+avfärdskontrollen. Utresa, havsbesök och hemresa ger +5 Energy på gemensamma
+tiominutersticks. Vid faktisk hemkomst återgår kaptenen till femminutersticks.
+Hälsans befintliga återhämtning ändras inte. Se [resor](SEA_TRAVEL.md).
+
+## Beständiga återförsök
+
+Ekonomihandlingar sparar request-ID före anropet och kan återhämtas efter
+omladdning eller navigation. Olösta handlingar visas som **Unconfirmed action**
+och kontrolleras med **Check saved action**. Samma karaktär måste vara inloggad.
+Se [ekonomigranskningen](ECONOMY_AUDIT.md) för skydd, tester och avgränsning.
+
+## Research om statberoende träning
+
+Ett Torn-inspirerat förslag för flerårig progression finns i
+[balansresearchen](TRAINING_BALANCE_RESEARCH.md). Det är analyserat men inte infört;
+reglerna ovan beskriver fortfarande den aktiva implementationen.

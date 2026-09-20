@@ -4,9 +4,9 @@ set local search_path = public, extensions;
 select no_plan();
 
 select is((select count(*)::int from public.character_profiles), (select count(*)::int from public.characters), 'Existing characters have profiles');
-select columns_are('public', 'character_profiles', array['character_id','display_name','location','created_at'], 'Profiles expose only the four agreed identity fields');
+select columns_are('public', 'character_profiles', array['character_id','display_name','location','created_at','arrives_at','arrival_location','max_sea_distance','arrival_max_sea_distance'], 'Profiles expose identity, travel timing and distance records');
 select ok((select relrowsecurity from pg_class where oid='public.character_profiles'::regclass), 'Profile row-level security is enabled');
-select ok(not exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='character_profiles'), 'Profiles do not broaden Realtime payloads');
+select ok(exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='character_profiles'), 'Coarse profile changes are published for travel updates');
 
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
 ('d4000000-0000-4000-8000-000000000001','profile-one@example.test',false,'{"character_name":"Profile Test One"}'),
@@ -40,9 +40,9 @@ select is((select count(*)::int from public.character_profiles p join profile_be
 update public.characters set created_at=created_at-interval '2 days' where user_id='d4000000-0000-4000-8000-000000000002';
 select ok(exists(select 1 from public.character_profiles p join public.characters c on c.id=p.character_id where c.user_id='d4000000-0000-4000-8000-000000000002' and p.created_at=c.created_at), 'Server corrections preserve the real creation date');
 
--- Future travel is exercised only in this rolled-back transaction.
-alter table public.characters drop constraint characters_start_location;
-update public.characters set location='open_sea' where user_id='d4000000-0000-4000-8000-000000000002';
+select set_config('request.jwt.claims','{"sub":"d4000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
+select public.depart_harbor(sea_version,gen_random_uuid()) from public.characters where user_id='d4000000-0000-4000-8000-000000000002';
+select private.settle_sea_travel(id,travel_arrives_at) from public.characters where user_id='d4000000-0000-4000-8000-000000000002';
 select is((select p.location from public.character_profiles p join profile_test_ids i on i.id=p.character_id where i.user_id='d4000000-0000-4000-8000-000000000002'), 'open_sea', 'Profiles remain available outside the harbor');
 select is((select count(*)::int from public.harbor_players where display_name='Profile Renamed Captain'), 0, 'The harbor directory retains its location-specific scope');
 delete from auth.users where id='d4000000-0000-4000-8000-000000000002';

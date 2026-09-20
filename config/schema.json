@@ -510,9 +510,105 @@
                   },
                   "active": {
                     "type": "boolean"
+                  },
+                  "tradable": {
+                    "type": "boolean"
                   }
                 }
               }
+            }
+          }
+        },
+        "seaTravel": {
+          "type": "object",
+          "properties": {
+            "departureEnergyCost": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "outwardDurationSeconds": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 86400
+            },
+            "returnSecondsPerStep": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 86400
+            },
+            "locationTypes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "scoutEnergyCost": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "scoutPageSize": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "marketplace": {
+          "type": "object",
+          "properties": {
+            "feeBps": {
+              "type": "number",
+              "integer": true,
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "popularityHours": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 8760
+            },
+            "pageSize": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "listingsPageSize": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "maxBatchSize": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "valueWindowHours": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 8760
             }
           }
         }

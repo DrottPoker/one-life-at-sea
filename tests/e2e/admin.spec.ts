@@ -120,7 +120,7 @@ test("admin edits players, grants equipment, recovers a lost grant and browses a
   } finally { await cleanup([admin, player]); }
 });
 
-test("admin remains accessible in hospital and combat, and revocation is immediate", async ({ page }) => {
+test("admin remains accessible in hospital and combat, and revocation is immediate", async ({ page, context }) => {
   const admin = await account(true), player = await account();
   try {
     await login(page, admin);
@@ -162,8 +162,11 @@ test("admin remains accessible in hospital and combat, and revocation is immedia
     sql("delete from private.admin_members where user_id='" + admin.userId + "'");
     expect((await admin.api.rpc("admin_overview")).error?.message).toBe("ADMIN_REQUIRED");
     expect((await page.request.get("/admin")).status()).toBe(403);
-    await page.goto("/admin");
-    await expect(page.getByText("Administrator access is required.", { exact: true })).toBeVisible();
+    // A fresh tab isolates the HTTP denial from in-flight refreshes of the revoked admin page.
+    const denied = await context.newPage();
+    await denied.goto("/admin");
+    await expect(denied.getByText("Administrator access is required.", { exact: true })).toBeVisible();
+    await denied.close();
   } finally { await cleanup([admin, player]); }
 });
 

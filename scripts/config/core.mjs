@@ -31,6 +31,15 @@ export function validateConfig(config) {
   visit(config, schema, "config");
   const { gameplay: g, auth: a, server: s, frontend: f } = config;
   const check = (condition, message) => { if (!condition) throw new Error(message); };
+  const sea = g.seaTravel;
+  check(sea.departureEnergyCost <= g.resources.energyMax, "Departure costs more than maximum Energy.");
+  check(sea.scoutEnergyCost <= g.resources.energyMax, "Scouting costs more than maximum Energy.");
+  check(sea.locationTypes.filter(place => place.active).length >= 2, "Sea travel requires two active place types.");
+  check(new Set(sea.locationTypes.map(place => place.id)).size === sea.locationTypes.length, "Sea place IDs must be unique.");
+  for (const place of sea.locationTypes) {
+    check(/^[a-z][a-z0-9_]{0,47}$/.test(place.id) && !["the_harbor", "harbor_outskirts"].includes(place.id), "Invalid sea place ID.");
+    check(place.name.length <= 100, "Sea place name is too long.");
+  }
   const inventory = g.inventory;
   check(new Set(inventory.categories.map(c => c.id)).size === inventory.categories.length, "Inventory category IDs must be unique.");
   check(new Set(inventory.items.map(i => i.id)).size === inventory.items.length, "Item IDs must be unique.");
@@ -118,7 +127,8 @@ export function gameplaySql(config) {
     (_, name) => read("supabase/templates/gameplay/" + name + ".sql"));
   return render(template
     .replace("{{training.catalogSql}}", () => trainingCatalogSql(config))
-    .replace("{{inventory.catalogSql}}", () => inventoryCatalogSql(config)), config);
+    .replace("{{inventory.catalogSql}}", () => inventoryCatalogSql(config))
+    .replace("{{seaTravel.catalogSql}}", () => seaTravelCatalogSql(config)), config);
 }
 export function revision(config) {
   return createHash("sha256").update(JSON.stringify(config.gameplay)).update(gameplaySql(config)).digest("hex");
@@ -151,10 +161,10 @@ export function inventoryCatalogSql(config) {
   const categories = catalog.categories.map((c, i) => "(" + [quote(c.id), quote(c.name), i].join(",") + ")").join(",\n");
   const items = catalog.items.map(i => "(" + [quote(i.id),quote(i.categoryId),quote(i.name),quote(i.description),
     quote(i.effectDescription),quote(i.imagePath),quote(i.kind),i.kind !== "equipment",
-    i.slot === "none" ? "null::text" : quote(i.slot),i.active].join(",") + ")").join(",\n");
+    i.slot === "none" ? "null::text" : quote(i.slot),i.active,i.tradable].join(",") + ")").join(",\n");
   let delimiter = "$inventory$";
   while ((categories + items).includes(delimiter)) delimiter = delimiter.slice(0, -1) + "_$";
-  const columns = "id,category_id,name,description,effect_description,image_path,kind,stackable,slot,active";
+  const columns = "id,category_id,name,description,effect_description,image_path,kind,stackable,slot,active,tradable";
   return "do " + delimiter + " begin " +
     "if exists(select 1 from private.item_categories old left join (values\n" + categories +
     "\n) incoming(id,name,position) using(id) where incoming.id is null) then raise exception 'Existing category IDs must be preserved'; end if; " +
@@ -165,5 +175,14 @@ export function inventoryCatalogSql(config) {
     "\non conflict(id) do update set name=excluded.name,position=excluded.position;\n" +
     "insert into private.item_definitions(" + columns + ") values\n" + items +
     "\non conflict(id) do update set category_id=excluded.category_id,name=excluded.name,description=excluded.description," +
-    "effect_description=excluded.effect_description,image_path=excluded.image_path,active=excluded.active;\n";
+    "effect_description=excluded.effect_description,image_path=excluded.image_path,active=excluded.active,tradable=excluded.tradable;\n";
+}
+
+export function seaTravelCatalogSql(config) {
+  const quote = value => "'" + value.replaceAll("'", "''") + "'";
+  const rows = config.gameplay.seaTravel.locationTypes.map(place =>
+    "(" + [quote(place.id), quote(place.name), place.active].join(",") + ")").join(",\n");
+  return "update private.sea_location_types set active=false;\n" +
+    "insert into private.sea_location_types(id,name,active) values\n" + rows +
+    "\non conflict(id) do update set name=excluded.name,active=excluded.active;\n";
 }

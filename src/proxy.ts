@@ -1,8 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig } from "@/lib/env";
-import { isHospitalAccessiblePath } from "@/lib/hospital";
-import { attackUrl } from "@/lib/combat";
+import { navigationRedirect } from "@/lib/game-navigation";
 import { withDatabaseRetry } from "@/lib/database-retry";
 import type { Database } from "@/lib/database.types";
 
@@ -37,9 +36,8 @@ export async function proxy(request: NextRequest) {
         response.cookies.getAll().forEach(cookie => unavailable.cookies.set(cookie));
         response = unavailable;
       } else {
-        const destination = lock?.hospital_until ? "/harbor/hospital" : lock?.attack ? attackUrl(lock.attack.target_id) : null;
-        const allowedHospitalPage = !!lock?.hospital_until && isHospitalAccessiblePath(request.nextUrl.pathname);
-        if (destination && request.nextUrl.pathname !== destination && !allowedHospitalPage) {
+        const destination = navigationRedirect(request.nextUrl.pathname, lock);
+        if (destination) {
           const redirect = NextResponse.redirect(new URL(destination, request.url));
           response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
           response = redirect;

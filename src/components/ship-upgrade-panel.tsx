@@ -37,7 +37,7 @@ export function ShipUpgradePanel() {
       <p className="o-copy">{job.workshop_name} · +{formatStat(job.stat_gain)} {STAT_LABELS[job.stat]}</p>
       <p className="o-form-hint">{job.energy_cost} Energy paid. You can keep playing while the work continues.</p>
     </section> : <TrainingActionForm label="Start ship work" fields={{ action: "ship", tier_id: tier.id }}>
-      {blocked => <fieldset className="o-ship-order" disabled={blocked || !!state.active_attack || !!state.hospital_until}>
+      {blocked => <fieldset className="o-ship-order" disabled={blocked || !!state.active_combat_id || !!state.hospital_until}>
         <legend>New ship work</legend>
         <div className="o-ship-choices">
           <div className="o-field"><label className="o-field-label" htmlFor="ship-stat">Stat</label>
@@ -57,6 +57,6 @@ export function ShipUpgradePanel() {
       </fieldset>}
     </TrainingActionForm>}
     {completed && <div className="o-ship-completed" role="status">Last job completed: +{formatStat(completed.stat_gain)} {STAT_LABELS[completed.stat]}.</div>}
-    {state.active_attack && <p className="o-training-feedback o-copy">Finish your current fight to start new work. Existing work continues.</p>}
+    {state.active_combat_id && <p className="o-training-feedback o-copy">Finish your current fight to start new work. Existing work continues.</p>}
   </>;
 }

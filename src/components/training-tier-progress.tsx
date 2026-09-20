@@ -21,7 +21,7 @@ export function TrainingTierProgress({ group }: { group: TrainingGroup }) {
     {next && <>
       <TrainingActionForm label={"Purchase " + next.name} fields={{ action: "purchase", group, tier_id: next.id }}>
         {blocked => <div className="o-tier-purchase"><p><strong>{next.name}</strong><span>+{formatGold(next.statGain)} per {group === "crew" ? "drill" : gameplay.training.shipEnergyPerUnit + " Energy"}</span></p>
-          <button className="o-training-button" type="submit" disabled={blocked || !unlocked || state.gold_coins < next.goldCost || !!state.active_attack || !!state.hospital_until}>
+          <button className="o-training-button" type="submit" disabled={blocked || !unlocked || state.gold_coins < next.goldCost || !!state.active_combat_id || !!state.hospital_until}>
             Buy for {formatGold(next.goldCost)} Gold Coins
           </button></div>}
       </TrainingActionForm>

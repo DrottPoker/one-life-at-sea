@@ -76,3 +76,12 @@ fokus/återanslutning och reservkontroll uppdaterar gränssnittet.
 - [hospital.spec.ts](../tests/e2e/hospital.spec.ts): webbläsarflöden, PvP och offlineutskrivning.
 
 Configbyten påverkar nya intagningar. En redan sparad sluttid ändras inte.
+
+## Resor och administrativ skada
+
+Avfärd är spärrad under sjukhusvistelsen. Om en administrativ hälsoändring på havet
+utlöser intagning avbryts resan och alternativen tas bort. Kaptenen är i hamnen;
+intjänad Energy räknas med tiominutersticks till havs och femminutersticks från
+intagningen eller en tidigare faktisk hemkomst. Energy är alltid heltal. Detta följer
+Hospital-regeln och inför ingen räddningshandling för spelaren. Se [resor](SEA_TRAVEL.md)
+och [Energy](ENERGY_RECOVERY.md).

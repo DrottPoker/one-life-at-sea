@@ -29,8 +29,9 @@ const errors: Record<string, string> = {
   NOT_AUTHORIZED: "Please sign in again.",
 };
 
-export async function trainingAction(form: FormData): Promise<TrainingResult> {
-  await requireCharacter();
+export async function trainingAction(form: FormData, characterId: string): Promise<TrainingResult> {
+  const character = await requireCharacter({ allowHospital: true, allowSea: true });
+  if (character.id !== characterId) return { error: true, retry: true, message: "Your signed-in character changed. Sign back in to check this saved action." };
   const action = form.get("action"), stat = form.get("stat"), group = form.get("group");
   const tier = form.get("tier_id"), energy = parseShipEnergy(form.get("energy_amount")), requestId = form.get("request_id");
   if (!isUuid(requestId) || typeof tier !== "string" || !tier) return { error: true, message: errors.INVALID_REQUEST };

@@ -1,33 +1,17 @@
 import { test, expect } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
-import { execFileSync } from "node:child_process";
-import { randomBytes, randomUUID } from "node:crypto";
-import type { Database } from "../../src/lib/database.types";
-import { isLocalTestApi, localDatabaseContainer } from "../support/local";
+import { randomUUID } from "node:crypto";
+import { createTestAccount, createTestClient as client, cleanupTestAccounts, testSql } from "../support/accounts";
 
-process.loadEnvFile(".env.local");
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-if (!isLocalTestApi(url)) throw new Error("Bank tests require local Supabase.");
-const client = () => createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-
+const accounts: Awaited<ReturnType<typeof createTestAccount>>[] = [];
 async function account() {
-  const api = client();
-  const suffix = randomBytes(10).toString("hex");
-  const email = "bank-" + suffix + "@example.test";
-  const password = randomBytes(24).toString("hex");
-  const signup = await api.auth.signUp({ email, password, options: { data: { character_name: "Bank " + suffix } } });
-  expect(signup.error).toBeNull();
-  const own = await api.from("characters").select("id").single();
-  expect(own.error).toBeNull();
-  const id = own.data!.id;
-  if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error("Invalid test captain ID.");
-  return { api, id, email, password };
+  const own = await createTestAccount("bank");
+  accounts.push(own);
+  return own;
 }
+test.afterEach(async () => { await cleanupTestAccounts(accounts.splice(0)); });
 function seedCoins(id: string, amount: number) {
   if (!/^[0-9a-f-]{36}$/.test(id) || !Number.isSafeInteger(amount)) throw new Error("Invalid fixture.");
-  execFileSync("docker", ["exec", localDatabaseContainer, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1",
-    "-c", "update public.characters set gold_coins=" + amount + ",bank_gold_coins=0 where id='" + id + "'"], { stdio: ["ignore", "pipe", "pipe"] });
+  testSql("update public.characters set gold_coins=" + amount + ",bank_gold_coins=0 where id='" + id + "'");
 }
 
 test("bank transfers persist, update both tabs and fit the sidebar and mobile", async ({ page, context }) => {

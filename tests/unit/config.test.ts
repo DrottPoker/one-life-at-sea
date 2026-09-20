@@ -10,6 +10,15 @@ describe("configuration contract", () => {
     for (const [path, expected] of Object.entries(generatedFiles(config))) expect(read(path), path).toBe(expected);
   });
   it.each([
+    ["too few sea places", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.locationTypes = c.gameplay.seaTravel.locationTypes.slice(0, 1); }],
+    ["inactive sea catalog", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.locationTypes.forEach(p => p.active = false); }],
+    ["duplicate sea type", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.locationTypes[1].id = c.gameplay.seaTravel.locationTypes[0].id; }],
+    ["reserved sea type", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.locationTypes[0].id = "harbor_outskirts"; }],
+    ["unaffordable scouting", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.scoutEnergyCost = 101; }],
+    ["empty scouting pages", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.scoutPageSize = 0; }],
+    ["unaffordable departure", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.departureEnergyCost = 101; }],
+    ["zero outward duration", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.outwardDurationSeconds = 0; }],
+    ["fractional return duration", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.returnSecondsPerStep = 1.5; }],
     ["duplicate tier ID", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.crewTiers[1].id = c.gameplay.training.crewTiers[0].id; }],
     ["tier XP ordering", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.shipTiers[2].xpRequired = 0; }],
     ["unsafe Perfect Drill", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.crewTiers[9].statGain = Number.MAX_SAFE_INTEGER; }],

@@ -31,7 +31,8 @@
     "pretest:db": "npm run config:check",
     "test:config:db": "node scripts/config/test-database.mjs",
     "pretest:config:db": "npm run config:check",
-    "pretest:e2e": "npm run config:check"
+    "pretest:e2e": "npm run config:check",
+    "audit:economy": "node scripts/audit-economy.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

@@ -31,7 +31,7 @@ async function captain() {
   const result = await api.from("characters").select("id").single();
   expect(result.error).toBeNull();
   // Combat scenarios use explicit baseline stats; signup defaults are tested with training.
-  sql("update public.characters set ship_attack=1,ship_defense=1,ship_speed=1,ship_accuracy=1,crew_attack=1,crew_defense=1,crew_speed=1,crew_accuracy=1 where id=\'" + uuid(result.data!.id) + "\'");
+  sql("update public.characters set energy_updated_at=clock_timestamp()+interval '1 day',ship_attack=1,ship_defense=1,ship_speed=1,ship_accuracy=1,crew_attack=1,crew_defense=1,crew_speed=1,crew_accuracy=1 where id=\'" + uuid(result.data!.id) + "\'");
   return { api, email, password, name, userId, id: uuid(result.data!.id) };
 }
 function battle(data: CombatResponse | null) {
@@ -251,7 +251,7 @@ test("joined attackers and an online defender receive shared HP live; the defend
     await expect(pageD).toHaveURL(/\/harbor$/);
     await pageD.getByRole("link", { name: "Crew Training", exact: true }).click();
     await expect(pageD).toHaveURL(/\/harbor\/crew-training$/);
-    await expect(pageD.getByRole("button", { name: /Train Attack/ })).toBeEnabled();
+    await expect(pageD.getByRole("button", { name: /Train Attack/ })).toBeDisabled();
     await page.getByRole("button", { name: /^Retreat Take/ }).click();
     await expect(page.getByRole("heading", { name: "You withdrew", exact: true })).toBeVisible();
     await page.getByRole("link", { name: "Back to The Harbor", exact: true }).first().click();

@@ -16,12 +16,14 @@ const errors: Record<string, string> = {
   ITEM_NOT_FOUND: "That item is no longer in your inventory.",
   NOT_ENOUGH_ITEMS: "You no longer have that many items. Check the updated quantity.",
   IN_HOSPITAL: "You cannot destroy items while in hospital.",
+  NOT_IN_HARBOR: "Return to The Harbor to destroy items.",
   IN_COMBAT: "Finish your current fight before destroying items.",
   NOT_AUTHORIZED: "Please sign in again to use your inventory.",
 };
 
-export async function trashInventoryItem(form: FormData): Promise<TrashResult> {
-  await requireCharacter({ allowHospital: true });
+export async function trashInventoryItem(form: FormData, characterId: string): Promise<TrashResult> {
+  const character = await requireCharacter({ allowHospital: true, allowSea: true });
+  if (character.id !== characterId) return { error: true, retry: true, message: "Your signed-in character changed. Sign back in to check this saved action." };
   const entryId = form.get("entry_id");
   const entryType = form.get("entry_type");
   const quantity = parseItemQuantity(form.get("quantity"));

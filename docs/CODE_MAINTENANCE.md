@@ -10,9 +10,14 @@ Genomgång och städning genomförd 2026-09-20. Aktuella verifieringsresultat fi
 | Rutter, serverdata och mutationer | `src/app/` |
 | Presentation och lokal interaktion | `src/components/` |
 | Inventorybilder och expanderade detaljer | `src/components/inventory/` |
+| Marknadsvyer, formulär och återförsök | `src/components/marketplace/`, `src/lib/marketplace.ts` |
+| Marknadens lager, köp och listning | `supabase/templates/gameplay/marketplace-*.sql` |
 | Gemensam nedräkning mot servertid | `src/hooks/use-server-countdown.ts` |
 | Serialiserad hämtning av nya snapshots | `src/lib/snapshot-poller.ts` |
 | Fokus, återanslutning och återkomst till fliken | `src/lib/browser-events.ts` |
+| Omedelbar sidåterkoppling och Next.js-länkar | `src/components/game-navigation.tsx`, `content-loading.tsx` |
+| Gemensam navigationspolicy för Hospital, strid och resa | `src/lib/game-navigation.ts` |
+| Havsresor och sparade alternativ | `supabase/templates/gameplay/sea-travel.sql`, `src/lib/sea-travel.ts` |
 | Generell validering och formatering | `src/lib/validation.ts`, `format.ts`, `time.ts` |
 | Spelregler och visningsvärden | `config/` |
 | Databasfunktioner per funktionsområde | `supabase/templates/gameplay/` |
@@ -51,3 +56,14 @@ olika spelhandlingar behöver inte en gemensam abstraktion bara för att deras f
 Kör `npm run check` och relevanta webbläsar-/databastester. Vid breda ändringar i
 delad kod ska hela webbläsarsviten verifieras. Befintliga designplaner är historik
 eller framtida förslag; följ funktionsdokumenten och faktisk kod för aktuellt beteende.
+
+Bakgrundsuppdatering samordnas via `game-refresh.tsx`: länkens vänteläge och
+spellayoutens laddningsgräns skjuter upp AppFrames uppdatering. GameStateProvider
+använder samma kö för resurser och reseankomst. En fokusuppdatering mitt i ett
+sidbyte kan därmed inte låsa den nästa navigationen.
+
+Ekonomins klientjournal finns i `src/lib/economy-journal.ts` och
+`src/components/economy-requests.tsx`. Den delar lagring och återhämtning medan
+serverhandlingar och databaskvitton behåller sina egna domänregler.
+`npm run audit:economy` kontrollerar lokal ekonomiintegritet utan att ändra data.
+Se [ekonomigranskningen](ECONOMY_AUDIT.md).

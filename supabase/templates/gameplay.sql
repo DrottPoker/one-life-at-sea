@@ -1,5 +1,7 @@
 {{include.training}}
 {{include.resources}}
+{{include.sea-scouting}}
+{{include.sea-travel}}
 {{include.combat}}
 {{include.game-state}}
 {{include.bank}}
@@ -7,5 +9,10 @@
 {{include.combat-report}}
 {{include.profile}}
 {{include.circulation-tracking}}
+{{include.market-value-tracking}}
+{{include.market-value-history}}
 {{include.inventory}}
 {{include.circulation-history}}
+{{include.marketplace-read}}
+{{include.marketplace-sell}}
+{{include.marketplace-buy}}

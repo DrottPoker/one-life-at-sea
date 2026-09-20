@@ -24,6 +24,10 @@ config.gameplay.combat.equipment.cannons = "Captain's test cannons";
 config.gameplay.harbor.pageSize = 3;
 config.gameplay.inventory.pageSize = 2;
 Object.assign(config.gameplay.inventory.items[0], { name: "Captain\'s $inventory$ Cutlass", active: false });
+Object.assign(config.gameplay.seaTravel, { scoutEnergyCost: 9, scoutPageSize: 2, departureEnergyCost: 8, outwardDurationSeconds: 7, returnSecondsPerStep: 11,
+  locationTypes: [{ id: "test_cove", name: "Captain's $sea$ Cove", active: true }, { id: "test_depths", name: "Test depths", active: true }] });
+Object.assign(config.gameplay.marketplace, { feeBps: 1000, popularityHours: 6, valueWindowHours: 2, pageSize: 2, listingsPageSize: 1, maxBatchSize: 2 });
+config.gameplay.inventory.items.find(item => item.id === "brass_compass").tradable = false;
 validateConfig(config);
 const removedItem = structuredClone(config), changedKind = structuredClone(config);
 removedItem.gameplay.inventory.items.pop();
@@ -94,7 +98,55 @@ const checks = [
 "select public.submit_combat_order((value#>>'{battle,id}')::uuid,0,'retreat',gen_random_uuid()) from config_battle;",
 "select is((select extract(epoch from(protected_until-ship_recovery_at))::int from public.characters where id=(select a from config_captains)),45,'Protection duration is configurable');",
 "select ok(jsonb_array_length(public.list_harbor_players()->'players')<=3,'Harbor page size is configurable');",
+"select is((select travel_arrives_at from public.characters where id=(select id from old_sea_fixture)),(select travel_arrives_at from old_sea_fixture),'Config changes preserve saved arrival time');",
+"select is((select jsonb_agg(to_jsonb(o) order by o.position) from private.sea_route_options o where character_id=(select id from old_sea_fixture)),(select options from old_sea_fixture),'Config changes preserve offered routes even if types are removed');",
+"select set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_sea_user;",
+"select private.settle_sea_travel(id,travel_arrives_at) from public.characters where id=(select id from old_sea_fixture);",
+"select public.choose_sea_route((public.get_game_state()#>>'{sea,version}')::uuid,(public.get_game_state()#>>'{sea,options,0,id}')::uuid,gen_random_uuid());",
+"select is(public.get_game_state()#>>'{sea,journey,destination,name}',(select options#>>'{0,place_name}' from old_sea_fixture),'Stored choice name survives catalog removal');",
+"select is((select extract(epoch from(travel_arrives_at-travel_started_at))::int from public.characters where id=(select id from old_sea_fixture)),7,'New onward duration follows updated configuration');",
+"select private.settle_sea_travel(id,travel_arrives_at) from public.characters where id=(select id from old_sea_fixture);",
+"select ok(exists(select 1 from jsonb_array_elements(public.get_game_state()#>'{sea,options}') p where p->>'name'=$quote$Captain's $sea$ Cove$quote$),'Sea names safely escape quotes and dollar delimiters');",
+"select public.return_to_harbor((public.get_game_state()#>>'{sea,version}')::uuid,gen_random_uuid());",
+"select is((select extract(epoch from(travel_arrives_at-travel_started_at))::int from public.characters where id=(select id from old_sea_fixture)),22,'New return duration is depth times configured seconds');",
+"select private.settle_sea_travel(id,travel_arrives_at) from public.characters where id=(select id from old_sea_fixture);",
+"update public.characters set energy=100,energy_updated_at=clock_timestamp() where id=(select id from old_sea_fixture);",
+"select public.depart_harbor((public.get_game_state()#>>'{sea,version}')::uuid,gen_random_uuid());",
+"select is(public.get_game_state()->>'energy','92','New departure charges updated configured cost');",
+"select is((select extract(epoch from(travel_arrives_at-travel_started_at))::int from public.characters where id=(select id from old_sea_fixture)),7,'New departure duration follows configuration');",
+"select private.settle_sea_travel(id,travel_arrives_at) from public.characters where id=(select id from old_sea_fixture);",
+"select is(public.scout_nearby_ships((public.get_game_state()#>>'{sea,version}')::uuid,gen_random_uuid())->>'energy_cost','9','Scouting price follows configuration');",
+"select is(public.get_game_state()->>'energy','83','Configured scouting price is deducted from recovered Energy');",
+"select ok(jsonb_array_length(public.get_sea_scout()->'players')<=2,'Scouting result page size follows configuration');",
 ];
+checks.push(
+"select is((select fee_bps from private.market_listings where id=(select (value#>>'{listings,0,id}')::uuid from old_market_fixture)),500,'Existing listing keeps its captured fee after config change');",
+"create temporary table market_config_users as select gen_random_uuid() seller,gen_random_uuid() buyer;",
+"insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','Market config '||id::text) from market_config_users cross join lateral(values(seller),(buyer)) u(id);",
+"create temporary table market_config_captains as select (select id from public.characters where user_id=seller) seller,(select id from public.characters where user_id=buyer) buyer from market_config_users;",
+"update public.characters set gold_coins=1000 where id=(select buyer from market_config_captains);",
+"insert into private.item_stacks(character_id,item_id,quantity) select seller,i,10 from market_config_captains cross join(values('linen_bandages'),('oak_planks'),('brass_compass')) v(i);",
+"insert into private.item_instances(character_id,item_id,damage,accuracy) select seller,'cutlass',35,50 from market_config_captains;",
+"select set_config('request.jwt.claims',jsonb_build_object('sub',seller,'role','authenticated')::text,true) from market_config_users;",
+"select is(public.list_market_inventory()->>'total','2','Sale inventory excludes inactive and nontradable items before pagination');",
+"select is(jsonb_array_length(public.list_market_items()->'items'),2,'Market catalog page size follows configuration');",
+"select is(public.list_market_items(null,'Brass Compass')->>'total','0','Nontradable definitions are excluded from the market catalog');",
+"create temporary table market_config_entries as select jsonb_agg(jsonb_build_object('entry_id',id,'entry_type','stack','quantity',1,'unit_price',100) order by item_id) value from private.item_stacks where character_id=(select seller from market_config_captains) and item_id<>'brass_compass';",
+"select throws_ok($batch$select public.create_market_listings(value||jsonb_build_array(value->0),gen_random_uuid()) from market_config_entries$batch$,'22023','INVALID_BATCH','Configured listing batch limit is enforced');",
+"create temporary table market_config_listings as select public.create_market_listings(value,gen_random_uuid()) value from market_config_entries;",
+"select is((select fee_bps from private.market_listings where id=(select (value#>>'{listings,0,id}')::uuid from market_config_listings)),1000,'New listing captures updated fee');",
+"select is(jsonb_array_length(public.list_market_listings(null,true)->'items'),1,'Own listing page size follows configuration');",
+"select is(public.list_market_listings(null,true)->>'total','2','Listing pagination retains the full own count');",
+"select is(jsonb_array_length(public.list_market_listings(\'linen_bandages\',false,1)->\'items\'),2,\'Expanded offers use the configured batch size\');",
+"create temporary table market_config_baseline as select (public.list_market_items('medical')#>>'{items,0,sold}')::bigint sold;",
+"select set_config('request.jwt.claims',jsonb_build_object('sub',buyer,'role','authenticated')::text,true) from market_config_users;",
+"select is((select public.buy_market_listing((value#>>'{listings,0,id}')::uuid,1,100,gen_random_uuid())->>'fee' from market_config_listings),'10','New sale deducts the configured 10 percent fee');",
+"select is((select public.buy_market_listing((value#>>'{listings,0,id}')::uuid,1,100,gen_random_uuid())->>'fee' from old_market_fixture),'5','Existing sale still deducts its original 5 percent fee');",
+"update private.market_sales set sold_at=statement_timestamp()-interval '7 hours' where listing_id=(select (value#>>'{listings,0,id}')::uuid from market_config_listings);",
+"select is((public.list_market_items('medical')#>>'{items,0,sold}')::bigint,(select sold+1 from market_config_baseline),'Popularity uses the configured 6 hour window instead of 12 hours');",
+"select is(private.item_market_value_at('linen_bandages',statement_timestamp()),(select floor(sum(gross)::numeric/nullif(sum(quantity),0)) from private.market_sales where item_id='linen_bandages' and sold_at>statement_timestamp()-interval '2 hours' and sold_at<=statement_timestamp()),'Market value uses the configured two-hour window');",
+"select is((select gold_coins from public.characters where id=(select seller from market_config_captains)),167::bigint,'Configured fee is withheld from actual carried proceeds');"
+);
 const sql = "begin;\ncreate extension if not exists pgtap with schema extensions;\nset local search_path=public,extensions;\n" +
   "create temporary table old_training_user as select gen_random_uuid() id;\n" +
   "insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||\'@example.test\',false,jsonb_build_object(\'character_name\',\'Old Config \'||id::text) from old_training_user;\n" +
@@ -104,6 +156,8 @@ const sql = "begin;\ncreate extension if not exists pgtap with schema extensions
   "select public.start_ship_upgrade(\'attack\',50,\'ship_1\',gen_random_uuid());\n" +
   "insert into private.item_stacks(character_id,item_id,quantity) select captain,'linen_bandages',7 from old_training_fixture;\n" +
   "insert into private.item_instances(character_id,item_id,damage,accuracy) select captain,'cutlass',d,50 from old_training_fixture cross join(values(32.15),(35.20),(48.70)) v(d);\n" +
+  "create temp table old_sea_user as select gen_random_uuid() id;\ninsert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','Sea config '||id::text) from old_sea_user;\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_sea_user;\nselect public.depart_harbor((public.get_game_state()#>>'{sea,version}')::uuid,gen_random_uuid());\ncreate temp table old_sea_fixture as select c.id,c.travel_arrives_at,(select jsonb_agg(to_jsonb(o) order by o.position) from private.sea_route_options o where o.character_id=c.id) options from public.characters c where user_id=(select id from old_sea_user);\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_training_user;\n" +
+  "create temporary table old_market_user as select gen_random_uuid() id;\ninsert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','Old market '||id::text) from old_market_user;\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_market_user;\ninsert into private.item_stacks(character_id,item_id,quantity) select id,'linen_bandages',1 from public.characters where user_id=(select id from old_market_user);\ncreate temporary table old_market_fixture as select public.create_market_listings(jsonb_build_array(jsonb_build_object('entry_id',s.id,'entry_type','stack','quantity',1,'unit_price',100)),gen_random_uuid()) value from private.item_stacks s join public.characters c on c.id=s.character_id where c.user_id=(select id from old_market_user);\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_training_user;\n" +
   migrationSql(config) + "\nselect no_plan();\n" + checks.join("\n") + "\nselect * from finish();\nrollback;\n" +
   "select case when public.get_gameplay_revision()='" + originalRevision + "' then 'CONFIG_RESTORED' else 'CONFIG_NOT_RESTORED' end;\n";
 const output = execFileSync("docker", ["exec", "-i", "supabase_db_" + config.server.local.supabaseProjectId,

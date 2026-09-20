@@ -65,11 +65,12 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     await navigation.getByRole("link", { name: "Crew Training", exact: true }).click();
     await expect.poll(() => heldRequests).toBeGreaterThan(0);
     const loader = page.getByRole("status", { name: "Loading view" });
-    // Next shows link feedback until the prefetched loading boundary is available.
-    const pending = loader.or(navigation.locator('.o-nav-symbol[data-pending="true"]')).filter({ visible: true }).first();
-    await expect(pending).toBeVisible();
-    await expect(page.getByRole("main").getByRole("status", { name: "Loading view" })
-      .or(page.getByRole("main").getByRole("heading", { name: "The Harbor", exact: true })).filter({ visible: true }).first()).toBeVisible();
+    const pending = page.getByRole("main").getByRole("status", { name: "Loading view" });
+    await expect(pending).toBeVisible({ timeout: 1_000 });
+    await expect(navigation.getByRole("link", { name: "Crew Training", exact: true })).toHaveAttribute("aria-current", "page");
+    await expect(navigation.locator(".o-spinner")).toHaveCount(0);
+    await expect(navigation.getByRole("link", { name: "Crew Training", exact: true }).locator("svg")).toBeVisible();
+    await expect(page.getByRole("main").getByRole("heading", { name: "The Harbor", exact: true })).toBeHidden();
     await expect(sidebar).toBeVisible();
     await expect(energy).toHaveAttribute("aria-valuenow", "100");
     expect(await originalSidebar.evaluate(element => element.isConnected)).toBe(true);
@@ -85,6 +86,11 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize({ width: 1280, height: 900 });
 
+    // Background reconciliation must not override the next navigation.
+    const beforeFocus = heldRequests;
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await page.waitForTimeout(250);
+    expect(heldRequests).toBe(beforeFocus);
     // A second choice must work even while the first response is held.
     await navigation.getByRole("link", { name: "Marketplace", exact: true }).click();
     await expect(page).toHaveURL(/\/harbor\/marketplace$/);

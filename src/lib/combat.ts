@@ -49,6 +49,10 @@ export const ORDER_LABELS: Record<CombatOrder, string> = {
   disengage: "Disengage", retreat: "Retreat",
 };
 const ERROR_MESSAGES: Record<string, string> = {
+  TRAVELING: "You cannot fight while traveling.",
+  TARGET_TRAVELING: "This captain is traveling and cannot be attacked.",
+  DIFFERENT_LOCATION: "You and this captain must be in The Harbor or at the same Sea distance.",
+  SCOUT_REQUIRED: "Scout at your current location to find this ship before attacking.",
   IN_HOSPITAL: "You cannot fight while in hospital.",
   TARGET_IN_HOSPITAL: "This captain is in hospital.",
   SELF_ATTACK: "You cannot attack your own character.",

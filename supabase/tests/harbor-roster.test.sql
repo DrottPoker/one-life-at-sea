@@ -3,8 +3,8 @@ create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 select no_plan();
 
-select is((select count(*)::int from public.harbor_players), (select count(*)::int from public.characters where location='the_harbor'), 'Existing harbor characters are backfilled');
-select columns_are('public','harbor_players',array['character_id','display_name'],'The realtime table contains only public captain identity');
+select is((select count(*)::int from public.harbor_players), (select count(*)::int from public.characters where location='the_harbor' or travel_kind='return'), 'Harbor projection includes scheduled arrivals');
+select columns_are('public','harbor_players',array['character_id','display_name','arrives_at'],'The realtime table contains public identity and scheduled arrival');
 select ok(exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='harbor_players'),'Harbor roster is published to Realtime');
 select ok(not exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='characters'),'Private character rows are not published');
 
@@ -38,11 +38,12 @@ create temp table before_training as select h.ctid as roster_version,h.character
 update public.characters set crew_attack=crew_attack+1 where user_id='c3000000-0000-4000-8000-000000000001';
 select ok(exists(select 1 from public.harbor_players h join before_training b on h.character_id=b.character_id where h.ctid=b.roster_version),'Training does not emit unnecessary roster updates');
 
--- Exercise future location changes only inside this rolled-back transaction.
-alter table public.characters drop constraint characters_start_location;
-update public.characters set location='open_sea' where user_id='c3000000-0000-4000-8000-000000000002';
+select set_config('request.jwt.claims','{"sub":"c3000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
+select public.depart_harbor(sea_version,gen_random_uuid()) from public.characters where user_id='c3000000-0000-4000-8000-000000000002';
+select private.settle_sea_travel(id,travel_arrives_at) from public.characters where user_id='c3000000-0000-4000-8000-000000000002';
 select is((select count(*)::int from public.harbor_players where display_name='Roster Renamed Captain'),0,'Leaving the harbor removes the captain');
-update public.characters set location='the_harbor' where user_id='c3000000-0000-4000-8000-000000000002';
+select public.return_to_harbor(sea_version,gen_random_uuid()) from public.characters where user_id='c3000000-0000-4000-8000-000000000002';
+select private.settle_sea_travel(id,travel_arrives_at) from public.characters where user_id='c3000000-0000-4000-8000-000000000002';
 select is((select count(*)::int from public.harbor_players where display_name='Roster Renamed Captain'),1,'Returning adds the same captain exactly once');
 delete from auth.users where id='c3000000-0000-4000-8000-000000000002';
 select is((select count(*)::int from public.harbor_players where display_name='Roster Renamed Captain'),0,'Account deletion removes the captain through the foreign key');

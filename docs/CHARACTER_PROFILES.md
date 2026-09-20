@@ -1,55 +1,45 @@
-> Uppdatering 2026-09-16: aktuella stridsregler och implementation finns i [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md). Den nya versionen använder en gemensam /attack-vy, flera angripare, realtid och publika rapporter. Äldre beskrivningar av separata prepare-sidor, exklusiv tvåpartsstrid eller privata slutrapporter nedan är historiska.
+# Karaktärsprofiler
 
-# Character profiles
+Uppdaterat 2026-09-20.
 
-## Implemented scope
+## Innehåll och åtkomst
 
-- Each character has a profile at `/characters/<character-id>`.
-- The interface is in English and uses the shared, compact blue game layout.
-- `My Profile` in the character panel opens the current player's profile.
-- Names in the realtime harbor roster link to the corresponding profile.
-  Profile links prefetch on pointer hover or keyboard focus to avoid fetching
-  every profile in the list at once.
-- A simple anchor portrait accompanies the captain's name, location, creation
-  date and character age. The current player sees `Your character` on their profile.
-- Creation dates use UTC and English date formatting. Age counts completed
-  24-hour periods since character creation; it is not a skill level.
-- The sidebar always shows the viewing player's character and resources.
-- Existing links, browser history and deep links work. A loading boundary keeps
-  the shared frame visible, and missing profiles have a route back to The Harbor.
-- Profiles require login and character creation, including direct page visits.
-- Other profiles have Attack, opening a free combat preparation view.
-- Your own profile has Defence orders and a link to the active or last fight.
-  The saved defence preset applies to future encounters, including while offline.
+`/characters/<character-id>` visar namn, grov plats, Max sea distance, skapandedatum och karaktärsålder.
+Max sea distance är karaktärens längsta nådda avstånd, ökar vid ankomst och behålls
+efter hemkomst, kortare resor och Hospital. Nya karaktärer börjar på 0.
+My Profile och namn i hamnlistan länkar hit. Sidopanelen tillhör alltid betraktaren.
+Profiler kräver ett registrerat konto med karaktär. De är läsbara i Hospital och
+på en stillastående havsplats; under resa visas vänteläget.
 
-## Data boundaries
+Platsen visas som The Harbor, At sea, Traveling eller Hospital. Sjukhusvistelse
+har företräde och visar återstående tid. Andra profiler visar Attack när både
+betraktare och mål är i hamnen, eller efter [scouting](SEA_SCOUTING.md) när båda
+är kvar vid samma Sea distance. Resande skepp och patienter är skyddade.
+SQL kontrollerar dessutom stridsvillkoren vid start. Den egna profilen visar försvarsorder, som endast kan ändras i hamnen.
 
-`public.character_profiles` contains only `character_id`, `display_name`,
-`location` and `created_at`. Row-level security allows registered,
-non-anonymous accounts to read these identity fields. Clients cannot insert,
-update or delete profile records.
+## Publik datagräns
 
-A private database trigger copies profile fields from the character on signup
-and server-owned name, location or date changes. Existing characters are
-backfilled. Character deletion cascades to its profile. Private resource and
-stat changes do not rewrite the projection.
+`public.character_profiles` innehåller `character_id`, `display_name`,
+`location`, `created_at`, `arrives_at`, `arrival_location`, `max_sea_distance` och
+`arrival_max_sea_distance`. Det sista fältet är ett eventuellt planerat nytt rekord
+som räknas först vid ankomst. En kortare resa innehåller inget kommande rekord.
+Konton, e-post, Energy, hälsa, stats, besöks-ID och privata resealternativ ingår inte.
 
-Profiles are independent of the harbor roster, so their identity is retained
-when travel is introduced. The profile uses a server snapshot and has no
-dedicated realtime subscription. It does not infer online status from location.
+Tabellen har registrerad-läsar-RLS och inga klientskrivbehörigheter. Serverns trigger
+synkroniserar verkliga ändringar av publika fält; karaktärens borttagning kaskaderar.
+Tabellen publiceras till Realtime, medan privata karaktärsrader aldrig publiceras.
 
-Account IDs, email, Energy, health and combat stats are absent from this table.
-The private character table keeps its existing owner-only access rules.
-The profile table is not added to the Realtime publication.
+`get_character_status(target_id)` beräknar effektiv plats och `max_sea_distance` mot
+databastid och returnerar aktuell ankomstdeadline, Hospital-deadline, `observed_at`
+och betraktarspecifik `can_attack_here`. Den senare tillämpar samma plats- och
+scoutingvillkor som stridsstart utan att exponera andras privata resestatus.
+En offlinekapten får därför rätt rekord och plats vid ankomst utan egen serverkontakt.
+Den äldre `get_hospital_status` finns kvar för kompatibilitet.
 
-## Future additions
+Klienten prenumererar på profil- och patientändringar. Den serialiserade pollern
+hämtar ny status vid deadlines, fokus, återanslutning och reservkontroll.
+Misslyckad uppdatering visas med Retry och blockerar Attack tills status kan verifieras.
+Plats används aldrig för att påstå att spelaren är online.
 
-Portrait uploads, biographies, messaging, trading, equipment, achievements and
-additional visible statistics can be designed separately. Combat interactions
-are implemented as described in [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md).
-
-## Local database
-
-The sixth migration, `20260915222700_add_character_profiles.sql`, creates the
-read model and its synchronization trigger. It is applied locally without
-resetting or replacing character data.
+[Resor](SEA_TRAVEL.md), [strid](COMBAT_SYSTEM.md), [Hospital](HOSPITAL.md) och
+[verifiering](IMPLEMENTATION_STATUS.md) beskriver de anslutna funktionerna.

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import { useActionState } from "react";
 import { saveDefence } from "@/app/combat-actions";
 import { useGameState } from "@/components/game-state";
@@ -8,7 +8,7 @@ import { useGameState } from "@/components/game-state";
 export function DefenceOrders() {
   const state = useGameState();
   const [result, action, pending] = useActionState(saveDefence, {});
-  const blocked = pending || !!state.hospital_until;
+  const blocked = pending || !!state.active_combat_id || !!state.hospital_until || state.sea.state !== "in_harbor";
   return <section className="o-defence" aria-labelledby="defence-heading">
     <div className="o-section-bar"><h2 id="defence-heading">Defence orders</h2><span>Used while you are away</span></div>
     <form action={action}>
@@ -19,6 +19,8 @@ export function DefenceOrders() {
       </select>
       <button className="o-training-button" disabled={blocked}>{pending ? "Saving..." : "Save orders"}</button>
       <p className="o-copy">Cannon focus fires while salvos remain, then boards. Boarding focus boards immediately. Your crew attacks during boarding.</p>
+      {state.sea.state !== "in_harbor" && <p className="o-copy">Return to The Harbor to change defence orders.</p>}
+      {state.active_combat_id && <p className="o-copy">Finish your current fight before changing defence orders.</p>}
       {state.hospital_until && <p className="o-copy">Defence orders cannot be changed while in hospital.</p>}
       <p className="o-feedback" role="status">{result.message}</p>
     </form>

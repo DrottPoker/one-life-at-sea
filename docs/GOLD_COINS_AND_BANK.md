@@ -16,15 +16,16 @@ Bank finns i hamnmenyn och hamnens lista över platser. Sidan visar båda saldon
 ett beloppsfält och knapparna Deposit och Withdraw. Hela eller delar av tillgängligt
 saldo kan överföras direkt. Endast positiva heltal accepteras.
 
-Inga avgifter, ränta, väntetider eller Energykostnader. Aktiva angripares befintliga
-hamnspärr gäller även banken. Patienter i [Hospital](HOSPITAL.md) kan varken sätta in
-eller ta ut pengar. En försvarare kan använda banken tills hen besegras. Sjukhusvistelse
-ändrar inte något av guldsaldona.
+Inga avgifter, ränta, väntetider eller Energykostnader. Både aktiva angripare och
+försvarare spärras från överföringar. Försvarare kan fortfarande läsa sina saldon;
+öppna formulär låses när attacken börjar. Patienter i [Hospital](HOSPITAL.md) kan varken
+sätta in eller ta ut pengar. Sjukhusvistelse ändrar inte något av guldsaldona.
 
-Items, material, consumables och nya sätt att tjäna pengar ingår inte i detta steg.
-Marketplace är fortsatt en platshållare. Kommande köp måste kontrollera och debitera
-gold_coins i en databastransaktion; de får aldrig summera in bank_gold_coins eller
-automatiskt ta pengar från banken.
+På [Marketplace](MARKETPLACE.md) används enbart burna Gold Coins. Ett köp debiterar
+köparens gold_coins och krediterar säljarens gold_coins efter 5 % försäljningsavgift.
+Avgiften räknas på en listings sammanlagda försäljning, avrundat nedåt, så delade
+köp inte ändrar totalavgiften. Pengar, items och kvitto sparas atomiskt. Varken
+bank_gold_coins eller Energy debiteras för köp, publicering eller återtagning.
 
 ## Beständighet och transaktioner
 
@@ -62,3 +63,13 @@ Den genererade gameplaymigrationen är 20260919010900_central_gameplay_config_6f
 Historiska migrationer och befintliga karaktärer har bevarats.
 
 Verifieringsresultat finns i [IMPLEMENTATION_STATUS](IMPLEMENTATION_STATUS.md).
+
+Banken kräver hamnposition. Under hela [havsvistelsen](SEA_TRAVEL.md), inklusive
+ut- och hemresa, är både insättning och uttag spärrade även via RPC.
+
+## Beständiga återförsök
+
+Ekonomihandlingar sparar request-ID före anropet och kan återhämtas efter
+omladdning eller navigation. Olösta handlingar visas som **Unconfirmed action**
+och kontrolleras med **Check saved action**. Samma karaktär måste vara inloggad.
+Se [ekonomigranskningen](ECONOMY_AUDIT.md) för skydd, tester och avgränsning.

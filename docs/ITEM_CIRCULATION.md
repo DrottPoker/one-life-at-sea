@@ -34,12 +34,15 @@ private.item_circulation innehåller total, initial_total, tracked_since och upd
 per itemdefinition. private.item_circulation_history sparar en slutlig observation
 per itemdefinition och databastransaktion. Ägaridentiteter finns inte i historiken.
 
-Statement-triggers för INSERT, UPDATE och DELETE på item_stacks och item_instances
+Statement-triggers för INSERT, UPDATE och DELETE på item_stacks, item_instances och
+marknadens återstående lager i market_listings
 summerar delta och behandlar item-ID:n i sorterad ordning. Räknare och historik ändras
 i samma transaktion som innehavet. Misslyckade handlingar och rollbacks lämnar ingen
 ändring. Ett idempotent Trash-återförsök skriver ingen ny ändring.
 
-Ägar- eller statändringar påverkar inte antalet. Kontoraderingens kaskader minskar
+Ägar- eller statändringar påverkar inte antalet. Listning, köp och återtagning på
+[Marketplace](MARKETPLACE.md) flyttar items mellan inventory och marknadslager i
+samma transaktion och behåller totalen. Kontoraderingens kaskader minskar
 antalet. Ett nytt item i katalogen får automatiskt en nollpunkt. Framtida lager måste
 kopplas till samma cirkulationsmodell innan de kan lagra items utanför de befintliga
 innehavstabellerna. Batchoperationer över flera SQL-satser ska behålla konsekvent
@@ -72,8 +75,10 @@ innan låset släpps, så ändringar mellan migrationerna inte tappas.
 - [20260919091606_item_circulation_history.sql](../supabase/migrations/20260919091606_item_circulation_history.sql)
 - [20260919091933_central_gameplay_config_ad98e4868b86.sql](../supabase/migrations/20260919091933_central_gameplay_config_ad98e4868b86.sql)
 - [gameplay.sql](../supabase/templates/gameplay.sql) är fortsatt källan för funktionerna.
-- [circulation.ts](../src/lib/circulation.ts) innehåller typer och diagramberäkningar.
-- [item-circulation-chart.tsx](../src/components/item-circulation-chart.tsx) hämtar och visar historiken.
+- [circulation.ts](../src/lib/circulation.ts) behåller cirkulationens publika typer och hjälpfunktioner.
+- [item-history.ts](../src/lib/item-history.ts) innehåller den gemensamma diagramgeometrin.
+- [item-history-chart.tsx](../src/components/item-history-chart.tsx) hämtar och visar både Circ och
+  [marknadsvärdets historik](ITEM_MARKET_VALUE.md). Value ligger till vänster om Circ i detaljerna.
 
 Triggrarnas beteende följer [PostgreSQL CREATE TRIGGER](https://www.postgresql.org/docs/current/sql-createtrigger.html)
 och [Supabase Postgres Triggers](https://supabase.com/docs/guides/database/postgres/triggers).

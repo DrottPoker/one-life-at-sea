@@ -1,72 +1,50 @@
-> Config 2026-09-17: justerbara värden har sin källa i [config/gameplay.json](../config/gameplay.json). Värdena nedan beskriver nuvarande standardbalans. Se [konfigurationsguiden](CONFIGURATION.md) för hur ändringar appliceras.
-
 # Hamnens spelarlista
 
-Datum: 2026-09-15.
+Uppdaterat 2026-09-20. Balans kommer från [gameplayconfig](../config/gameplay.json).
 
 ## Beteende
 
-The Harbor visar en panel med kaptener som har platsen `the_harbor`.
-Även utloggade spelare ingår. Listan visar karaktärsnamn, markerar den egna
-karaktären med **You** och visar det totala antalet kaptener.
+The Harbor visar kaptener som är i hamnen, även utloggade spelare. Namn sorteras
+alfabetiskt med 20 per sida. Den egna kaptenen markeras med **You**. Antal och
+sidindelning beräknas på hela listan; tomma sista sidor begränsas till en giltig sida.
 
-Namnen sorteras alfabetiskt och visas med 20 per sida. Sidindelningen omfattar
-hela hamnen, även om den innehåller fler spelare än Data API:s vanliga radgräns.
-En tom eller borttagen sista sida flyttas automatiskt till en giltig sida.
+Kaptenen lämnar listan vid avfärd och återkommer vid hemresans deadline.
+Det kräver inte att resenären loggar in. Det är plats, inte onlinestatus, som
+avgör medlemskapet. Se [resesystemet](SEA_TRAVEL.md).
 
-Detta är en lista över karaktärernas plats, inte en lista över öppna
-webbläsarflikar eller spelare som är online just nu. Alla karaktärer börjar
-fortfarande i hamnen; resor och byte av plats har ännu inget spelargränssnitt.
+## Serverprojektion och åtkomst
 
-## Realtidsuppdatering
+`public.harbor_players` innehåller `character_id`, `display_name` och
+`arrives_at`. Ankomst är null för en färdigställd hamnposition, annars
+hemresans deadline. En framtida ankomst döljs av RLS.
 
-Supabase Realtime skickar Postgres Changes via WebSocket när hamnlistan ändras.
-Den öppna sidan hämtar då aktuell sida och antal från databasen utan omladdning.
+Endast registrerade konton kan läsa. Klienter kan inte skriva listan.
+Kontokoppling, stats, resurser och privata resor publiceras inte.
+Serverns trigger synkroniserar namn, plats och planerad hemkomst. En främmande
+nyckel tar bort posten om karaktären raderas. Oförändrade publika värden
+skriver inte om projektionen vid träning eller andra resursändringar.
 
-En första lista renderas på servern. Webbläsaren prenumererar och hämtar sedan
-en ny ögonblicksbild för att fånga ändringar som skett under anslutningen.
-Klienten inväntar inloggningssessionen före anslutning och bekräftad
-databasprenumeration innan statusen Live visas. Fel i en ändringshändelse visas
-som pausade uppdateringar.
-När anslutningen återkommer eller sidan återfår fokus hämtas listan igen.
-Förfrågningar körs i ordning och upprepade ändringssignaler samlas ihop.
-Det förhindrar att en gammal hämtning skriver över en nyare lista.
+`list_harbor_players(requested_page)` är en security-invoker RPC med RLS.
+Namn, antal och sida läses med samma databasögonblick och tidsvillkor.
+`observed_at` anger databastid. `next_arrival_at` hämtar nästa planerade
+hemkomst från den minimala profilprojektionen.
 
-Panelen visar anslutningsstatus och en Retry-knapp vid problem. Den senaste
-hämtade listan finns kvar, men markeras som möjlig att vara inaktuell.
-Vanliga uppdateringar drivs av databasens händelser, utan återkommande polling.
+## Öppen lista
 
-## Datagräns
+Servern renderar första sidan. Klienten prenumererar på `harbor_players` och
+`character_profiles`, som aviserar nya hemresor innan deras dolda listpost
+är läsbar. Cookiebaserad Realtimeautentisering och bekräftad prenumeration
+krävs innan statusen Live visas.
 
-`public.harbor_players` innehåller endast:
+Den gemensamma snapshot-pollern samlar signaler och serialiserar hämtning.
+Nästa hemkomst, reservkontroll, fokus och återanslutning uppdaterar listan
+även om ingen ny databasskrivning sker vid deadline. Sista fungerande snapshot
+behålls vid fel och markeras tillsammans med Retry.
 
-- `character_id`: karaktärens offentliga identifierare.
-- `display_name`: karaktärens namn.
+## Verifiering
 
-Den privata karaktärstabellen och dess kontokoppling, stats och resurser
-publiceras inte till Realtime. Bara registrerade konton har läsbehörighet till
-hamnlistan. Anonyma anrop saknar behörighet; klienter kan inte skriva listan.
+Databastester verifierar publik datagräns, RLS, sidindelning och offlinehemkomst.
+Webbläsartestet genomför riktiga resekommandon, kontrollerar Realtimefält och
+återhämtning efter nätavbrott samt mobilbredder. Egna lokala testkonton städas.
 
-En privat databastrigger följer nya karaktärer och serverns ändringar av namn
-eller plats. Främmande nyckel med cascade tar bort listposten när karaktären tas
-bort. Träning och energiändringar skriver inte om hamnlistan. Äldre karaktärer
-fylldes i när migrationen applicerades, utan ändring av deras speldata.
-
-`list_harbor_players(requested_page)` kör med anroparens behörighet och RLS.
-Sida, totalt antal och namn hämtas ur samma databasögonblicksbild. Databasen
-begränsar sidstorleken och hanterar ogiltiga sidnummer.
-
-## Lokal drift och verifiering
-
-Realtime är aktiverat i `supabase/config.toml`. En redan startad lokal miljö
-behöver startas om med `supabase stop` följt av `supabase start` när denna
-konfiguration ändras. Använd inte `--no-backup` eller databasåterställning.
-
-Migration: `20260915195100_add_harbor_roster.sql`.
-
-Tester och utförda kontroller redovisas i
-[implementationsstatus](IMPLEMENTATION_STATUS.md). Webbläsartestet använder
-isolerade lokala konton och återställer sina testposter efter körningen.
-
-Teknisk referens:
-[Supabase Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes).
+Aktuella resultat finns i [implementationsstatus](IMPLEMENTATION_STATUS.md).

@@ -65,7 +65,7 @@ test("registration creates the character and returns to the same harbor after lo
   const image = page.getByRole("img");
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
   await page.getByRole("navigation", { name: "Harbor locations" }).getByRole("link", { name: "Marketplace" }).click();
-  await expect(page.getByRole("heading", { name: "The market is not open yet." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Most Popular", exact: true })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Harbor locations" }).getByRole("link", { name: "Marketplace" })).toHaveAttribute("aria-current", "page");
   await page.getByRole("navigation", { name: "Harbor locations" }).getByRole("link", { name: "Shipyard" }).click();
   await expect(page.getByRole("heading", { name: "The shipwright is not taking orders." })).toBeVisible();

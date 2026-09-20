@@ -55,6 +55,12 @@ begin
   if exists(select 1 from public.characters where id=captain_id and hospital_until is not null) then
     raise exception 'IN_HOSPITAL' using errcode='P0001';
   end if;
+  if exists(select 1 from private.combat_engagements where character_id=captain_id) then
+    raise exception 'IN_COMBAT' using errcode='P0001';
+  end if;
+  if exists(select 1 from public.characters where id=captain_id and location<>'the_harbor') then
+    raise exception 'NOT_IN_HARBOR' using errcode='P0001';
+  end if;
 end;
 $$;
 
@@ -105,6 +111,7 @@ begin
   end loop;
   for captain_id in select distinct id from unnest(captain_ids) id where id is not null order by id loop
     perform private.settle_hospital(captain_id,clock_timestamp());
+    perform private.settle_sea_travel(captain_id,clock_timestamp());
   end loop;
 end;
 $$;
@@ -125,7 +132,7 @@ $$;
 
 create or replace function public.get_navigation_lock()
 returns jsonb language sql volatile security invoker set search_path='' as $$
-  select jsonb_build_object('attack',s->'active_attack','hospital_until',s->'hospital_until')
+  select jsonb_build_object('attack',s->'active_attack','hospital_until',s->'hospital_until','sea_state',s#>>'{sea,state}')
   from (select public.get_game_state() s) state;
 $$;
 revoke all on function public.get_navigation_lock() from public,anon,authenticated;

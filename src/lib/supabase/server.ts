@@ -1,10 +1,12 @@
 import "server-only";
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseConfig } from "@/lib/env";
 import type { Database } from "@/lib/database.types";
 
-export async function createClient() {
+// Reuse only within the current server render, never across player requests.
+export const createClient = cache(async () => {
   const config = getSupabaseConfig();
   if (!config) throw new Error("Supabase is not configured.");
   const store = await cookies();
@@ -21,4 +23,4 @@ export async function createClient() {
       },
     },
   });
-}
+});

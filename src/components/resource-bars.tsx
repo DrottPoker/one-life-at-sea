@@ -1,6 +1,6 @@
 "use client";
 
-import { gameplay, durationLabel } from "@/config/public";
+import { gameplay, frontend, durationLabel } from "@/config/public";
 
 
 import { Coins } from "lucide-react";
@@ -26,7 +26,8 @@ export function ResourceBars() {
         <span style={{ width: (resource.value / resource.max * 100) + "%" }} />
       </div>
     </div>)}
-      <p className="o-resource-note">Energy: +{gameplay.resources.energyRecoveryAmount} every {durationLabel(gameplay.resources.energyRecoverySeconds)}</p>
+      <p className="o-resource-note">Energy: +{gameplay.resources.energyRecoveryAmount} every {durationLabel(gameplay.resources.energyRecoverySeconds * (state.sea.state === "in_harbor" ? 1 : 2))} on the server clock.</p>
+      {state.energy_next_at && <p className="o-resource-note">Next Energy tick: <time aria-label="Next Energy tick" dateTime={state.energy_next_at}>{new Date(state.energy_next_at).toLocaleTimeString(frontend.site.locale, { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: frontend.site.logTimeZone })} {frontend.site.logTimeZone}</time></p>}
       {state.hospital_until && <p className="o-resource-note">In hospital. Game actions are locked until discharge.</p>}
       {state.health_next_at && <p className="o-resource-note">Recovering: ship +1 / {gameplay.resources.shipRecoverySeconds}s, crew +1 / {gameplay.resources.crewRecoverySeconds}s</p>}
       {state.protected_until && <p className="o-resource-note">Protected from attacks. Starting a fight ends protection.</p>}

@@ -27,18 +27,18 @@ export const characterForUser = cache(async (userId: string) => {
   return data;
 });
 
-export async function requireCharacter({ allowHospital = false }: { allowHospital?: boolean } = {}) {
+export async function requireCharacter({ allowHospital = false, allowSea = false }: { allowHospital?: boolean; allowSea?: boolean } = {}) {
   const user = await requireUser();
-  await assertGameplayRevision();
-  const character = await characterForUser(user.id);
+  const [, character] = await Promise.all([assertGameplayRevision(), characterForUser(user.id)]);
   if (!character) redirect("/create-character");
-  if (!allowHospital && (await gameStateForPlayer()).hospital_until) redirect("/harbor/hospital");
+  const state = await gameStateForPlayer();
+  if (!allowHospital && state.hospital_until) redirect("/harbor/hospital");
+  if (!allowSea && state.sea.state !== "in_harbor") redirect("/sea");
   return character;
 }
 
 export const gameStateForPlayer = cache(async () => {
-  await requireUser();
-  await assertGameplayRevision();
+  await Promise.all([requireUser(), assertGameplayRevision()]);
   const supabase = await createClient();
   const { data, error } = await withDatabaseRetry(() => supabase.rpc("get_game_state"));
   if (error || !data) throw new Error("Your resources could not be loaded. Please try again.");

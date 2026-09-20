@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
-import { requireUser, characterForUser } from "@/lib/player";
+import { requireUser, characterForUser, gameStateForPlayer } from "@/lib/player";
 
 export default async function Home() {
   const user = await requireUser();
-  redirect(await characterForUser(user.id) ? "/harbor" : "/create-character");
+  if (!await characterForUser(user.id)) redirect("/create-character");
+  redirect((await gameStateForPlayer()).sea.state === "in_harbor" ? "/harbor" : "/sea");
 }

@@ -31,8 +31,6 @@ begin
       'gold_coins',previous.gold_coins,'bank_gold_coins',previous.bank_gold_coins);
   end if;
   perform private.assert_can_act(viewer_id);
-  if exists(select 1 from private.combat_engagements where character_id=viewer_id and role='attacker') then
-    raise exception 'IN_COMBAT' using errcode='P0001'; end if;
   select * into captain from public.characters where id=viewer_id for update;
   if captain.location <> 'the_harbor' then raise exception 'NOT_IN_HARBOR' using errcode='P0001'; end if;
   if direction='deposit' then

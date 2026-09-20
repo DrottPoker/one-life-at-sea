@@ -1,3 +1,28 @@
+-- Settle the old recovery model once before replacing its pause metadata.
+do $energy_cutover$
+declare captain record; cutover_at timestamptz;
+begin
+  if exists(select 1 from information_schema.columns where table_schema='public'
+    and table_name='characters' and column_name='energy_paused_at') then
+    lock table public.characters in access exclusive mode;
+    cutover_at:=clock_timestamp();
+    for captain in select id from public.characters where location='traveling' and travel_arrives_at<=cutover_at loop
+      perform private.settle_sea_travel(captain.id,cutover_at);
+    end loop;
+    update public.characters c set energy=e.energy,energy_updated_at=cutover_at
+      from (select p.id,r.energy from public.characters p
+        cross join lateral private.character_energy_snapshot(p,cutover_at) r) e where c.id=e.id;
+    drop trigger characters_guard_sea_resources on public.characters;
+    alter table public.characters drop constraint characters_sea_state_check;
+    alter table public.characters drop column energy_paused_at;
+    alter table public.characters add constraint characters_sea_state_check check(
+      (location='the_harbor' and sea_step=0 and sea_visit_id is null and sea_place_id is null and sea_place_name is null)
+      or (location='open_sea' and sea_step>0 and sea_visit_id is not null and sea_place_id is not null and sea_place_name is not null)
+      or (location='traveling' and sea_place_id is null and sea_place_name is null));
+  end if;
+end;
+$energy_cutover$;
+
 -- Canonical function bodies; scalar config tokens are substituted by config tooling.
 -- Existing rows and reports are preserved; incompatible lower caps abort migration.
 alter table public.characters
@@ -28,20 +53,20 @@ alter table private.combat_participants
   drop constraint combat_participants_defender_ammo_check,
   add constraint combat_participants_defender_ammo_check check(defender_ammo>=0);
 
-create or replace function private.energy_snapshot(stored_energy integer, anchor timestamptz, observed_at timestamptz)
-returns table (energy integer, energy_updated_at timestamptz)
-language sql immutable strict security invoker set search_path = ''
-as $$
-  with elapsed as (
-    select greatest(0, floor(extract(epoch from (observed_at - anchor)) / {{gameplay.resources.energyRecoverySeconds}})) as intervals
-  ), recovery as (
-    select intervals, least({{gameplay.resources.energyMax}} - stored_energy,
-      intervals * {{gameplay.resources.energyRecoveryAmount}})::integer as gained from elapsed
-  )
-  select stored_energy + gained,
-    case when stored_energy + gained = {{gameplay.resources.energyMax}} then observed_at
-      else anchor + intervals * make_interval(secs => {{gameplay.resources.energyRecoverySeconds}}) end
-  from recovery;
+-- Count fixed UTC boundaries, never a timer started by the player's last action.
+create or replace function private.energy_tick_snapshot(stored_energy integer,anchor timestamptz,observed_at timestamptz,tick_seconds bigint)
+returns table(energy integer,energy_updated_at timestamptz)
+language sql immutable strict security invoker set search_path='' as $$
+  select least({{gameplay.resources.energyMax}},stored_energy+greatest(0,
+    floor(extract(epoch from observed_at)/tick_seconds)-floor(extract(epoch from anchor)/tick_seconds))
+    *{{gameplay.resources.energyRecoveryAmount}})::integer,greatest(anchor,observed_at);
+$$;
+revoke all on function private.energy_tick_snapshot(integer,timestamptz,timestamptz,bigint) from public,anon,authenticated;
+
+create or replace function private.energy_snapshot(stored_energy integer,anchor timestamptz,observed_at timestamptz)
+returns table(energy integer,energy_updated_at timestamptz)
+language sql immutable strict security invoker set search_path='' as $$
+  select * from private.energy_tick_snapshot(stored_energy,anchor,observed_at,{{gameplay.resources.energyRecoverySeconds}});
 $$;
 
 create or replace function private.health_snapshot(value integer, anchor timestamptz, observed_at timestamptz, seconds integer)
@@ -50,3 +75,20 @@ as $$
   select least({{gameplay.resources.healthMax}}, value + least({{gameplay.resources.healthMax}}, greatest(0, floor(extract(epoch from (observed_at - anchor)) / seconds)))::integer);
 $$;
 
+-- An overdue return changes the rate at arrival, including a tick exactly at arrival.
+create or replace function private.character_energy_snapshot(c public.characters,observed_at timestamptz)
+returns table(energy integer,energy_updated_at timestamptz)
+language plpgsql stable security invoker set search_path='' as $$
+declare recovered record;
+begin
+  if c.location='traveling' and c.travel_kind='return' and c.travel_arrives_at<=observed_at then
+    select * into recovered from private.energy_tick_snapshot(c.energy,c.energy_updated_at,
+      greatest(c.energy_updated_at,c.travel_arrives_at-interval '1 microsecond'),{{gameplay.resources.energyRecoverySeconds}}::bigint*2);
+    return query select * from private.energy_snapshot(recovered.energy,recovered.energy_updated_at,observed_at);
+  else
+    return query select * from private.energy_tick_snapshot(c.energy,c.energy_updated_at,observed_at,
+      {{gameplay.resources.energyRecoverySeconds}}::bigint*case when c.location='the_harbor' then 1 else 2 end);
+  end if;
+end;
+$$;
+revoke all on function private.character_energy_snapshot(public.characters,timestamptz) from public,anon,authenticated;

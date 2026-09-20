@@ -73,7 +73,7 @@ De ska skiljas från besluten ovan och hållas justerbara.
 | Bufftid | Verklig tid från aktivering; utloggning, strid och sidbyte pausar inte tiden. |
 | Workshopbyte | Tillåtet under pågående arbete. Den nya workshopen gäller nästa arbete. |
 | Arbetskö | Ingen avbrytning, automatisk upprepning eller kö i första versionen. Kostnad, utbyte och sluttid visas före start. |
-| Strid | Befintlig spärr för aktiva angripares manuella träning gäller även jobbstart, köp och buffaktivering. Redan startat arbete fortsätter. Försvarare använder hamnen som idag. |
+| Strid | Spärren gäller aktiva angripare och försvarare för manuell träning, jobbstart, köp och framtida buffaktivering. Redan startat arbete fortsätter. Försvarare kan läsa hamnens sidor. |
 | Befintliga kaptener | Behåll stats, resurser och stridshistorik. Nya XP-spår börjar på 0 med första övningen/workshopen ägd. |
 
 Arbetstider och XP-takt är startförslag, inte färdig balans. Workshopens nivå

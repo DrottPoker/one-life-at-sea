@@ -216,7 +216,7 @@ create or replace function private.get_combat_preview(target_id uuid)
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); a public.characters%rowtype; d public.characters%rowtype;
   own_engagement private.combat_engagements%rowtype; target_engagement private.combat_engagements%rowtype;
-  a_snapshot jsonb; d_snapshot jsonb; energy_now integer; reason text; observed_at timestamptz;
+  a_snapshot jsonb; d_snapshot jsonb; energy_now integer; reason text; location_error text; observed_at timestamptz;
 begin
   if target_id is null then return jsonb_build_object('error','CHARACTER_NOT_FOUND'); end if;
   perform private.settle_combat_context(array[viewer_id,target_id]);
@@ -232,9 +232,11 @@ begin
   d_snapshot:=private.combat_snapshot(d,observed_at);
   if own_engagement.character_id is not null then a_snapshot:=a_snapshot || jsonb_build_object('ship_health',a.ship_health,'crew_health',a.crew_health); end if;
   if target_engagement.character_id is not null then d_snapshot:=d_snapshot || jsonb_build_object('ship_health',d.ship_health,'crew_health',d.crew_health); end if;
-  select energy into energy_now from private.energy_snapshot(a.energy,a.energy_updated_at,observed_at);
+  select energy into energy_now from private.character_energy_snapshot(a,observed_at);
+  location_error:=private.combat_location_error(a,d,observed_at);
   reason:=case when a.hospital_until is not null then 'IN_HOSPITAL'
     when d.hospital_until is not null then 'TARGET_IN_HOSPITAL'
+    when location_error is not null then location_error
     when viewer_id=target_id then 'SELF_ATTACK'
     when own_engagement.role='attacker' then 'IN_COMBAT'
     when own_engagement.role='defender' then 'DEFENDING'
@@ -274,7 +276,7 @@ begin
   perform private.settle_ship_upgrade(target_id,observed_at);
   select * into a from public.characters where id=viewer_id;
   select * into d from public.characters where id=target_id;
-  select * into recovered from private.energy_snapshot(a.energy,a.energy_updated_at,observed_at);
+  select * into recovered from private.character_energy_snapshot(a,observed_at);
   snapshot:=private.combat_snapshot(a,observed_at);
   battle_id:=(preview->>'join_combat_id')::uuid; joining:=battle_id is not null;
   if not joining then
@@ -319,7 +321,8 @@ begin
     return jsonb_build_object('battle',private.combat_view(battle_id,viewer_id));
   end if;
   if b.status='completed' or p.status<>'active' then return jsonb_build_object('battle',private.combat_view(battle_id,viewer_id)); end if;
-  perform private.assert_can_act(viewer_id);
+  if exists(select 1 from public.characters where id=viewer_id and hospital_until is not null) then raise exception 'IN_HOSPITAL'; end if;
+  if exists(select 1 from public.characters where id=viewer_id and location='traveling') then raise exception 'TRAVELING'; end if;
   if p.round<>expected_round then return jsonb_build_object('error','STALE_ROUND'); end if;
   if player_order is null or (p.phase='sea' and player_order not in ('fire','board','retreat'))
     or (p.phase='boarding' and player_order not in ('crew_attack','disengage','retreat')) then return jsonb_build_object('error','INVALID_ORDER'); end if;

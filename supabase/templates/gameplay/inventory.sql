@@ -26,7 +26,7 @@ begin
   ), bounds as (
     select count(*) total,least(requested_page,greatest(0,(count(*)-1)/page_size))::integer page from matching
   ), items as (
-    select m.*,c.total::text circulation from matching m
+    select m.*,c.total::text circulation,private.item_market_value_at(m.item_id,statement_timestamp())::text market_value from matching m
       join private.item_circulation c on c.item_id=m.item_id
       order by lower(m.name) collate "C",m.item_id,m.id,m.entry_type
       limit page_size offset (select page::bigint*page_size from bounds)
@@ -75,8 +75,6 @@ begin
     return previous.result;
   end if;
   perform private.assert_can_act(viewer_id);
-  if exists(select 1 from private.combat_engagements where character_id=viewer_id and role='attacker') then
-    raise exception 'IN_COMBAT' using errcode='P0001'; end if;
   if entry_type='stack' then
     select * into stack from private.item_stacks s where s.id=entry_id and s.character_id=viewer_id for update;
     if not found then raise exception 'ITEM_NOT_FOUND' using errcode='P0001'; end if;

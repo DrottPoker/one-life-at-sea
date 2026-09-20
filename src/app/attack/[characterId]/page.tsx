@@ -14,12 +14,14 @@ export const metadata = { title: "Attacking" };
 export default async function AttackPage({ params }: { params: Promise<{ characterId: string }> }) {
   const { characterId } = await params;
   if (!isUuid(characterId)) notFound();
-  const character = await requireCharacter();
+  const character = await requireCharacter({ allowSea: true });
   const state = await gameStateForPlayer();
   if (state.active_attack && characterId !== state.active_attack.target_id) {
     redirect(attackUrl(state.active_attack.target_id));
   }
-  if (characterId === character.id) redirect("/harbor");
+  const backUrl = state.sea.state === "in_harbor" ? "/harbor" : "/sea";
+  const backLabel = state.sea.state === "in_harbor" ? "The Harbor" : "At Sea";
+  if (characterId === character.id) redirect(backUrl);
   const client = await createClient();
   let battle: Battle | null = null;
   const battleId = state.active_attack?.battle_id ?? state.last_combat_id;
@@ -38,7 +40,7 @@ export default async function AttackPage({ params }: { params: Promise<{ charact
   return <GameStateProvider state={state}><main id="main" className="o-attack-main">
     <header className="o-attack-heading"><div><span className="o-attack-brand">{frontend.site.name.toUpperCase()}</span><h1>Attacking</h1></div>
       <div><span>Energy <strong>{state.energy} / {gameplay.resources.energyMax}</strong></span>
-        {!state.active_attack && <Link href="/harbor">Back to The Harbor</Link>}
+        {!state.active_attack && <Link href={backUrl}>Back to {backLabel}</Link>}
       </div></header>
     <AttackSession battle={battle} preview={preview} key={characterId} />
   </main></GameStateProvider>;

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import { requireCharacter } from "@/lib/player";
 import { Panel } from "@/components/shell";
 import { ShipUpgradePanel } from "@/components/ship-upgrade-panel";

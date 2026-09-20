@@ -14,10 +14,11 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const user = await currentUser();
-  const isAdmin = user ? await currentUserIsAdmin() : false;
-  const character = user ? await characterForUser(user.id) : null;
+  const [isAdmin, character] = user
+    ? await Promise.all([currentUserIsAdmin(), characterForUser(user.id)])
+    : [false, null] as const;
   const state = character ? await gameStateForPlayer() : null;
   return <html lang={frontend.site.language}><body><a href="#main" className="skip-link">Skip to content</a>
-    <AppFrame isAdmin={isAdmin} hospitalUntil={state?.hospital_until ?? null} characterId={character?.id ?? null} attack={state?.active_attack ?? null}>{children}</AppFrame>
+    <AppFrame seaState={state?.sea.state ?? null} isAdmin={isAdmin} hospitalUntil={state?.hospital_until ?? null} characterId={character?.id ?? null} attack={state?.active_attack ?? null}>{children}</AppFrame>
   </body></html>;
 }

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Package } from "lucide-react";
 import type { InventoryEntry } from "@/lib/inventory";
 
-export function ItemImage({ item, large = false }: { item: InventoryEntry; large?: boolean }) {
+export function ItemImage({ item, large = false }: { item: Pick<InventoryEntry, "name" | "image_path">; large?: boolean }) {
   const [failed, setFailed] = useState(false);
   return <span className={large ? "o-item-art" : "o-item-thumb"}>
     {failed ? <Package aria-label="Item image unavailable" role="img" /> :

@@ -1,3 +1,5 @@
+import type { ItemHistory, ItemHistoryPeriod } from "@/lib/item-history";
+import type { MarketItem, MarketListing, MarketPage, MarketReceipt, SaleEntry } from "@/lib/marketplace";
 import type { AdminResource, AdminPage, AdminPayload, AdminReceipt } from "@/lib/admin";
 import type { CirculationHistory, CirculationPeriod } from "@/lib/circulation";
 import type { InventoryEntryType, InventoryPage, TrashReceipt } from "@/lib/inventory";
@@ -8,12 +10,29 @@ import type { HarborPlayer, HarborRoster } from "@/lib/harbor";
 import type { GameState, TrainingGroup, Stat } from "@/lib/game";
 import type { AttackLock, CombatLog, Battle, CombatPreview, CombatResponse, CombatError, DefenceOrder, CombatOrder } from "@/lib/combat";
 
+import type { ScoutReceipt, ScoutPage } from "@/lib/sea-scouting";
+import type { CharacterStatus, TravelReceipt } from "@/lib/sea-travel";
+import type { NavigationLock } from "@/lib/game-navigation";
+
 export type Character = {
   id: string;
   user_id: string;
   display_name: string;
   name_key: string;
-  location: "the_harbor";
+  location: "the_harbor" | "open_sea" | "traveling";
+  sea_step: number;
+  max_sea_distance: number;
+  sea_version: string;
+  sea_visit_id: string | null;
+  sea_place_id: string | null;
+  sea_place_name: string | null;
+  travel_id: string | null;
+  travel_kind: "depart" | "onward" | "return" | null;
+  travel_target_step: number | null;
+  travel_place_id: string | null;
+  travel_place_name: string | null;
+  travel_started_at: string | null;
+  travel_arrives_at: string | null;
   created_at: string;
   energy_updated_at: string;
   ship_recovery_at: string;
@@ -34,10 +53,11 @@ export type CharacterProfile = { character_id: string } & Pick<Character, "displ
 export type Database = {
   public: {
     Tables: {
+      market_item_events: { Row: { item_id: string; revision: number }; Insert: never; Update: never; Relationships: [] };
       hospital_patients: { Row: HospitalPatient; Insert: never; Update: never; Relationships: [] };
       player_game_events: { Row: { character_id: string; revision: number }; Insert: never; Update: never; Relationships: [] };
-      character_profiles: { Row: CharacterProfile; Insert: never; Update: never; Relationships: [] };
-      harbor_players: { Row: HarborPlayer; Insert: never; Update: never; Relationships: [] };
+      character_profiles: { Row: CharacterProfile & { max_sea_distance: number; arrival_max_sea_distance: number | null; arrives_at: string | null; arrival_location: "the_harbor" | "open_sea" | null }; Insert: never; Update: never; Relationships: [] };
+      harbor_players: { Row: HarborPlayer & { arrives_at: string | null }; Insert: never; Update: never; Relationships: [] };
       characters: {
         Row: Character;
         Insert: { display_name: string };
@@ -47,11 +67,24 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      list_market_items: { Args: { category_id?: string; search_term?: string; requested_page?: number }; Returns: MarketPage<MarketItem> };
+      list_market_listings: { Args: { target_item?: string; own_only?: boolean; requested_page?: number }; Returns: MarketPage<MarketListing> };
+      list_market_inventory: { Args: { category_id?: string; search_term?: string; requested_page?: number }; Returns: InventoryPage };
+      create_market_listings: { Args: { entries: SaleEntry[]; request_id: string }; Returns: MarketReceipt };
+      buy_market_listing: { Args: { listing_id: string; quantity: number; expected_unit_price: number; request_id: string }; Returns: MarketReceipt };
+      cancel_market_listing: { Args: { listing_id: string; request_id: string }; Returns: MarketReceipt };
+      scout_nearby_ships: { Args: { expected_version: string; request_id: string }; Returns: ScoutReceipt };
+      get_sea_scout: { Args: { requested_page?: number }; Returns: ScoutPage | null };
+      depart_harbor: { Args: { expected_version: string; request_id: string }; Returns: TravelReceipt };
+      choose_sea_route: { Args: { expected_version: string; option_id: string; request_id: string }; Returns: TravelReceipt };
+      return_to_harbor: { Args: { expected_version: string; request_id: string }; Returns: TravelReceipt };
+      get_character_status: { Args: { target_id: string }; Returns: CharacterStatus | null };
       is_admin: { Args: Record<string, never>; Returns: boolean };
       admin_catalog: { Args: Record<string, never>; Returns: AdminResource[] };
       admin_overview: { Args: Record<string, never>; Returns: Record<string, string> };
       admin_read: { Args: { resource: string; search_term?: string; requested_page?: number; filters?: Record<string, string | null> }; Returns: AdminPage };
       admin_mutate: { Args: { action: string; payload: AdminPayload; request_id: string; reason: string }; Returns: AdminReceipt };
+      get_item_market_value: { Args: { target_item: string; period?: ItemHistoryPeriod }; Returns: ItemHistory };
       get_item_circulation: { Args: { target_item: string; period?: CirculationPeriod }; Returns: CirculationHistory };
       list_inventory: { Args: { category_id?: string; search_term?: string; requested_page?: number }; Returns: InventoryPage };
       trash_inventory_item: { Args: { entry_id: string; entry_type: InventoryEntryType; quantity: number; request_id: string }; Returns: TrashReceipt };
@@ -60,7 +93,7 @@ export type Database = {
       is_character_name_available: { Args: { candidate: string }; Returns: boolean };
       list_hospital_patients: { Args: { requested_page?: number }; Returns: HospitalRoster };
       get_hospital_status: { Args: { target_id: string }; Returns: HospitalStatus };
-      get_navigation_lock: { Args: Record<string, never>; Returns: { attack: AttackLock | null; hospital_until: string | null } };
+      get_navigation_lock: { Args: Record<string, never>; Returns: NavigationLock };
       get_attack_lock: { Args: Record<string, never>; Returns: AttackLock | null };
       get_combat_log: { Args: { battle_id: string }; Returns: CombatLog | null };
       get_game_state: { Args: Record<string, never>; Returns: GameState | null };

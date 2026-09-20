@@ -241,6 +241,8 @@ test("empty inventory, server pagination, combined filters and stale final pages
 test("circulation chart shows world totals, periods, inspection, refresh and hospital access", async ({ page }) => {
   const own = await account(), other = await account();
   const numbers = new Intl.NumberFormat("en-GB");
+  let releaseRecovery = () => {};
+  const recovery = new Promise<void>(resolve => { releaseRecovery = resolve; });
   try {
     await login(page, own);
     await page.goto("/inventory");
@@ -302,14 +304,25 @@ test("circulation chart shows world totals, periods, inspection, refresh and hos
     await expect(chart.getByRole("tooltip")).toContainText("Total in circulation: " + numbers.format(expected), { timeout: 20000 });
     await details.getByRole("button", { name: "Hide circulation history for Linen Bandages", exact: true }).click();
     await expect(chart).toHaveCount(0);
-    await page.route("**/rest/v1/rpc/get_item_circulation", route => route.fulfill({
-      status: 503, contentType: "application/json", body: JSON.stringify({ code: "TEST_UNAVAILABLE", message: "Temporarily unavailable" }),
-    }));
+    let recovering = false;
+    await page.route("**/rest/v1/rpc/get_item_circulation", async route => {
+      if (!recovering) {
+        await route.fulfill({
+          status: 503, contentType: "application/json", body: JSON.stringify({ code: "TEST_UNAVAILABLE", message: "Temporarily unavailable" }),
+        });
+      } else {
+        // Background refresh must not remove Retry before the test clicks it.
+        await recovery;
+        await route.continue();
+      }
+    });
     await details.getByRole("button", { name: "Show circulation history for Linen Bandages", exact: true }).click();
     await expect(chart.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
-    await page.unroute("**/rest/v1/rpc/get_item_circulation");
+    recovering = true;
     await chart.getByRole("button", { name: "Retry", exact: true }).click();
+    releaseRecovery();
     await expect(plot).toBeVisible();
+    await page.unroute("**/rest/v1/rpc/get_item_circulation");
     sql("update public.characters set crew_health=0 where id='" + own.id + "'");
     await page.reload();
     await page.getByRole("button", { name: "Linen Bandages details", exact: true }).click();
@@ -317,7 +330,11 @@ test("circulation chart shows world totals, periods, inspection, refresh and hos
     await expect(plot).toBeVisible();
     await expect(chart.getByRole("radio", { name: "All time", exact: true })).toBeChecked();
     await expect(page.getByRole("button", { name: "Trash Linen Bandages", exact: true })).toBeDisabled();
-  } finally { await cleanup([own,other]); }
+  } finally {
+    releaseRecovery();
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+    await cleanup([own,other]);
+  }
 });
 
 for (const viewport of [{ width: 1280, height: 640 }, { width: 375, height: 740 }]) {

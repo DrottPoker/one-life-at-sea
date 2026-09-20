@@ -31,12 +31,23 @@ Länken är tillgänglig även under sjukhusvistelse.
 - Inventory kan läsas i Hospital. Trash är spärrat där. Medicinsk Use är ett
   planerat undantag när faktiska Use-effekter införs.
 - Aktiva angripare har kvar sitt navigations- och handlingslås till striden.
+  Försvarare kan läsa, söka, filtrera och inspektera items men inte ändra dem.
+  Trash och öppna bekräftelser/återförsök låses vid attackstart. Framtida Equip och Use
+  omfattas också av stridens handlingslås.
 
 [Cirkulation och historik](ITEM_CIRCULATION.md) visar världens antal per itemtyp med
 utfällbart diagram, sex perioder och datum/antal vid pekaren.
 
-Value, handel, utrustningsbonusar och faktiska consumable-effekter
-ingår inte ännu. Nuvarande stridsnamn Cutlasses och Basic cannons är fortfarande
+Handel sker genom [Marketplace](MARKETPLACE.md). Listade items tas ur inventory och
+återkommer vid avbruten listing; köpta items hamnar i köparens inventory.
+Utrustning behåller sitt exemplar-ID och sina stats. Cirkulationen är oförändrad.
+
+[Value och historik](ITEM_MARKET_VALUE.md) visar det antalsviktade snittpriset från
+genomförda köp under 12 timmar, i hela Gold Coins, till vänster om Circ.
+Saknas köp i fönstret behålls senaste Value; bara aldrig sålda items visar N/A.
+Båda använder samma diagram med sex perioder.
+
+Utrustningsbonusar och faktiska consumable-effekter ingår inte ännu. Nuvarande stridsnamn Cutlasses och Basic cannons är fortfarande
 stridsvyns grundetiketter och representerar inte utrustade inventoryexemplar.
 
 ## Datamodell och behörigheter
@@ -46,7 +57,7 @@ Fem nya tabeller ligger i private och har RLS aktiverat:
 | Tabell | Ansvar |
 | --- | --- |
 | item_categories | Kategori-ID, namn och ordning. |
-| item_definitions | Stabil itemdefinition, kategori, text, bild, typ, stackbarhet, framtida utrustningsplats och aktivflagga. |
+| item_definitions | Stabil itemdefinition, kategori, text, bild, typ, stackbarhet, framtida utrustningsplats, aktivflagga och handelsbarhet. |
 | item_stacks | Ett positivt heltalsantal per karaktär och stackbar definition. |
 | item_instances | Separat ID och sparade Damage/Accuracy-värden för varje utrustningsexemplar. |
 | inventory_requests | Privata kvitton som hindrar upprepad radering vid återförsök. |
@@ -87,7 +98,8 @@ kontrollerar unika ID:n, kategorireferenser, typer, utrustningsplatser och lokal
 Configsynk bevarar alla tidigare definitioner och deras typ/utrustningsplats.
 För att sluta erbjuda en definition sätts active till false; ägda exemplar förblir
 läsbara. Text och kategoritillhörighet kan ändras utan att skriva över individuella
-stats, mängder eller ägare.
+stats, mängder eller ägare. Flaggan tradable styr marknadens säljbarhet och
+ändrar inte möjligheten att läsa redan ägda items.
 
 - [20260919072355_inventory_foundation.sql](../supabase/migrations/20260919072355_inventory_foundation.sql)
   skapar tabeller, index och begränsningar.
@@ -134,3 +146,16 @@ finns i [itembilderna](ITEM_ART.md).
   nätverksavbrott, samtidighet, Hospital och paginering.
 
 Se [implementationsstatus](IMPLEMENTATION_STATUS.md) för genomförda kontroller.
+
+## Resor
+
+Inventory är läsbart på stillastående havsplatser. Trash och andra spelmutationer
+är spärrade utanför hamnen, även via direkta API-anrop. Under resans vänteläge
+omdirigeras inventorysidan till /sea. Se [resor](SEA_TRAVEL.md).
+
+## Beständiga återförsök
+
+Ekonomihandlingar sparar request-ID före anropet och kan återhämtas efter
+omladdning eller navigation. Olösta handlingar visas som **Unconfirmed action**
+och kontrolleras med **Check saved action**. Samma karaktär måste vara inloggad.
+Se [ekonomigranskningen](ECONOMY_AUDIT.md) för skydd, tester och avgränsning.

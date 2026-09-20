@@ -1,15 +1,14 @@
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import { notFound } from "next/navigation";
 import { requireCharacter } from "@/lib/player";
 import { Panel, HarborArt } from "@/components/shell";
 
 const places = {
-  marketplace: { title: "Marketplace", heading: "The market is not open yet.", copy: "Canvas awnings shade the stalls along the sunlit waterfront.", later: "Trading will be added in a later update." },
   shipyard: { title: "Shipyard", heading: "The shipwright is not taking orders.", copy: "The smell of timber and tar hangs over the docks.", later: "Shipyard services will be added in a later update." },
 };
 
 function placeFor(value: string) {
-  if (value !== "marketplace" && value !== "shipyard") notFound();
+  if (value !== "shipyard") notFound();
   return places[value];
 }
 

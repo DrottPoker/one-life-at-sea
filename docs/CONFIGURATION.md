@@ -1,6 +1,6 @@
 # Konfiguration och projektstruktur
 
-Uppdaterat 2026-09-17.
+Uppdaterat 2026-09-20.
 
 ## Källor och ansvar
 
@@ -61,8 +61,10 @@ gäller nya karaktärer; tidigare saldon bevaras. Karaktärens saldo och banksal
 är separata även i RPC och UI. Se [bankreglerna](GOLD_COINS_AND_BANK.md).
 
 Energy använder resources.energyRecoveryAmount (5) per resources.energyRecoverySeconds (300).
-Återhämtningen sker i hela intervall och kapas vid energyMax (100). Tidsankaret följer antalet
-intervall, inte antalet tilldelade poäng.
+Intervallet ligger på fasta UTC-gränser från Unix-epoken, gemensamma för alla kaptener.
+Till havs och under resor används dubbla intervallet (600 sekunder) med samma heltalsbelopp.
+Energy kapas vid energyMax (100). Tidsankaret anger senaste avräkning, inte en egen timer.
+Se [Energy](ENERGY_RECOVERY.md) för byte av takt, offlineankomst och migration.
 
 Hospital använder hospital.durationSeconds (300). Intagningen sparar start- och sluttid;
 ett configbyte påverkar nya vistelser, inte redan sparade sluttider. Utskrivning ger full
@@ -151,8 +153,8 @@ De exponeras inte som godtyckliga balansvärden. Nya mekaniker kräver implement
 - Enhetstester verifierar felaktiga inställningar, SQL-citering, generering, revisionsändring och synkroniserade filer.
 - De befintliga databastesterna kontrollerar den fastställda standardbalansen och behörigheterna.
 - test:config:db använder en alternativ konfiguration i en enda lokal transaktion, kontrollerar faktisk
-  skapande-/tränings-/stridslogik och gör ROLLBACK. Aktuella configfiler och sparade konton ändras inte.
-- Webbläsartester täcker registrering, träning, navigation, profiler, hamnlista, strid och inventory.
+  skapande-/tränings-/stridslogik, resor och marknadshandel och gör ROLLBACK. Aktuella configfiler och sparade konton ändras inte.
+- Webbläsartester täcker registrering, träning, navigation, profiler, hamnlista, strid, inventory, resor, scouting och marketplace.
 - Inventorys kategorier, definitioner och sidstorlek finns i gameplay.inventory. Tidigare ID:n,
   itemtyp och utrustningsplats bevaras vid synk. Avaktivera definitioner i stället för att ta bort dem.
   Ägda antal och individuella stats skrivs inte över. Se [Inventory](INVENTORY.md).
@@ -166,3 +168,34 @@ behöver dessa förväntningar uppdateras medvetet; de ersätts inte automatiskt
 inventory.historyMaxPoints styr maximalt antal interna historikpunkter (500) plus
 vänster och höger ändpunkt. Den fullständiga historiken sparas i databasen; stora
 perioder hämtar begränsade stickprov genom ett tidsindex. Se [Item Circulation](ITEM_CIRCULATION.md).
+
+### Resor till havs
+
+`seaTravel.departureEnergyCost` är 5, `outwardDurationSeconds` är 60 och
+`returnSecondsPerStep` är 60. `locationTypes` kräver minst två aktiva typer
+med unika ID:n och namn. Nuvarande katalog har fyra typer.
+Gamla typer avaktiveras vid borttagning ur config; sparade val och destinationer
+består. Ändrade tider gäller nya färder, inklusive ny hemresa från en äldre havsplats.
+Påbörjade resors sparade deadlines skrivs inte om. Konfigurationsdatabastestet
+verifierar kostnad, ut-/hemrestid, namn och bevarade pågående resor.
+
+### Marketplace
+
+`marketplace.feeBps` är 500 (5 %), `popularityHours` är 12, `valueWindowHours` är 12, `pageSize` är 30,
+`listingsPageSize` är 20 per expansion och `maxBatchSize` är 25. Avgiftssatsen sparas i varje ny
+listing och tillämpas på dess ackumulerade försäljning, avrundat nedåt. Ett senare
+configbyte påverkar inte äldre listings.
+
+Value använder `valueWindowHours` för antalsviktat snittpris från genomförda köp.
+Tomma fönster behåller senaste icke-tomma värde; endast aldrig handlade items visar N/A.
+Historiken delar `inventory.historyMaxPoints` med Circ. Ett ändrat fönster räknar
+om värden från beständiga köpdata; inga pengar eller kvitton skrivs om.
+Se [Item Market Value](ITEM_MARKET_VALUE.md).
+
+`inventory.items[].tradable` måste vara true och definitionen aktiv för nya listings
+och köp. Avaktiverat innehav finns kvar i inventory och osålda erbjudanden kan
+återtas. Add Listings filtrerar säljbarhet före `inventory.pageSize` tillämpas.
+
+Alternativtestet verifierar 10 % för nya listings, bevarade 5 % för tidigare
+listings, ett sex timmars popularitetsfönster, ett två timmars värdefönster, sidstorlekar, batchgräns och
+icke-handelsbara items. Alla teständringar rullas tillbaka. Se [Marketplace](MARKETPLACE.md).
