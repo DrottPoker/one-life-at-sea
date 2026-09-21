@@ -1,3 +1,4 @@
+import type { PlayerSearchPage } from "@/lib/player-identity";
 import type { ItemHistory, ItemHistoryPeriod } from "@/lib/item-history";
 import type { MarketItem, MarketListing, MarketPage, MarketReceipt, SaleEntry } from "@/lib/marketplace";
 import type { AdminResource, AdminPage, AdminPayload, AdminReceipt } from "@/lib/admin";
@@ -17,6 +18,7 @@ import type { NavigationLock } from "@/lib/game-navigation";
 export type Character = {
   id: string;
   user_id: string;
+  player_number: number;
   display_name: string;
   name_key: string;
   location: "the_harbor" | "open_sea" | "traveling";
@@ -48,16 +50,16 @@ export type Character = {
   protected_until: string | null;
 } & Record<`${TrainingGroup}_${Stat}`, number>;
 
-export type CharacterProfile = { character_id: string } & Pick<Character, "display_name" | "location" | "created_at">;
+export type CharacterProfile = { character_id: string } & Pick<Character, "player_number" | "display_name" | "location" | "created_at">;
 
 export type Database = {
   public: {
     Tables: {
       market_item_events: { Row: { item_id: string; revision: number }; Insert: never; Update: never; Relationships: [] };
-      hospital_patients: { Row: HospitalPatient; Insert: never; Update: never; Relationships: [] };
+      hospital_patients: { Row: Omit<HospitalPatient, "player_number">; Insert: never; Update: never; Relationships: [] };
       player_game_events: { Row: { character_id: string; revision: number }; Insert: never; Update: never; Relationships: [] };
       character_profiles: { Row: CharacterProfile & { max_sea_distance: number; arrival_max_sea_distance: number | null; arrives_at: string | null; arrival_location: "the_harbor" | "open_sea" | null }; Insert: never; Update: never; Relationships: [] };
-      harbor_players: { Row: HarborPlayer & { arrives_at: string | null }; Insert: never; Update: never; Relationships: [] };
+      harbor_players: { Row: Omit<HarborPlayer, "player_number"> & { arrives_at: string | null }; Insert: never; Update: never; Relationships: [] };
       characters: {
         Row: Character;
         Insert: { display_name: string };
@@ -67,6 +69,7 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      search_players: { Args: { search_term?: string; requested_page?: number }; Returns: PlayerSearchPage };
       list_market_items: { Args: { category_id?: string; search_term?: string; requested_page?: number }; Returns: MarketPage<MarketItem> };
       list_market_listings: { Args: { target_item?: string; own_only?: boolean; requested_page?: number }; Returns: MarketPage<MarketListing> };
       list_market_inventory: { Args: { category_id?: string; search_term?: string; requested_page?: number }; Returns: InventoryPage };

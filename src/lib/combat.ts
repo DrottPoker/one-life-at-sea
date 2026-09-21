@@ -8,11 +8,11 @@ export type CombatOrder = typeof ORDERS[number];
 export type DefenceOrder = "cannon" | "boarding";
 export type CombatStats = Record<Stat, number>;
 export type Combatant = {
-  id: string; name: string; ship_health: number; crew_health: number;
+  id: string; player_number: number; name: string; ship_health: number; crew_health: number;
   ammo: number | null; ship: CombatStats | null; crew: CombatStats | null;
   cannons: string | null; weapon: string | null;
 };
-export type AttackLock = { battle_id: string; target_id: string };
+export type AttackLock = { battle_id: string; target_id: string; target_player_number: number };
 export type ParticipantStatus = "active" | "victory" | "assist" | "defeated" | "retreated" | "draw";
 export type CombatOutcome = "hull_victory" | "boarding_victory" | "retreated" | "draw" | "defended";
 export type CombatEvent = {
@@ -23,7 +23,7 @@ export type CombatEvent = {
   outcome: CombatOutcome | null; at: string; timed_out: boolean; participant_result: ParticipantStatus;
 };
 export type CombatPerson = {
-  id: string; name: string; role: "attacker" | "defender"; status: ParticipantStatus | "survived";
+  id: string; player_number: number | null; name: string; role: "attacker" | "defender"; status: ParticipantStatus | "survived";
   hits: number; damage: number; ship_damage: number; crew_damage: number; ship_health: number; crew_health: number; phase: "sea" | "boarding" | null;
 };
 export type Battle = {
@@ -75,7 +75,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 export function combatError(code: string) {
   return ERROR_MESSAGES[code] ?? "The action could not be saved. Reload the fight to check its latest state.";
 }
-export function attackUrl(targetId: string) {
+export function attackUrl(targetId: string | number) {
   return "/attack/" + targetId;
 }
 export function isCombatOrder(value: unknown): value is CombatOrder {

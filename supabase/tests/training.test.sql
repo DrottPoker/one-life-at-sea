@@ -22,8 +22,8 @@ select ok(to_regprocedure('public.train_stat(text,text)') is null,'Old public in
 select ok(to_regprocedure('private.train_stat(text,text)') is null,'Old internal instant training is removed');
 
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('b2000000-0000-4000-8000-000000000001','training-one@example.test',false,'{"character_name":"Training Captain"}'),
-('b2000000-0000-4000-8000-000000000002','training-two@example.test',false,'{"character_name":"Other Training Captain"}'),
+('b2000000-0000-4000-8000-000000000001','training-one@example.test',false,'{"character_name":"TrainingCaptain"}'),
+('b2000000-0000-4000-8000-000000000002','training-two@example.test',false,'{"character_name":"OtherTrainingCaptain"}'),
 ('b2000000-0000-4000-8000-000000000003','training-anon@example.test',true,'{}');
 create temporary table training_fixture as select
 (select id from public.characters where user_id='b2000000-0000-4000-8000-000000000001') a,

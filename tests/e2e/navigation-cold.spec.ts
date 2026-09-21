@@ -41,21 +41,21 @@ test("cold navigation updates content immediately and preserves normal link beha
     const newPage = context.waitForEvent("page");
     await page.getByRole("link", { name: "My Profile", exact: true }).click({ modifiers: ["Control"] });
     const profileTab = await newPage;
-    await expect(profileTab).toHaveURL(new RegExp("/characters/" + account.id + "$"));
+    await expect(profileTab).toHaveURL(new RegExp("/players/" + account.playerNumber + "$"));
     await expect(main.getByRole("heading", { name: "Inventory", exact: true })).toBeVisible();
     await expect(main.getByRole("status", { name: "Loading view" })).toHaveCount(0);
     await profileTab.close();
     await page.bringToFront();
 
     // Content feedback also covers profile links outside the harbor menu.
-    blockedPath = "/characters/" + account.id;
+    blockedPath = "/players/" + account.playerNumber;
     gate = new Promise<void>(resolve => { release = resolve; });
     await page.getByRole("link", { name: "My Profile", exact: true }).click();
     await expect(main.getByRole("status", { name: "Loading view" })).toBeVisible({ timeout: 1_000 });
     await expect(main.getByRole("heading", { name: "Inventory", exact: true })).toBeHidden();
     blockedPath = null;
     release?.();
-    await expect(page).toHaveURL(new RegExp("/characters/" + account.id + "$"));
+    await expect(page).toHaveURL(new RegExp("/players/" + account.playerNumber + "$"));
     await expect(main.getByRole("status", { name: "Loading view" })).toHaveCount(0);
     expect(errors).toEqual([]);
   } finally {

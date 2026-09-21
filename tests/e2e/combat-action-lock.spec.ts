@@ -131,7 +131,7 @@ test("sea defender cannot sail or scout but can read saved sightings and profile
   ]) expect(response.error?.message).toBe("IN_COMBAT");
   expect((await state(own)).energy).toBe(before.energy);
   await page.getByRole("list", { name: "Spotted ships" }).getByRole("link", { name: a.name, exact: true }).click();
-  await expect(page).toHaveURL(new RegExp("/characters/" + a.id + "$"));
+  await expect(page).toHaveURL(new RegExp("/players/" + a.playerNumber + "$"));
   await expect(page.getByRole("button", { name: "Attack", exact: true })).toBeDisabled();
   await page.goto("/sea");
   await expect(home).toBeDisabled();

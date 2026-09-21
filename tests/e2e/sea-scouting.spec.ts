@@ -58,9 +58,9 @@ test("paid scouting persists, finds later arrivals only on a new search, and ope
     if (width !== 320) await page.screenshot({ path: ".local/scouting-" + width + ".png", fullPage: true });
   }
   await scouting.getByRole("link", { name: target.name, exact: true }).click();
-  await expect(page).toHaveURL(new RegExp("/characters/" + target.id + "$"));
+  await expect(page).toHaveURL(new RegExp("/players/" + target.playerNumber + "$"));
   await page.getByRole("link", { name: "Attack", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp("/attack/" + target.id + "$"));
+  await expect(page).toHaveURL(new RegExp("/attack/" + target.playerNumber + "$"));
   await expect(page.getByRole("link", { name: "Back to At Sea", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
   await expect(page.getByRole("button", { name: /^Fire cannons 1 salvo/ })).toBeVisible();

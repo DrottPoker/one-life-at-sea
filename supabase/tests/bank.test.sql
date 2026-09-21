@@ -4,8 +4,8 @@ set local search_path = public, extensions;
 select no_plan();
 
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('bc000000-0000-4000-8000-000000000001','bank-one@example.test',false,'{"character_name":"Bank One"}'),
-('bc000000-0000-4000-8000-000000000002','bank-two@example.test',false,'{"character_name":"Bank Two"}'),
+('bc000000-0000-4000-8000-000000000001','bank-one@example.test',false,'{"character_name":"BankOne"}'),
+('bc000000-0000-4000-8000-000000000002','bank-two@example.test',false,'{"character_name":"BankTwo"}'),
 ('bc000000-0000-4000-8000-000000000003','bank-anon@example.test',true,'{}');
 
 set local role anon;
@@ -78,7 +78,7 @@ select lives_ok($$select public.transfer_gold('deposit',9007199254740991,gen_ran
 select is((public.get_game_state()->>'bank_gold_coins')::bigint,9007199254740991::bigint,'Large balance retains integer precision');
 select lives_ok($$select public.transfer_gold('withdraw',9007199254740991,gen_random_uuid())$$,'Largest safe balance can be withdrawn');
 
-select public.start_combat((select character_id from public.character_profiles where display_name='Bank Two'),gen_random_uuid());
+select public.start_combat((select character_id from public.character_profiles where display_name='BankTwo'),gen_random_uuid());
 select throws_ok($$select public.transfer_gold('deposit',1,gen_random_uuid())$$,'P0001','IN_COMBAT','Active attackers cannot bypass the harbor lock');
 select set_config('request.jwt.claims','{"sub":"bc000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
 select throws_ok($$select public.transfer_gold('deposit',1,gen_random_uuid())$$,'42501','NOT_AUTHORIZED','Anonymous Auth users cannot transfer');

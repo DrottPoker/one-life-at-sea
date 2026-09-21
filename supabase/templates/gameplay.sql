@@ -8,6 +8,7 @@
 {{include.hospital}}
 {{include.combat-report}}
 {{include.profile}}
+{{include.player-directory}}
 {{include.circulation-tracking}}
 {{include.market-value-tracking}}
 {{include.market-value-history}}

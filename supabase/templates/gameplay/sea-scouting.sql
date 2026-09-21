@@ -105,7 +105,8 @@ begin
   page:=least(greatest(coalesce(requested_page,0),0),greatest(0,(total-1)/{{gameplay.seaTravel.scoutPageSize}}));
   return jsonb_build_object('id',scout.request_id,'sea_distance',scout.sea_distance,'scouted_at',scout.created_at,
     'total',total,'page',page,'players',coalesce((select jsonb_agg(to_jsonb(p) order by p.position) from (
-      select t.target_id character_id,t.display_name,t.position from private.sea_scout_targets t
+      select t.target_id character_id,t.display_name,t.position,p.player_number from private.sea_scout_targets t
+        join public.character_profiles p on p.character_id=t.target_id
         where t.character_id=viewer_id and t.request_id=scout.request_id order by t.position
         limit {{gameplay.seaTravel.scoutPageSize}} offset page*{{gameplay.seaTravel.scoutPageSize}}
     ) p),'[]'::jsonb));

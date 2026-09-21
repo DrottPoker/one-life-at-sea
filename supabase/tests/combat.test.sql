@@ -4,9 +4,9 @@ set local search_path = public, extensions;
 select no_plan();
 
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('c3000000-0000-4000-8000-000000000001','combat-one@example.test',false,'{"character_name":"Combat Captain One"}'),
-('c3000000-0000-4000-8000-000000000002','combat-two@example.test',false,'{"character_name":"Combat Captain Two"}'),
-('c3000000-0000-4000-8000-000000000003','combat-three@example.test',false,'{"character_name":"Combat Captain Three"}'),
+('c3000000-0000-4000-8000-000000000001','combat-one@example.test',false,'{"character_name":"CombatCaptainOne"}'),
+('c3000000-0000-4000-8000-000000000002','combat-two@example.test',false,'{"character_name":"CombatCaptainTwo"}'),
+('c3000000-0000-4000-8000-000000000003','combat-three@example.test',false,'{"character_name":"CombatCaptainThree"}'),
 ('c3000000-0000-4000-8000-000000000004','combat-anon@example.test',true,'{}');
 create temporary table combat_fixtures as select
   (select id from public.characters where user_id='c3000000-0000-4000-8000-000000000001') as a,

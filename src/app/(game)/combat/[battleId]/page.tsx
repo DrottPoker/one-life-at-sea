@@ -12,5 +12,5 @@ export default async function LegacyCombat({ params }: { params: Promise<{ battl
   const { data, error } = await withDatabaseRetry(() => client.rpc("get_combat", { battle_id: battleId }));
   if (error) throw new Error("The encounter could not be loaded.");
   if (!data) notFound();
-  redirect(data.status === "completed" ? "/combatlog/" + battleId : attackUrl(data.defender.id));
+  redirect(data.status === "completed" ? "/combatlog/" + battleId : attackUrl(data.defender.player_number));
 }

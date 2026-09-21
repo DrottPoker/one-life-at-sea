@@ -1,3 +1,4 @@
+import { isPlayerNumber, isPlayerProfilePath } from "@/lib/player-identity";
 import { isUuid } from "@/lib/validation";
 
 export type SeaPhase = "in_harbor" | "at_sea" | "traveling";
@@ -24,7 +25,9 @@ export function isSeaAccessiblePath(pathname: string, state: SeaPhase) {
   if (state === "in_harbor") return true;
   if (pathname === "/sea") return true;
   return state === "at_sea" && (pathname === "/inventory" ||
-    ["/characters/", "/attack/", "/combatlog/"].some(prefix => pathname.startsWith(prefix) && isUuid(pathname.slice(prefix.length))));
+    pathname === "/players" || isPlayerProfilePath(pathname) ||
+    (pathname.startsWith("/attack/") && (isPlayerNumber(pathname.slice(8)) || isUuid(pathname.slice(8)))) ||
+    (pathname.startsWith("/combatlog/") && isUuid(pathname.slice(11))));
 }
 export function seaLocationLabel(sea: SeaState) {
   if (sea.state === "traveling") return sea.journey?.kind === "return" ? "Returning to The Harbor" : "Traveling";

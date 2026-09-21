@@ -24,15 +24,15 @@ async function captain() {
   const api = client();
   const email = "combat-" + suffix() + "@example.test";
   const password = randomBytes(24).toString("hex");
-  const name = "Captain " + suffix();
+  const name = "Captain" + suffix();
   const signup = await api.auth.signUp({ email, password, options: { data: { character_name: name } } });
   expect(signup.error).toBeNull();
   const userId = uuid(signup.data.user!.id);
-  const result = await api.from("characters").select("id").single();
+  const result = await api.from("characters").select("id, player_number").single();
   expect(result.error).toBeNull();
   // Combat scenarios use explicit baseline stats; signup defaults are tested with training.
   sql("update public.characters set energy_updated_at=clock_timestamp()+interval '1 day',ship_attack=1,ship_defense=1,ship_speed=1,ship_accuracy=1,crew_attack=1,crew_defense=1,crew_speed=1,crew_accuracy=1 where id=\'" + uuid(result.data!.id) + "\'");
-  return { api, email, password, name, userId, id: uuid(result.data!.id) };
+  return { api, email, password, name, userId, id: uuid(result.data!.id), playerNumber: result.data!.player_number };
 }
 function battle(data: CombatResponse | null) {
   expect(data).not.toBeNull();
@@ -77,7 +77,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await login(page, a);
     await page.goto("/characters/" + d.id);
     await page.getByRole("link", { name: "Attack", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp("/attack/" + d.id + "$"));
+    await expect(page).toHaveURL(new RegExp("/attack/" + d.playerNumber + "$"));
     const main = page.getByRole("main");
     await expect(page.locator(".o-sidebar")).toHaveCount(0);
     await expect(page.locator(".o-masthead")).toHaveCount(0);
@@ -88,11 +88,11 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await expect.poll(() => scene.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
     await page.screenshot({ path: ".local/attack-prepare-desktop.jpg", type: "jpeg", quality: 75, fullPage: true });
     await main.getByRole("link", { name: "Back to profile", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp("/characters/" + d.id + "$"));
+    await expect(page).toHaveURL(new RegExp("/players/" + d.playerNumber + "$"));
     await page.getByRole("link", { name: "Attack", exact: true }).click();
     await main.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
     await expect(main.getByRole("button", { name: /^Fire cannons 1 salvo/ })).toBeVisible();
-    await expect(page).toHaveURL(new RegExp("/attack/" + d.id + "$"));
+    await expect(page).toHaveURL(new RegExp("/attack/" + d.playerNumber + "$"));
     const battleId = uuid((await a.api.rpc("get_attack_lock")).data!.battle_id);
     const lockedUrl = page.url();
     await expect(opponent.getByText("Basic cannons", { exact: true })).toBeVisible();
@@ -167,7 +167,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
         await expect(entry.locator("dl > div").filter({ hasText: "Crew damage" }).locator("dd")).toHaveText(String(person.crew_damage));
         expect(await tab.getByText(person.name, { exact: true }).evaluateAll(
           (elements, href) => elements.length > 0 && elements.every(element => element.closest("a")?.getAttribute("href") === href),
-          "/characters/" + person.id,
+          "/players/" + person.player_number,
         )).toBe(true);
       }
       await tab.screenshot({ path: ".local/combat-public-log.jpg", type: "jpeg", quality: 75, fullPage: true });
@@ -232,7 +232,7 @@ test("joined attackers and an online defender receive shared HP live; the defend
     await login(page, a);
     await login(pageB, b);
     await login(pageD, d);
-    await page.goto("/attack/" + d.id);
+    await page.goto("/attack/" + d.playerNumber);
     const sharedUrl = page.url();
     await page.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
     await expect(page.getByRole("button", { name: /^Fire cannons 1 salvo/ })).toBeVisible();
@@ -290,7 +290,7 @@ test("a shared victory opens the same report for both attackers and the target l
     sql("update public.characters set ship_defense=1000000,ship_accuracy=1000000 where id in('" + a.id + "','" + b.id + "')");
     await login(page, a);
     await login(pageB, b);
-    await page.goto("/attack/" + d.id);
+    await page.goto("/attack/" + d.playerNumber);
     const sharedUrl = page.url();
     await page.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
     await expect(page.getByRole("button", { name: /^Fire cannons 1 salvo/ })).toBeVisible();
@@ -336,7 +336,7 @@ test("extreme stats distinguish guaranteed misses from blocked hits in sea and c
     sql("update public.characters set ship_speed=64,crew_speed=64,ship_defense=25,crew_defense=25 where id in('" + a.id + "','" + d.id + "')");
     sql("update public.characters set ship_accuracy=4096,crew_accuracy=4096 where id='" + d.id + "'");
     await login(page, a);
-    await page.goto("/attack/" + d.id);
+    await page.goto("/attack/" + d.playerNumber);
     await page.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
     await page.getByRole("button", { name: /^Fire cannons 1 salvo/ }).click();
     await expect(page.getByText("Round 1 / 25", { exact: true })).toBeVisible();

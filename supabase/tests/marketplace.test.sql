@@ -19,7 +19,7 @@ insert into private.item_definitions(id,category_id,name,description,effect_desc
 
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data)
 select ('a8600000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'market-'||n||'@example.test',false,
-  jsonb_build_object('character_name','Market Fixture '||n) from generate_series(1,3) n;
+  jsonb_build_object('character_name','MarketFixture'||chr(65+n)) from generate_series(1,3) n;
 create temp table f as select row_number() over(order by user_id)::integer n,id,user_id,gen_random_uuid() request_id
  from public.characters where user_id::text like 'a8600000-0000-4000-8000-%';
 create temp table results(key text primary key,value jsonb);

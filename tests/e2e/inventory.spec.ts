@@ -176,7 +176,7 @@ test("hospital permits inventory reading and filtering while locking destruction
     await expect(tab.getByRole("heading", { name: "Inventory", exact: true })).toBeVisible();
     await tab.close();
     await page.getByRole("link", { name: "My Profile", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp("/characters/" + own.id + "$"));
+    await expect(page).toHaveURL(new RegExp("/players/" + own.playerNumber + "$"));
     await page.getByRole("link", { name: "Inventory", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Inventory", exact: true })).toBeVisible();
     await page.goto("/harbor/bank");
@@ -186,7 +186,7 @@ test("hospital permits inventory reading and filtering while locking destruction
     await expect(page.getByRole("button", { name: "Trash Linen Bandages", exact: true })).toBeEnabled();
     expect((await own.api.rpc("start_combat", { target_id: opponent.id, request_id: randomUUID() })).error).toBeNull();
     await page.goto("/inventory");
-    await expect(page).toHaveURL(new RegExp("/attack/" + opponent.id + "$"));
+    await expect(page).toHaveURL(new RegExp("/attack/" + opponent.playerNumber + "$"));
     expect((await own.api.rpc("trash_inventory_item", { entry_id: stack.id, entry_type: "stack", quantity: 1, request_id: randomUUID() })).error?.message).toBe("IN_COMBAT");
   } finally { await cleanup([own, opponent]); }
 });

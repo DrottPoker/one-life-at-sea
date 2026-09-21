@@ -1,13 +1,15 @@
 # Karaktärsprofiler
 
-Uppdaterat 2026-09-20.
+Uppdaterat 2026-09-21.
 
 ## Innehåll och åtkomst
 
-`/characters/<character-id>` visar namn, grov plats, Max sea distance, skapandedatum och karaktärsålder.
+`/players/<player-number>` visar namn, grov plats, Max sea distance, skapandedatum och karaktärsålder.
 Max sea distance är karaktärens längsta nådda avstånd, ökar vid ankomst och behålls
 efter hemkomst, kortare resor och Hospital. Nya karaktärer börjar på 0.
-My Profile och namn i hamnlistan länkar hit. Sidopanelen tillhör alltid betraktaren.
+My Profile och namn i hamnlistan länkar hit. Profilen visar även permanent Player ID.
+Äldre `/characters/<uuid>` omdirigerar till nummerprofilen. **Players** ger sökning på namn
+eller nummer, inklusive entydig `#100001`-sökning. Se [spelar-ID:n](PLAYER_IDS.md). Sidopanelen tillhör alltid betraktaren.
 Profiler kräver ett registrerat konto med karaktär. De är läsbara i Hospital och
 på en stillastående havsplats; under resa visas vänteläget.
 
@@ -19,7 +21,7 @@ SQL kontrollerar dessutom stridsvillkoren vid start. Den egna profilen visar fö
 
 ## Publik datagräns
 
-`public.character_profiles` innehåller `character_id`, `display_name`,
+`public.character_profiles` innehåller `character_id`, `player_number`, `display_name`,
 `location`, `created_at`, `arrives_at`, `arrival_location`, `max_sea_distance` och
 `arrival_max_sea_distance`. Det sista fältet är ett eventuellt planerat nytt rekord
 som räknas först vid ankomst. En kortare resa innehåller inget kommande rekord.

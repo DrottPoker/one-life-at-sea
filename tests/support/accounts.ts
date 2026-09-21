@@ -23,16 +23,16 @@ export function testSql(statement: string): string {
 export async function createTestAccount(prefix: string, metadata: Record<string, unknown> = {}) {
   const api = createTestClient(), tag = randomBytes(10).toString("hex");
   const email = prefix + "-" + tag + "@example.test", password = randomBytes(24).toString("hex");
-  const name = "Captain " + tag;
+  const name = "Captain" + tag.replace(/[0-9]/g, digit => String.fromCharCode(103 + Number(digit)));
   const signup = await api.auth.signUp({ email, password, options: { data: { character_name: name, ...metadata } } });
   expect(signup.error).toBeNull();
-  const own = await api.from("characters").select("id").single();
+  const own = await api.from("characters").select("id, player_number").single();
   expect(own.error).toBeNull();
   const id = own.data!.id, userId = signup.data.user!.id;
   if (![id, userId].every(value => /^[0-9a-f-]{36}$/.test(value))) throw new Error("Invalid fixture ID.");
   // Isolate action-cost tests from real clock ticks; recovery tests set explicit past checkpoints.
   testSql("update public.characters set energy_updated_at=clock_timestamp()+interval '1 day' where id='" + id + "';");
-  return { api, id, userId, email, password, name };
+  return { api, id, playerNumber: own.data!.player_number, userId, email, password, name };
 }
 
 type TestAccount = Awaited<ReturnType<typeof createTestAccount>>;

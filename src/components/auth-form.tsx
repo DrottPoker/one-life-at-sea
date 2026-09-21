@@ -5,7 +5,7 @@ import { auth } from "@/config/public";
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { register, logIn, sendReset, changePassword } from "@/app/actions";
-import { normalizeCharacterName, type FormState } from "@/lib/validation";
+import { normalizeCharacterName, validateCharacterName, type FormState } from "@/lib/validation";
 
 type Mode = "register" | "login" | "forgot" | "reset";
 const actions = { register, login: logIn, forgot: sendReset, reset: changePassword };
@@ -26,6 +26,7 @@ export function AuthForm({ mode, initialEmail = "" }: { mode: Mode; initialEmail
     const timer = setTimeout(() => setRemaining(remaining - 1), 1000);
     return () => clearTimeout(timer);
   }, [remaining]);
+  const nameError = (name ? validateCharacterName(name) : undefined) ?? (name === state.name ? state.errors?.name : undefined);
   const hasPassword = ["register", "login", "reset"].includes(mode);
   const hasConfirmation = mode === "register" || mode === "reset";
   return <>
@@ -33,10 +34,10 @@ export function AuthForm({ mode, initialEmail = "" }: { mode: Mode; initialEmail
       {state.message && <p className={`o-notice ${state.success ? "" : "o-error"}`} role={state.success ? "status" : "alert"}>{state.message}</p>}
       <fieldset disabled={pending}>
         {mode === "register" && <label className="o-field" htmlFor="character-name"><span className="o-field-label" id="character-name-label">Character name</span>
-          <input aria-labelledby="character-name-label" id="character-name" name="name" value={name} onChange={event => setName(event.target.value)} required
-            autoComplete="off" spellCheck={false} aria-invalid={!!state.errors?.name} aria-describedby="name-hint name-error" />
-          <small className="o-form-hint" id="name-hint">Choose an available name.</small>
-          <small className="o-field-error" id="name-error" role="alert">{state.errors?.name}</small>
+          <input aria-labelledby="character-name-label" id="character-name" name="name" value={name} onChange={event => { setName(event.target.value); event.currentTarget.setCustomValidity(validateCharacterName(event.target.value) ?? ""); }} required
+            autoComplete="off" spellCheck={false} aria-invalid={!!nameError} aria-describedby="name-hint name-error" />
+          <small className="o-form-hint" id="name-hint">No numbers or spaces. Choose an available name.</small>
+          <small className="o-field-error" id="name-error" role="alert">{nameError}</small>
         </label>}
         {mode !== "reset" && <label className="o-field" htmlFor="email"><span className="o-field-label" id="email-label">Email address</span>
           <input aria-labelledby="email-label" id="email" name="email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required maxLength={auth.emailMaxLength}

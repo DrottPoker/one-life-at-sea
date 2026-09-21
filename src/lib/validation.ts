@@ -10,12 +10,13 @@ export type FormState = {
 };
 
 export function normalizeCharacterName(value: string) {
-  return value.normalize("NFC").replace(/\s+/gu, " ").trim();
+  return value.normalize("NFC");
 }
 
 export function validateCharacterName(value: string): string | undefined {
   const name = normalizeCharacterName(value);
-  if (!name) return "Enter a character name.";
+  if (!name.trim()) return "Enter a character name.";
+  if (/[\p{N}\p{White_Space}\uFEFF]/u.test(name)) return "Use a character name without numbers or spaces.";
 }
 
 export function validateEmail(value: string): string | undefined {

@@ -55,6 +55,7 @@ export function ProfileDetails({ profile, initialStatus, joined, age, ownProfile
   const attackBlocked = !!viewer.active_combat_id || !!viewer.hospital_until || inHospital || error || !hospital.can_attack_here;
   return <>
     <dl className="o-profile-details">
+      <div><dt>Player ID</dt><dd><output aria-label="Player ID">{profile.player_number}</output></dd></div>
       <div><dt>Location</dt><dd><MapPin aria-hidden="true" />{location}</dd></div>
       {hospital.hospital_until && <>
         <div><dt>Status</dt><dd><HeartPulse aria-hidden="true" />In hospital</dd></div>
@@ -67,7 +68,7 @@ export function ProfileDetails({ profile, initialStatus, joined, age, ownProfile
     {error && <p className="o-feedback" role="status">Character status could not be refreshed. <button className="o-text-button" onClick={() => setAttempt(a => a + 1)}>Retry status</button></p>}
     {!ownProfile && <div className="o-profile-actions">
       {attackBlocked ? <button className="o-training-button" disabled><Swords size={14} aria-hidden="true" />Attack</button> :
-        <Link className="o-training-button" href={"/attack/" + profile.character_id} prefetch={false}><Swords size={14} aria-hidden="true" />Attack</Link>}
+        <Link className="o-training-button" href={"/attack/" + profile.player_number} prefetch={false}><Swords size={14} aria-hidden="true" />Attack</Link>}
     </div>}
   </>;
 }

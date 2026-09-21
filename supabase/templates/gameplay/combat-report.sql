@@ -12,11 +12,13 @@ returns jsonb language sql stable security invoker set search_path='' as $$
   )
   select coalesce(jsonb_agg(person order by joined_at,id),'[]'::jsonb) from (
     select p.joined_at,p.character_id id,jsonb_build_object('id',p.character_id,'name',p.snapshot->>'name',
+      'player_number',coalesce(p.snapshot->'player_number',(select to_jsonb(player_number) from public.characters where id=p.character_id)),
       'role','attacker','status',p.status,'hits',p.hits,'damage',p.damage,
       'ship_damage',coalesce(d.ship_damage,0),'crew_damage',coalesce(d.crew_damage,0),
       'ship_health',p.snapshot->'ship_health','crew_health',p.snapshot->'crew_health','phase',p.phase) person
     from private.combat_participants p left join damage d on d.actor_id=p.character_id where p.combat_id=battle_id
     union all select b.started_at,b.defender_id,jsonb_build_object('id',b.defender_id,'name',b.state->'defender'->>'name',
+      'player_number',coalesce(b.state->'defender'->'player_number',(select to_jsonb(player_number) from public.characters where id=b.defender_id)),
       'role','defender','status',case when b.status='active' then 'active'
         when (b.state#>>'{defender,crew_health}')::integer=0 or (b.state#>>'{defender,ship_health}')::integer=0 then 'defeated' else 'survived' end,
       'hits',coalesce(d.hits,0),'damage',coalesce(d.ship_damage,0)+coalesce(d.crew_damage,0),

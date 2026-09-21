@@ -139,14 +139,14 @@ test("hospital profiles stay accessible and show a live public countdown until d
     const time = await clock.textContent();
     await expect(clock).not.toHaveText(time!);
     await page.getByRole("link", { name: "My Profile", exact: true }).click();
-    await expect(page).toHaveURL("/characters/" + own.id);
+    await expect(page).toHaveURL("/players/" + own.playerNumber);
     await expect(myProfile.getByText("In hospital", { exact: true })).toBeVisible();
     await expect(myProfile.getByLabel("Hospital time remaining", { exact: true })).toHaveText(/^[0-5]:\d{2}$/);
     await expect(page.getByRole("button", { name: "Save orders", exact: true })).toBeDisabled();
     await expect(page.getByLabel("At sea", { exact: true })).toBeDisabled();
     expect((await own.api.rpc("save_defence_orders", { preset: "boarding" })).error?.message).toBe("IN_HOSPITAL");
     await page.reload();
-    await expect(page).toHaveURL("/characters/" + own.id);
+    await expect(page).toHaveURL("/players/" + own.playerNumber);
     const second = await context.newPage();
     await second.goto("/characters/" + own.id);
     await expect(second.getByRole("main").getByText("In hospital", { exact: true })).toBeVisible();
@@ -159,9 +159,9 @@ test("hospital profiles stay accessible and show a live public countdown until d
     await page.getByRole("link", { name: "Back to Hospital", exact: true }).click();
     await expect(page).toHaveURL(/\/harbor\/hospital$/);
     await page.getByRole("list", { name: "Captains in hospital" }).getByRole("link", { name: own.name, exact: true }).click();
-    await expect(page).toHaveURL("/characters/" + own.id);
+    await expect(page).toHaveURL("/players/" + own.playerNumber);
     await page.goto("/characters/" + observer.id);
-    await expect(page).toHaveURL("/characters/" + observer.id);
+    await expect(page).toHaveURL("/players/" + observer.playerNumber);
     await expect(page.getByRole("button", { name: "Attack", exact: true })).toBeDisabled();
     await expect(page.getByRole("main").getByText("In hospital", { exact: true })).toHaveCount(0);
     await page.goto("/characters/" + own.id);
@@ -170,7 +170,7 @@ test("hospital profiles stay accessible and show a live public countdown until d
     await expect(theirProfile.getByText("In hospital", { exact: true })).toHaveCount(0, { timeout: 20000 });
     await expect(page.getByRole("button", { name: "Save orders", exact: true })).toBeEnabled();
     await expect(theirProfile.getByRole("link", { name: "Attack", exact: true })).toBeVisible();
-    await expect(page).toHaveURL("/characters/" + own.id);
+    await expect(page).toHaveURL("/players/" + own.playerNumber);
     // An offline patient's expiry also clears from someone else's open profile.
     await page.getByRole("button", { name: "Log out", exact: true }).filter({ visible: true }).click();
     await expect(page).toHaveURL(/\/login$/);

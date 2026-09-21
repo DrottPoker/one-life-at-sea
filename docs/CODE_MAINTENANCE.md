@@ -18,6 +18,7 @@ Genomgång och städning genomförd 2026-09-20. Aktuella verifieringsresultat fi
 | Omedelbar sidåterkoppling och Next.js-länkar | `src/components/game-navigation.tsx`, `content-loading.tsx` |
 | Gemensam navigationspolicy för Hospital, strid och resa | `src/lib/game-navigation.ts` |
 | Havsresor och sparade alternativ | `supabase/templates/gameplay/sea-travel.sql`, `src/lib/sea-travel.ts` |
+| Publika spelar-ID:n, profillösning och katalog | `src/lib/player-identity.ts`, `src/lib/player-profile.ts`, `src/app/(game)/players/`, `supabase/templates/gameplay/player-directory.sql` |
 | Generell validering och formatering | `src/lib/validation.ts`, `format.ts`, `time.ts` |
 | Spelregler och visningsvärden | `config/` |
 | Databasfunktioner per funktionsområde | `supabase/templates/gameplay/` |

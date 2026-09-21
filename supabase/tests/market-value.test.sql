@@ -3,7 +3,7 @@ create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
 select no_plan();
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('7a000000-0000-4000-8000-000000000001','value-one@example.test',false,'{"character_name":"Value One"}'),
+('7a000000-0000-4000-8000-000000000001','value-one@example.test',false,'{"character_name":"ValueOne"}'),
 ('7a000000-0000-4000-8000-000000000002','value-anon@example.test',true,'{}');
 insert into private.item_definitions(id,category_id,name,description,effect_description,image_path,kind,stackable,slot,tradable)
 values ('value_material','materials','Value Material','Test.','No effect.','/images/items/timber.png','passive',true,null,true),

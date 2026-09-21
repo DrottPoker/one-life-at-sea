@@ -1,5 +1,6 @@
 import { frontend } from "@/config/public";
 import { GameLink as Link, GameNavigationProvider, GameContent } from "@/components/game-navigation";
+import { playerProfileUrl } from "@/lib/player-identity";
 import { seaLocationLabel } from "@/lib/sea-travel";
 import type { ReactNode } from "react";
 import { Anchor } from "lucide-react";
@@ -22,10 +23,10 @@ export default async function GameLayout({ children }: { children: ReactNode }) 
           <div className="o-character-identity">
             <span className="o-captain-emblem" aria-hidden="true"><Anchor /></span>
             <div><span className="o-captain-label">Captain</span><span className="o-character-name">{character.display_name}</span>
-              <div className="o-character-caption"><Link href={"/characters/" + character.id}>My Profile</Link></div>
+              <div className="o-character-caption"><Link href={playerProfileUrl(character.player_number)}>My Profile</Link></div>
             </div>
           </div>
-          <dl className="o-side-data"><div><dt>Location</dt><dd>{state.hospital_until ? "Hospital" : seaLocationLabel(state.sea)}</dd></div><div><dt>Member since</dt><dd>{created}</dd></div></dl>
+          <dl className="o-side-data"><div><dt>Player ID</dt><dd>{character.player_number}</dd></div><div><dt>Location</dt><dd>{state.hospital_until ? "Hospital" : seaLocationLabel(state.sea)}</dd></div><div><dt>Member since</dt><dd>{created}</dd></div></dl>
         </div>
         <ResourceBars />
       </section>

@@ -1,5 +1,6 @@
 "use client";
 
+import { playerProfileUrl } from "@/lib/player-identity";
 import { createSnapshotPoller, snapshotRefreshDelay } from "@/lib/snapshot-poller";
 
 import { GameLink as Link } from "@/components/game-navigation";
@@ -11,7 +12,7 @@ import { HARBOR_PAGE_SIZE, loadHarborRoster, type HarborRoster, type HarborPlaye
 
 function CaptainProfileLink({ player }: { player: HarborPlayer }) {
   const [prefetch, setPrefetch] = useState(false);
-  return <Link className="o-roster-name" href={`/characters/${player.character_id}`}
+  return <Link className="o-roster-name" href={playerProfileUrl(player.player_number)}
     prefetch={prefetch ? "auto" : false} onPointerEnter={() => setPrefetch(true)} onFocus={() => setPrefetch(true)}>
     {player.display_name}
   </Link>;
@@ -107,7 +108,7 @@ export function HarborPlayers({ initial, characterId }: { initial: HarborRoster 
     {roster ? <ul className="o-roster-list" aria-label="Captains in The Harbor" aria-busy={loading}>
       {roster.players.map(player => <li key={player.character_id}>
         <Anchor aria-hidden="true" />
-        <CaptainProfileLink player={player} />
+        <CaptainProfileLink player={player} /><small className="o-player-number">[{player.player_number}]</small>
         {player.character_id === characterId && <span className="o-roster-you">You</span>}
       </li>)}
       {total === 0 && <li className="o-roster-empty">No captains are docked here.</li>}

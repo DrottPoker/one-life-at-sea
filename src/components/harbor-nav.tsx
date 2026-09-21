@@ -1,13 +1,14 @@
 "use client";
 
 import { GameLink as Link, useNavigationPathname } from "@/components/game-navigation";
-import { Anchor, Store, Hammer, Swords, Ship, Landmark, HeartPulse, Package, Compass } from "lucide-react";
+import { Anchor, Store, Hammer, Swords, Ship, Landmark, HeartPulse, Package, Compass, Users } from "lucide-react";
 
 import { useGameState } from "@/components/game-state";
 import { isHospitalAccessiblePath } from "@/lib/hospital";
 import { isSeaAccessiblePath } from "@/lib/sea-travel";
 
 const locations = [
+  { href: "/players", label: "Players", Icon: Users },
   { href: "/sea", label: "At Sea", Icon: Compass },
   { href: "/harbor", label: "The Harbor", Icon: Anchor },
   { href: "/inventory", label: "Inventory", Icon: Package },

@@ -2,17 +2,19 @@ import { describe, expect, it } from "vitest";
 import { callbackDestination, normalizeCharacterName, validateCharacterName, validateEmail, validatePassword } from "../../src/lib/validation";
 
 describe("character identity", () => {
-  it("normalizes Unicode and whitespace before storage", () => {
-    expect(normalizeCharacterName("  A\u030asa\t  O'Neill  ")).toBe("Åsa O'Neill");
+  it("normalizes Unicode without silently removing forbidden whitespace", () => {
+    expect(normalizeCharacterName("A\u030asa")).toBe("Åsa");
+    expect(normalizeCharacterName(" Alva ")).toBe(" Alva ");
   });
-  it.each(["Alva Storm", "Åsa O'Neill", "Anne-Marie", "Νίκος", "李小龍"])("accepts names written with letters: %s", name => {
+  it.each(["Alva", "ÅsaO'Neill", "Anne-Marie", "Νίκος", "李小龍", "x", "x".repeat(80), "<script>", "🚢Captain", "-Alva", "Alva-", "Alva_Storm"])("accepts names without numbers or spaces: %s", name => {
     expect(validateCharacterName(name)).toBeUndefined();
   });
-  it.each(["7", "x".repeat(80), "Captain123", "<script>", "🚢 Captain", "-Alva", "Alva-", "Alva_Storm"])("accepts unrestricted names: %s", name => {
-    expect(validateCharacterName(name)).toBeUndefined();
+  it.each(["7", "Captain123", "Alva Storm", " Alva", "Alva ", "Alva\tStorm", "Alva\nStorm", "Alva\u00a0Storm",
+    "Alva\u202fStorm", "Alva\u0085Storm", "Alva\uFEFFStorm", "Captain١", "Captain１", "Captain²", "CaptainⅣ"])("rejects numbers and whitespace: %j", name => {
+    expect(validateCharacterName(name)).toBe("Use a character name without numbers or spaces.");
   });
   it.each(["", " ", "\t\n"])("rejects an empty name: %j", name => {
-    expect(validateCharacterName(name)).toBeDefined();
+    expect(validateCharacterName(name)).toBe("Enter a character name.");
   });
 });
 

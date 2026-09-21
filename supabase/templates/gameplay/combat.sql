@@ -2,7 +2,7 @@ create or replace function private.combat_snapshot(c public.characters, observed
 returns jsonb language sql stable security invoker set search_path = ''
 as $$
   select jsonb_build_object(
-    'id', c.id, 'name', c.display_name, 'ammo', {{gameplay.combat.startingAmmo}}, 'defence_order', c.defence_order,
+    'id', c.id, 'player_number', c.player_number, 'name', c.display_name, 'ammo', {{gameplay.combat.startingAmmo}}, 'defence_order', c.defence_order,
     'ship_health', private.health_snapshot(c.ship_health, c.ship_recovery_at, observed_at, {{gameplay.resources.shipRecoverySeconds}}),
     'crew_health', private.health_snapshot(c.crew_health, c.crew_recovery_at, observed_at, {{gameplay.resources.crewRecoverySeconds}}),
     'ship', jsonb_build_object('attack',c.ship_attack,'defense',c.ship_defense,'speed',c.ship_speed,'accuracy',c.ship_accuracy),
@@ -11,10 +11,12 @@ as $$
 $$;
 
 create or replace function private.visible_combatant(snapshot jsonb, own boolean, revealed boolean)
-returns jsonb language sql immutable security invoker set search_path = ''
+returns jsonb language sql stable security invoker set search_path = ''
 as $$
   select jsonb_build_object(
     'id',snapshot->'id','name',snapshot->'name',
+    'player_number',coalesce(snapshot->'player_number',
+      (select to_jsonb(player_number) from public.characters where id=(snapshot->>'id')::uuid)),
     'ship_health',snapshot->'ship_health','crew_health',snapshot->'crew_health',
     'ammo',case when own then snapshot->'ammo' end,
     'ship',case when own then snapshot->'ship' end,

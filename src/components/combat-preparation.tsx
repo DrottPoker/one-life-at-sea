@@ -60,6 +60,6 @@ export function CombatPreparation({ preview }: { preview: CombatPreview }) {
       <button className="o-text-button" onClick={() => router.refresh()}>Check availability</button>
     </div>}
     <p className="o-combat-feedback" role="status">{message}</p>
-    <div className="o-panel-foot o-combat-foot"><Link href={"/characters/" + preview.defender.id}>Back to profile</Link><span>Opening this screen costs no Energy.</span></div>
+    <div className="o-panel-foot o-combat-foot"><Link href={"/players/" + preview.defender.player_number}>Back to profile</Link><span>Opening this screen costs no Energy.</span></div>
   </>;
 }

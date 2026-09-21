@@ -4,7 +4,7 @@ set local search_path=public,extensions;
 select no_plan();
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data)
 select ('a9700000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'integrity-'||n||'@example.test',false,
-  jsonb_build_object('character_name','Integrity Fixture '||n) from generate_series(1,2) n;
+  jsonb_build_object('character_name','IntegrityFixture'||chr(65+n)) from generate_series(1,2) n;
 create temp table owners as select row_number() over(order by user_id)::integer n,id from public.characters
  where user_id::text like 'a9700000-0000-4000-8000-%';
 create temp table receipts(key text primary key,value jsonb);

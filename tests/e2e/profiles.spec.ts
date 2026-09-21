@@ -28,8 +28,8 @@ test("captain profiles open from the harbor and keep private character data prot
   const created: string[] = [];
   const email = `profile-owner-${suffix()}@example.test`;
   const password = randomBytes(24).toString("hex");
-  const ownerName = `A A Owner ${suffix()}`;
-  const otherName = `A A Profile ${suffix()}`;
+  const ownerName = `AAAOwner${suffix()}`;
+  const otherName = `AAAProfile${suffix()}`;
   const errors: string[] = [];
   const documents: string[] = [];
   page.on("pageerror", error => errors.push(error.name));
@@ -40,13 +40,13 @@ test("captain profiles open from the harbor and keep private character data prot
       expect(signup.error).toBeNull();
       created.push(uuid(signup.data.user!.id));
     }
-    const target = await other.from("characters").select("id").single();
+    const target = await other.from("characters").select("id, player_number").single();
     expect(target.error).toBeNull();
     const targetId = uuid(target.data!.id);
     localSql(`update public.characters set created_at=clock_timestamp()-interval '2 days',crew_attack=9876,ship_health=81 where id='${targetId}'`);
     const publicProfile = await owner.from("character_profiles").select("*").eq("character_id", targetId).single();
     expect(publicProfile.error).toBeNull();
-    expect(Object.keys(publicProfile.data!).sort()).toEqual(["arrival_location", "arrival_max_sea_distance", "arrives_at", "character_id", "created_at", "display_name", "location", "max_sea_distance"]);
+    expect(Object.keys(publicProfile.data!).sort()).toEqual(["arrival_location", "arrival_max_sea_distance", "arrives_at", "character_id", "created_at", "display_name", "location", "max_sea_distance", "player_number"]);
     expect(publicProfile.data).toMatchObject({ character_id: targetId, display_name: otherName, location: "the_harbor" });
     expect((await owner.from("characters").select("*").eq("id", targetId)).data).toEqual([]);
     expect((await owner.from("character_profiles").update({ display_name: "Forged Captain" }).eq("character_id", targetId)).error?.code).toBe("42501");
@@ -75,7 +75,7 @@ test("captain profiles open from the harbor and keep private character data prot
     await main.getByRole("link", { name: "Back to The Harbor", exact: true }).click();
     const roster = page.getByRole("region", { name: /^Captains in The Harbor/ });
     await roster.getByRole("link", { name: otherName, exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/characters/${targetId}$`));
+    await expect(page).toHaveURL(new RegExp(`/players/${target.data!.player_number}$`));
     await expect(main.getByRole("heading", { name: otherName, exact: true })).toBeVisible();
     await expect(main.getByText("2 days", { exact: true })).toBeVisible();
     await expect(main.locator("time")).toHaveAttribute("datetime", publicProfile.data!.created_at);

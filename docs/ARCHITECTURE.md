@@ -95,8 +95,10 @@ hides them by default and can conceal this type of layout shift.
 | `/reset-password` | Sets a new password for an authenticated session. |
 | `/create-character` | Compatibility path for older unfinished accounts only; all new registrations already have a character and return to the harbor. |
 | `/inventory` | Owned item stacks and equipment instances, category/search filters, inline details and confirmed Trash. Readable in Hospital. |
-| `/characters/[characterId]` | Identity profile, Attack link, own defence orders and latest combat report. |
-| `/attack/<characterId>` | Shareable target URL, unchanged during preparation, start and join. |
+| `/players` | Registered-player directory with name/public-number search and pagination. |
+| `/players/[playerNumber]` | Identity profile, permanent public number, Attack link and own defence orders. |
+| `/characters/[characterId]` | Compatibility redirect from character UUID to the public-number profile. |
+| `/attack/<playerNumber>` | Shareable target URL, unchanged during preparation, start and join. Legacy UUID addresses redirect here. |
 | `/combatlog/[battleId]` | Public completed combat report, readable without login. |
 | `/combat/prepare/[id]`, `/combat/[id]` | Legacy redirects to the attack screen or public report. |
 | `/harbor` | Saved character, harbor overview and live captain directory. |
@@ -144,16 +146,17 @@ Training tier purchases, inventory viewing/destruction and player-to-player item
 
 An `auth.users` insert trigger creates the character in the same transaction as
 registration. It reads only `character_name` from user metadata, validates it via
-the table constraints and assigns the owner from `new.id`. A rejected name rolls
+the name-validation trigger and table constraints and assigns the owner from `new.id`. A rejected name rolls
 back the account as well. Changes to Auth metadata after registration never alter
 the saved character. Anonymous sign-in remains disabled; the trigger does not
 create characters for anonymous Auth records.
 
 Two constraints guarantee one character per account and case-insensitive name
-uniqueness. Names are normalized to NFC with single internal spaces. Names may contain numbers, symbols and emoji, including one-character names.
-The previous 3-24 character and letter-only rules have been removed. SQL checks
-still reject empty or unnormalized direct API input. Future name changes are not
-available. The unique account constraint makes concurrent creation safe.
+uniqueness. Names are normalized to NFC. New names and administrative renames cannot
+contain Unicode numbers or whitespace; symbols, emoji and one-character names
+remain valid. The forms, server actions and database enforce the rule. Existing
+names remain usable without forced renaming. There is no self-service rename UI.
+The unique account constraint makes concurrent creation safe. See [character names](CHARACTER_NAMES.md).
 
 `is_character_name_available` exposes only a boolean for a proposed name. It is a
 public registration hint, not authorization or a reservation. Character rows,
@@ -252,7 +255,7 @@ The shared game state and resource sidebar reflect successful transfers across t
 
 ## Shared PvP encounters
 
-/attack/<characterId> is the full-width preparation and attack screen. The URL always identifies the target;
+/attack/<playerNumber> is the full-width preparation and attack screen. The URL always identifies the target;
 opening another attacker\'s copied URL shows the current viewer\'s preparation and Join battle. The server resolves
 the viewer\'s own encounter from game state, never from a shared attacker-specific URL. AttackSession remembers the
 encounter during this visit and opens its public report on completion if the captain survives. Hospital takes precedence for a defeated captain. Fresh visits show preparation again.
@@ -324,8 +327,8 @@ online-only semantics are used. See [the roster specification](HARBOR_ROSTER.md)
 
 ## Character profiles
 
-Authenticated character profiles at `/characters/[characterId]` load only
-`character_id`, `display_name`, `location` and `created_at` from
+Authenticated character profiles at `/players/[playerNumber]` load only
+`character_id`, `player_number`, `display_name`, `location` and `created_at` from
 `public.character_profiles`. The table also holds `arrives_at` and
 `arrival_location`, `max_sea_distance` and optional `arrival_max_sea_distance`.
 `get_character_status` resolves coarse location and the reached distance record
@@ -335,7 +338,9 @@ RLS guard and grants authenticated SELECT only. A private trigger synchronizes
 identity fields from `characters`; the sixth migration backfills existing rows,
 and the foreign key cascades deletions. Private stats are not exposed or published.
 
-The server page validates the UUID and requires the viewer's own character.
+The server page validates the public number and requires the viewer's own character.
+Legacy UUID profile paths redirect to the number address. The `/players` directory searches
+this same public projection by name or number, respecting its RLS. See [player IDs](PLAYER_IDS.md).
 The persistent sidebar always belongs to the viewer. The character panel links
 to the viewer's profile, and the harbor list links to other profiles.
 Profile loading, missing records and page errors stay inside the game layout.

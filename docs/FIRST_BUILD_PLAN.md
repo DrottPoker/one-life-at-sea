@@ -46,8 +46,8 @@ Hamnen är spelarens första plats i världen. Aktiviteter kommer i senare etapp
 | Kontohantering | Supabase Auth med e-post och lösenord | Passar vald plattform och hela inloggningsflödet. |
 | E-postbekräftelse | Avstängd under den första utvecklingsfasen | E-post och lösenord räcker; spelaren loggas in direkt efter registrering. |
 | Karaktärer per konto | En karaktär, skapad samtidigt som kontot | Databasen garanterar sambandet och förhindrar en andra karaktär. |
-| Karaktärsnamn | Ifyllt och unikt, fria tecken och ingen spellängdsgräns | Namnreglerna har förenklats för utveckling. |
-| Namnregler | Bokstäver, mellanslag, bindestreck och apostrof | Tillåter svenska namn. Versaler och överflödiga mellanslag ger inte nya namn. |
+| Karaktärsnamn | Ifyllt och unikt, utan siffror eller blanksteg | Uppdaterad ägarregel 2026-09-21. |
+| Namnregler | Unicode-bokstäver, symboler och emoji fungerar; inga siffror eller blanksteg | NFC och skiftlägesokänslig unikhet. Se CHARACTER_NAMES.md. |
 | Startutrustning | Inget skepp eller någon utrustning ännu | Startresurser beslutas tillsammans med kommande aktiviteter. |
 | Visuell form | Havsblå paneler, ljusblått hav, sandtoner och en hamnillustration | Sammanhängande värld genom hela flödet. |
 | Körning | Lokal Next.js-app och lokal Supabase i Docker | Molnprojektet kunde inte skapas eftersom kontots två gratisplatser är upptagna. |

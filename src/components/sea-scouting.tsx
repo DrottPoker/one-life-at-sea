@@ -38,7 +38,7 @@ function ScoutResults({ scoutId }: { scoutId: string }) {
     </time>. Scout again to find new arrivals. A ship may have moved since you spotted it.</p>
     <ul className="o-roster-list" aria-label="Spotted ships">
       {result.players.map(player => <li key={player.character_id}>
-        <Ship size={14} aria-hidden="true" /><Link className="o-roster-name" href={"/characters/" + player.character_id} prefetch={false}>{player.display_name}</Link>
+        <Ship size={14} aria-hidden="true" /><Link className="o-roster-name" href={"/players/" + player.player_number} prefetch={false}>{player.display_name}</Link><small className="o-player-number">[{player.player_number}]</small>
       </li>)}
       {!result.total && <li className="o-roster-empty">No other ships were found at this Sea distance.</li>}
     </ul>

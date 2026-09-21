@@ -69,7 +69,7 @@ export function CombatArena({ battle }: { battle: Battle }) {
     </section>}
     <div className="o-combat-feedback" role="status">{message}{message && <button className="o-text-button" onClick={() => router.refresh()}>Reload fight</button>}</div>
     <div className="o-battle-record">
-      <CombatEvents events={battle.events} defenderId={battle.defender.id} defenderName={battle.defender.name} newestFirst />
+      <CombatEvents people={battle.people} events={battle.events} defenderId={battle.defender.id} defenderName={battle.defender.name} newestFirst />
       <CombatPeople people={battle.people} winnerId={battle.winner_id} />
     </div>
   </>;

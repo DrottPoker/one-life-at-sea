@@ -5,7 +5,7 @@ select no_plan();
 
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data)
 select ('a8300000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'scout-'||n||'@example.test',false,
-  jsonb_build_object('character_name','Scout Test '||lpad(n::text,2,'0')) from generate_series(1,32) n;
+  jsonb_build_object('character_name','ScoutTest'||chr(65+n/26)||chr(65+n%26)) from generate_series(1,32) n;
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data)
 values('a8300000-0000-4000-8000-000000000099','scout-anon@example.test',true,'{}');
 create temp table scout_fixture as select id,user_id,right(user_id::text,12)::integer n from public.characters
@@ -62,7 +62,7 @@ select is((select count(*)::int from jsonb_array_elements(public.get_sea_scout()
 select is((select count(*)::int from jsonb_array_elements(public.get_sea_scout()->'players') p
   where p->>'character_id'=(select id::text from scout_fixture where n=5)),1,'An arrived offline ship is included');
 select is((select array_agg(k order by k) from jsonb_object_keys(public.get_sea_scout()#>'{players,0}') k),
-  array['character_id','display_name','position'],'List reveals only identity and ordering');
+  array['character_id','display_name','player_number','position'],'List reveals only identity and ordering');
 select is((select public.get_character_status(id)->>'can_attack_here' from scout_fixture where n=5),'true','Offline arrival is eligible on its profile before owner login');
 select is((select public.get_character_status(id)->>'can_attack_here' from scout_fixture where n=2),'true','Different place types at the same distance may fight');
 select is(public.get_game_state()->>'energy','55','Reading and paging the saved list is free');

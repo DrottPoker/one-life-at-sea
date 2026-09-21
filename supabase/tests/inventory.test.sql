@@ -3,8 +3,8 @@ create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
 select no_plan();
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('1e000000-0000-4000-8000-000000000001','inventory-one@example.test',false,'{"character_name":"Inventory One"}'),
-('1e000000-0000-4000-8000-000000000002','inventory-two@example.test',false,'{"character_name":"Inventory Two"}'),
+('1e000000-0000-4000-8000-000000000001','inventory-one@example.test',false,'{"character_name":"InventoryOne"}'),
+('1e000000-0000-4000-8000-000000000002','inventory-two@example.test',false,'{"character_name":"InventoryTwo"}'),
 ('1e000000-0000-4000-8000-000000000003','inventory-anon@example.test',true,'{}');
 set local role anon;
 select throws_ok($$select public.list_inventory()$$,'42501',null,'Signed-out clients cannot read inventory');
@@ -82,7 +82,7 @@ reset role;
 update public.characters set hospital_started_at=clock_timestamp()-interval '6 minutes',hospital_until=clock_timestamp()-interval '1 minute' where user_id='1e000000-0000-4000-8000-000000000001';
 set local role authenticated;
 select lives_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000002','stack',1,gen_random_uuid())$$,'Expired hospital stay settles before Trash');
-select public.start_combat((select character_id from public.character_profiles where display_name='Inventory Two'),gen_random_uuid());
+select public.start_combat((select character_id from public.character_profiles where display_name='InventoryTwo'),gen_random_uuid());
 select throws_ok($$select public.trash_inventory_item('1e200000-0000-4000-8000-000000000002','stack',1,gen_random_uuid())$$,'P0001','IN_COMBAT','Active attacker cannot bypass action lock');
 select set_config('request.jwt.claims','{"sub":"1e000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 select is(public.list_inventory('medical')#>>'{items,0,quantity}','77','Other inventory is unchanged');

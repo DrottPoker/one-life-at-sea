@@ -13,8 +13,8 @@ export function CombatantPanel({ captain, own, phase }: { captain: Combatant; ow
   return <section className={"o-combatant " + (own ? "o-combatant-own" : "o-combatant-opponent")} aria-label={prefix + " ship and crew"}>
     <header className="o-combatant-heading">
       <div className="o-combat-pennant" aria-hidden="true">{own ? <Skull /> : <ShipWheel />}</div>
-      <div><h2><Link href={"/characters/" + captain.id}>{captain.name}</Link></h2>
-        <span>{own ? "Your command" : "Opponent"}</span></div>
+      <div><h2><Link href={"/players/" + captain.player_number}>{captain.name}</Link></h2>
+        <span>[{captain.player_number}] · {own ? "Your command" : "Opponent"}</span></div>
     </header>
     <div className="o-combat-health">
       {(["ship", "crew"] as const).map(kind => {

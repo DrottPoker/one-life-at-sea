@@ -141,7 +141,8 @@ grant execute on function public.get_navigation_lock() to authenticated;
 create or replace function public.list_hospital_patients(requested_page integer default 0)
 returns jsonb language sql stable security invoker set search_path='' as $$
   with patients as (
-    select * from public.hospital_patients where hospital_until>now()
+    select h.*,p.player_number from public.hospital_patients h
+    join public.character_profiles p on p.character_id=h.character_id where h.hospital_until>now()
   ), totals as (
     select count(*)::integer total,min(hospital_until) next_discharge_at from patients
   ), paging as (

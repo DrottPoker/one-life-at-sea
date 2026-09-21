@@ -3,9 +3,9 @@ create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
 select no_plan();
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('1c000000-0000-4000-8000-000000000001','circulation-one@example.test',false,'{"character_name":"Circulation One"}'),
-('1c000000-0000-4000-8000-000000000002','circulation-two@example.test',false,'{"character_name":"Circulation Two"}'),
-('1c000000-0000-4000-8000-000000000003','circulation-three@example.test',false,'{"character_name":"Circulation Three"}'),
+('1c000000-0000-4000-8000-000000000001','circulation-one@example.test',false,'{"character_name":"CirculationOne"}'),
+('1c000000-0000-4000-8000-000000000002','circulation-two@example.test',false,'{"character_name":"CirculationTwo"}'),
+('1c000000-0000-4000-8000-000000000003','circulation-three@example.test',false,'{"character_name":"CirculationThree"}'),
 ('1c000000-0000-4000-8000-000000000004','circulation-anon@example.test',true,'{}');
 insert into private.item_definitions(id,category_id,name,description,effect_description,image_path,kind,stackable,slot)
 values ('circulation_material','materials','Circulation Material','Test material.','No effect.','/images/items/timber.png','passive',true,null),

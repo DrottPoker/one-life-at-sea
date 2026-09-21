@@ -5,7 +5,8 @@ Uppdaterat 2026-09-20. Balans kommer från [gameplayconfig](../config/gameplay.j
 ## Beteende
 
 The Harbor visar kaptener som är i hamnen, även utloggade spelare. Namn sorteras
-alfabetiskt med 20 per sida. Den egna kaptenen markeras med **You**. Antal och
+alfabetiskt med 20 per sida. Publika nummer visas bredvid namnen och länkarna använder `/players/<player-number>`.
+Den egna kaptenen markeras med **You**. Antal och
 sidindelning beräknas på hela listan; tomma sista sidor begränsas till en giltig sida.
 
 Kaptenen lämnar listan vid avfärd och återkommer vid hemresans deadline.
@@ -17,6 +18,8 @@ avgör medlemskapet. Se [resesystemet](SEA_TRAVEL.md).
 `public.harbor_players` innehåller `character_id`, `display_name` och
 `arrives_at`. Ankomst är null för en färdigställd hamnposition, annars
 hemresans deadline. En framtida ankomst döljs av RLS.
+Listfunktionen hämtar även `player_number` från `character_profiles`, utan att
+ändra hamntabellens Realtime-format. Se [spelar-ID:n](PLAYER_IDS.md).
 
 Endast registrerade konton kan läsa. Klienter kan inte skriva listan.
 Kontokoppling, stats, resurser och privata resor publiceras inte.

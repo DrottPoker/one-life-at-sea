@@ -29,7 +29,8 @@ begin
     'sea',private.sea_state(c),'gold_coins',c.gold_coins,'bank_gold_coins',c.bank_gold_coins,'training',private.training_state(c.id),
     'hospital_until',c.hospital_until,'observed_at',observed_at,'ship_health',ship_hp,'crew_health',crew_hp,'health_next_at',health_next_at,
     'active_combat_id',active.id,'combat_next_at',active.deadline,'last_combat_id',last_id,
-    'active_attack',case when engagement.role='attacker' then jsonb_build_object('battle_id',active.id,'target_id',active.defender_id) end,
+    'active_attack',case when engagement.role='attacker' then jsonb_build_object('battle_id',active.id,'target_id',active.defender_id,
+      'target_player_number',(select player_number from public.characters where id=active.defender_id)) end,
     'defence_order',c.defence_order,'protected_until',case when c.protected_until>observed_at then c.protected_until end,
     'ship_attack',c.ship_attack,'ship_defense',c.ship_defense,'ship_speed',c.ship_speed,'ship_accuracy',c.ship_accuracy,
     'crew_attack',c.crew_attack,'crew_defense',c.crew_defense,'crew_speed',c.crew_speed,'crew_accuracy',c.crew_accuracy);
@@ -53,8 +54,10 @@ as $$
     'players', coalesce((
       select jsonb_agg(to_jsonb(player) order by player.display_name, player.character_id)
       from (
-        select character_id, display_name from public.harbor_players where arrives_at is null or arrives_at<=statement_timestamp()
-        order by display_name, character_id limit {{gameplay.harbor.pageSize}} offset paging.page * {{gameplay.harbor.pageSize}}
+        select h.character_id, h.display_name, p.player_number from public.harbor_players h
+        join public.character_profiles p on p.character_id=h.character_id
+        where h.arrives_at is null or h.arrives_at<=statement_timestamp()
+        order by h.display_name, h.character_id limit {{gameplay.harbor.pageSize}} offset paging.page * {{gameplay.harbor.pageSize}}
       ) player
     ), '[]'::jsonb)
   ) from paging;

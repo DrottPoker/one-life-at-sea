@@ -75,7 +75,7 @@ declare viewer uuid:=private.combat_captain(); page_size integer:={{gameplay.mar
 begin
   if requested_page is null or requested_page<0 or own_only is null or (not own_only and target_item is null) then raise exception 'INVALID_FILTER' using errcode='22023'; end if;
   with matching as (
-    select l.id,l.item_id,l.entry_type,l.quantity,l.unit_price,l.seller_id,p.display_name seller_name,
+    select l.id,l.item_id,l.entry_type,l.quantity,l.unit_price,l.seller_id,p.display_name seller_name,p.player_number seller_player_number,
       l.seller_id=viewer is_own,d.name,d.image_path,d.kind,d.category_id,l.created_at,l.fee_bps,
       d.active and d.tradable tradable,
       case when l.entry_type='instance' then jsonb_build_object('damage',l.damage,'accuracy',l.accuracy) end stats

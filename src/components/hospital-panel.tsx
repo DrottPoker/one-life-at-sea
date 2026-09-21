@@ -65,7 +65,7 @@ export function HospitalPanel({ initial, characterId }: { initial: HospitalRoste
     </div>
     <div className="o-section-bar"><h2>Captains in hospital ({total})</h2></div>
     <ul className="o-roster-list" aria-label="Captains in hospital">
-      {roster?.patients.map(patient => <li key={patient.character_id}><HeartPulse aria-hidden="true" /><Link className="o-roster-name" href={"/characters/" + patient.character_id}>{patient.display_name}</Link>
+      {roster?.patients.map(patient => <li key={patient.character_id}><HeartPulse aria-hidden="true" /><Link className="o-roster-name" href={"/players/" + patient.player_number}>{patient.display_name}</Link><small className="o-player-number">[{patient.player_number}]</small>
         {patient.character_id === characterId && <span className="o-roster-you">You</span>}</li>)}
       {roster && !total && <li className="o-roster-empty">No captains are in hospital.</li>}
       {!roster && <li className="o-roster-empty">{error ? "The patient list could not be loaded." : "Loading patients..."}</li>}

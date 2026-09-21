@@ -7,7 +7,7 @@ Kodens ansvarsfördelning och fortsatt utveckling beskrivs i [kodstrukturen](doc
 ## Spelfunktioner
 
 - Registrera med karaktärsnamn, e-post och lösenord. Konto och karaktär skapas samtidigt.
-- Karaktärsnamn behöver bara vara ifyllt och unikt. Siffror, symboler, emoji och korta namn fungerar.
+- Karaktärsnamn ska vara ifyllt och unikt, utan siffror eller mellanslag. Svenska bokstäver, symboler och emoji fungerar. Se [namnregler](docs/CHARACTER_NAMES.md).
 - Exakt en karaktär per konto. Du loggas in direkt och kommer till **The Harbor**.
 - Ingen e-postbekräftelse krävs i utvecklingsversionen.
 - Enkla lösenord fungerar: minst 6 tecken, utan krav på stora bokstäver, siffror eller specialtecken.
@@ -32,6 +32,7 @@ Kodens ansvarsfördelning och fortsatt utveckling beskrivs i [kodstrukturen](doc
   Se [resesystemet](docs/SEA_TRAVEL.md).
 - The Harbor visar kaptener som är i hamnen, med namn, antal och realtidsuppdatering.
   Listan omfattar även utloggade kaptener och har 20 namn per sida.
+- **Players**: sök kaptener på namn eller publikt nummer från 100001. Använd exempelvis #100001 för exakt ID-sökning. UUID behålls internt. Se [spelar-ID:n](docs/PLAYER_IDS.md).
 - **My Profile** öppnar din karaktärsprofil. Klicka på ett namn i hamnen för att se en annan kaptens profil.
 - **Inventory** i sidopanelens Harbor-meny: kategorier, namnsökning, itemrader med egna bilder och stats,
   utfällbara detaljer och fungerande Trash. Equip och Use väntar på nästa etapp.
@@ -47,7 +48,7 @@ Kodens ansvarsfördelning och fortsatt utveckling beskrivs i [kodstrukturen](doc
 - Båda har tio justerbara nivåer. Nya karaktärer börjar med 10 i varje stat.
 - Energy är alltid heltal: +5 vid fasta klockslag var femte minut i hamnen och var tionde minut till havs, även under resor och offline, upp till 100. Nästa tick visas i sidopanelen. Se [Energy](docs/ENERGY_RECOVERY.md).
 - Lösenordsåterställning, valideringsfel och skyddad åtkomst mellan konton.
-- **Attack**: fullskärmsvy med kanonstrid och boarding. Dela `/attack/<motståndarens-id>` så kan andra ansluta mot gemensam hälsa. Adressen är samma före och under striden.
+- **Attack**: fullskärmsvy med kanonstrid och boarding. Dela `/attack/<motståndarens-publika-nummer>` så kan andra ansluta mot gemensam hälsa. Adressen är samma före och under striden.
 - Aktiva angripare stannar i sin strid tills de vinner, förlorar eller lämnar. Försvarare kan läsa sidor och inventory, men alla handlingar som flyttar eller ändrar karaktären är låsta under striden. Hälsa och handlingslås uppdateras i realtid.
 - Torn-inspirerade statkurvor: Accuracy mot Speed för träffchans, Attack mot Defense för skada. Extrem Speed kan undvika alla träffar; 25 gånger Defense blockerar all skada.
 - **Combat log**: offentligt delbar logg med servertid, final blow, assist och separata värden för Ship damage och Crew damage. Alla deltagarnamn länkar till profiler.

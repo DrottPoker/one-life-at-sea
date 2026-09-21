@@ -51,7 +51,7 @@ async function recoveryLink(email: string) {
 test("registration creates the character and returns to the same harbor after login", async ({ page, browser }) => {
   const email = `voyage-${suffix()}@example.test`;
   const secret = suffix().slice(0, 6);
-  const name = `Captain_${suffix()}_123_🦜_LongName`;
+  const name = `Captain_${suffix()}_🦜_LongName`;
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.name));
   await page.goto("/harbor");
@@ -95,7 +95,7 @@ test("registration creates the character and returns to the same harbor after lo
   await fillRegistration(other, otherEmail, otherSecret, name.toUpperCase());
   await expect(other.locator("#name-error")).toContainText("already taken");
   await expect(other.getByLabel("Email address", { exact: true })).toHaveValue(otherEmail);
-  await register(other, otherEmail, otherSecret, `Mariner ${suffix()}`);
+  await register(other, otherEmail, otherSecret, `Mariner${suffix()}`);
   await otherContext.close();
   expect(errors).toEqual([]);
 });
@@ -104,7 +104,7 @@ test("password recovery uses the local email link and preserves the character", 
   const email = `recovery-${suffix()}@example.test`;
   const oldPassword = password();
   const newPassword = suffix().slice(0, 6);
-  const name = `Sailor ${suffix()}`;
+  const name = `Sailor${suffix()}`;
   await register(page, email, oldPassword, name);
   await page.getByRole("button", { name: "Log out", exact: true }).filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/login$/);
@@ -134,22 +134,22 @@ test("the real Data API enforces owner isolation and one character per account",
   const second = client();
   const anonymous = client();
   for (const api of [first, second]) {
-    const { data, error } = await api.auth.signUp({ email: `api-${suffix()}@example.test`, password: password(), options: { data: { character_name: `Sailor ${suffix()}` } } });
+    const { data, error } = await api.auth.signUp({ email: `api-${suffix()}@example.test`, password: password(), options: { data: { character_name: `Sailor${suffix()}` } } });
     expect(error?.code).toBeUndefined();
     expect(!!data.session).toBe(true);
   }
-  const attempts = await Promise.all(["Captain", "Sailor"].map(prefix => first.from("characters").insert({ display_name: `${prefix} ${suffix()}` })));
+  const attempts = await Promise.all(["Captain", "Sailor"].map(prefix => first.from("characters").insert({ display_name: `${prefix}${suffix()}` })));
   expect(attempts.map(result => result.error?.code ?? "created").sort()).toEqual(["23505", "23505"]);
   const own = await first.from("characters").select("*");
   expect(own.error?.code).toBeUndefined();
   expect(own.data).toHaveLength(1);
-  const changed = await first.auth.updateUser({ data: { character_name: `Changed ${suffix()}`, user_id: "tampered", location: "open_sea" } });
+  const changed = await first.auth.updateUser({ data: { character_name: `Changed${suffix()}`, user_id: "tampered", location: "open_sea" } });
   expect(changed.error?.code).toBeUndefined();
   expect((await first.from("characters").select("*")).data).toEqual(own.data);
   const other = await second.from("characters").select("*").eq("id", own.data![0].id);
   expect(other.data).toEqual([]);
   expect((await anonymous.from("characters").select("*")).error?.code).toBe("42501");
-  const tampered = await second.from("characters").insert({ display_name: `Pirate ${suffix()}`, user_id: own.data![0].user_id, location: "open_sea" });
+  const tampered = await second.from("characters").insert({ display_name: `Pirate${suffix()}`, user_id: own.data![0].user_id, location: "open_sea" });
   expect(tampered.error?.code).toBe("42501");
   await first.auth.signOut();
   await second.auth.signOut();
@@ -157,7 +157,7 @@ test("the real Data API enforces owner isolation and one character per account",
 
 test("simultaneous registrations cannot reserve one name twice or leave orphan accounts", async () => {
   const client = () => createClient(apiUrl, apiKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const name = `Mariner ${suffix()}`;
+  const name = `Mariner${suffix()}`;
   const attempts = [0, 1].map(() => ({ api: client(), email: `race-${suffix()}@example.test`, secret: password() }));
   const results = await Promise.all(attempts.map((entry, index) => entry.api.auth.signUp({
     email: entry.email, password: entry.secret, options: { data: { character_name: index ? name.toUpperCase() : name } },
@@ -169,7 +169,7 @@ test("simultaneous registrations cannot reserve one name twice or leave orphan a
     if (result.error) {
       const rejectedLogin = await entry.api.auth.signInWithPassword({ email: entry.email, password: entry.secret });
       expect(rejectedLogin.error?.code).toBe("invalid_credentials");
-      const retry = await entry.api.auth.signUp({ email: entry.email, password: entry.secret, options: { data: { character_name: `Retry ${suffix()}` } } });
+      const retry = await entry.api.auth.signUp({ email: entry.email, password: entry.secret, options: { data: { character_name: `Retry${suffix()}` } } });
       expect(retry.error?.code).toBeUndefined();
       expect(!!retry.data.session).toBe(true);
     }

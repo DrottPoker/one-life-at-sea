@@ -25,6 +25,7 @@ export function adminPageNumber(value: string | undefined): number {
 }
 
 export const adminErrors: Record<string, string> = {
+  INVALID_CHARACTER_NAME: "Use a character name without numbers or spaces.",
   ADMIN_REQUIRED: "Administrator access is required. Your access may have been revoked.",
   STALE_ROW: "This record changed after you opened it. Reload the record before editing again.",
   ROW_NOT_FOUND: "This record no longer exists. Reload the page.",

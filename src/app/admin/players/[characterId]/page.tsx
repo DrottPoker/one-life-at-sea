@@ -28,12 +28,12 @@ export default async function AdminPlayer({ params }: { params: Promise<{ charac
   const filteredLink = (name: string) => "/admin/database/" + name + "?field=character_id&value=" + characterId;
   return <>
     <Link href="/admin/players">Back to players</Link><h2>{captain.display_name}</h2>
-    <p>Character: <code>{characterId}</code><br />Account: <code>{captain.user_id}</code></p>
+    <p>Player ID: <strong>{captain.player_number}</strong><br />Character: <code>{characterId}</code><br />Account: <code>{captain.user_id}</code></p>
     <section className="admin-card"><h2>Character, stats and balances</h2>
       <dl className="admin-metrics">{["gold_coins","bank_gold_coins","energy","ship_health","crew_health"].map(key =>
         <div key={key}><dt>{key.replaceAll("_", " ")}</dt><dd>{captain[key]}</dd></div>)}</dl>
       <RecordEditor resource={resource("characters")} row={row} label="Edit character" />
-      <Link href={"/characters/" + characterId}>View game profile</Link>
+      <Link href={"/players/" + captain.player_number}>View game profile</Link>
       <p>Hospital until: {captain.hospital_until ?? "Not hospitalized"}</p>
       {captain.hospital_until && <MutationForm action="update" payload={{
         resource: "characters", key: rowKey(resource("characters"), row), version: row.version,

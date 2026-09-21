@@ -4,9 +4,9 @@ set local search_path=public,extensions;
 select no_plan();
 create or replace function private.combat_roll() returns double precision language sql volatile security invoker set search_path='' as $$ select 0.0::double precision $$;
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('d4000000-0000-4000-8000-000000000001','shared-one@example.test',false,'{"character_name":"Shared Captain One"}'),
-('d4000000-0000-4000-8000-000000000002','shared-two@example.test',false,'{"character_name":"Shared Captain Two"}'),
-('d4000000-0000-4000-8000-000000000003','shared-target@example.test',false,'{"character_name":"Shared Defender"}');
+('d4000000-0000-4000-8000-000000000001','shared-one@example.test',false,'{"character_name":"SharedCaptainOne"}'),
+('d4000000-0000-4000-8000-000000000002','shared-two@example.test',false,'{"character_name":"SharedCaptainTwo"}'),
+('d4000000-0000-4000-8000-000000000003','shared-target@example.test',false,'{"character_name":"SharedDefender"}');
 create temporary table f as select
 (select id from public.characters where user_id='d4000000-0000-4000-8000-000000000001') a,
 (select id from public.characters where user_id='d4000000-0000-4000-8000-000000000002') b,

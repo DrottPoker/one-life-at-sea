@@ -3,8 +3,8 @@ create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
 select no_plan();
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('ad000000-0000-4000-8000-000000000001','admin-owner@example.test',false,'{"character_name":"Admin Owner Test"}'),
-('ad000000-0000-4000-8000-000000000002','admin-player@example.test',false,'{"character_name":"Admin Player Test","role":"admin","is_admin":true}'),
+('ad000000-0000-4000-8000-000000000001','admin-owner@example.test',false,'{"character_name":"AdminOwnerTest"}'),
+('ad000000-0000-4000-8000-000000000002','admin-player@example.test',false,'{"character_name":"AdminPlayerTest","role":"admin","is_admin":true}'),
 ('ad000000-0000-4000-8000-000000000003','admin-anon@example.test',true,'{}');
 insert into private.admin_members(user_id) values('ad000000-0000-4000-8000-000000000001'),('ad000000-0000-4000-8000-000000000003');
 select set_config('test.captain',(select id::text from public.characters where user_id='ad000000-0000-4000-8000-000000000002'),true);
@@ -37,9 +37,9 @@ select ok(not exists(select 1 from jsonb_array_elements(public.admin_catalog()) 
 select throws_ok($$select public.admin_read('auth.users')$$,'22023','UNKNOWN_RESOURCE','Auth table denied');
 select throws_ok($$select public.admin_read('characters; drop table public.characters')$$,'22023','UNKNOWN_RESOURCE','Table identifier injection denied');
 select throws_ok($$select public.admin_read('characters','',0,'{"user_id;drop": "test"}')$$,'22023','INVALID_FILTER','Filter identifier injection denied');
-select is(public.admin_read('characters','Admin Player Test')->>'total','1','Literal player search works');
+select is(public.admin_read('characters','AdminPlayerTest')->>'total','1','Literal player search works');
 select is(public.admin_read('characters','%',0)->>'total','0','Search wildcards are literal');
-select is(public.admin_read('characters','Admin Player Test',2147483647)->>'page','0','Pagination clamps');
+select is(public.admin_read('characters','AdminPlayerTest',2147483647)->>'page','0','Pagination clamps');
 reset role;
 update public.characters set energy_updated_at=clock_timestamp()-interval '2 days',
   ship_recovery_at=clock_timestamp()-interval '2 days',crew_recovery_at=clock_timestamp()-interval '2 days'

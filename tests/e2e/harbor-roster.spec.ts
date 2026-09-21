@@ -28,8 +28,8 @@ test("harbor roster receives real events and recovers after a connection loss", 
   const created: string[] = [];
   const email = `roster-${suffix()}@example.test`;
   const password = randomBytes(24).toString("hex");
-  const observerName = `A A Watch ${suffix()}`;
-  const visitorName = `A A Guest ${suffix()}`;
+  const observerName = `AAAWatch${suffix()}`;
+  const visitorName = `AAAGuest${suffix()}`;
   const errors: string[] = [];
   const eventColumns: string[][] = [];
   page.on("pageerror", error => errors.push(error.name));

@@ -10,7 +10,7 @@ export type MarketItem = Pick<InventoryEntry, "item_id" | "name" | "category_id"
 };
 export type MarketPage<T> = { items: T[]; total: number; page: number; page_size: number; observed_at: string };
 export type MarketListing = Pick<InventoryEntry, "id" | "entry_type" | "item_id" | "quantity" | "name" | "image_path" | "kind" | "category_id" | "stats"> & {
-  seller_id: string; seller_name: string; is_own: boolean; unit_price: number; fee_bps: number; created_at: string; tradable: boolean;
+  seller_id: string; seller_player_number: number; seller_name: string; is_own: boolean; unit_price: number; fee_bps: number; created_at: string; tradable: boolean;
 };
 export type SaleEntry = { entry_id: string; entry_type: InventoryEntryType; quantity: number; unit_price: number };
 export type MarketOperation = { action: "create"; entries: SaleEntry[] } |

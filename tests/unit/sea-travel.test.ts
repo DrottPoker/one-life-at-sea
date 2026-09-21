@@ -20,7 +20,7 @@ describe("sea navigation locks", () => {
     }
   });
   it("retains battle and hospital priority", () => {
-    expect(navigationRedirect("/sea", { ...base, attack: { target_id: target, battle_id: target } })).toBe("/attack/" + target);
+    expect(navigationRedirect("/sea", { ...base, attack: { target_id: target, target_player_number: 100001, battle_id: target } })).toBe("/attack/100001");
     expect(navigationRedirect("/sea", { ...base, hospital_until: "2026-12-01Z" })).toBe("/harbor/hospital");
     expect(navigationRedirect("/inventory", { ...base, hospital_until: "2026-12-01Z" })).toBeNull();
     expect(navigationRedirect("/harbor/bank", base)).toBeNull();

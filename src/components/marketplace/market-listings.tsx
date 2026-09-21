@@ -35,7 +35,7 @@ function BuyRow({ listing, mutation, stale }: { listing: MarketListing; mutation
   }
   return <tr data-listing-id={listing.id}>
     <td className="o-market-listing-art"><ItemImage item={listing} /></td>
-    <td className="o-market-seller"><Link href={"/characters/" + listing.seller_id} title={listing.seller_name} prefetch={false}>{listing.seller_name}</Link>
+    <td className="o-market-seller"><Link href={"/players/" + listing.seller_player_number} title={listing.seller_name} prefetch={false}>{listing.seller_name}</Link><small className="o-player-number"> [{listing.seller_player_number}]</small>
       {listing.stats && <small>Damage {formatItemStat(listing.stats.damage)} · Accuracy {formatItemStat(listing.stats.accuracy)}</small>}
     </td>
     <td className="o-market-price" title="Gold Coins each">{formatGold(listing.unit_price)}<span className="sr-only"> Gold Coins each</span></td>

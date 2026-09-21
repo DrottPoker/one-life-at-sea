@@ -4,8 +4,8 @@ set local search_path=public,extensions;
 select no_plan();
 
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('a8200000-0000-4000-8000-000000000001','distance-one@example.test',false,'{"character_name":"Distance Test One"}'),
-('a8200000-0000-4000-8000-000000000002','distance-two@example.test',false,'{"character_name":"Distance Test Two"}');
+('a8200000-0000-4000-8000-000000000001','distance-one@example.test',false,'{"character_name":"DistanceTestOne"}'),
+('a8200000-0000-4000-8000-000000000002','distance-two@example.test',false,'{"character_name":"DistanceTestTwo"}');
 create temp table distance_fixture as select id from public.characters where user_id='a8200000-0000-4000-8000-000000000001';
 grant select on distance_fixture to authenticated;
 

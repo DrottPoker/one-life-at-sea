@@ -23,6 +23,14 @@ Outside the game provider it behaves as a regular Next.js Link. The content swit
 does not unmount old components before the router commits; pending economy actions
 can still record their result. The durable economy journal also survives navigation.
 
+## Player identities
+
+Profiles use `/players/<player-number>` and attacks use `/attack/<player-number>`.
+Legacy UUID links resolve to those routes on the server. Hospital and sea navigation
+allow the directory and numeric profiles under the same rules as existing profiles.
+Battle locks carry both the internal target UUID and the public number, so an old
+attack link can reach its canonical redirect without a navigation loop.
+
 ## Cache and freshness
 
 The router reuses layout segments, downloaded code and prefetched loading boundaries.

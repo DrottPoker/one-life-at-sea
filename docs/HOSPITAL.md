@@ -12,6 +12,7 @@ Implementerat lokalt 2026-09-19. Detta ersätter idén om hardcore och permanent
   ändra försvarsorder eller attackera under vistelsen.
 - Patienten kan se sjukhussidan, läsa patientlistan, besöka sin egen och andra spelares profiler och logga ut.
   My Profile fungerar under hela vistelsen, och patientnamnen länkar till profilerna.
+  Players-sökningen och nummerbaserade profiler fungerar också under vistelsen.
   [Inventory](INVENTORY.md) får läsas, filtreras och öppnas via direktlänk. Trash är spärrat.
   Medicinsk itemanvändning kommer i nästa etapp; Use är ännu inaktivt.
   Andra spelare kan inte attackera patienten.

@@ -3,8 +3,8 @@ create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
 select no_plan();
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('f6000000-0000-4000-8000-000000000001','hospital-a@example.test',false,'{"character_name":"Hospital A"}'),
-('f6000000-0000-4000-8000-000000000002','hospital-d@example.test',false,'{"character_name":"Hospital D"}'),
+('f6000000-0000-4000-8000-000000000001','hospital-a@example.test',false,'{"character_name":"HospitalA"}'),
+('f6000000-0000-4000-8000-000000000002','hospital-d@example.test',false,'{"character_name":"HospitalD"}'),
 ('f6000000-0000-4000-8000-000000000003','hospital-anon@example.test',true,'{}');
 create temporary table h as select
 (select id from public.characters where user_id='f6000000-0000-4000-8000-000000000001') a,
@@ -41,11 +41,11 @@ select is(public.get_game_state()->>'bank_gold_coins','500','Bank balance remain
 select throws_ok($$update public.characters set hospital_until=null,hospital_started_at=null$$,'42501',null,'Clients cannot discharge themselves');
 select throws_ok($$delete from public.hospital_patients$$,'42501',null,'Clients cannot edit the patient list');
 select throws_ok($$select private.settle_hospital((select a from h),clock_timestamp()+interval '1 hour')$$,'42501',null,'Clients cannot choose discharge time');
-select ok(exists(select 1 from jsonb_array_elements(public.list_hospital_patients()->'patients') p where p->>'display_name'='Hospital A'),'Patient sees hospital list');
+select ok(exists(select 1 from jsonb_array_elements(public.list_hospital_patients()->'patients') p where p->>'display_name'='HospitalA'),'Patient sees hospital list');
 select ok(not (public.list_hospital_patients()::text like '%@example.test%'),'List hides account data');
 select ok(not (public.list_hospital_patients()::text like '%gold_coins%'),'List hides balances');
 select set_config('request.jwt.claims','{"sub":"f6000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
-select ok(exists(select 1 from jsonb_array_elements(public.list_hospital_patients()->'patients') p where p->>'display_name'='Hospital A'),'Other registered players see patients');
+select ok(exists(select 1 from jsonb_array_elements(public.list_hospital_patients()->'patients') p where p->>'display_name'='HospitalA'),'Other registered players see patients');
 select is((select public.get_hospital_status(a)->'hospital_until' from h),(select value from hr where key='until'),'Other players can read the exact hospital deadline');
 select is((select array_agg(k order by k) from h,jsonb_object_keys(public.get_hospital_status(a)) k),array['hospital_until','observed_at'],'Profile hospital status exposes only deadline and server time');
 select is((select public.get_combat_preview(a)->>'reason' from h),'TARGET_IN_HOSPITAL','Hospital patients cannot be attacked');
@@ -61,7 +61,7 @@ reset role;
 update public.characters set hospital_started_at=clock_timestamp()-interval '10 minutes',hospital_until=clock_timestamp()-interval '1 second'
   where id=(select a from h);
 set local role authenticated;
-select ok(not exists(select 1 from jsonb_array_elements(public.list_hospital_patients()->'patients') p where p->>'display_name'='Hospital A'),'Expired offline patients leave the list without signing in');
+select ok(not exists(select 1 from jsonb_array_elements(public.list_hospital_patients()->'patients') p where p->>'display_name'='HospitalA'),'Expired offline patients leave the list without signing in');
 select is((select public.get_hospital_status(a)->>'hospital_until' from h),null,'Offline expiry disappears from profile status without owner access');
 select is(public.get_game_state()->>'hospital_until',null,'Discharge is automatic on server access');
 select is(public.get_game_state()->>'crew_health','100','Crew returns at full health');

@@ -3,7 +3,7 @@ import { createTestAccount, loginTestAccount, cleanupTestAccounts } from "../sup
 
 test("nautical frame keeps scenery fixed and game views usable across screen sizes", async ({ page }) => {
   test.setTimeout(90_000);
-  const account = await createTestAccount("design", { character_name: "Captain Silverwave" });
+  const account = await createTestAccount("design", { character_name: "CaptainSilverwave" });
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   try {

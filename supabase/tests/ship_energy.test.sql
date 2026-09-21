@@ -5,7 +5,7 @@ set local search_path=public,extensions;
 select no_plan();
 select ok(to_regprocedure('public.start_ship_upgrade(text,text,text,uuid)') is null,'Old size-based RPC is removed');
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('b3000000-0000-4000-8000-000000000001','ship-energy@example.test',false,'{"character_name":"Ship Energy Captain"}');
+('b3000000-0000-4000-8000-000000000001','ship-energy@example.test',false,'{"character_name":"ShipEnergyCaptain"}');
 create temporary table ship_fixture as select id captain,gen_random_uuid() request from public.characters
 where user_id='b3000000-0000-4000-8000-000000000001';
 grant select on ship_fixture to authenticated;

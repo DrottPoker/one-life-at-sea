@@ -18,7 +18,7 @@ function fixture(id: string, statements: string) {
 async function account() {
   const api = client(), tag = randomBytes(10).toString("hex");
   const email = "training-" + tag + "@example.test", password = randomBytes(24).toString("hex");
-  expect((await api.auth.signUp({ email, password, options: { data: { character_name: "Sailor " + tag } } })).error).toBeNull();
+  expect((await api.auth.signUp({ email, password, options: { data: { character_name: "Sailor" + tag.replace(/[0-9]/g, digit => String.fromCharCode(103 + Number(digit))) } } })).error).toBeNull();
   const own = await api.from("characters").select("id").single();
   expect(own.error).toBeNull();
   // Recovery scenarios override this checkpoint with a real server-clock boundary.

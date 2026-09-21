@@ -205,9 +205,9 @@ for each row execute function private.sync_harbor_player();
 create or replace function private.sync_character_profile()
 returns trigger language plpgsql security definer set search_path='' as $$
 begin
-  insert into public.character_profiles(character_id,display_name,location,created_at,arrives_at,arrival_location,
+  insert into public.character_profiles(character_id,player_number,display_name,location,created_at,arrives_at,arrival_location,
     max_sea_distance,arrival_max_sea_distance)
-    values(new.id,new.display_name,new.location,new.created_at,new.travel_arrives_at,
+    values(new.id,new.player_number,new.display_name,new.location,new.created_at,new.travel_arrives_at,
       case when new.location='traveling' then case when new.travel_kind='return' then 'the_harbor' else 'open_sea' end end,
       new.max_sea_distance,case when new.travel_kind in ('depart','onward')
         and new.travel_target_step>new.max_sea_distance then new.travel_target_step end)

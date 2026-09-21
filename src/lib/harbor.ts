@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
 export const HARBOR_PAGE_SIZE = gameplay.harbor.pageSize;
-export type HarborPlayer = { character_id: string; display_name: string };
+export type HarborPlayer = { character_id: string; player_number: number; display_name: string };
 export type HarborRoster = { players: HarborPlayer[]; total: number; page: number; observed_at: string; next_arrival_at: string | null };
 
 export async function loadHarborRoster(client: SupabaseClient<Database>, page: number, signal?: AbortSignal) {

@@ -1,3 +1,50 @@
+# Publika spelar-ID:n och namnregler, 2026-09-21
+
+Ägarens beslut: publika nummer från 100001 och UUID som intern identitet.
+Nya karaktärsnamn får inte innehålla siffror eller mellanslag.
+
+- Permanent databasgenererat player_number, unikt och skrivskyddat även vid
+  administrativa ändringar. Borttagna nummer återanvänds inte.
+- Alla 446 karaktärer som fanns före migrationen har samma UUID och
+  nummer 100001-100446 i skapelseordning. Ingen databasåterställning gjordes.
+- Players söker på namn eller nummer. #100001 ger exakt ID-sökning.
+- Profiler och delade attackadresser använder numret. Gamla UUID-länkar
+  omdirigerar och äldre stridssnapshots får nummer vid läsning.
+- Nummer visas i spelvyer och admin. Spelhandlingar, relationer och RLS
+  använder fortsatt UUID.
+- Registrering och karaktärsskapande avvisar Unicode-tal och blanksteg
+  i formulär, serverhandling och databas. Ogiltig registrering lämnar inget konto.
+- Äldre namn behålls och hindrar inte spelhandlingar. Nya namn och
+  administrativa namnbyten följer regeln.
+- Berörda dokument och testfixturer är uppdaterade.
+
+Verifierat:
+
+- npm run check: lint, TypeScript, 246 enhetstester och produktionsbygge passerade.
+- npm run test:db: 1 233 assertions i 24 filer passerade.
+- npm run test:config:db: 76 assertions passerade; den alternativa konfigurationen
+  rullades tillbaka och originalkonfigurationen återställdes.
+- Lokala säkerhetsadvisors rapporterade inga varningar eller fel.
+- Samtliga tre nya migrationer applicerades lokalt utan dataåterställning.
+
+- Webbläsare: 69 scenarier verifierade mot samma produktionsbygge.
+  Helhetskörningen gav 66 godkända. Tre testförberedelser rättades
+  (formulärval, lösenord efter avvisat försök och ett gammalt testnamn med
+  mellanslag); samtliga tre passerade i den riktade omkörningen.
+- Sökning, samtidiga registreringar, RLS, äldre länkar, combat, sjöresor,
+  Hospital, inventory, handel, träning och navigation omfattas.
+- Spelarsökningens skärmbilder granskades för dator och mobil; ingen
+  horisontell scroll vid 1280, 375 eller 320 px.
+- Utvecklingssidans registreringsformulär på port 3000 svarar HTTP 200
+  och visar den nya namnregeln.
+- git diff --check passerade.
+
+Den tidigare dokumenterade Next.js-diagnostiken om avbrutna RSC-strömmar
+förekom i helhetskörningen, tillsammans med en drain-listener-varning.
+Ingen varning eller något fel rapporterades i den avslutande riktade körningen.
+
+Se [spelar-ID:n](PLAYER_IDS.md) och [karaktärsnamn](CHARACTER_NAMES.md).
+
 # Ny combat-design, 2026-09-21
 
 Attackvyn följer ägarens combat-referenser med mörkblå ytor, guldramar och

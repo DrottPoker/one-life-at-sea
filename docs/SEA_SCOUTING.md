@@ -10,7 +10,7 @@ allt PvP till havs. [Resor](SEA_TRAVEL.md) och [strid](COMBAT_SYSTEM.md) gäller
 - Alla andra kaptener vid samma **Sea distance** hittas, oavsett platstyp eller
   inloggningsstatus. Själv, hamnkaptener och skepp under resa ingår inte.
   En färd som redan har anlänt räknas även innan ägaren loggar in.
-- Resultatet visar kaptenernas namn med länkar till deras profiler. Alla resultat
+- Resultatet visar kaptenernas namn och publika nummer med länkar till deras profiler. Alla resultat
   är åtkomliga med sidindelning, som normalt visar 25 kaptener per sida.
 - Listan är en sparad ögonblicksbild. Omladdning, profilbesök, sidbyte och återinloggning
   kostar inget. Nya ankomster hittas först vid en ny betald scouting.

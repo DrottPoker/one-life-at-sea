@@ -8,8 +8,8 @@ export function navigationRedirect(pathname: string, lock: NavigationLock | null
   if (!lock || pathname === "/reset-password" || pathname.startsWith("/auth/")) return null;
   if (lock.hospital_until) return isHospitalAccessiblePath(pathname) ? null : "/harbor/hospital";
   if (lock.attack) {
-    const destination = attackUrl(lock.attack.target_id);
-    return pathname === destination ? null : destination;
+    const destination = attackUrl(lock.attack.target_player_number);
+    return pathname === destination || pathname === attackUrl(lock.attack.target_id) ? null : destination;
   }
   if (lock.sea_state && !isSeaAccessiblePath(pathname, lock.sea_state)) return "/sea";
   return null;

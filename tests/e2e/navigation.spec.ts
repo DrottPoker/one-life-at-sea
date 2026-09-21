@@ -41,7 +41,7 @@ test("game navigation preserves the shell, prefetches and only loads content", a
 
   try {
     await page.goto("/register");
-    await page.getByLabel("Character name", { exact: true }).fill(`Navigator ${suffix}`);
+    await page.getByLabel("Character name", { exact: true }).fill(`Navigator${suffix}`);
     await page.getByLabel("Email address", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByLabel("Confirm password", { exact: true }).fill(password);

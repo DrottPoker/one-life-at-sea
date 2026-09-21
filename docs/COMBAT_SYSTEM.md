@@ -7,7 +7,8 @@ Uppdaterat 2026-09-21. Detta dokument beskriver den implementerade versionen.
 
 ## Flöde och sidlås
 
-- Attack på en profil öppnar /attack/<character-id>. Adressen identifierar motståndaren och kan delas.
+- Attack på en profil öppnar /attack/<player-number>. Adressen identifierar motståndaren och kan delas.
+- Motståndarens publika nummer används i adressen. Gamla UUID-adresser omdirigeras och interna stridsanrop behåller UUID. Se [spelar-ID:n](PLAYER_IDS.md).
 - Förberedelse är gratis. Båda deltagarna visas sida vid sida. Motståndarens utrustning är Unknown.
 - Start battle kostar 10 Energy. Om målet redan försvarar ett möte visas Join battle, med samma kostnad.
 - Adressen ändras inte vid start eller join. Varje besökare ser sin egen förberedelse eller pågående attack.

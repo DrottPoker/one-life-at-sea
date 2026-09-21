@@ -939,3 +939,9 @@ dialog button.o-dialog-close svg { width:18px; height:18px; }
  .o-arrival h2 { font-size:19px; }
  .o-sea-departure { padding:13px; gap:12px; }
 }
+
+.o-player-number { white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--o-muted); }
+.o-player-search { display:grid; gap:8px; margin-bottom:16px; }
+.o-player-search > div { display:flex; flex-wrap:wrap; gap:8px; }
+.o-player-search input { flex:1; min-width:0; width:100%; }
+.o-player-search p { margin:0; }

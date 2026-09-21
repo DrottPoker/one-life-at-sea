@@ -5,7 +5,7 @@ select no_plan();
 
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data)
 select ('a8400000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'action-lock-'||n||'@example.test',false,
-  jsonb_build_object('character_name','Action Lock '||n) from generate_series(1,4) n;
+  jsonb_build_object('character_name','ActionLock'||chr(65+n)) from generate_series(1,4) n;
 create temp table f as select id,user_id,right(user_id::text,12)::integer n from public.characters
   where user_id::text like 'a8400000-0000-4000-8000-%';
 update public.characters set gold_coins=10000,bank_gold_coins=10000,ship_defense=10000,ship_speed=10000

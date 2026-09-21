@@ -4,8 +4,8 @@ set local search_path=public,extensions;
 select no_plan();
 
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('a8100000-0000-4000-8000-000000000001','sea-one@example.test',false,'{"character_name":"Sea Test One"}'),
-('a8100000-0000-4000-8000-000000000002','sea-two@example.test',false,'{"character_name":"Sea Test Two"}'),
+('a8100000-0000-4000-8000-000000000001','sea-one@example.test',false,'{"character_name":"SeaTestOne"}'),
+('a8100000-0000-4000-8000-000000000002','sea-two@example.test',false,'{"character_name":"SeaTestTwo"}'),
 ('a8100000-0000-4000-8000-000000000003','sea-anon@example.test',true,'{}');
 create temp table sea_fixture as select
 (select id from public.characters where user_id='a8100000-0000-4000-8000-000000000001') a,

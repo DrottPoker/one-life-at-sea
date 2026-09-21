@@ -25,8 +25,8 @@ select is((select energy from private.energy_snapshot(10,'2026-03-08 01:59:59-05
 set local time zone 'UTC';
 
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
-('a8500000-0000-4000-8000-000000000001','energy-ticks-one@example.test',false,'{"character_name":"Energy Ticks One"}'),
-('a8500000-0000-4000-8000-000000000002','energy-ticks-two@example.test',false,'{"character_name":"Energy Ticks Two"}');
+('a8500000-0000-4000-8000-000000000001','energy-ticks-one@example.test',false,'{"character_name":"EnergyTicksOne"}'),
+('a8500000-0000-4000-8000-000000000002','energy-ticks-two@example.test',false,'{"character_name":"EnergyTicksTwo"}');
 create temp table f as select id,user_id from public.characters where user_id::text like 'a8500000-0000-4000-8000-%';
 grant select on f to authenticated;
 update public.characters set location='open_sea',sea_step=2,sea_visit_id=gen_random_uuid(),
