@@ -620,6 +620,56 @@
               "maximum": 8760
             }
           }
+        },
+        "morale": {
+          "type": "object",
+          "properties": {
+            "maximum": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "lossPerEnergy": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 100
+            },
+            "recoveryAmount": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 100
+            },
+            "recoverySeconds": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 3600
+            },
+            "statBonusBps": {
+              "type": "number",
+              "integer": true,
+              "minimum": 0,
+              "maximum": 999
+            },
+            "trainingBonusBps": {
+              "type": "number",
+              "integer": true,
+              "minimum": 0,
+              "maximum": 999
+            },
+            "tavernGain": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 200
+            },
+            "tavernGoldCost": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
         }
       }
     },
@@ -786,6 +836,35 @@
               "integer": true,
               "minimum": 1,
               "maximum": 2147483647
+            }
+          }
+        },
+        "dayNight": {
+          "type": "object",
+          "properties": {
+            "dayStartHour": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 22,
+              "integer": true
+            },
+            "nightStartHour": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 23,
+              "integer": true
+            },
+            "resyncMs": {
+              "type": "number",
+              "minimum": 1000,
+              "maximum": 3600000,
+              "integer": true
+            },
+            "requestTimeoutMs": {
+              "type": "number",
+              "minimum": 1000,
+              "maximum": 60000,
+              "integer": true
             }
           }
         }

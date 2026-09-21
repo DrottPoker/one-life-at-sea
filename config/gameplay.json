@@ -160,7 +160,7 @@
       }
     ],
     "shipMinEnergy": 5,
-    "shipSecondsPerEnergy": 60,
+    "shipSecondsPerEnergy": 6,
     "energyPerUnit": 5,
     "statScale": 1000,
     "statExponent": 0.6
@@ -372,5 +372,15 @@
     "listingsPageSize": 20,
     "maxBatchSize": 25,
     "valueWindowHours": 12
+  },
+  "morale": {
+    "maximum": 100,
+    "lossPerEnergy": 0.5,
+    "recoveryAmount": 5,
+    "recoverySeconds": 300,
+    "statBonusBps": 500,
+    "trainingBonusBps": 500,
+    "tavernGain": 25,
+    "tavernGoldCost": 1000
   }
 }

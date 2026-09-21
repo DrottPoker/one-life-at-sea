@@ -1,5 +1,6 @@
 * { box-sizing:border-box; }
 [hidden] { display:none !important; }
+body[data-day-period="night"] { --o-background-image:var(--o-night-background-image); }
 button,input { font:inherit; }
 button { cursor:pointer; }
 a:focus-visible,button:focus-visible,input:focus-visible { outline:2px solid var(--o-gold); outline-offset:3px; }
@@ -161,13 +162,26 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 @media(pointer:coarse) { .o-nav,.o-text-button { min-height:var(--o-touch-height); } }
 
 .o-resources { padding:12px; }
+.o-resource { position:relative; }
 .o-resource + .o-resource { margin-top:10px; }
+.o-resource-control { cursor:help; border-radius:2px; }
+.o-resource-control:focus-visible { outline:2px solid var(--o-gold); outline-offset:4px; }
+.o-resource-tooltip { position:absolute; z-index:20; left:100%; top:50%; transform:translateY(-50%); width:248px; padding-left:8px; font-size:12px; line-height:1.45; }
+.o-resource-tooltip > span { display:block; padding:8px 10px; background:var(--o-inset); border:1px solid var(--o-line); border-radius:3px; color:var(--o-text); box-shadow:0 3px 12px var(--o-palette-0006); }
 .o-resource-label { display:flex; justify-content:space-between; gap:6px; font-size:12px; margin-bottom:5px; font-variant-numeric:tabular-nums; }
 .o-resource-track { height:7px; border:1px solid var(--o-line); border-radius:8px; background:var(--o-bg); overflow:hidden; }
 .o-resource-track > span { display:block; height:100%; background:var(--o-palette-e7ca83); }
 .o-resource-ship > span { background:var(--o-palette-72c9eb); }
 .o-resource-crew > span { background:var(--o-palette-83c9b4); }
-.o-resource-note { margin:9px 0 0; color:var(--o-muted); font-size:10px; line-height:1.6; }
+.o-resource-morale { position:relative; }
+.o-resource-morale::after { content:""; position:absolute; inset-block:0; left:50%; border-left:1px solid var(--o-muted); }
+.o-resource-morale > span { position:absolute; background:var(--o-palette-83c9b4); }
+.o-resource-morale > span[data-negative="true"] { background:var(--o-combat-danger); }
+.o-tavern-summary { display:flex; flex-wrap:wrap; gap:16px 32px; margin:18px 0; font-variant-numeric:tabular-nums; }
+.o-tavern-summary dt { color:var(--o-muted); font-size:12px; }
+.o-tavern-summary dd { margin:4px 0 0; color:var(--o-gold); font-size:18px; }
+.o-tavern form { margin:18px 0 10px; }
+.o-combat-morale { margin:0; padding:8px 14px; color:var(--o-muted); font-size:12px; }
 .o-training-intro { padding:18px 14px; border-bottom:1px solid var(--o-line); }
 .o-training-heading { font:400 20px/1.4 Georgia,serif; color:var(--o-palette-eedaad); margin-bottom:7px; }
 .o-training-head,.o-training-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(112px,160px) 150px; gap:12px; align-items:center; padding:8px 14px; }
@@ -183,10 +197,11 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-training-foot { display:flex; flex-wrap:wrap; justify-content:space-between; gap:5px 12px; color:var(--o-muted); font-size:12px; }
 .o-training-feedback { padding:12px 14px; min-height:43px; color:var(--o-palette-eedaad); }
 @media(max-width:{{frontend.layout.compactBreakpointPx}}px) {
- .o-resources { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+ .o-resources { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
  .o-resource + .o-resource { margin-top:0; }
  .o-resource-label { flex-direction:column; gap:3px; font-size:11px; }
- .o-resource-note { grid-column:1 / -1; margin:0; }
+ .o-resource-tooltip { left:0; top:auto; bottom:100%; transform:none; width:min(240px,calc(100vw - 44px)); padding:0 0 6px; }
+ .o-resource:nth-child(even) .o-resource-tooltip { left:auto; right:0; }
  .o-training-head { display:none; }
  .o-training-row { grid-template-columns:minmax(0,1fr) minmax(0,45%); gap:10px; padding:12px 10px; }
  .o-training-row output { font-size:16px; text-align:right; }
@@ -927,7 +942,6 @@ dialog button.o-dialog-close svg { width:18px; height:18px; }
  .o-captain-card > .o-condition-card { margin-top:8px; }
  .o-resources { padding:10px 12px; gap:9px; }
  .o-gold-coins { padding:8px 12px; }
- .o-resource-note { margin:0; font-size:10px; }
  .o-nav { padding:9px 4px; font-size:11px; }
  .o-navigation-module > .o-side-title { display:none; }
  .o-panel-title h1,.o-panel-title h2 { font-size:17px; }

@@ -40,7 +40,7 @@ XP-krav och efficiency måste stiga och första nivån är gratis vid 0 XP.
 Båda träningsgrupper använder energyPerUnit (5), statScale (1000) och statExponent (0,6).
 Varje Energy räknas med den virtuellt ökade valda staten, avrundat till sex decimaler.
 Se [träningsreglerna](TRAINING_FOUNDATION.md) för den exakta algoritmen.
-Skeppsarbete använder dessutom shipMinEnergy (5) och shipSecondsPerEnergy (60).
+Skeppsarbete använder dessutom shipMinEnergy (5) och shipSecondsPerEnergy (6, alltså 30 sekunder per 5 Energy).
 Sliderns maxvärde är aktuell Energy. Konfigurationen begränsar Energykapaciteten till
 10 000 för att hålla beräkningen ändlig; dagens kapacitet är fortsatt 100.
 Effektivitet måste vara positiv, högst 1000, ha högst sex decimaler och ge en positiv

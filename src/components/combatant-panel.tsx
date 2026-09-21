@@ -2,6 +2,7 @@ import { gameplay } from "@/config/public";
 import Link from "next/link";
 import { Ship, ShipWheel, Skull, Swords, Crosshair, HelpCircle, Shield } from "lucide-react";
 import { STATS, STAT_LABELS } from "@/lib/game";
+import { formatMorale, formatMoraleMultiplier } from "@/lib/morale";
 import { formatStat } from "@/lib/format";
 import type { Combatant } from "@/lib/combat";
 
@@ -43,6 +44,7 @@ export function CombatantPanel({ captain, own, phase }: { captain: Combatant; ow
       </div>
     </dl>
     <div className="o-combat-stats-heading">{phase === "sea" ? "Ship stats" : "Crew stats"}</div>
+    {own && phase === "boarding" && captain.crew_morale != null && <p className="o-combat-morale">Crew Morale {formatMorale(captain.crew_morale)} · {formatMoraleMultiplier(captain.morale_multiplier ?? 1)} stats at entry</p>}
     <dl className="o-combat-stats" aria-label={prefix + " " + (phase === "sea" ? "ship" : "crew") + " stats"}>
       {STATS.map(stat => {
         const Icon = statIcons[stat];

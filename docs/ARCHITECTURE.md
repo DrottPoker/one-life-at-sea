@@ -20,6 +20,10 @@ scenery is served as public/images/harbor-background.webp on a fixed decorative
 layer behind the centered game frame. The document scrolls normally; the compact
 harbor banner, sidebar resources and all gameplay views share the same theme.
 See [interface design](INTERFACE_DESIGN.md) for responsive behavior and asset ownership.
+The backdrop follows a shared UTC day/night cycle: night starts at 21:00 and day
+at 06:00. The root render reads request-time server clock data; WorldClock keeps
+the body period current with monotonic elapsed time and uncached clock reads.
+See [day and night](DAY_NIGHT_CYCLE.md) for recovery and future gameplay boundaries.
 
 Server Components load the current player. Client Components handle input,
 validation feedback, password visibility, pending states and the active navigation.
@@ -50,7 +54,11 @@ the main content area before a slow server response or loading boundary arrives.
 The selected harbor destination updates immediately; menu icons stay unchanged.
 `GameContent` hides and disables the previous view while keeping its components
 mounted until the router commits, preserving in-flight action handling. The economy
-request journal stays mounted outside this switch. Only the latest pending link can
+request journal stays mounted outside this switch. Saved requests keep new mutations
+blocked, but the recovery panel waits for the character's Web Lock to be released
+and checks storage again. Normal in-flight actions therefore never display an
+unconfirmed-action panel, including in other tabs; unresolved receipts still do.
+Only the latest pending link can
 clear the shared indicator. Modified clicks, keyboard navigation, history and
 prefetching remain owned by Next.js.
 
@@ -89,6 +97,7 @@ hides them by default and can conceal this type of layout shift.
 | `/` | Routes to login or the harbor; incomplete older accounts can finish their name choice. |
 | `/register` | Character name, email and password, password confirmation; creates account and character together and opens the harbor. |
 | `/login` | Email/password login. |
+| `/api/world-time` | Public uncached UTC time, period and next transition. No auth, gameplay state or navigation locks. |
 | `/forgot-password` | Requests a reset email with a neutral account-existence response. |
 | `/auth/callback` | Exchanges a PKCE authorization code and accepts only fixed local destinations. |
 | `/auth/link-error` | Recovery from expired, reused or invalid account links. |
@@ -203,17 +212,35 @@ is required. `energy_next_at` gives the next server boundary for UI refresh and 
 Recovery amount and base interval are configurable; the sea interval is twice the base.
 See [Energy recovery](ENERGY_RECOVERY.md).
 
+Crew Morale is stored as exact numeric with a one-decimal constraint, starting at 0
+within -100..100. Its separate timestamp counts fixed five-minute boundaries in
+every location: each tick moves 5 towards zero, including offline and combat.
+Game state derives morale and its next deadline without writing on reads.
+
+Crew drills apply the pre-action morale multiplier once to the permanent-stat
+base gain, round to six decimals, apply Perfect Drill, and spend 0.5 morale per
+Energy atomically. Combat snapshots multiply all four Crew stats by the captured
+morale factor at entry; permanent stats, Ship stats and health are unchanged.
+Existing combat snapshots remain valid. The client uses integer arithmetic for
+the final morale multiplication to match PostgreSQL's positive half-up rounding.
+
+The Tavern offers a +25 Crew Morale meal for 1,000 carried Gold Coins, with no
+Energy cost. The authenticated public buy_tavern_meal wrapper delegates to a
+private mutator with character/combat locks, expected-offer checks, and durable
+per-character receipts. Meals share the browser journal used by the other economy
+actions. See [Crew Morale](CREW_MORALE.md).
+
 Training uses public train_crew, purchase_training_tier and start_ship_upgrade RPCs.
 A private authenticated mutator owns validation, RNG, Energy, carried-gold debits and XP.
 The old public/private train_stat functions are removed. XP stays bigint; both groups'
 stats, tier efficiency and job stat_gain use numeric to retain fractional improvements. Their existing
 safe-integer ceiling is preserved. Character row types are separate from derived game state.
 The ship RPC accepts energy_amount instead of a size ID. A whole amount from the configured
-minimum (5) through recovered current Energy determines cost, duration (60 seconds per Energy)
+minimum (5) through recovered current Energy determines cost, duration (6 seconds per Energy)
 and stat-dependent rewards. private.training_gain rounds each Energy unit to six decimals
 using (efficiency / energyPerUnit) * (1 + virtualStat / statScale)^statExponent, then
 advances virtualStat before the next unit. Crew uses the same helper for five Energy,
-followed by one Perfect Drill roll that can double the full normal gain. Sequential ship
+followed by the captured morale multiplier and one Perfect Drill roll that can double the full normal gain. Sequential ship
 jobs on the same stat and tier therefore preserve the exact gain regardless of job sizes.
 New receipts preserve the starting stat, normal gain, efficiency and configuration revision. Old jobs retain their snapshots;
 the nullable size_id and old size catalog remain historical metadata only.

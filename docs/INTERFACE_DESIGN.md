@@ -10,6 +10,10 @@ resource/economy state remain in place.
 - `public/images/harbor-background.webp` is an optimized copy of the owner's
   `ChatGPT Image 21 sep. 2026 03_31_20 (1).png` (1672 x 941).
   The original file in Downloads is unchanged.
+- At 21:00-06:00 UTC, the backdrop uses the supplied matching night artwork
+  in `public/images/harbor-background-night.webp` (1672 x 941, 341932 bytes).
+  Server time selects the first render and an open page changes automatically.
+  See [day and night](DAY_NIGHT_CYCLE.md).
 - A decorative fixed `body::before` layer draws the background behind the frame.
   The document has a single scrollbar; the game content moves and the scenery
   stays in place. No scroll listeners, parallax script or nested game scroller.
@@ -30,6 +34,17 @@ same navy surfaces as the surrounding panels; the owner removed the parchment
 bands above and below the artwork on 2026-09-21.
 The captain's identity and live resources share one sidebar card. A vector anchor
 emblem provides a neutral placeholder for future supplied character artwork.
+Crew Morale shares this card with Energy and health. Its bar has a fixed midpoint
+at zero, green fill to the right for positive values and coral fill to the left
+for negative values. A signed one-decimal value and an accessible meter expose
+the exact state. The four resource bars form a two-by-two grid on mobile.
+
+Resource descriptions appear in short tooltips on hover, keyboard focus or touch.
+The tooltip stays open when hovered and can be dismissed with Escape or an
+outside tap. Desktop hints sit beside the bar; mobile hints open above it.
+Recovery text and next-tick timestamps are omitted from the card. Server deadlines
+still drive automatic resource updates. Health hints reflect combat and hospital
+recovery rules; morale shows the current stats and training effect.
 
 Harbor departures stay prominent below the compact welcome card. The captain
 directory and harbor destinations sit side by side on wide screens, then stack
@@ -41,7 +56,7 @@ other invented data from the mockup.
 ## Maintenance
 
 Edit `config/theme.css` for palette, typography, frame size, sidebar width,
-banner height and the background image path (`--o-background-image`).
+banner height and the day/night background image paths (`--o-background-image`, `--o-night-background-image`).
 Edit `config/interface.css.template` for component layout, then run
 `npm run config:sync`. Do not hand-edit the generated stylesheet.
 Shared rendering is in `shell.tsx`, the game layout and `resource-bars.tsx`.

@@ -27,7 +27,7 @@ select is(public.get_game_state()->>'ship_attack','10','Fractional rewards wait 
 select is((select public.start_ship_upgrade('attack',6,'ship_1',request) from ship_fixture),(select value from ship_receipts),'Retry preserves the exact job and fractional gain');
 select throws_ok($$select public.start_ship_upgrade('attack',7,'ship_1',request) from ship_fixture$$,'22023','REQUEST_CONFLICT','Changing Energy under the same request is rejected');
 reset role;
-select is((select extract(epoch from(finishes_at-started_at)) from private.ship_upgrade_jobs where character_id=(select captain from ship_fixture) and applied_at is null),360::numeric,'Each Energy adds one minute');
+select is((select extract(epoch from(finishes_at-started_at)) from private.ship_upgrade_jobs where character_id=(select captain from ship_fixture) and applied_at is null),36::numeric,'Each Energy adds six seconds');
 update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '7 minutes',finishes_at=clock_timestamp()-interval '1 second'
 where character_id=(select captain from ship_fixture) and applied_at is null;
 set local role authenticated;
@@ -58,7 +58,7 @@ select public.start_ship_upgrade('accuracy',37,'ship_1',gen_random_uuid());
 select is(public.get_game_state()->>'energy','0','The full current balance can be spent');
 select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','7.460336','Full balance includes virtual stat growth');
 reset role;
-select is((select extract(epoch from(finishes_at-started_at)) from private.ship_upgrade_jobs where character_id=(select captain from ship_fixture) and applied_at is null),2220::numeric,'Arbitrary full-balance duration is correct');
+select is((select extract(epoch from(finishes_at-started_at)) from private.ship_upgrade_jobs where character_id=(select captain from ship_fixture) and applied_at is null),222::numeric,'Arbitrary full-balance duration is correct');
 update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '38 minutes',finishes_at=clock_timestamp()-interval '1 second'
 where character_id=(select captain from ship_fixture) and applied_at is null;
 set local role authenticated;

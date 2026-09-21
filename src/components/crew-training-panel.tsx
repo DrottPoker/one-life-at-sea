@@ -5,7 +5,8 @@ import { useGameState } from "@/components/game-state";
 import { TrainingActionForm } from "@/components/training-action-form";
 import { TrainingTierProgress } from "@/components/training-tier-progress";
 import { STATS, STAT_LABELS, TRAINING_COST } from "@/lib/game";
-import { trainingTier, trainingStatGain } from "@/lib/training";
+import { trainingTier, crewTrainingStatGain } from "@/lib/training";
+import { formatMorale, formatMoraleBonus } from "@/lib/morale";
 import { formatStat, formatStatGain } from "@/lib/format";
 
 const descriptions = { attack: "Weapon drills and striking power.", defense: "Guard drills and protection.", speed: "Footwork and coordinated movement.", accuracy: "Target practice and steady aim." };
@@ -18,6 +19,7 @@ export function CrewTrainingPanel() {
     <div className="o-training-intro">
       <p className="o-training-heading">A sharper crew, one drill at a time.</p>
       <p className="o-copy">Spend <strong>{TRAINING_COST} Energy</strong> per drill. Gains grow with the permanent stat you train.</p>
+      <p className="o-copy">Crew Morale <strong>{formatMorale(state.crew_morale)}</strong>: {formatMoraleBonus(state.crew_morale, "training")} training gains. Each drill costs {formatMorale(TRAINING_COST * gameplay.morale.lossPerEnergy).replace("+", "")} morale.</p>
       <p className="o-copy"><strong>{gameplay.training.perfectChanceBps / 100}% Perfect Drill chance</strong>: {gameplay.training.perfectMultiplier}x stat gain.</p>
     </div>
     <TrainingActionForm label="Crew training" fields={{ action: "crew", tier_id: tier.id }}>
@@ -27,7 +29,7 @@ export function CrewTrainingPanel() {
           <div><h2>{STAT_LABELS[stat]}</h2><p>{descriptions[stat]}</p></div>
           <output aria-label={STAT_LABELS[stat] + " stat"}>{formatStat(state[`crew_${stat}`])}</output>
           <button className="o-training-button" type="submit" name="stat" value={stat}
-            aria-label={`Train ${STAT_LABELS[stat]} for ${TRAINING_COST} Energy`} disabled={blocked || !ready}>Train +{formatStatGain(trainingStatGain(state[`crew_${stat}`], tier.efficiency, TRAINING_COST))}</button>
+            aria-label={`Train ${STAT_LABELS[stat]} for ${TRAINING_COST} Energy`} disabled={blocked || !ready}>Train +{formatStatGain(crewTrainingStatGain(state[`crew_${stat}`], tier.efficiency, TRAINING_COST, state.crew_morale))}</button>
         </div>)}</div>
         <div className="o-panel-foot o-training-foot"><span>Each drill costs {TRAINING_COST} Energy.</span><span>{state.energy} Energy available</span></div>
       </>}

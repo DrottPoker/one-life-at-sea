@@ -118,7 +118,7 @@ declare
   current_tier private.training_tiers%rowtype;
   previous private.training_requests%rowtype;
   job private.ship_upgrade_jobs%rowtype;
-  recovered record;
+  recovered record; morale_state record; morale_before numeric; morale_after numeric; morale_factor numeric; base_gain numeric;
   group_name text:=case when action='crew' then 'crew' when action='ship' then 'ship' else payload->>'group' end;
   stat text:=payload->>'stat';
   observed_at timestamptz;
@@ -162,7 +162,15 @@ begin
       then raise exception 'INVALID_ENERGY' using errcode='22023'; end if;
       energy_cost:=(payload->>'energy_amount')::integer;
     end if;
-    normal_gain:=private.training_gain(stat_before,current_tier.efficiency,energy_cost);
+    base_gain:=private.training_gain(stat_before,current_tier.efficiency,energy_cost);
+    normal_gain:=base_gain;
+    if action='crew' then
+      select * into morale_state from private.morale_snapshot(captain.crew_morale,captain.morale_updated_at,observed_at);
+      morale_before:=morale_state.morale;
+      morale_after:=greatest(-{{gameplay.morale.maximum}},morale_before-energy_cost*{{gameplay.morale.lossPerEnergy}});
+      morale_factor:=private.morale_multiplier(morale_before,{{gameplay.morale.trainingBonusBps}});
+      normal_gain:=trim_scale(round(base_gain*morale_factor,6));
+    end if;
     gain:=case when action='crew' then private.crew_training_gain(normal_gain,private.combat_roll()) else normal_gain end;
     xp_gain:=energy_cost::bigint*{{gameplay.training.xpPerEnergy}};
     if (to_jsonb(captain)->>(group_name||'_'||stat))::numeric>9007199254740991-gain
@@ -171,10 +179,12 @@ begin
     if recovered.energy<energy_cost then raise exception 'NOT_ENOUGH_ENERGY'; end if;
     update public.characters set energy=recovered.energy-energy_cost,energy_updated_at=recovered.energy_updated_at where id=viewer_id;
     if action='crew' then
+      update public.characters set crew_morale=morale_after,morale_updated_at=morale_state.morale_updated_at where id=viewer_id;
       execute format('update public.characters set %I=%I+$1 where id=$2','crew_'||stat,'crew_'||stat) using gain,viewer_id;
       update private.character_training set xp=xp+xp_gain where character_id=viewer_id and training_group='crew';
       result:=jsonb_build_object('kind','crew','stat',stat,'stat_gain',gain,'xp_gain',xp_gain,'energy_cost',energy_cost,
-        'perfect',gain>normal_gain,'tier_id',current_tier.id);
+        'perfect',gain>normal_gain,'tier_id',current_tier.id,'morale_before',morale_before,'morale_after',morale_after,
+        'morale_multiplier',morale_factor,'base_gain',base_gain);
     else
       insert into private.ship_upgrade_jobs(character_id,stat,workshop_id,workshop_name,energy_cost,stat_gain,xp_gain,config_revision,started_at,finishes_at)
         values(viewer_id,stat,current_tier.id,current_tier.name,energy_cost,gain,xp_gain,public.get_gameplay_revision(),

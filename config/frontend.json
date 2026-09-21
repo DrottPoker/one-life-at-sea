@@ -30,5 +30,11 @@
     "mobileBreakpointPx": 760,
     "compactBreakpointPx": 600,
     "narrowBreakpointPx": 420
+  },
+  "dayNight": {
+    "dayStartHour": 6,
+    "nightStartHour": 21,
+    "resyncMs": 300000,
+    "requestTimeoutMs": 10000
   }
 }

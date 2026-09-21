@@ -13,12 +13,13 @@ Till havs gäller fasta tiominutersticks. Energy lagras alltid som heltal. Se [E
 - Crew: 5 Energy ger en statberoende ökning direkt och 5 XP. Perfect Drill har 1 % chans
   att dubbla statökningen, utan extra XP.
 - Skepp: välj stat och Energy med en slider från 5 till aktuell Energy, i heltalssteg.
-  Varje Energy tar en minut. Betala vid start och få stats/XP vid sluttiden.
+  Varje Energy tar sex sekunder, alltså 30 sekunder per 5 Energy. Betala vid start och få stats/XP vid sluttiden.
   Ett pågående arbete åt gången, utan kö eller automatisk upprepning.
 - Slidern följer saldot när det ändras och låses tillsammans med startknappen under 5 Energy.
   Kostnad, tid och statökning visas direkt. Servern kontrollerar det återhämtade saldot vid start.
-- Crew och Ship använder samma kurva per Energy. Ökningen beror bara på den valda
-  permanenta staten, betald Energy och den köpta nivåns effektivitet. Båda sparar decimaler.
+- Crew och Ship använder samma grundkurva per Energy: permanent stat, betald Energy
+  och köpt nivå. Crew får dessutom -5 % till +5 % från aktuell Crew Morale och
+  förbrukar 0,5 moral per Energy. Ship påverkas inte av moral. Båda sparar decimaler.
 - Varje Energy räknas separat med virtuell statökning under jobbet. Ett arbete för
   100 Energy ger exakt samma normala belöning som tio sekventiella arbeten för 10 Energy
   på samma stat och nivå, utan andra stat- eller balansändringar mellan jobben.
@@ -59,18 +60,24 @@ Round avrundar till närmaste värde med sex decimaler; exakt halva avrundas upp
 dessa positiva värden. Nästa Energy räknas från S plus den hittills beräknade ökningen.
 Ingen avrundning till heltalsstats sker. Befintliga sparade stats skrivs inte om.
 
-För Crew är E = 5. Efter normalberäkningen drar servern ett slumputfall:
+För Crew är E = 5. Grundökningen multipliceras en gång med
+
+`1 + morale_before / 100 * 0,05`
+
+och avrundas till sex decimaler. Moralen före passet används; efteråt dras
+2,5 moral, med golv -100. Den tillfälliga stridsbonusen ingår aldrig i S.
+Efter moralberäkningen drar servern ett slumputfall:
 under 0,01 ger Perfect Drill och exakt dubbla normalökningen; annars vanlig ökning.
 Bonussen läggs på hela passet en gång. Den ger varken extra XP eller en ny intern
 omräkning under samma pass. Efterföljande pass räknas från den nya permanenta staten.
 
 För Ship är E vald heltalsmängd mellan 5 och tillgänglig Energy, högst 100 i dagens config.
 Ingen Perfect Drill gäller Ship. Jobbets belöning och XP sparas vid start, liksom sluttiden
-E * 60 sekunder senare. Varken nivåköp eller balansändring räknar om detta jobb.
+E * 6 sekunder senare. Varken nivåköp eller balansändring räknar om detta jobb.
 
 Formeln `M * (1 + S / 1000)^0.6` är en nära uppskattning för fem Energy.
 Den exakta algoritmen ovan inkluderar även den lilla ökningen mellan Energy-enheterna.
-Exempel på normala fem-Energy-pass, utan Perfect Drill:
+Exempel på fem-Energy-pass vid neutral moral, utan Perfect Drill:
 
 | Stat före passet | Nivå 1, M = 1 | Nivå 10, M = 3 |
 | ---: | ---: | ---: |
@@ -82,11 +89,12 @@ Exempel på normala fem-Energy-pass, utan Perfect Drill:
 | 1 000 000 | 63,134540 | 189,409355 |
 
 Ett första Crew-pass på Attack 10 ger alltså 11,00623, eller 12,01246 vid Perfect Drill.
-Ett Ship-jobb på Attack 10 för 6 Energy ger +1,207548 efter sex minuter.
+Ett Ship-jobb på Attack 10 för 6 Energy ger +1,207548 efter 36 sekunder.
 Ökningen i absoluta tal växer med staten, medan ökningen i procent av staten avtar.
 
-Utrustningsvärden och tillfälliga stridsbonusar ingår inte i S. Träning ger ingen Happy,
-Morale eller hälsobonus. Dessa framtida system är separata designbeslut.
+Utrustningsvärden och tillfälliga stridsbonusar ingår inte i S. Crew Training
+sänker moralen, men ändrar inte hälsan. Moralen rör sig 5 mot 0 på fasta
+femminutersticks och kan höjas i tavernan. Se [Crew Morale](CREW_MORALE.md).
 
 ## Nivåer och ekonomi
 
@@ -199,8 +207,10 @@ Hälsans befintliga återhämtning ändras inte. Se [resor](SEA_TRAVEL.md).
 ## Beständiga återförsök
 
 Ekonomihandlingar sparar request-ID före anropet och kan återhämtas efter
-omladdning eller navigation. Olösta handlingar visas som **Unconfirmed action**
-och kontrolleras med **Check saved action**. Samma karaktär måste vara inloggad.
+omladdning eller navigation. Pågående handlingar visar ingen återhämtningsruta.
+Först när anropet har avslutats utan säker bekräftelse visas **Unconfirmed action**
+med **Check saved action**. Detta gäller även mellan flikar och efter omladdning.
+Samma karaktär måste vara inloggad.
 Se [ekonomigranskningen](ECONOMY_AUDIT.md) för skydd, tester och avgränsning.
 
 ## Research om statberoende träning

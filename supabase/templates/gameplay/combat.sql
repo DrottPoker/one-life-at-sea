@@ -6,8 +6,13 @@ as $$
     'ship_health', private.health_snapshot(c.ship_health, c.ship_recovery_at, observed_at, {{gameplay.resources.shipRecoverySeconds}}),
     'crew_health', private.health_snapshot(c.crew_health, c.crew_recovery_at, observed_at, {{gameplay.resources.crewRecoverySeconds}}),
     'ship', jsonb_build_object('attack',c.ship_attack,'defense',c.ship_defense,'speed',c.ship_speed,'accuracy',c.ship_accuracy),
-    'crew', jsonb_build_object('attack',c.crew_attack,'defense',c.crew_defense,'speed',c.crew_speed,'accuracy',c.crew_accuracy)
-  );
+    'crew_morale',m.morale,'morale_multiplier',private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}}),
+    'crew', jsonb_build_object(
+      'attack',trim_scale(c.crew_attack*private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}})),
+      'defense',trim_scale(c.crew_defense*private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}})),
+      'speed',trim_scale(c.crew_speed*private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}})),
+      'accuracy',trim_scale(c.crew_accuracy*private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}})))
+  ) from private.morale_snapshot(c.crew_morale,c.morale_updated_at,observed_at) m;
 $$;
 
 create or replace function private.visible_combatant(snapshot jsonb, own boolean, revealed boolean)
@@ -21,6 +26,8 @@ as $$
     'ammo',case when own then snapshot->'ammo' end,
     'ship',case when own then snapshot->'ship' end,
     'crew',case when own then snapshot->'crew' end,
+    'crew_morale',case when own then snapshot->'crew_morale' end,
+    'morale_multiplier',case when own then snapshot->'morale_multiplier' end,
     'cannons',case when own or revealed then {{gameplay.combat.equipment.cannons}} end,
     'weapon',case when own or revealed then {{gameplay.combat.equipment.crewWeapon}} end);
 $$;

@@ -1,9 +1,11 @@
 "use client";
 
-import { createContext, useContext, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
 import { marketAction } from "@/app/marketplace-actions";
 import { transferGold } from "@/app/bank-actions";
 import { trashInventoryItem } from "@/app/inventory-actions";
+import { buyTavernMeal } from "@/app/tavern-actions";
+import type { TavernResult } from "@/lib/morale";
 import { trainingAction } from "@/app/training-actions";
 import { useGameRefresh } from "@/components/game-refresh";
 import { economyJournalKey, executeSavedRequest, formRequest, parseEconomyRequest, requestForm, type EconomyRequest } from "@/lib/economy-journal";
@@ -18,6 +20,7 @@ type Journal = {
   bank: (form: FormData) => Promise<BankActionResult>;
   inventory: (form: FormData) => Promise<TrashResult>;
   training: (form: FormData) => Promise<TrainingResult>;
+  tavern: (form: FormData) => Promise<TavernResult>;
 };
 const Context = createContext<Journal | null>(null);
 const eventName = "economy-request-changed";
@@ -27,14 +30,33 @@ function subscribe(listener: () => void) {
   return () => { window.removeEventListener(eventName, listener); window.removeEventListener("storage", listener); };
 }
 function changed() { window.dispatchEvent(new Event(eventName)); }
+function readJournal(key: string) {
+  try { return localStorage.getItem(key); } catch { return "unavailable"; }
+}
+function useRecoveryNeeded(key: string, raw: string | null) {
+  const [unresolved, setUnresolved] = useState<{ key: string; raw: string } | null>(null);
+  useEffect(() => {
+    if (raw === null) return;
+    const controller = new AbortController(), snapshot = { key, raw };
+    function checkSavedRequest() {
+      if (!controller.signal.aborted && readJournal(key) === raw) setUnresolved(snapshot);
+    }
+    // Wait for any active request, including one running in another tab.
+    const check = navigator.locks
+      ? navigator.locks.request(key, { mode: "shared", signal: controller.signal }, checkSavedRequest)
+      : Promise.resolve().then(checkSavedRequest);
+    void check.catch(checkSavedRequest);
+    return () => controller.abort();
+  }, [key, raw]);
+  return raw !== null && unresolved?.key === key && unresolved.raw === raw;
+}
 
 export function EconomyRequests({ characterId, children }: { characterId: string; children: ReactNode }) {
   const key = economyJournalKey(characterId), refresh = useGameRefresh();
   const [notice, setNotice] = useState("");
   const [checking, startChecking] = useTransition();
-  const raw = useSyncExternalStore(subscribe, () => {
-    try { return localStorage.getItem(key); } catch { return "unavailable"; }
-  }, () => null);
+  const raw = useSyncExternalStore(subscribe, () => readJournal(key), () => null);
+  const recoveryNeeded = useRecoveryNeeded(key, raw);
   let saved: EconomyRequest | null = null, unreadable = false;
   try { saved = parseEconomyRequest(raw); } catch { unreadable = true; }
 
@@ -52,6 +74,7 @@ export function EconomyRequests({ characterId, children }: { characterId: string
     bank: form => send(formRequest("bank", form), () => transferGold(form, characterId)),
     inventory: form => send(formRequest("inventory", form), () => trashInventoryItem(form, characterId)),
     training: form => send(formRequest("training", form), () => trainingAction(form, characterId)),
+    tavern: form => send(formRequest("tavern", form), () => buyTavernMeal(form, characterId)),
   };
   function check(request: EconomyRequest) {
     startChecking(async () => {
@@ -62,7 +85,7 @@ export function EconomyRequests({ characterId, children }: { characterId: string
     });
   }
   return <Context.Provider value={journal}>
-    {raw !== null && <section className="o-panel o-economy-recovery" aria-label="Unconfirmed action">
+    {recoveryNeeded && <section className="o-panel o-economy-recovery" aria-label="Unconfirmed action">
       <div className="o-panel-body">
         <strong>Unconfirmed action</strong>
         <p>{unreadable ? "The saved action could not be read. Keep browser data and contact support before making another change." :

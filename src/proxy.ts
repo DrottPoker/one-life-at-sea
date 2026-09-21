@@ -6,6 +6,8 @@ import { withDatabaseRetry } from "@/lib/database-retry";
 import type { Database } from "@/lib/database.types";
 
 export async function proxy(request: NextRequest) {
+  // Public clock only; time synchronization must survive gameplay navigation locks.
+  if (request.nextUrl.pathname === "/api/world-time") return NextResponse.next();
   let response = NextResponse.next({ request });
   const config = getSupabaseConfig();
   if (config) {

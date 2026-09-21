@@ -10,6 +10,15 @@ describe("configuration contract", () => {
     for (const [path, expected] of Object.entries(generatedFiles(config))) expect(read(path), path).toBe(expected);
   });
   it.each([
+    ["morale precision", (c: ReturnType<typeof loadConfig>) => { c.gameplay.morale.lossPerEnergy = 0.25; }],
+    ["morale recovery precision", (c: ReturnType<typeof loadConfig>) => { c.gameplay.morale.recoveryAmount = 1.25; }],
+    ["morale range", (c: ReturnType<typeof loadConfig>) => { c.gameplay.morale.maximum = 0; }],
+    ["tavern gain range", (c: ReturnType<typeof loadConfig>) => { c.gameplay.morale.tavernGain = 201; }],
+    ["tavern price range", (c: ReturnType<typeof loadConfig>) => { c.gameplay.morale.tavernGoldCost = c.gameplay.economy.maxGoldCoins + 1; }],
+    ["invalid night hour", (c: ReturnType<typeof loadConfig>) => { c.frontend.dayNight.nightStartHour = 24; }],
+    ["fractional day hour", (c: ReturnType<typeof loadConfig>) => { c.frontend.dayNight.dayStartHour = 6.5; }],
+    ["equal day and night", (c: ReturnType<typeof loadConfig>) => { c.frontend.dayNight.dayStartHour = 21; }],
+    ["inverted day hours", (c: ReturnType<typeof loadConfig>) => { c.frontend.dayNight.dayStartHour = 22; }],
     ["too few sea places", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.locationTypes = c.gameplay.seaTravel.locationTypes.slice(0, 1); }],
     ["inactive sea catalog", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.locationTypes.forEach(p => p.active = false); }],
     ["duplicate sea type", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.locationTypes[1].id = c.gameplay.seaTravel.locationTypes[0].id; }],

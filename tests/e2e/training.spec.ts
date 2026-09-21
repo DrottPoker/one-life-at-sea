@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { trainingStatGain } from "../../src/lib/training";
+import { trainingStatGain, crewTrainingStatGain } from "../../src/lib/training";
 import { formatStat, formatStatGain } from "../../src/lib/format";
 import { isLocalTestApi, localDatabaseContainer } from "../support/local";
 
@@ -22,7 +22,7 @@ async function account() {
   const own = await api.from("characters").select("id").single();
   expect(own.error).toBeNull();
   // Recovery scenarios override this checkpoint with a real server-clock boundary.
-  fixture(own.data!.id, "update public.characters set energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain;");
+  fixture(own.data!.id, "update public.characters set energy_updated_at=clock_timestamp()+interval '1 day',morale_updated_at=clock_timestamp()+interval '1 day' where id=:captain;");
   return { api, id: own.data!.id as string, email, password };
 }
 async function login(page: Page, own: Awaited<ReturnType<typeof account>>) {
@@ -44,7 +44,9 @@ test("crew XP, carried-gold purchases, two tabs, login and responsive layout", a
   await other.goto("/harbor/crew-training");
   for (const [index, stat] of ["Attack", "Defense", "Speed", "Accuracy"].entries()) {
     await page.getByRole("button", { name: "Train " + stat + " for 5 Energy", exact: true }).click();
-    await expect(page.getByLabel(stat + " stat", { exact: true })).toHaveText(/^1[12]\.01$/);
+    const normal = crewTrainingStatGain(10, 1, 5, -index * 2.5);
+    const values = [formatStat(10 + normal), formatStat(10 + normal * 2)].map(value => value.replaceAll(".", "\\."));
+    await expect(page.getByLabel(stat + " stat", { exact: true })).toHaveText(new RegExp("^(?:" + values.join("|") + ")$"));
     await expect(page.getByRole("progressbar", { name: "Energy", exact: true })).toHaveAttribute("aria-valuenow", String(95 - index * 5));
   }
   await expect(page.getByRole("progressbar", { name: "Crew progress", exact: true })).toHaveAttribute("value", "20");
@@ -84,9 +86,10 @@ test("crew XP, carried-gold purchases, two tabs, login and responsive layout", a
   fixture(own.id, "update public.characters set energy=4,energy_updated_at=date_bin(interval '5 minutes',clock_timestamp(),'1970-01-01Z')-interval '1 second' where id=:captain;");
   await page.reload();
   await expect(page.getByRole("button", { name: "Train Attack for 5 Energy", exact: true })).toBeEnabled({ timeout: 15000 });
-  const before = (await own.api.rpc("get_game_state")).data.crew_attack;
+  const beforeState = (await own.api.rpc("get_game_state")).data;
+  const before = beforeState.crew_attack;
   await page.getByRole("button", { name: "Train Attack for 5 Energy", exact: true }).click();
-  const normalGain = trainingStatGain(before, 1.15, 5);
+  const normalGain = crewTrainingStatGain(before, 1.15, 5, beforeState.crew_morale);
   await expect.poll(async () => [1, 2].map(multiplier => formatStat(Math.round((before + normalGain * multiplier) * 1e6) / 1e6))
     .includes(await page.getByLabel("Attack stat", { exact: true }).innerText())).toBe(true);
   expect(errors).toEqual([]);
@@ -157,7 +160,7 @@ test("concurrent drills, purchases and ship starts cannot overspend or duplicate
   let current = 10;
   for (const receipt of ordered) {
     expect(receipt.stat_before).toBe(current);
-    expect(receipt.normal_gain).toBe(trainingStatGain(current, 1, 5));
+    expect(receipt.normal_gain).toBe(crewTrainingStatGain(current, 1, 5, receipt.morale_before));
     expect(receipt.stat_gain).toBe(receipt.normal_gain * (receipt.perfect ? 2 : 1));
     current = Math.round((current + receipt.stat_gain) * 1e6) / 1e6;
   }
@@ -166,7 +169,7 @@ test("concurrent drills, purchases and ship starts cannot overspend or duplicate
     energy: 0, crew_attack: Math.round((10 + successful.reduce((sum, r) => sum + r.data.stat_gain, 0)) * 1e6) / 1e6,
     training: { progress: { crew: { xp: 100, tier_id: "crew_1" }, ship: { xp: 0 } } },
   });
-  fixture(own.id, "update public.characters set gold_coins=1000,energy=100,energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain;");
+  fixture(own.id, "update public.characters set gold_coins=1000,energy=100,energy_updated_at=clock_timestamp()+interval '1 day',morale_updated_at=clock_timestamp()+interval '1 day' where id=:captain;");
   const request = randomUUID();
   const purchases = await Promise.all(Array.from({ length: 8 }, () => own.api.rpc("purchase_training_tier", {
     training_group: "crew", tier_id: "crew_2", request_id: request,
@@ -222,7 +225,7 @@ test("ship slider tracks available Energy and awards fractional stats", async ({
   test.setTimeout(90_000);
   const own = await account(), errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
-  fixture(own.id, "update public.characters set ship_defense=10000.625,ship_speed=10000000000.625,energy=0,energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain;");
+  fixture(own.id, "update public.characters set ship_defense=10000.625,ship_speed=10000000000.625,energy=0,energy_updated_at=clock_timestamp()+interval '1 day',morale_updated_at=clock_timestamp()+interval '1 day' where id=:captain;");
   await login(page, own);
   await page.goto("/harbor/ship-upgrades");
   const slider = page.getByRole("slider", { name: "Work size", exact: true });
@@ -233,7 +236,7 @@ test("ship slider tracks available Energy and awards fractional stats", async ({
   await expect(slider).toBeDisabled();
   await expect(start).toBeDisabled();
   for (const energy of [4, 5, 37]) {
-    fixture(own.id, "update public.characters set energy=" + energy + ",energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain; select private.notify_training(:captain);");
+    fixture(own.id, "update public.characters set energy=" + energy + ",energy_updated_at=clock_timestamp()+interval '1 day',morale_updated_at=clock_timestamp()+interval '1 day' where id=:captain; select private.notify_training(:captain);");
     await expect(page.getByText(energy + " Energy available", { exact: true })).toBeVisible();
     if (energy < 5) {
       await expect(slider).toBeDisabled();
@@ -246,7 +249,7 @@ test("ship slider tracks available Energy and awards fractional stats", async ({
       await expect(slider).toHaveValue(String(energy));
     }
   }
-  fixture(own.id, "update public.characters set energy=7,energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain; select private.notify_training(:captain);");
+  fixture(own.id, "update public.characters set energy=7,energy_updated_at=clock_timestamp()+interval '1 day',morale_updated_at=clock_timestamp()+interval '1 day' where id=:captain; select private.notify_training(:captain);");
   await expect(slider).toHaveAttribute("max", "7");
   await expect(slider).toHaveValue("7");
   await slider.press("ArrowLeft");
@@ -260,7 +263,7 @@ test("ship slider tracks available Energy and awards fractional stats", async ({
   await expect(page.getByText("+" + formatStatGain(largeGain) + " Speed", { exact: true })).toBeVisible();
   await page.getByLabel("Stat", { exact: true }).selectOption("attack");
   await expect(page.getByText("+1.21 Attack", { exact: true })).toBeVisible();
-  await expect(page.getByText("6 Energy · 6 minutes", { exact: true })).toBeVisible();
+  await expect(page.getByText("6 Energy · 36 seconds", { exact: true })).toBeVisible();
   for (const width of [1280, 375, 320]) {
     await page.setViewportSize({ width, height: 1000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -274,7 +277,7 @@ test("ship slider tracks available Energy and awards fractional stats", async ({
   expect(state.ship_defense).toBe(10000.625);
   expect(state.ship_speed).toBe(10000000000.625);
   expect(state.training.ship_job).toMatchObject({ energy_cost: 6, stat_gain: 1.207548, xp_gain: 6 });
-  expect(Date.parse(state.training.ship_job.finishes_at) - Date.parse(state.training.ship_job.started_at)).toBe(360_000);
+  expect(Date.parse(state.training.ship_job.finishes_at) - Date.parse(state.training.ship_job.started_at)).toBe(36_000);
   fixture(own.id, "update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '7 minutes',finishes_at=clock_timestamp()-interval '1 second' where character_id=:captain and applied_at is null;");
   await page.reload();
   await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("11.21");

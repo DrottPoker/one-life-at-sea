@@ -3,7 +3,9 @@ import { loadConfig, migrationSql, revision, validateConfig, inventoryCatalogSql
 
 const config = loadConfig();
 const originalRevision = revision(config);
+const originalShipSecondsPerEnergy = config.gameplay.training.shipSecondsPerEnergy;
 config.gameplay.economy.initialGoldCoins = 77;
+Object.assign(config.gameplay.morale, { lossPerEnergy: 0.2, recoveryAmount: 2, recoverySeconds: 60, statBonusBps: 250, trainingBonusBps: 300, tavernGain: 10, tavernGoldCost: 17 });
 config.gameplay.hospital.durationSeconds = 19;
 Object.assign(config.gameplay.resources, { energyMax: 120, energyRecoverySeconds: 60, energyRecoveryAmount: 3, healthMax: 150,
   shipHealthInitial: 120, crewHealthInitial: 110, shipRecoverySeconds: 7, crewRecoverySeconds: 4 });
@@ -54,7 +56,7 @@ const checks = [
 "select is((select stat_gain from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),10.089358::numeric,'Old job keeps its original gain after config change');",
 "select is((select xp_gain from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),50::bigint,'Old job keeps its original XP');",
 "select is((select energy_cost from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),50,'Old job keeps its original Energy cost');",
-"select is((select extract(epoch from(finishes_at-started_at))::int from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),3000,'Old job keeps its original duration');",
+"select is((select extract(epoch from(finishes_at-started_at))::int from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null)," + (50 * originalShipSecondsPerEnergy) + ",'Old job keeps its original duration');",
 "select is((select bank_gold_coins from public.characters where id=(select captain from old_training_fixture)),123::bigint,'Config migration preserves existing bank coins');",
 "select is((select ship_attack from public.characters where id=(select captain from old_training_fixture)),10::numeric,'Config migration preserves existing stats');",
 "select is(public.get_gameplay_revision(),'" + revision(config) + "','Alternative revision is installed within transaction');",
@@ -83,7 +85,7 @@ const checks = [
 "select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','3.009951','New ship gain uses the configured per-Energy rate');",
 "select is(public.get_game_state()#>>'{training,ship_job,xp_gain}','14','New ship XP uses changed rate');",
 "select is(public.get_game_state()#>>'{training,ship_job,workshop_name}','Captain''s $catalog$ Workshop','Catalog strings safely escape quotes and dollar delimiters');",
-"select is((select extract(epoch from(finishes_at-started_at))::int from private.ship_upgrade_jobs where character_id=(select a from config_captains) and applied_at is null),840,'New ship duration uses changed config');",
+"select is((select extract(epoch from(finishes_at-started_at))::int from private.ship_upgrade_jobs where character_id=(select a from config_captains) and applied_at is null)," + (7 * config.gameplay.training.shipSecondsPerEnergy) + ",'New ship duration uses changed config');",
 "select is((select energy from public.characters where id=(select a from config_captains)),86,'Training applies configured cost');",
 "update public.characters set ship_health=1,ship_recovery_at=clock_timestamp()+interval '1 hour' where id=(select a from config_captains);",
 "select is((select public.get_combat_preview(d)->>'reason' from config_captains),'NO_HEALTH','Minimum attack health is configurable');",
@@ -148,6 +150,21 @@ checks.push(
 "select is((public.list_market_items('medical')#>>'{items,0,sold}')::bigint,(select sold+1 from market_config_baseline),'Popularity uses the configured 6 hour window instead of 12 hours');",
 "select is(private.item_market_value_at('linen_bandages',statement_timestamp()),(select floor(sum(gross)::numeric/nullif(sum(quantity),0)) from private.market_sales where item_id='linen_bandages' and sold_at>statement_timestamp()-interval '2 hours' and sold_at<=statement_timestamp()),'Market value uses the configured two-hour window');",
 "select is((select gold_coins from public.characters where id=(select seller from market_config_captains)),167::bigint,'Configured fee is withheld from actual carried proceeds');"
+);
+checks.push(
+"select is((select morale from private.morale_snapshot(10,'2026-01-01Z','2026-01-01 00:02Z')),6::numeric,'Morale recovery amount and interval follow config');",
+"select is(private.morale_multiplier(100,250),1.025::numeric,'Morale stat effect follows its basis points');",
+"create temporary table morale_config_user as select gen_random_uuid() id;",
+"insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','MoraleConfig'||translate(id::text,'0123456789','ghijklmnop')) from morale_config_user;",
+"update public.characters set morale_updated_at=clock_timestamp()+interval '1 day' where user_id=(select id from morale_config_user);",
+"select set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from morale_config_user;",
+"select public.buy_tavern_meal(17,10,gen_random_uuid());",
+"select is((public.get_game_state()->>'crew_morale')::numeric,10::numeric,'Tavern gain follows config');",
+"select is((public.get_game_state()->>'gold_coins')::numeric,60::numeric,'Tavern price follows config');",
+"select is((select (private.combat_snapshot(c,clock_timestamp())#>>'{crew,attack}')::numeric from public.characters c where user_id=(select id from morale_config_user)),12.03::numeric,'Combat snapshot uses configured morale stat bonus');",
+"create temporary table morale_config_drill as select public.train_crew('attack','crew_1',gen_random_uuid()) value;",
+"select is((select (value->>'normal_gain')::numeric from morale_config_drill),round(private.training_gain(12,3,7)*1.003,6),'Crew gain uses configured morale training bonus');",
+"select is((public.get_game_state()->>'crew_morale')::numeric,8.6::numeric,'Morale cost uses configured cost per Energy');"
 );
 const sql = "begin;\ncreate extension if not exists pgtap with schema extensions;\nset local search_path=public,extensions;\n" +
   "create temporary table old_training_user as select gen_random_uuid() id;\n" +

@@ -1,4 +1,5 @@
 import { gameplay } from "@/config/public";
+import { applyTrainingMorale } from "@/lib/morale";
 import type { Stat, TrainingGroup } from "@/lib/game";
 
 type TrainingProgress = { xp: number; tier_id: string };
@@ -13,7 +14,7 @@ export type TrainingState = {
   last_ship_job: ShipJob | null;
 };
 export type TrainingReceipt =
-  | { kind: "crew"; stat: Stat; stat_gain: number; xp_gain: number; energy_cost: number; perfect: boolean; tier_id: string }
+  | { kind: "crew"; stat: Stat; stat_gain: number; xp_gain: number; energy_cost: number; perfect: boolean; tier_id: string; morale_before?: number; morale_after?: number; morale_multiplier?: number; base_gain?: number; normal_gain?: number; stat_before?: number }
   | { kind: "ship"; job_id: string; stat: Stat; stat_gain: number; xp_gain: number; energy_cost: number; finishes_at: string }
   | { kind: "purchase"; group: TrainingGroup; tier_id: string; tier_name: string; gold_cost: number };
 export type TrainingResult = { message?: string; error?: boolean; retry?: boolean };
@@ -24,6 +25,10 @@ export function trainingTier(group: TrainingGroup, id: string) {
   const tier = trainingTiers(group).find(t => t.id === id);
   if (!tier) throw new Error("Training catalog is out of date. Reload the page.");
   return tier;
+}
+
+export function crewTrainingStatGain(stat: number, efficiency: number, energy: number, morale: number) {
+  return applyTrainingMorale(trainingStatGain(stat, efficiency, energy), morale);
 }
 
 export function parseShipEnergy(value: unknown): number | null {

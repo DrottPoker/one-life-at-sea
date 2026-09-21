@@ -24,7 +24,14 @@ klienternas återförsök och lokala utvecklingsverktyg ingår.
    Utrustning i en aktiv listing kunde därför återskapas med samma ID.
    Verktyget låser nu berörda itemtyper och hoppar över utrustning i marknadens
    förvar. Redan såld utrustning förblir hos köparen.
-4. Bankens webbläsartester använder gemensamma kontohjälpare och städar sina
+4. **Blinkande återhämtningsruta under vanliga handlingar.** En sparad begäran
+   är först pågående, inte obekräftad. Återhämtningsvyn väntar på karaktärens
+   Web Lock och läser journalen igen efter att anropet är färdigt. Ett lyckat
+   eller definitivt nekat anrop visar aldrig rutan, heller inte i andra flikar
+   eller efter omladdning av en annan flik. Saknas bekräftelse, även efter att
+   ursprungsfliken stängts, erbjuds samma säkra kontroll av det sparade kvittot.
+   Nya handlingar är fortfarande spärrade medan en begäran finns sparad.
+5. Bankens webbläsartester använder gemensamma kontohjälpare och städar sina
    egna konton även när ett test misslyckas.
 
 Inga databasregler för priser, avgifter eller utfärdande av vanliga items har
@@ -74,6 +81,10 @@ för underhåll och verifiering. Den ska inte köras vid varje sidvisning.
   säljarens saldogräns, misslyckad återtagning och köpkvitto efter kontoradering.
 - Webbläsartester tappar verkliga serversvar efter commit, laddar om och
   kontrollerar samma händelse. Andra flikar ser den sparade begäran.
+- Regressionstester håller kvar lyckade serversvar för crew-träning, nivåköp,
+  skeppsarbete, bank, Trash och marknadslistning. En DOM-observatör upptäcker även
+  mycket korta blinkningar i båda flikarna. Omladdning under ett pågående anrop
+  och stängning av ursprungsfliken efter commit provas också.
 - Blandade samtidighetstester kombinerar korsvisa köp, dubbla anrop med samma ID,
   banköverföringar, återtagning och Trash. Items och total mängd Gold Coins
   inklusive avgifter måste stämma efter varje omgång.
@@ -92,3 +103,11 @@ Databasens kvitton är beständiga även om webbläsardata rensas, men automatis
 koppling till den ursprungliga begäran kräver att klientens sparade ID finns kvar.
 Kvittona är fortfarande domänspecifika; den gemensamma klientkoden hanterar bara
 lagring och återhämtning. Inga autentiseringsuppgifter lagras i kvittojournalen.
+
+## Tavernans moralaktivitet
+
+Måltider använder samma karaktärslås och beständiga klientjournal. Servern validerar
+pris och effekt, debiterar 1 000 burna Gold Coins och tilldelar högst +25 moral
+i samma transaktion. Full moral, otillräckligt saldo, resa, strid eller Hospital
+nekar ett nytt köp utan debitering. Gamla kvitton kan återhämtas även under spärr.
+Samtidiga anrop, tappat svar efter commit och återförsök efter omladdning testas.

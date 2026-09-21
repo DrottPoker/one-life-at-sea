@@ -1,3 +1,171 @@
+# Kortare skeppsarbete med bibehållen hamnspärr, 2026-09-21
+
+Ägarens slutliga beslut är 30 sekunder per 5 Energy och fortsatt hamnlåsning.
+
+- Nya skeppsjobb använder 6 sekunder per Energy: 5 Energy tar 30 sekunder,
+  50 tar 5 minuter och 100 tar 10 minuter.
+- Pågående skeppsjobb blockerar fortfarande avsegling i både UI och server-RPC.
+  Stats och XP tilldelas vid sluttiden; då släpper avseglingsspärren automatiskt.
+- Redan startade jobb behåller sina sparade sluttider, kostnader och belöningar.
+- Slutlig migration: 20260921130045_central_gameplay_config_316321bbcfef.sql.
+  Den är applicerad lokalt och skiljer sig från föregående configmigration
+  endast genom tidsfaktorn och revisionsvärdet. Ingen databasåterställning.
+- Förslaget att ta bort hamnspärren drogs tillbaka före migration. Resefunktionen
+  och dess UI-spärr är oförändrade.
+
+Verifierat:
+
+- npm run check: lint, typkontroll, 279 enhetstester och produktionsbygge passerade.
+- npm run test:db: 1 312 assertions i 25 filer passerade.
+- npm run test:config:db: 83 assertions passerade. Alternativ konfiguration
+  rullades tillbaka och originalkonfigurationen återställdes.
+- Fyra riktade webbläsartester passerade tillsammans. Ett riktigt 30-sekundersjobb
+  blockerade både avseglingsknappen och direkt RPC; knappen aktiverades vid
+  sluttiden och avseglingen lyckades. Även samtidighet, återinloggning,
+  flera flikar och exakt tidsvisning för 6 Energy (36 sekunder) verifierades.
+- Säkerhetsadvisors rapporterade inga varningar eller fel.
+- Aktuell app- och databasrevision matchar; git diff --check passerade.
+
+Den tidigare dokumenterade Next.js-diagnosen om avbrutna RSC-strömmar förekom
+även i denna webbläsarkörning och har inte räknats som löst här.
+
+Se [träningsreglerna](TRAINING_FOUNDATION.md) för aktuellt beteende.
+
+# Korta beskrivningar för resursbarer, 2026-09-21
+
+Energy, Ship Health, Crew Health och Crew Morale visar nu en kort tooltip vid
+hover, tangentbordsfokus eller tryck. Den ligger bredvid baren på dator och
+ovanför på mobil. Tooltipen kan hovras och stängas med Escape eller ett tryck
+utanför resurserna.
+
+- De fasta förklaringstexterna och ticktiderna har tagits bort ur resurskortet.
+- Energy visar återhämtningstakten för aktuell plats. HP visar återhämtningen
+  eller aktuell strids-/Hospital-spärr. Crew Morale visar aktuell effekt och
+  återgången mot 0.
+- Serverns deadlines och automatisk uppdatering är oförändrade.
+- Inga spelregler eller databasmigrationer ändrades.
+
+Verifierat:
+
+- npm run check: lint, typkontroll, 279 enhetstester och produktionsbygge passerade.
+- De sex berörda webbläsartesterna passerade tillsammans i slutkörningen.
+  Hover, tooltip-hover, fokus, Escape, återhämtning och responsiv placering ingår.
+- Bilder från dator och mobil granskades. Tooltipen ryms inom skärmen vid
+  samtliga kontrollerade bredder från 320 till 1280 pixlar.
+- Berörda testfiler lintades även efter den sista justeringen.
+- Configkontroll och git diff --check passerade.
+
+Den tidigare dokumenterade Next.js-diagnosen om avbrutna RSC-strömmar förekom
+även här. Den har inte räknats som löst av denna presentationsändring.
+
+Se [gränssnittsdesign](INTERFACE_DESIGN.md) för beteende och underhåll.
+
+# Crew Morale och tavernmåltider, 2026-09-21
+
+Implementerat enligt ägarens beslut:
+
+- Crew Morale börjar på 0 och har intervallet -100 till +100 med en decimal.
+- Crew Training förbrukar 0,5 moral per Energy. Moralen före passet ger linjärt
+  -5 % till +5 % på ökningen; Perfect Drill tillämpas därefter.
+- Samma intervall påverkar Crew Attack, Defense, Speed och Accuracy i strid.
+  Deltagarens moral och effekt sparas vid stridsstart/inträde. Permanenta stats,
+  Ship-stats, hälsa och redan pågående strider behålls.
+- På fasta femminutersgränser i UTC flyttas moralen 5 mot 0, även offline.
+- Tavernans måltid ger +25 för 1 000 Gold Coins utan Energykostnad. Moralen
+  stannar vid +100. Fullt pris nära taket visas före köpet; vid taket nekas köp.
+- Baren vid Energy och HP har 0 i mitten, positiv fyllning åt höger och negativ
+  åt vänster. Den visar en decimal och fungerar i mobilens tvåkolumnslayout.
+- Serverlås och privata kvitton gör samtidiga handlingar och återförsök säkra.
+  Admin kan ändra moral med ny återhämtningsstart och granska tavernkvitton.
+- Migration 20260921072744_central_gameplay_config_43a877cba7da.sql är applicerad
+  lokalt. Ingen databasåterställning gjordes.
+
+Verifierat:
+
+- npm run check: lint, TypeScript, 274 enhetstester och produktionsbygge passerade.
+  Efter fler konfigurationstester passerade alla 279 enhetstester.
+  Lint och typkontroll passerade även efter den sista testjusteringen.
+- npm run test:db: 1 312 assertions i 25 filer passerade.
+- npm run test:config:db: 83 assertions passerade; alternativ balans rullades tillbaka.
+- Alla 12 riktade tester för moral och stabil ekonomisk återkoppling passerade.
+- Helhetskörningen omfattade 84 webbläsartester. 83 passerade; ett äldre
+  träningstest förväntade en ökning utan moralpåverkan. Förväntningen rättades
+  till moralen före passet och testet passerade därefter i en riktad omkörning.
+- Positiv och negativ fyllning granskades visuellt. Responsiva kontroller
+  omfattade 1280, 375 och 320 pixlar utan horisontell överströmning.
+- Databasens säkerhetsadvisors rapporterade inga varningar eller fel.
+- Ekonomigranskningens åtta kontroller visade inga avvikelser.
+- Configkontroll och git diff --check passerade.
+
+Tidigare dokumenterade Next.js-diagnoser om avbrutna RSC-strömmar förekom i
+helhetskörningen; en avbruten extra teststart rapporterade också Gzip-listeners.
+De är inte dolda eller räknade som lösta av moralfunktionen.
+Den riktade slutkörningen passerade utan dessa diagnoser.
+
+Se [Crew Morale](CREW_MORALE.md) för spelregler, lagring och underhåll.
+
+# Stabil återkoppling för ekonomihandlingar, 2026-09-21
+
+Den gemensamma rutan **Unconfirmed action** blinkade tidigare till vid varje
+vanlig handling eftersom journalen sparas före serveranropet. Återhämtningsvyn
+väntar nu på karaktärens Web Lock och kontrollerar därefter om begäran finns kvar.
+
+- Crew-träning, nivåköp, skeppsarbete, bank, Trash och marknad delar rättningen.
+- Pågående handlingar behåller knappspärrar och sparade request-ID:n utan att
+  visa återhämtningsrutan. Det gäller även andra flikar och omladdning där.
+- Förlorade svar och en stängd ursprungsflik lämnar samma säkra återhämtning.
+  Ingen begäran återspelas automatiskt och inga server- eller databasregler ändras.
+- Sju nya webbläsartester håller kvar riktiga serversvar och observerar DOM:en
+  för att fånga även mycket korta blinkningar samt provar återhämtning efter stängning.
+
+Verifierat:
+
+- npm run check: lint, TypeScript, 259 enhetstester och produktionsbygge passerade.
+- Samtliga sju nya webbläsartester passerade i den riktade körningen.
+- Hela webbläsarsviten: samtliga 79 tester passerade i samma körning (9 minuter).
+- npm run audit:economy: samtliga åtta integritetskontroller utan avvikelse.
+- git diff --check passerade.
+
+Den tidigare dokumenterade Next.js-diagnostiken om avbrutna RSC-strömmar
+förekom även här. Den har inte dolts eller räknats som löst av UI-rättningen.
+
+Se [ekonomigranskningen](ECONOMY_AUDIT.md) för beteende och avgränsning.
+
+# Dag/natt-cykel, 2026-09-21
+
+Implementerat enligt ägarens önskemål: natt 21:00-06:00 server time (UTC).
+
+- Den fasta bakgrunden använder den levererade nattbilden under natten.
+  Endast bakgrunden växlar; välkomstbild, stridsbilder och spelregler behålls.
+- Servern väljer rätt period i initial HTML. Öppna sidor växlar utan omladdning
+  med en serverankrad monoton klocka, periodisk synk och återhämtning efter vila/nätfel.
+- Den publika klockrutten returnerar enbart tid, period och nästa byte. Den behöver
+  ingen databas och fungerar även under Hospital, resor och strid.
+- Periodberäkningen är fristående för framtida serverstyrda regler. Nattfiske
+  och andra tidsberoende belöningar ingår inte i denna etapp.
+- Nattbilden är en lokal WebP på 1672 x 941 pixlar, 341 932 byte.
+  Originalbilden är oförändrad. Ingen databasmigration behövdes.
+
+Verifierat:
+
+- npm run check: lint, TypeScript, 259 enhetstester och produktionsbygge passerade.
+- Hela webbläsarsviten: samtliga 72 tester passerade i samma körning.
+- Efter en stabilare väntan på testets initiala klocksynk passerade alla tre
+  dag/natt-tester på nytt; lint och typkontroll passerade också efter teständringen.
+- 21:00 och 06:00 verifierades utan omladdning, med felställd datorklocka,
+  annan tidszon, förlorad tidssynk och återanslutning. Initial HTML fungerar utan JS.
+- Klockrutten kontrollerades med inloggad Hospital-spärr och utan inloggning.
+- Dag- och nattskärmbilder granskades visuellt. Responsiva kontroller passerade.
+- Utvecklingsservern på port 3000 returnerar HTTP 200 för klockan och nattbilden,
+  med korrekt aktuell nattperiod och nästa byte 06:00 UTC.
+- Configkontroll och git diff --check passerade.
+
+De tidigare dokumenterade Next.js-diagnoserna om avbrutna RSC-strömmar och
+Gzip drain listeners förekom i helhetskörningen. Den riktade slutkörningen
+rapporterade inga sådana diagnoser och inga webbläsarfel.
+
+Se [dag/natt-cykeln](DAY_NIGHT_CYCLE.md) för beteende och underhåll.
+
 # Publika spelar-ID:n och namnregler, 2026-09-21
 
 Ägarens beslut: publika nummer från 100001 och UUID som intern identitet.

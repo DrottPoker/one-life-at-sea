@@ -290,3 +290,13 @@ Gemensamma sorterade deltagarlås gör samtidig attack och avfärd ömsesidigt
 uteslutande. Resor skapar inget nytt attackskydd. En överlevande kapten stannar
 på havsplatsen med fortsatt återhämtning på fasta tiominutersticks. Nederlag skickar kaptenen till
 Hospital i hamnen och bevarar distansrekordet. Se [resor](SEA_TRAVEL.md).
+
+## Crew Morale
+
+Vid start/join multipliceras deltagarens Crew Attack, Defense, Speed och Accuracy
+med `1 + morale / 100 * 0,05`. Försvararen använder motsvarande snapshot när
+mötet skapas. Moralen återhämtas först till samma observationstidpunkt.
+Statsen ligger fast under deltagandet även när moralen senare tickar mot 0.
+Permanenta stats, Ship-stats och HP ändras inte. Motståndarens moral exponeras inte.
+Historiska strider använder sina befintliga snapshots.
+Se [Crew Morale](CREW_MORALE.md).

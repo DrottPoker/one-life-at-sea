@@ -31,6 +31,12 @@ export function validateConfig(config) {
   visit(config, schema, "config");
   const { gameplay: g, auth: a, server: s, frontend: f } = config;
   const check = (condition, message) => { if (!condition) throw new Error(message); };
+  for (const value of [g.morale.lossPerEnergy, g.morale.recoveryAmount, g.morale.tavernGain]) {
+    check(Math.abs(value * 10 - Math.round(value * 10)) < 0.000001, "Morale supports at most one decimal.");
+  }
+  check(g.morale.recoveryAmount <= g.morale.maximum, "Morale recovery exceeds the range.");
+  check(g.morale.tavernGain <= g.morale.maximum * 2, "Tavern gain exceeds the morale range.");
+  check(g.morale.tavernGoldCost <= g.economy.maxGoldCoins, "Tavern price exceeds the Gold Coins limit.");
   const sea = g.seaTravel;
   check(sea.departureEnergyCost <= g.resources.energyMax, "Departure costs more than maximum Energy.");
   check(sea.scoutEnergyCost <= g.resources.energyMax, "Scouting costs more than maximum Energy.");
@@ -94,6 +100,7 @@ export function validateConfig(config) {
   check(["127.0.0.1", "localhost", "::1"].includes(s.local.host), "Local tools must bind to a loopback host.");
   check(/^[a-z0-9_-]+$/.test(s.local.supabaseProjectId), "Supabase project ID must contain lowercase letters, digits, underscores or dashes.");
   check(g.combat.mitigation.equalStatsReduction > 0 && g.combat.mitigation.equalStatsReduction < 1, "Equal-stat reduction must be strictly between zero and one.");
+  check(f.dayNight.dayStartHour < f.dayNight.nightStartHour, "Day must start before night in UTC.");
   new Intl.DateTimeFormat(f.site.locale, { timeZone: f.site.logTimeZone });
 }
 export function pathValue(object, path) {

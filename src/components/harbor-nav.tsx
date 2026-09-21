@@ -1,7 +1,7 @@
 "use client";
 
 import { GameLink as Link, useNavigationPathname } from "@/components/game-navigation";
-import { Anchor, Store, Hammer, Swords, Ship, Landmark, HeartPulse, Package, Compass, Users } from "lucide-react";
+import { Utensils, Anchor, Store, Hammer, Swords, Ship, Landmark, HeartPulse, Package, Compass, Users } from "lucide-react";
 
 import { useGameState } from "@/components/game-state";
 import { isHospitalAccessiblePath } from "@/lib/hospital";
@@ -15,6 +15,7 @@ const locations = [
   { href: "/harbor/crew-training", label: "Crew Training", Icon: Swords },
   { href: "/harbor/ship-upgrades", label: "Ship Upgrades", Icon: Ship },
   { href: "/harbor/hospital", label: "Hospital", Icon: HeartPulse },
+  { href: "/harbor/tavern", label: "Tavern", Icon: Utensils },
   { href: "/harbor/bank", label: "Bank", Icon: Landmark },
   { href: "/harbor/marketplace", label: "Marketplace", Icon: Store },
   { href: "/harbor/shipyard", label: "Shipyard", Icon: Hammer },

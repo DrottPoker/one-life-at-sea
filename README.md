@@ -13,6 +13,7 @@ Kodens ansvarsfördelning och fortsatt utveckling beskrivs i [kodstrukturen](doc
 - Enkla lösenord fungerar: minst 6 tecken, utan krav på stora bokstäver, siffror eller specialtecken.
 - Karaktären sparas i PostgreSQL och finns kvar efter utloggning och omstart.
 - Karibisk pixelart, havsblå paneler och kompakt vänstermeny.
+- **Dag/natt**: bakgrunden växlar automatiskt till nattbild 21:00-06:00 server time (UTC), även på en öppen sida. Se [dag/natt-cykeln](docs/DAY_NIGHT_CYCLE.md).
 - Hamnens vyer delar samma spellayout. Vid sidbyten ligger menyn och resursmätarna kvar,
   med en liten laddningsindikator i innehållet medan serverdata hämtas.
 - **Marketplace**: Torn-inspirerat itemrutnät med Most Popular för senaste 12 timmarna,
@@ -43,10 +44,14 @@ Kodens ansvarsfördelning och fortsatt utveckling beskrivs i [kodstrukturen](doc
 - **Bank** i The Harbor visar banksaldo och låter dig sätta in och ta ut Gold Coins. Endast pengar på karaktären kan användas till köp.
 - **Hospital**: fem minuters återhämtning när crew dör eller skeppet sjunker. Spelhandlingar är låsta tills du skrivs ut med full hälsa. Karaktär och progression behålls. Patientlistan visar även offlinekaptener. Profiler är tillgängliga under vistelsen och visar sjukhusstatus med återstående tid för andra spelare.
 - **Energy**, **Ship Health** och **Crew Health** visas i hamnen, med maxvärdet 100.
-- **Crew Training**: övningar med XP, guldköp och 1 % Perfect Drill. Första övningen ger +1 för 5 Energy.
-- **Ship Upgrades**: välj stat och arbetsstorlek. Ett arbete åt gången, färdigt efter 5, 25 eller 50 minuter även offline. XP och köpta workshops ger större ökningar.
+- **Crew Morale** visas bredvid resurserna: -100 till +100, med noll i mitten.
+  Crew-träning kostar 0,5 moral per Energy och varje femminuterstick flyttar moralen 5 mot 0.
+  Moralen ger upp till ±5 % på Crew-stats i strid och på träningsökningar.
+- **Tavern**: en måltid ger +25 moral för 1 000 Gold Coins utan Energy-kostnad. Se [Crew Morale](docs/CREW_MORALE.md).
+- **Crew Training**: övningar med XP, guldköp och 1 % Perfect Drill. Första övningen ger cirka +1,01 för 5 Energy vid neutral moral.
+- **Ship Upgrades**: välj stat och 5-100 Energy. Varje 5 Energy tar 30 sekunder, alltså högst 10 minuter. Ett arbete åt gången; skeppet stannar i hamnen tills jobbet är klart. Arbetet fortsätter även offline. XP och köpta workshops ger större ökningar.
 - Båda har tio justerbara nivåer. Nya karaktärer börjar med 10 i varje stat.
-- Energy är alltid heltal: +5 vid fasta klockslag var femte minut i hamnen och var tionde minut till havs, även under resor och offline, upp till 100. Nästa tick visas i sidopanelen. Se [Energy](docs/ENERGY_RECOVERY.md).
+- Energy är alltid heltal: +5 vid fasta klockslag var femte minut i hamnen och var tionde minut till havs, även under resor och offline, upp till 100. Återhämtningstakten visas när du håller musen över Energy-baren. Se [Energy](docs/ENERGY_RECOVERY.md).
 - Lösenordsåterställning, valideringsfel och skyddad åtkomst mellan konton.
 - **Attack**: fullskärmsvy med kanonstrid och boarding. Dela `/attack/<motståndarens-publika-nummer>` så kan andra ansluta mot gemensam hälsa. Adressen är samma före och under striden.
 - Aktiva angripare stannar i sin strid tills de vinner, förlorar eller lämnar. Försvarare kan läsa sidor och inventory, men alla handlingar som flyttar eller ändrar karaktären är låsta under striden. Hälsa och handlingslås uppdateras i realtid.
@@ -177,6 +182,7 @@ En Linux-VPS kan användas senare.
 - [Godkänd plan för första stridssystemet](docs/FIRST_COMBAT_PLAN.md)
 - [Marketplace och itemhandel](docs/MARKETPLACE.md)
 - [Gold Coins och banken](docs/GOLD_COINS_AND_BANK.md)
+- [Crew Morale och tavernmåltider](docs/CREW_MORALE.md)
 - [Resurser och första träningssystemet](docs/TRAINING_FOUNDATION.md)
 - [Plan: träningsprogression, tillfälliga crew-bonusar och tidsstyrda skeppsarbeten](docs/TRAINING_PROGRESSION_PLAN.md)
 - [Scouting och PvP till havs](docs/SEA_SCOUTING.md)

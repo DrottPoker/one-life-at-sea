@@ -21,6 +21,7 @@
   --o-scenery-tint-top:#04152125;
   --o-scenery-tint-bottom:#04152150;
   --o-background-image:url('/images/harbor-background.webp');
+  --o-night-background-image:url('/images/harbor-background-night.webp');
   --o-art-height:156px;
   --o-sidebar:232px;
   font-family:var(--o-body-font);

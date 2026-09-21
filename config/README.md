@@ -4,8 +4,8 @@ Alla justerbara spelregler och drift-/UI-inställningar samlas här. Nuvarande v
 
 | Fil | Vad du ändrar |
 | --- | --- |
-| gameplay.json | Energy, hälsa, återhämtning, träningskostnad och ökning, åtta startstats, stridskostnad, ammunition, rundor, tidsgränser, skydd, träff-/skadekurvor, boarding, grundutrustning hamnens sidstorlek samt seaTravel med avgångskostnad, restider, platstyper samt scoutingens pris och sidstorlek. Marketplace styr avgift, popularitetsfönster, sidstorlekar och batchgräns; inventory styr katalog och handelsbarhet. |
-| frontend.json | Spelnamn, språk-/datumformat, metadata, loggens tidszon, laddning/uppdateringsintervall, hamnbild och responsiva brytpunkter. |
+| gameplay.json | Crew Morale, tavernpriser, Energy, hälsa, återhämtning, träningskostnad och ökning, åtta startstats, stridskostnad, ammunition, rundor, tidsgränser, skydd, träff-/skadekurvor, boarding, grundutrustning hamnens sidstorlek samt seaTravel med avgångskostnad, restider, platstyper samt scoutingens pris och sidstorlek. Marketplace styr avgift, popularitetsfönster, sidstorlekar och batchgräns; inventory styr katalog och handelsbarhet. |
+| frontend.json | Spelnamn, språk-/datumformat, metadata, loggens tidszon, laddning/uppdateringsintervall, hamnbild, dag/natt-cykel och responsiva brytpunkter. |
 | theme.css | Färger, typsnitt, sidbredd, stridsbredd, sidopanel, bildhöjd, fast bakgrundsbild, sidmarginal, touchstorlek och spinnerhastighet. |
 | interface.css.template | Detaljerad CSS för gränssnittet; brytpunkter hämtas från frontend.json. |
 | auth.json | E-post-/lösenordslängder och väntetid för lösenordsåterställning. |
@@ -26,8 +26,14 @@ Alla justerbara spelregler och drift-/UI-inställningar samlas här. Nuvarande v
 Till havs och under resor används dubbla intervallet (600). `energyRecoveryAmount` är
 samma heltalsbelopp (5) på varje tick. Se [Energy](../docs/ENERGY_RECOVERY.md).
 
+`morale` styr spann, kostnad per Crew-Energy, fasta tickintervall, återgång mot 0,
+bonus i basis points och tavernmåltidens effekt/pris. Morale stöder en decimal.
+Aktuella standardvärden: ±100, 0,5/Energy, 5 mot 0 var 300:e sekund,
+500 basis points (5 %) och +25 för 1 000 Gold Coins.
+Se [Crew Morale](../docs/CREW_MORALE.md).
+
 Exempel: `training.energyCost` styr crew-träningens kostnad och knapptext.
-`training.shipMinEnergy` styr sliderns minimum (5), `shipSecondsPerEnergy` arbetstiden per Energy (60)
+`training.shipMinEnergy` styr sliderns minimum (5), `shipSecondsPerEnergy` arbetstiden per Energy (6, alltså 30 sekunder per 5 Energy)
 och `training.energyPerUnit` referensenheten (5) för både Crew och Ship.
 Varje nivå har `efficiency`. `statScale` (1000) och `statExponent` (0,6) styr
 statberoendet. Varje Energy avrundas till sex decimaler och ökar den virtuella staten
@@ -58,4 +64,5 @@ Se [den fullständiga guiden](../docs/CONFIGURATION.md) för verifiering, deploy
 
 Gränssnittets navy-/guldtema och den fasta hamnbakgrunden beskrivs i
 [designgrunden](../docs/INTERFACE_DESIGN.md). Bakgrundens sökväg ändras via
---o-background-image i theme.css. Spelmodulen scrollar med dokumentet.
+--o-background-image och --o-night-background-image i theme.css. Spelmodulen scrollar med dokumentet.
+frontend.json innehåller dayNight: dag börjar 06:00 och natt 21:00 UTC. Se [dag/natt-cykeln](../docs/DAY_NIGHT_CYCLE.md).

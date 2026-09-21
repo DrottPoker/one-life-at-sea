@@ -14,6 +14,7 @@ vi.mock("@/components/game-state", () => ({
     training: { progress: { crew: { xp: 0, tier_id: "crew_1" } }, ship_job: null },
     sea: { state: "in_harbor" },
     gold_coins: 1234, bank_gold_coins: 500,
+    crew_morale: 0, morale_next_at: null,
     energy: 50, ship_health: 50, crew_health: 125, health_next_at: "2026-09-17T00:00:00Z",
     crew_attack: 10, crew_defense: 9999.994, crew_speed: 10000.625, crew_accuracy: 10000000000.625,
     active_attack: null, protected_until: null,
@@ -34,9 +35,9 @@ describe("configured interface", () => {
     expect(html).toContain('aria-valuemax="250"');
     expect(html).toContain('width:25%');
     expect(html).toContain('width:20%');
-    expect(html).toContain('Energy: +7 every 45 seconds');
-    expect(html).toContain('15s');
-    expect(html).toContain('5s');
+    expect(html).toContain('Increases by 7 every 45 seconds.');
+    expect(html).toContain('every 15 seconds outside combat.');
+    expect(html).toContain('every 5 seconds outside combat.');
   });
   it("uses the configured training cost and gain in buttons and explanatory copy", () => {
     const html = renderToStaticMarkup(createElement(CrewTrainingPanel));

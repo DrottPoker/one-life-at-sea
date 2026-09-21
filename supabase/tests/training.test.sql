@@ -100,7 +100,7 @@ select is((select public.start_ship_upgrade('attack',5,'ship_1',ship_request) fr
 select throws_ok($$select public.start_ship_upgrade('speed',50,'ship_1',gen_random_uuid())$$,'P0001','SHIP_WORK_ACTIVE','Only one job can be pending');
 
 reset role;
-select is((select extract(epoch from(finishes_at-started_at))::int from private.ship_upgrade_jobs where character_id=(select a from training_fixture) and applied_at is null),300,'Small job lasts five minutes');
+select is((select extract(epoch from(finishes_at-started_at))::int from private.ship_upgrade_jobs where character_id=(select a from training_fixture) and applied_at is null),30,'Five Energy takes thirty seconds');
 update private.character_training set xp=100 where character_id=(select a from training_fixture) and training_group='ship';
 set local role authenticated;
 select lives_ok($$select public.purchase_training_tier('ship','ship_2',gen_random_uuid())$$,'Workshop can be bought while work is active');

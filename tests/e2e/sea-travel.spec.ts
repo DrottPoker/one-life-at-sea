@@ -221,7 +221,8 @@ test("concurrent departures and routes are atomic, and neither combat participan
   }
 });
 
-test("departure gates are clear for insufficient Energy and unfinished ship work", async ({ page }) => {
+test("departure stays locked until the thirty-second ship job completes", async ({ page }) => {
+  test.setTimeout(60_000);
   const own = await captain();
   testSql("update public.characters set energy=4,energy_updated_at=clock_timestamp()+interval '1 day' where id='" + own.id + "';");
   await loginTestAccount(page, own);
@@ -230,9 +231,19 @@ test("departure gates are clear for insufficient Energy and unfinished ship work
   testSql("update public.characters set energy=100,energy_updated_at=clock_timestamp()+interval '1 day' where id='" + own.id + "';");
   expect((await own.api.rpc("start_ship_upgrade", { stat: "attack", energy_amount: 5, expected_workshop_id: "ship_1", request_id: crypto.randomUUID() })).error).toBeNull();
   await page.reload();
+  const before = await state(own);
+  expect(Date.parse(before.training.ship_job!.finishes_at) - Date.parse(before.training.ship_job!.started_at)).toBe(30_000);
   await expect(page.getByRole("button", { name: "Set sail", exact: true })).toBeDisabled();
   await expect(page.getByText("Your ship upgrade must finish before you can leave.", { exact: true })).toBeVisible();
-  testSql("update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '6 minutes',finishes_at=clock_timestamp()-interval '1 second' where character_id='" + own.id + "' and applied_at is null;");
-  await page.reload();
-  await expect(page.getByRole("button", { name: "Set sail", exact: true })).toBeEnabled();
+  expect((await own.api.rpc("depart_harbor", { expected_version: before.sea.version, request_id: crypto.randomUUID() })).error?.message).toBe("SHIP_WORK_ACTIVE");
+  await expect(page.getByRole("button", { name: "Set sail", exact: true })).toBeEnabled({ timeout: 35_000 });
+  const completed = await state(own);
+  expect(completed.sea.state).toBe("in_harbor");
+  expect(completed.ship_attack).toBe(11.00623);
+  expect(completed.training.ship_job).toBeNull();
+  expect(completed.training.progress.ship.xp).toBe(5);
+  expect(completed.energy).toBe(95);
+  await page.getByRole("button", { name: "Set sail", exact: true }).click();
+  await expect(page).toHaveURL(/\/sea$/);
+  expect((await state(own)).energy).toBe(90);
 });

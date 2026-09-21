@@ -4,6 +4,7 @@ import type { MarketItem, MarketListing, MarketPage, MarketReceipt, SaleEntry } 
 import type { AdminResource, AdminPage, AdminPayload, AdminReceipt } from "@/lib/admin";
 import type { CirculationHistory, CirculationPeriod } from "@/lib/circulation";
 import type { InventoryEntryType, InventoryPage, TrashReceipt } from "@/lib/inventory";
+import type { TavernReceipt } from "@/lib/morale";
 import type { TrainingReceipt } from "@/lib/training";
 import type { HospitalPatient, HospitalRoster, HospitalStatus } from "@/lib/hospital";
 import type { BankDirection, BankTransfer } from "@/lib/bank";
@@ -37,6 +38,8 @@ export type Character = {
   travel_arrives_at: string | null;
   created_at: string;
   energy_updated_at: string;
+  morale_updated_at: string;
+  crew_morale: number;
   ship_recovery_at: string;
   crew_recovery_at: string;
   hospital_started_at: string | null;
@@ -100,6 +103,7 @@ export type Database = {
       get_attack_lock: { Args: Record<string, never>; Returns: AttackLock | null };
       get_combat_log: { Args: { battle_id: string }; Returns: CombatLog | null };
       get_game_state: { Args: Record<string, never>; Returns: GameState | null };
+      buy_tavern_meal: { Args: { expected_gold_cost: number; expected_morale_gain: number; request_id: string }; Returns: TavernReceipt };
       transfer_gold: { Args: { direction: BankDirection; amount: number; request_id: string }; Returns: BankTransfer };
       train_crew: { Args: { stat: Stat; expected_tier_id: string; request_id: string }; Returns: TrainingReceipt };
       start_ship_upgrade: { Args: { stat: Stat; energy_amount: number; expected_workshop_id: string; request_id: string }; Returns: TrainingReceipt };

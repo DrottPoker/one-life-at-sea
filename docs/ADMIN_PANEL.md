@@ -111,3 +111,11 @@ reset the settlement checkpoint without changing global tick boundaries. Lethal
 administrative damage ends the journey through Hospital, clears route choices
 and switches to harbor recovery from admission or an earlier actual homecoming.
 See [sea travel](SEA_TRAVEL.md).
+
+## Crew Morale
+
+The character editor supports crew_morale from -100 to +100 with at most one
+decimal. Database constraints enforce the same bounds for admin edits. Each
+change establishes a fresh morale checkpoint and is recorded in the existing
+audit log. Combat locks still apply. Tavern receipts are available as a read-only
+resource. Canonical admin mutation SQL is in supabase/templates/gameplay/admin.sql.

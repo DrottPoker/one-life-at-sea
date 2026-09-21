@@ -12,6 +12,7 @@ Genomgång och städning genomförd 2026-09-20. Aktuella verifieringsresultat fi
 | Inventorybilder och expanderade detaljer | `src/components/inventory/` |
 | Marknadsvyer, formulär och återförsök | `src/components/marketplace/`, `src/lib/marketplace.ts` |
 | Marknadens lager, köp och listning | `supabase/templates/gameplay/marketplace-*.sql` |
+| Moral, fasta serverticks och tavernmåltider | `src/lib/morale.ts`, `supabase/templates/gameplay/morale.sql`, `tavern.sql` |
 | Gemensam nedräkning mot servertid | `src/hooks/use-server-countdown.ts` |
 | Serialiserad hämtning av nya snapshots | `src/lib/snapshot-poller.ts` |
 | Fokus, återanslutning och återkomst till fliken | `src/lib/browser-events.ts` |
@@ -66,5 +67,7 @@ sidbyte kan därmed inte låsa den nästa navigationen.
 Ekonomins klientjournal finns i `src/lib/economy-journal.ts` och
 `src/components/economy-requests.tsx`. Den delar lagring och återhämtning medan
 serverhandlingar och databaskvitton behåller sina egna domänregler.
+Återhämtningsvyn väntar på karaktärens Web Lock innan en kvarvarande begäran
+visas som obekräftad; knappar spärras redan medan begäran pågår.
 `npm run audit:economy` kontrollerar lokal ekonomiintegritet utan att ändra data.
 Se [ekonomigranskningen](ECONOMY_AUDIT.md).

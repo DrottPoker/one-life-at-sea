@@ -9,6 +9,7 @@ export type DefenceOrder = "cannon" | "boarding";
 export type CombatStats = Record<Stat, number>;
 export type Combatant = {
   id: string; player_number: number; name: string; ship_health: number; crew_health: number;
+  crew_morale?: number | null; morale_multiplier?: number | null;
   ammo: number | null; ship: CombatStats | null; crew: CombatStats | null;
   cannons: string | null; weapon: string | null;
 };

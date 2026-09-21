@@ -1,3 +1,4 @@
+{{include.morale}}
 {{include.training}}
 {{include.resources}}
 {{include.sea-scouting}}
@@ -5,6 +6,7 @@
 {{include.combat}}
 {{include.game-state}}
 {{include.bank}}
+{{include.tavern}}
 {{include.hospital}}
 {{include.combat-report}}
 {{include.profile}}
@@ -17,3 +19,4 @@
 {{include.marketplace-read}}
 {{include.marketplace-sell}}
 {{include.marketplace-buy}}
+{{include.admin}}

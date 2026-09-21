@@ -10,12 +10,27 @@ test("fixed Energy deadlines show the current rate and recovered sea Energy can 
     testSql("update public.characters set energy=0,energy_updated_at=" +
       "date_bin(interval '5 minutes',clock_timestamp(),'1970-01-01Z')-interval '1 second' where id='" + own.id + "';");
     await page.goto("/harbor/crew-training");
-    await expect(page.getByText("Energy: +5 every 5 minutes on the server clock.", { exact: true })).toBeVisible();
     const energyBar = page.getByRole("progressbar", { name: "Energy", exact: true });
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
+    await energyBar.hover();
+    const hint = page.getByRole("tooltip");
+    await expect(hint).toHaveText("Increases by 5 every 5 minutes.");
+    await page.screenshot({ path: ".local/resource-tooltip-desktop.png" });
+    await hint.hover();
+    await expect(hint).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(hint).toHaveCount(0);
+    await energyBar.focus();
+    await expect(hint).toBeVisible();
+    await page.keyboard.press("Tab");
+    await expect(hint).toHaveText("Recovers 1 HP every 30 seconds outside combat.");
+    await page.keyboard.press("Escape");
+    await expect(hint).toHaveCount(0);
+    await expect(page.locator(".o-condition-card time")).toHaveCount(0);
     const harborEnergy = Number(await energyBar.getAttribute("aria-valuenow"));
     expect(Number.isInteger(harborEnergy)).toBe(true);
     expect(harborEnergy).toBeGreaterThanOrEqual(5);
-    const harborTick = await page.getByLabel("Next Energy tick", { exact: true }).getAttribute("datetime");
+    const harborTick = (await own.api.rpc("get_game_state")).data!.energy_next_at;
     expect(Date.parse(harborTick!) % 300_000).toBe(0);
     await expect(page.getByRole("button", { name: "Train Attack for 5 Energy", exact: true })).toBeEnabled();
 
@@ -25,8 +40,9 @@ test("fixed Energy deadlines show the current rate and recovered sea Energy can 
       expected_version: before.data!.sea.version, request_id: crypto.randomUUID(),
     })).error).toBeNull();
     await page.goto("/sea");
-    await expect(page.getByText("Energy: +5 every 10 minutes on the server clock.", { exact: true })).toBeVisible();
-    const travelingTick = await page.getByLabel("Next Energy tick", { exact: true }).getAttribute("datetime");
+    await energyBar.hover();
+    await expect(hint).toHaveText("Increases by 5 every 10 minutes.");
+    const travelingTick = (await own.api.rpc("get_game_state")).data!.energy_next_at;
     expect(Date.parse(travelingTick!) % 600_000).toBe(0);
 
     testSql("update public.characters set energy=0,energy_updated_at=" +

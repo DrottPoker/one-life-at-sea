@@ -22,7 +22,7 @@ test("nautical frame keeps scenery fixed and game views usable across screen siz
     });
     const initial = await background();
     expect(initial.position).toBe("fixed");
-    expect(initial.image).toContain("/images/harbor-background.webp");
+    expect(initial.image).toMatch(/\/images\/harbor-background(?:-night)?\.webp/);
     expect((await hero.boundingBox())!.height).toBeLessThanOrEqual(190);
     const shell = await page.locator(".game-shell").boundingBox();
     expect(shell!.x).toBeGreaterThan(100);
@@ -35,7 +35,7 @@ test("nautical frame keeps scenery fixed and game views usable across screen siz
     await page.evaluate(() => window.scrollTo(0, 220));
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
     expect((await hero.boundingBox())!.y).toBeLessThan(heroTop);
-    expect(await background()).toEqual(initial);
+    expect(await background()).toMatchObject({ position: initial.position, top: initial.top });
     expect(await page.locator(".o-workspace").evaluate(element => getComputedStyle(element).overflowY)).toBe("visible");
 
     for (const width of [1280, 1024, 900, 768, 600, 375, 320]) {
@@ -45,9 +45,19 @@ test("nautical frame keeps scenery fixed and game views usable across screen siz
       await expect(page.getByRole("progressbar", { name: "Energy", exact: true })).toBeVisible();
       const nav = page.getByRole("navigation", { name: "Harbor locations" });
       await expect(nav.getByRole("link", { name: "Marketplace", exact: true })).toBeVisible();
+      const morale = page.getByRole("meter", { name: "Crew Morale", exact: true });
+      await morale.focus();
+      const hint = page.getByRole("tooltip");
+      await expect(hint).toBeVisible();
+      const bounds = await hint.boundingBox();
+      expect(bounds!.x).toBeGreaterThanOrEqual(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+      if (width === 375) await page.screenshot({ path: ".local/resource-tooltip-mobile.png" });
+      await page.keyboard.press("Escape");
       if (width === 375) {
         await page.screenshot({ path: ".local/design-harbor-mobile.jpg", type: "jpeg", quality: 85, fullPage: true });
       }
+      await page.keyboard.press("Tab");
     }
 
     for (const [path, heading] of [
