@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { startFight } from "@/app/combat-actions";
-import { CombatantPanel } from "@/components/combatant-panel";
+import { CombatStage } from "@/components/combat-stage";
 import { useGameState } from "@/components/game-state";
 import { COMBAT_COST, combatError, type CombatPreview } from "@/lib/combat";
 
@@ -42,10 +42,7 @@ export function CombatPreparation({ preview }: { preview: CombatPreview }) {
   return <>
     <div className="o-combat-intro"><strong>{preview.join_combat_id ? "An attack is already underway" : "Prepare for an encounter"}</strong>
       <p>{preview.join_combat_id ? "Join the attackers with your own orders. You share the opposing ship and crew health." : "Inspect your condition before committing. The opposing equipment will be revealed when the fight starts."}</p></div>
-    <div className="o-combat-grid">
-      <CombatantPanel captain={preview.attacker} own phase="sea" />
-      <CombatantPanel captain={preview.defender} own={false} phase="sea" />
-    </div>
+    <CombatStage attacker={preview.attacker} defender={preview.defender} phase="sea" />
     <div className="o-combat-start">
       <div><h2>Give the order</h2><p>Both captains act each round. Your opponent follows saved defence orders.</p>
         <p className="o-copy">You can attack while injured. At least {gameplay.combat.minimumHealth} Ship Health and {gameplay.combat.minimumHealth} Crew Health are required.</p></div>

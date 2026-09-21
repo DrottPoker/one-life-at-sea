@@ -1,6 +1,6 @@
 # Konfiguration och projektstruktur
 
-Uppdaterat 2026-09-20.
+Uppdaterat 2026-09-21.
 
 ## Källor och ansvar
 
@@ -36,13 +36,18 @@ supabase/templates/gameplay/ och ersätter typkontrollerade skalära tokens. Än
 funktionsdel; genererad SQL jämförs fortfarande i sin helhet mot senaste configmigrationen.
 Training innehåller crewTiers och shipTiers. Generatorn skriver deterministiska SQL-kataloger
 från dessa listor. Nivå-ID och ordning får inte ändras eller tas bort när de har installerats.
-XP-krav och ökningar måste stiga och första nivån är gratis vid 0 XP.
-Skeppsarbete använder shipMinEnergy (5), shipEnergyPerUnit (5) och shipSecondsPerEnergy (60).
-Sliderns maxvärde är aktuell Energy. Statökning per Energy är workshopens statGain dividerat
-med shipEnergyPerUnit, avrundat till sex decimaler före multiplikation med vald Energy.
-De gamla storleksdefinitionerna bevaras endast som historik i den privata databaskatalogen.
-Perfect Drill-chansen anges i basispunkter: 100 är 1 %. Säkra heltalsgränser kontrolleras även för
-multiplicerade belöningar. Pågående skeppsjobb behåller sin sparade balans vid configbyten.
+XP-krav och efficiency måste stiga och första nivån är gratis vid 0 XP.
+Båda träningsgrupper använder energyPerUnit (5), statScale (1000) och statExponent (0,6).
+Varje Energy räknas med den virtuellt ökade valda staten, avrundat till sex decimaler.
+Se [träningsreglerna](TRAINING_FOUNDATION.md) för den exakta algoritmen.
+Skeppsarbete använder dessutom shipMinEnergy (5) och shipSecondsPerEnergy (60).
+Sliderns maxvärde är aktuell Energy. Konfigurationen begränsar Energykapaciteten till
+10 000 för att hålla beräkningen ändlig; dagens kapacitet är fortsatt 100.
+Effektivitet måste vara positiv, högst 1000, ha högst sex decimaler och ge en positiv
+avrundad Energy-enhet. Exponenten måste ligga mellan 0,01 och 0,99.
+Perfect Drill-chansen anges i basispunkter: 100 är 1 %. Sammansatta belöningar,
+XP och tider kontrolleras mot sina numeriska gränser. Pågående jobb och kvitton
+behåller sparade utfall vid configbyten. Alternativa kurvor testas med rollback.
 Textvärden citeras och SQL-escapas. En ändring ger en ny migration via Supabase CLI; äldre migrationer
 skrivs aldrig om. Samma värden används för kolumndefaults, relevanta CHECK-gränser, RPC-validering,
 återhämtning, deltagarlogik och skadefunktioner.

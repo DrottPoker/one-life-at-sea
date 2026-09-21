@@ -3,7 +3,7 @@
 import { gameplay, frontend, durationLabel } from "@/config/public";
 
 
-import { Coins } from "lucide-react";
+import { Coins, Zap, Ship, Users } from "lucide-react";
 import { formatGold } from "@/lib/bank";
 import { useGameState } from "@/components/game-state";
 import { MAX_ENERGY, MAX_HEALTH } from "@/lib/game";
@@ -11,15 +11,15 @@ import { MAX_ENERGY, MAX_HEALTH } from "@/lib/game";
 export function ResourceBars() {
   const state = useGameState();
   const resources = [
-    { key: "energy", label: "Energy", value: state.energy, max: MAX_ENERGY },
-    { key: "ship", label: "Ship Health", value: state.ship_health, max: MAX_HEALTH },
-    { key: "crew", label: "Crew Health", value: state.crew_health, max: MAX_HEALTH },
+    { key: "energy", label: "Energy", value: state.energy, max: MAX_ENERGY, Icon: Zap },
+    { key: "ship", label: "Ship Health", value: state.ship_health, max: MAX_HEALTH, Icon: Ship },
+    { key: "crew", label: "Crew Health", value: state.crew_health, max: MAX_HEALTH, Icon: Users },
   ];
-  return <section className="o-side-module" aria-labelledby="resources-title">
+  return <section className="o-side-module o-condition-card" aria-labelledby="resources-title">
     <div className="o-gold-coins"><span><Coins aria-hidden="true" />Gold Coins</span><output aria-label="Gold Coins on character">{formatGold(state.gold_coins)}</output></div>
     <h2 className="o-side-title" id="resources-title">Condition</h2>
     <div className="o-resources">{resources.map(resource => <div className="o-resource" key={resource.key}>
-      <div className="o-resource-label"><span>{resource.label}</span><span>{resource.value} / {resource.max}</span></div>
+      <div className="o-resource-label"><span><resource.Icon aria-hidden="true" />{resource.label}</span><span>{resource.value} / {resource.max}</span></div>
       <div className={"o-resource-track o-resource-" + resource.key} role="progressbar"
         aria-label={resource.label} aria-valuemin={0} aria-valuemax={resource.max} aria-valuenow={resource.value}
         aria-valuetext={resource.value + " of " + resource.max}>

@@ -7,9 +7,9 @@ import { TrainingActionForm } from "@/components/training-action-form";
 import { TrainingTierProgress } from "@/components/training-tier-progress";
 import { useServerCountdown } from "@/hooks/use-server-countdown";
 import { formatCountdown } from "@/lib/time";
-import { formatStat } from "@/lib/format";
+import { formatStat, formatStatGain } from "@/lib/format";
 import { STATS, STAT_LABELS, type Stat } from "@/lib/game";
-import { trainingTier, shipStatGain, type ShipJob } from "@/lib/training";
+import { trainingTier, trainingStatGain, type ShipJob } from "@/lib/training";
 
 function ShipCountdown({ job, observedAt }: { job: ShipJob; observedAt: string }) {
   const seconds = useServerCountdown(job.finishes_at, observedAt);
@@ -23,7 +23,7 @@ export function ShipUpgradePanel() {
   const available = Math.max(0, Math.floor(state.energy)), maximum = Math.max(minimum, available);
   const cost = Math.max(minimum, Math.min(selectedEnergy, maximum));
   if (selectedEnergy !== cost) setSelectedEnergy(cost);
-  const gain = shipStatGain(tier.statGain, cost), duration = cost * gameplay.training.shipSecondsPerEnergy;
+  const gain = trainingStatGain(state[`ship_${stat}`], tier.efficiency, cost), duration = cost * gameplay.training.shipSecondsPerEnergy;
   const job = state.training.ship_job, completed = state.training.last_ship_job;
   return <>
     <TrainingTierProgress group="ship" />
@@ -34,7 +34,7 @@ export function ShipUpgradePanel() {
     <div className="o-ship-stats">{STATS.map(key => <div key={key}><span>{STAT_LABELS[key]}</span><output aria-label={STAT_LABELS[key] + " stat"}>{formatStat(state[`ship_${key}`])}</output></div>)}</div>
     {job ? <section className="o-ship-job" aria-label="Ship work in progress">
       <div className="o-tier-heading"><h2>{STAT_LABELS[job.stat]} upgrade</h2><ShipCountdown job={job} observedAt={state.observed_at} /></div>
-      <p className="o-copy">{job.workshop_name} · +{formatStat(job.stat_gain)} {STAT_LABELS[job.stat]}</p>
+      <p className="o-copy">{job.workshop_name} · +{formatStatGain(job.stat_gain)} {STAT_LABELS[job.stat]}</p>
       <p className="o-form-hint">{job.energy_cost} Energy paid. You can keep playing while the work continues.</p>
     </section> : <TrainingActionForm label="Start ship work" fields={{ action: "ship", tier_id: tier.id }}>
       {blocked => <fieldset className="o-ship-order" disabled={blocked || !!state.active_combat_id || !!state.hospital_until}>
@@ -51,12 +51,12 @@ export function ShipUpgradePanel() {
             <div className="o-work-size-limits" id="ship-size-limits"><span>{minimum} Energy minimum</span><span>{available} Energy available</span></div>
           </div>
         </div>
-        <p className="o-work-preview"><strong>+{formatStat(gain)} {STAT_LABELS[stat]}</strong><span>{cost} Energy · {durationLabel(duration)}</span></p>
+        <p className="o-work-preview"><strong>+{formatStatGain(gain)} {STAT_LABELS[stat]}</strong><span>{cost} Energy · {durationLabel(duration)}</span></p>
         <button className="o-training-button" type="submit" disabled={state.energy < cost}>Start work</button>
         {state.energy < cost && <p className="o-form-hint">Not enough Energy for this job.</p>}
       </fieldset>}
     </TrainingActionForm>}
-    {completed && <div className="o-ship-completed" role="status">Last job completed: +{formatStat(completed.stat_gain)} {STAT_LABELS[completed.stat]}.</div>}
+    {completed && <div className="o-ship-completed" role="status">Last job completed: +{formatStatGain(completed.stat_gain)} {STAT_LABELS[completed.stat]}.</div>}
     {state.active_combat_id && <p className="o-training-feedback o-copy">Finish your current fight to start new work. Existing work continues.</p>}
   </>;
 }

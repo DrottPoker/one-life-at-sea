@@ -103,8 +103,8 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     await navigation.getByRole("link", { name: "Crew Training", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Crew Training", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Train Attack for 5 Energy", exact: true }).click();
-    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(/^1[12]$/);
-    const trainedAttack = (await page.getByLabel("Attack stat", { exact: true }).textContent())!;
+    await expect(page.getByLabel("Attack stat", { exact: true }).filter({ visible: true })).toHaveText(/^1[12]\.01$/);
+    const trainedAttack = (await page.getByLabel("Attack stat", { exact: true }).filter({ visible: true }).textContent())!;
     await expect(energy).toHaveAttribute("aria-valuenow", "95");
     expect(await originalEnergy.evaluate(element => element.isConnected)).toBe(true);
     await navigation.getByRole("link", { name: "Ship Upgrades", exact: true }).click();
@@ -113,7 +113,7 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     await expect(energy).toHaveAttribute("aria-valuenow", "95");
     await page.goBack();
     await expect(page).toHaveURL(/\/harbor\/crew-training$/);
-    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(trainedAttack);
+    await expect(page.getByLabel("Attack stat", { exact: true }).filter({ visible: true })).toHaveText(trainedAttack);
     await page.goForward();
     await expect(page).toHaveURL(/\/harbor\/ship-upgrades$/);
     await expect(page.getByRole("heading", { name: "Ship Upgrades", exact: true })).toBeVisible();
@@ -124,7 +124,7 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     // Direct deep links still load the correct authenticated view.
     await page.goto("/harbor/crew-training");
     await expect(page.getByRole("heading", { name: "Crew Training", exact: true })).toBeVisible();
-    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(trainedAttack);
+    await expect(page.getByLabel("Attack stat", { exact: true }).filter({ visible: true })).toHaveText(trainedAttack);
     await expect(energy).toHaveAttribute("aria-valuenow", "95");
     await page.getByRole("button", { name: "Log out", exact: true }).filter({ visible: true }).click();
     await expect(page).toHaveURL(/\/login$/);

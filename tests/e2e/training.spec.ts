@@ -2,6 +2,8 @@ import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { trainingStatGain } from "../../src/lib/training";
+import { formatStat, formatStatGain } from "../../src/lib/format";
 import { isLocalTestApi, localDatabaseContainer } from "../support/local";
 
 process.loadEnvFile(".env.local");
@@ -42,7 +44,7 @@ test("crew XP, carried-gold purchases, two tabs, login and responsive layout", a
   await other.goto("/harbor/crew-training");
   for (const [index, stat] of ["Attack", "Defense", "Speed", "Accuracy"].entries()) {
     await page.getByRole("button", { name: "Train " + stat + " for 5 Energy", exact: true }).click();
-    await expect(page.getByLabel(stat + " stat", { exact: true })).toHaveText(/^1[12]$/);
+    await expect(page.getByLabel(stat + " stat", { exact: true })).toHaveText(/^1[12]\.01$/);
     await expect(page.getByRole("progressbar", { name: "Energy", exact: true })).toHaveAttribute("aria-valuenow", String(95 - index * 5));
   }
   await expect(page.getByRole("progressbar", { name: "Crew progress", exact: true })).toHaveAttribute("value", "20");
@@ -84,7 +86,9 @@ test("crew XP, carried-gold purchases, two tabs, login and responsive layout", a
   await expect(page.getByRole("button", { name: "Train Attack for 5 Energy", exact: true })).toBeEnabled({ timeout: 15000 });
   const before = (await own.api.rpc("get_game_state")).data.crew_attack;
   await page.getByRole("button", { name: "Train Attack for 5 Energy", exact: true }).click();
-  await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(new RegExp("^(" + (before + 2) + "|" + (before + 4) + ")$"));
+  const normalGain = trainingStatGain(before, 1.15, 5);
+  await expect.poll(async () => [1, 2].map(multiplier => formatStat(Math.round((before + normalGain * multiplier) * 1e6) / 1e6))
+    .includes(await page.getByLabel("Attack stat", { exact: true }).innerText())).toBe(true);
   expect(errors).toEqual([]);
   await own.api.auth.signOut();
 });
@@ -97,7 +101,8 @@ test("variable ship jobs complete automatically, preserve work after login and u
   const other = await context.newPage();
   await other.goto("/harbor/ship-upgrades");
   let attack = 10, xp = 0, energy = 100;
-  for (const [cost, gain] of [[5, 1], [26, 5.2], [50, 10]] as const) {
+  for (const cost of [5, 26, 50]) {
+    const gain = trainingStatGain(attack, 1, cost);
     await expect(page.getByRole("main")).not.toContainText(/\bXP\b|earned|more XP required/);
     const slider = page.getByRole("slider", { name: "Work size", exact: true });
     await slider.focus();
@@ -106,7 +111,7 @@ test("variable ship jobs complete automatically, preserve work after login and u
     await page.getByRole("button", { name: "Start work", exact: true }).click();
     energy -= cost;
     await expect(page.getByRole("region", { name: "Ship work in progress" })).toBeVisible();
-    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(String(attack));
+    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(formatStat(attack));
     await expect(page.getByRole("progressbar", { name: "Energy", exact: true })).toHaveAttribute("aria-valuenow", String(energy));
     await expect(other.getByRole("region", { name: "Ship work in progress" })).toBeVisible();
     if (cost === 5) {
@@ -123,11 +128,11 @@ test("variable ship jobs complete automatically, preserve work after login and u
     }
     fixture(own.id, "update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '1 minute',finishes_at=clock_timestamp()+interval '4 seconds' where character_id=:captain and applied_at is null;");
     await page.reload();
-    attack += gain; xp += cost;
-    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(String(attack), { timeout: 15000 });
+    attack = Math.round((attack + gain) * 1e6) / 1e6; xp += cost;
+    await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(formatStat(attack), { timeout: 15000 });
     await expect(page.getByRole("progressbar", { name: "Workshop progress", exact: true })).toHaveAttribute("value", String(xp));
-    await expect(other.getByLabel("Attack stat", { exact: true })).toHaveText(String(attack), { timeout: 15000 });
-    await expect(page.getByText("Last job completed: +" + gain + " Attack.", { exact: true })).toBeVisible();
+    await expect(other.getByLabel("Attack stat", { exact: true })).toHaveText(formatStat(attack), { timeout: 15000 });
+    await expect(page.getByText("Last job completed: +" + formatStatGain(gain) + " Attack.", { exact: true })).toBeVisible();
   }
   await page.screenshot({ path: ".local/ship-work-completed-mobile.png", fullPage: true });
   await other.close();
@@ -135,7 +140,7 @@ test("variable ship jobs complete automatically, preserve work after login and u
   await expect(page).toHaveURL(/\/login$/);
   await login(page, own);
   await page.goto("/harbor/ship-upgrades");
-  await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("26.2");
+  await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText(formatStat(attack));
   await own.api.auth.signOut();
 });
 
@@ -148,9 +153,17 @@ test("concurrent drills, purchases and ship starts cannot overspend or duplicate
   })));
   const successful = results.filter(r => !r.error);
   expect(successful).toHaveLength(20);
+  const ordered = successful.map(result => result.data).sort((a, b) => a.stat_before - b.stat_before);
+  let current = 10;
+  for (const receipt of ordered) {
+    expect(receipt.stat_before).toBe(current);
+    expect(receipt.normal_gain).toBe(trainingStatGain(current, 1, 5));
+    expect(receipt.stat_gain).toBe(receipt.normal_gain * (receipt.perfect ? 2 : 1));
+    current = Math.round((current + receipt.stat_gain) * 1e6) / 1e6;
+  }
   expect(results.filter(r => r.error?.message === "NOT_ENOUGH_ENERGY")).toHaveLength(5);
   expect((await own.api.rpc("get_game_state")).data).toMatchObject({
-    energy: 0, crew_attack: 10 + successful.reduce((sum, r) => sum + r.data.stat_gain, 0),
+    energy: 0, crew_attack: Math.round((10 + successful.reduce((sum, r) => sum + r.data.stat_gain, 0)) * 1e6) / 1e6,
     training: { progress: { crew: { xp: 100, tier_id: "crew_1" }, ship: { xp: 0 } } },
   });
   fixture(own.id, "update public.characters set gold_coins=1000,energy=100,energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain;");
@@ -174,7 +187,7 @@ test("concurrent drills, purchases and ship starts cannot overspend or duplicate
   expect((await own.api.rpc("get_game_state")).data.energy).toBe(45);
   fixture(own.id, "update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '1 hour',finishes_at=clock_timestamp()-interval '1 second' where character_id=:captain and applied_at is null;");
   const reads = await Promise.all(Array.from({ length: 8 }, () => own.api.rpc("get_game_state")));
-  expect(reads.every(r => !r.error && r.data.ship_attack === 20 && r.data.training.progress.ship.xp === 50)).toBe(true);
+  expect(reads.every(r => !r.error && r.data.ship_attack === 20.089358 && r.data.training.progress.ship.xp === 50)).toBe(true);
   expect((await other.api.rpc("get_game_state")).data).toMatchObject({ energy: 100, crew_attack: 10, ship_attack: 10 });
   expect((await client().rpc("train_crew", { stat: "attack", expected_tier_id: "crew_1", request_id: randomUUID() })).error?.code).toBe("42501");
   expect((await own.api.rpc("train_stat", { training_group: "ship", stat: "attack" })).error).not.toBeNull();
@@ -197,7 +210,7 @@ test("a lost crew response retries the original drill without a second charge or
   expect(before.energy).toBe(95);
   expect(before.training.progress.crew.xp).toBe(5);
   await page.getByRole("button", { name: "Retry action", exact: true }).click();
-  await expect(page.getByText(/Crew Attack \+[12]\. Spent 5 Energy\./)).toBeVisible();
+  await expect(page.getByText("Crew Attack +" + formatStatGain(Math.round((before.crew_attack - 10) * 1e6) / 1e6) + ". Spent 5 Energy.")).toBeVisible();
   const after = (await own.api.rpc("get_game_state")).data;
   expect(after.energy).toBe(95);
   expect(after.crew_attack).toBe(before.crew_attack);
@@ -209,12 +222,14 @@ test("ship slider tracks available Energy and awards fractional stats", async ({
   test.setTimeout(90_000);
   const own = await account(), errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
-  fixture(own.id, "update public.characters set energy=0,energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain;");
+  fixture(own.id, "update public.characters set ship_defense=10000.625,ship_speed=10000000000.625,energy=0,energy_updated_at=clock_timestamp()+interval '1 day' where id=:captain;");
   await login(page, own);
   await page.goto("/harbor/ship-upgrades");
   const slider = page.getByRole("slider", { name: "Work size", exact: true });
   const start = page.getByRole("button", { name: "Start work", exact: true });
   await expect(slider).toHaveAttribute("min", "5");
+  await expect(page.getByLabel("Defense stat", { exact: true })).toHaveText("10,001");
+  await expect(page.getByLabel("Speed stat", { exact: true })).toHaveText("10,000,000,001");
   await expect(slider).toBeDisabled();
   await expect(start).toBeDisabled();
   for (const energy of [4, 5, 37]) {
@@ -236,7 +251,15 @@ test("ship slider tracks available Energy and awards fractional stats", async ({
   await expect(slider).toHaveValue("7");
   await slider.press("ArrowLeft");
   await expect(slider).toHaveValue("6");
-  await expect(page.getByText("+1.2 Attack", { exact: true })).toBeVisible();
+  await expect(page.getByText("+1.21 Attack", { exact: true })).toBeVisible();
+  await page.getByLabel("Stat", { exact: true }).selectOption("defense");
+  await expect(page.getByText("+" + formatStatGain(trainingStatGain(10000.625, 1, 6)) + " Defense", { exact: true })).toBeVisible();
+  await page.getByLabel("Stat", { exact: true }).selectOption("speed");
+  const largeGain = trainingStatGain(10000000000.625, 1, 6);
+  expect(largeGain).toBeGreaterThan(10000);
+  await expect(page.getByText("+" + formatStatGain(largeGain) + " Speed", { exact: true })).toBeVisible();
+  await page.getByLabel("Stat", { exact: true }).selectOption("attack");
+  await expect(page.getByText("+1.21 Attack", { exact: true })).toBeVisible();
   await expect(page.getByText("6 Energy · 6 minutes", { exact: true })).toBeVisible();
   for (const width of [1280, 375, 320]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -244,15 +267,17 @@ test("ship slider tracks available Energy and awards fractional stats", async ({
     if (width !== 320) await page.screenshot({ path: ".local/ship-slider-" + width + ".png", fullPage: true });
   }
   await start.click();
-  await expect(page.getByRole("region", { name: "Ship work in progress" })).toContainText("+1.2 Attack");
+  await expect(page.getByRole("region", { name: "Ship work in progress" })).toContainText("+1.21 Attack");
   const state = (await own.api.rpc("get_game_state")).data;
   expect(state.energy).toBe(1);
   expect(state.ship_attack).toBe(10);
-  expect(state.training.ship_job).toMatchObject({ energy_cost: 6, stat_gain: 1.2, xp_gain: 6 });
+  expect(state.ship_defense).toBe(10000.625);
+  expect(state.ship_speed).toBe(10000000000.625);
+  expect(state.training.ship_job).toMatchObject({ energy_cost: 6, stat_gain: 1.207548, xp_gain: 6 });
   expect(Date.parse(state.training.ship_job.finishes_at) - Date.parse(state.training.ship_job.started_at)).toBe(360_000);
   fixture(own.id, "update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '7 minutes',finishes_at=clock_timestamp()-interval '1 second' where character_id=:captain and applied_at is null;");
   await page.reload();
-  await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("11.2");
+  await expect(page.getByLabel("Attack stat", { exact: true })).toHaveText("11.21");
   await expect(slider).toBeDisabled();
   await expect(start).toBeDisabled();
   expect(errors).toEqual([]);

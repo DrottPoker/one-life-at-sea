@@ -141,7 +141,7 @@ update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '10 m
  where character_id=(select a from sea_fixture) and applied_at is null;
 set local role authenticated;
 select lives_ok($$select public.depart_harbor((public.get_game_state()#>>'{sea,version}')::uuid,gen_random_uuid())$$,'Completed ship work allows departure');
-select is(public.get_game_state()->>'ship_attack','11','Completed job is applied before departure');
+select is(public.get_game_state()->>'ship_attack','11.00623','Completed job is applied before departure');
 
 -- Administrative resource changes cannot leave the captain stranded.
 reset role;

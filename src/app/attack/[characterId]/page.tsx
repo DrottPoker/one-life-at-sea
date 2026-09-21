@@ -1,11 +1,10 @@
-import { gameplay, frontend } from "@/config/public";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireCharacter, gameStateForPlayer } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
 import { attackUrl, type Battle, type CombatPreview } from "@/lib/combat";
 import { isUuid } from "@/lib/validation";
+import { CombatHeading } from "@/components/combat-heading";
 import { AttackSession } from "@/components/attack-session";
 import { GameStateProvider } from "@/components/game-state";
 
@@ -38,10 +37,7 @@ export default async function AttackPage({ params }: { params: Promise<{ charact
     preview = data;
   }
   return <GameStateProvider state={state}><main id="main" className="o-attack-main">
-    <header className="o-attack-heading"><div><span className="o-attack-brand">{frontend.site.name.toUpperCase()}</span><h1>Attacking</h1></div>
-      <div><span>Energy <strong>{state.energy} / {gameplay.resources.energyMax}</strong></span>
-        {!state.active_attack && <Link href={backUrl}>Back to {backLabel}</Link>}
-      </div></header>
+    <CombatHeading battle={battle} energy={state.energy} backUrl={backUrl} backLabel={backLabel} canLeave={!state.active_attack} />
     <AttackSession battle={battle} preview={preview} key={characterId} />
   </main></GameStateProvider>;
 }

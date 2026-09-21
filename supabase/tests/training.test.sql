@@ -12,10 +12,10 @@ select is((select energy from private.energy_snapshot(0,'2026-01-01Z','2026-01-0
 select is((select energy from private.energy_snapshot(99,'2026-01-01Z','2026-02-01Z')),100,'Energy is capped');
 select is((select energy_updated_at from private.energy_snapshot(99,'2026-01-01Z','2026-02-01Z')),'2026-02-01Z'::timestamptz,'Full energy cannot bank time');
 select is((select energy from private.energy_snapshot(50,'2026-01-01 00:05Z','2026-01-01Z')),50,'Backwards time cannot remove Energy');
-select is(private.crew_training_gain(10,0),20::bigint,'Perfect Drill doubles the stat gain');
-select is(private.crew_training_gain(10,0.009999),20::bigint,'Rolls below one percent are perfect');
-select is(private.crew_training_gain(10,0.01),10::bigint,'One percent is the exclusive boundary');
-select is(private.crew_training_gain(1500,0.9999),1500::bigint,'Ordinary gains support late tiers');
+select is(private.crew_training_gain(10,0),20::numeric,'Perfect Drill doubles the stat gain');
+select is(private.crew_training_gain(10,0.009999),20::numeric,'Rolls below one percent are perfect');
+select is(private.crew_training_gain(10,0.01),10::numeric,'One percent is the exclusive boundary');
+select is(private.crew_training_gain(1500,0.9999),1500::numeric,'Ordinary gains support late tiers');
 select lives_ok($$select private.combat_damage(9007199254740991,9007199254740991)$$,'Maximum safe stats remain valid in combat');
 select throws_ok($$select private.crew_training_gain(1,1)$$,'22023','INVALID_TRAINING_ROLL','Invalid rolls are rejected');
 select ok(to_regprocedure('public.train_stat(text,text)') is null,'Old public instant training is removed');
@@ -56,8 +56,8 @@ select throws_ok($$select public.purchase_training_tier('crew','crew_3',gen_rand
 select throws_ok($$select public.purchase_training_tier('crew','crew_2',gen_random_uuid())$$,'P0001','NOT_ENOUGH_XP','Purchase requires earned XP');
 
 insert into training_results select 'crew',public.train_crew('attack','crew_1',crew_request) from training_fixture;
-select ok((select (value->>'stat_gain')::int in (1,2) from training_results where key='crew'),'Real server RNG returns a valid gain');
-select is(public.get_game_state()->>'crew_attack',(select (10+(value->>'stat_gain')::int)::text from training_results where key='crew'),'Reported gain matches durable stat');
+select ok((select (value->>'stat_gain')::numeric in (1.00623,2.01246) from training_results where key='crew'),'Real server RNG returns a valid gain');
+select is(public.get_game_state()->>'crew_attack',(select (10+(value->>'stat_gain')::numeric)::text from training_results where key='crew'),'Reported gain matches durable stat');
 select is(public.get_game_state()->>'energy','95','Drill pays five Energy once');
 select is(public.get_game_state()#>>'{training,progress,crew,xp}','5','XP follows Energy, not random bonus');
 select is((select public.train_crew('attack','crew_1',crew_request) from training_fixture),(select value from training_results where key='crew'),'Retry returns the original random result');
@@ -86,13 +86,15 @@ select is(public.get_game_state()#>>'{training,progress,crew,tier_id}','crew_2',
 select is((select public.purchase_training_tier('crew','crew_2',purchase_request) from training_fixture),(select value from training_results where key='purchase'),'Purchase replay is stable');
 select is(public.get_game_state()->>'gold_coins','750','Purchase replay does not charge twice');
 select is((select public.train_crew('attack','crew_1',crew_request) from training_fixture),(select value from training_results where key='crew'),'Old training receipt survives a tier change');
-select ok((public.train_crew('accuracy','crew_2',gen_random_uuid())->>'stat_gain')::int in (2,4),'Next drill uses the purchased tier');
+insert into training_results select 'tier_two',public.train_crew('accuracy','crew_2',gen_random_uuid());
+select is((select value->>'efficiency' from training_results where key='tier_two'),'1.15','Next drill uses the purchased tier');
+select ok((select (value->>'stat_gain')::numeric=(value->>'normal_gain')::numeric*case when (value->>'perfect')::boolean then 2 else 1 end from training_results where key='tier_two'),'Perfect status uses normal gain rather than tier efficiency');
 
 select throws_ok($$select public.start_ship_upgrade('attack',4,'ship_1',gen_random_uuid())$$,'22023','INVALID_ENERGY','Work below minimum rejected');
 insert into training_results select 'ship',public.start_ship_upgrade('attack',5,'ship_1',ship_request) from training_fixture;
 select is(public.get_game_state()->>'ship_attack','10','Ship stats wait for completion');
 select is(public.get_game_state()#>>'{training,progress,ship,xp}','0','Ship XP waits for completion');
-select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','1','Small job snapshots base gain');
+select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','1.00623','Small job snapshots base gain');
 select is(public.get_game_state()#>>'{training,ship_job,energy_cost}','5','Small job costs five Energy');
 select is((select public.start_ship_upgrade('attack',5,'ship_1',ship_request) from training_fixture),(select value from training_results where key='ship'),'Start replay returns the same job');
 select throws_ok($$select public.start_ship_upgrade('speed',50,'ship_1',gen_random_uuid())$$,'P0001','SHIP_WORK_ACTIVE','Only one job can be pending');
@@ -102,17 +104,17 @@ select is((select extract(epoch from(finishes_at-started_at))::int from private.
 update private.character_training set xp=100 where character_id=(select a from training_fixture) and training_group='ship';
 set local role authenticated;
 select lives_ok($$select public.purchase_training_tier('ship','ship_2',gen_random_uuid())$$,'Workshop can be bought while work is active');
-select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','1','Workshop purchase leaves old job gain unchanged');
+select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','1.00623','Workshop purchase leaves old job gain unchanged');
 select is(public.get_game_state()#>>'{training,ship_job,workshop_id}','ship_1','Job keeps original workshop');
 reset role;
 update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '10 minutes',finishes_at=clock_timestamp()-interval '1 second'
 where character_id=(select a from training_fixture) and applied_at is null;
 set local role authenticated;
-select is(public.get_game_state()->>'ship_attack','11','Due job completes on access');
+select is(public.get_game_state()->>'ship_attack','11.00623','Due job completes on access');
 select is(public.get_game_state()#>>'{training,progress,ship,xp}','105','Job awards snapshotted XP once');
 select is(public.get_game_state()#>'{training,ship_job}','null'::jsonb,'Completion frees the work slot');
-select is(public.get_game_state()#>>'{training,last_ship_job,stat_gain}','1','Last completion is available for feedback');
-select is(public.get_game_state()->>'ship_attack','11','Repeated reads cannot duplicate stats');
+select is(public.get_game_state()#>>'{training,last_ship_job,stat_gain}','1.00623','Last completion is available for feedback');
+select is(public.get_game_state()->>'ship_attack','11.00623','Repeated reads cannot duplicate stats');
 reset role;
 insert into training_results select 'revision',to_jsonb(revision) from public.player_game_events where character_id=(select a from training_fixture);
 set local role authenticated;
@@ -149,12 +151,12 @@ reset role;
 update public.characters set energy=100,energy_updated_at=clock_timestamp() where id=(select a from training_fixture);
 set local role authenticated;
 select public.start_ship_upgrade('speed',25,'ship_2',gen_random_uuid());
-select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','10','Medium job snapshots five workshop units');
+select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','5.793975','Medium job snapshots five workshop units');
 select is(public.get_game_state()#>>'{training,ship_job,energy_cost}','25','Medium work costs twenty-five Energy');
 select set_config('request.jwt.claims','{"sub":"b2000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 select is(public.get_game_state()->>'crew_attack','10','Other captain retains independent stats');
 select public.start_ship_upgrade('attack',50,'ship_1',gen_random_uuid());
-select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','10','Large job snapshots ten workshop units');
+select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','10.089358','Large job snapshots ten workshop units');
 select is(public.get_game_state()#>>'{training,ship_job,energy_cost}','50','Large work costs fifty Energy');
 reset role;
 update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '1 hour',finishes_at=clock_timestamp()-interval '1 second'
@@ -163,12 +165,12 @@ set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"b2000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 insert into training_results select 'battle',public.start_combat(d,gen_random_uuid()) from training_fixture;
 reset role;
-select is((select ship_attack from public.characters where id=(select d from training_fixture)),20::numeric,'Actual combat start settles offline defender work');
-select is((select state#>>'{defender,ship,attack}' from private.combats where id=(select (value#>>'{battle,id}')::uuid from training_results where key='battle')),'20','Defender snapshot includes completed upgrade');
+select is((select ship_attack from public.characters where id=(select d from training_fixture)),20.089358::numeric,'Actual combat start settles offline defender work');
+select is((select state#>>'{defender,ship,attack}' from private.combats where id=(select (value#>>'{battle,id}')::uuid from training_results where key='battle')),'20.089358','Defender snapshot includes completed upgrade');
 update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '1 hour',finishes_at=clock_timestamp()-interval '1 second'
 where character_id=(select a from training_fixture) and applied_at is null;
 set local role authenticated;
-select is(public.get_game_state()->>'ship_speed','20','Jobs also complete during combat');
+select is(public.get_game_state()->>'ship_speed','15.793975','Jobs also complete during combat');
 select throws_ok($$select public.train_crew('attack','crew_2',gen_random_uuid())$$,'P0001','IN_COMBAT','Attacker cannot start crew training');
 select throws_ok($$select public.start_ship_upgrade('attack',5,'ship_2',gen_random_uuid())$$,'P0001','IN_COMBAT','Attacker cannot start ship work');
 reset role;

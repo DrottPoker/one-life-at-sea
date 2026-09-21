@@ -21,70 +21,70 @@
         "name": "Deck Drills",
         "xpRequired": 0,
         "goldCost": 0,
-        "statGain": 1
+        "efficiency": 1
       },
       {
         "id": "crew_2",
         "name": "Harbor Exercises",
         "xpRequired": 100,
         "goldCost": 250,
-        "statGain": 2
+        "efficiency": 1.15
       },
       {
         "id": "crew_3",
         "name": "Sailor Training",
         "xpRequired": 500,
         "goldCost": 1000,
-        "statGain": 4
+        "efficiency": 1.35
       },
       {
         "id": "crew_4",
         "name": "Veteran Drills",
         "xpRequired": 1500,
         "goldCost": 4000,
-        "statGain": 8
+        "efficiency": 1.55
       },
       {
         "id": "crew_5",
         "name": "Boarding Practice",
         "xpRequired": 4000,
         "goldCost": 15000,
-        "statGain": 20
+        "efficiency": 1.8
       },
       {
         "id": "crew_6",
         "name": "Officer Training",
         "xpRequired": 10000,
         "goldCost": 50000,
-        "statGain": 50
+        "efficiency": 2.05
       },
       {
         "id": "crew_7",
         "name": "Elite Exercises",
         "xpRequired": 20000,
         "goldCost": 150000,
-        "statGain": 125
+        "efficiency": 2.3
       },
       {
         "id": "crew_8",
         "name": "Master Drills",
         "xpRequired": 40000,
         "goldCost": 500000,
-        "statGain": 300
+        "efficiency": 2.55
       },
       {
         "id": "crew_9",
         "name": "Legendary Training",
         "xpRequired": 65000,
         "goldCost": 1500000,
-        "statGain": 750
+        "efficiency": 2.8
       },
       {
         "id": "crew_10",
         "name": "Admiral Exercises",
         "xpRequired": 100000,
         "goldCost": 5000000,
-        "statGain": 1500
+        "efficiency": 3
       }
     ],
     "shipTiers": [
@@ -93,75 +93,77 @@
         "name": "Deck Workbench",
         "xpRequired": 0,
         "goldCost": 0,
-        "statGain": 1
+        "efficiency": 1
       },
       {
         "id": "ship_2",
         "name": "Harbor Workshop",
         "xpRequired": 100,
         "goldCost": 250,
-        "statGain": 2
+        "efficiency": 1.15
       },
       {
         "id": "ship_3",
         "name": "Shipwright Workshop",
         "xpRequired": 500,
         "goldCost": 1000,
-        "statGain": 4
+        "efficiency": 1.35
       },
       {
         "id": "ship_4",
         "name": "Reinforced Workshop",
         "xpRequired": 1500,
         "goldCost": 4000,
-        "statGain": 8
+        "efficiency": 1.55
       },
       {
         "id": "ship_5",
         "name": "Advanced Workshop",
         "xpRequired": 4000,
         "goldCost": 15000,
-        "statGain": 20
+        "efficiency": 1.8
       },
       {
         "id": "ship_6",
         "name": "Master Shipwright",
         "xpRequired": 10000,
         "goldCost": 50000,
-        "statGain": 50
+        "efficiency": 2.05
       },
       {
         "id": "ship_7",
         "name": "Naval Workshop",
         "xpRequired": 20000,
         "goldCost": 150000,
-        "statGain": 125
+        "efficiency": 2.3
       },
       {
         "id": "ship_8",
         "name": "Grand Workshop",
         "xpRequired": 40000,
         "goldCost": 500000,
-        "statGain": 300
+        "efficiency": 2.55
       },
       {
         "id": "ship_9",
         "name": "Royal Dockworks",
         "xpRequired": 65000,
         "goldCost": 1500000,
-        "statGain": 750
+        "efficiency": 2.8
       },
       {
         "id": "ship_10",
         "name": "Admiral Dockworks",
         "xpRequired": 100000,
         "goldCost": 5000000,
-        "statGain": 1500
+        "efficiency": 3
       }
     ],
     "shipMinEnergy": 5,
-    "shipEnergyPerUnit": 5,
-    "shipSecondsPerEnergy": 60
+    "shipSecondsPerEnergy": 60,
+    "energyPerUnit": 5,
+    "statScale": 1000,
+    "statExponent": 0.6
   },
   "startingStats": {
     "ship": {

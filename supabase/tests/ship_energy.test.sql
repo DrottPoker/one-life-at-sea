@@ -21,7 +21,7 @@ select throws_ok($$select private.training_action('ship','{"stat":"attack","tier
 select is(public.get_game_state()->>'energy','100','Invalid requests do not debit Energy');
 insert into ship_receipts select public.start_ship_upgrade('attack',6,'ship_1',request) from ship_fixture;
 select is(public.get_game_state()->>'energy','94','Arbitrary whole Energy is debited exactly');
-select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','1.2','Six Energy snapshots a fractional stat gain');
+select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','1.207548','Six Energy snapshots a fractional stat gain');
 select is(public.get_game_state()#>>'{training,ship_job,xp_gain}','6','XP still follows spent Energy');
 select is(public.get_game_state()->>'ship_attack','10','Fractional rewards wait for completion');
 select is((select public.start_ship_upgrade('attack',6,'ship_1',request) from ship_fixture),(select value from ship_receipts),'Retry preserves the exact job and fractional gain');
@@ -31,20 +31,20 @@ select is((select extract(epoch from(finishes_at-started_at)) from private.ship_
 update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '7 minutes',finishes_at=clock_timestamp()-interval '1 second'
 where character_id=(select captain from ship_fixture) and applied_at is null;
 set local role authenticated;
-select is(public.get_game_state()->>'ship_attack','11.2','Completion preserves fractional stats');
-select is(public.get_game_state()->>'ship_attack','11.2','Repeated reads cannot award fractional gains twice');
+select is(public.get_game_state()->>'ship_attack','11.207548','Completion preserves fractional stats');
+select is(public.get_game_state()->>'ship_attack','11.207548','Repeated reads cannot award fractional gains twice');
 select public.start_ship_upgrade('attack',7,'ship_1',gen_random_uuid());
 reset role;
 update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '8 minutes',finishes_at=clock_timestamp()-interval '1 second'
 where character_id=(select captain from ship_fixture) and applied_at is null;
 set local role authenticated;
-select is(public.get_game_state()->>'ship_attack','12.6','Different small jobs accumulate without rounding');
+select is(public.get_game_state()->>'ship_attack','12.617446','Different small jobs preserve every rounded Energy unit');
 select public.start_ship_upgrade('defense',13,'ship_1',gen_random_uuid());
 reset role;
 update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '14 minutes',finishes_at=clock_timestamp()-interval '1 second'
 where character_id=(select captain from ship_fixture) and applied_at is null;
 set local role authenticated;
-select is(public.get_game_state()->>'ship_defense','12.6','One larger job equals multiple smaller jobs');
+select is(public.get_game_state()->>'ship_defense','12.617446','One larger job equals multiple smaller jobs');
 reset role;
 update public.characters set energy=4,energy_updated_at=clock_timestamp() where id=(select captain from ship_fixture);
 set local role authenticated;
@@ -56,7 +56,7 @@ set local role authenticated;
 select throws_ok($$select public.start_ship_upgrade('attack',38,'ship_1',gen_random_uuid())$$,'P0001','NOT_ENOUGH_ENERGY','Stale Energy above the current balance is rejected');
 select public.start_ship_upgrade('accuracy',37,'ship_1',gen_random_uuid());
 select is(public.get_game_state()->>'energy','0','The full current balance can be spent');
-select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','7.4','Full balance gets proportional stats');
+select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','7.460336','Full balance includes virtual stat growth');
 reset role;
 select is((select extract(epoch from(finishes_at-started_at)) from private.ship_upgrade_jobs where character_id=(select captain from ship_fixture) and applied_at is null),2220::numeric,'Arbitrary full-balance duration is correct');
 update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '38 minutes',finishes_at=clock_timestamp()-interval '1 second'

@@ -1,10 +1,10 @@
 "use client";
 
-import { gameplay } from "@/config/public";
 import { useGameState } from "@/components/game-state";
 import { TrainingActionForm } from "@/components/training-action-form";
 import { trainingTier, trainingTiers } from "@/lib/training";
 import { formatGold } from "@/lib/bank";
+import { formatStat } from "@/lib/format";
 import type { TrainingGroup } from "@/lib/game";
 
 export function TrainingTierProgress({ group }: { group: TrainingGroup }) {
@@ -16,11 +16,11 @@ export function TrainingTierProgress({ group }: { group: TrainingGroup }) {
   return <section className="o-tier-progress" aria-label={group === "crew" ? "Crew progression" : "Workshop progression"}>
     <div className="o-tier-heading"><div><span className="o-eyebrow">{group === "crew" ? "Current exercise" : "Current workshop"}</span>
       <h2>{current.name}</h2></div><span>Tier {index + 1} / {tiers.length}</span></div>
-    <p className="o-copy"><strong>{percent}%</strong>{!next && " · Fully upgraded"}</p>
+    <p className="o-copy">{formatStat(current.efficiency)}x training efficiency · <strong>{percent}%</strong>{!next && " · Fully upgraded"}</p>
     <progress aria-label={group === "crew" ? "Crew progress" : "Workshop progress"} max={100} value={percent} aria-valuetext={`${percent}%`} />
     {next && <>
       <TrainingActionForm label={"Purchase " + next.name} fields={{ action: "purchase", group, tier_id: next.id }}>
-        {blocked => <div className="o-tier-purchase"><p><strong>{next.name}</strong><span>+{formatGold(next.statGain)} per {group === "crew" ? "drill" : gameplay.training.shipEnergyPerUnit + " Energy"}</span></p>
+        {blocked => <div className="o-tier-purchase"><p><strong>{next.name}</strong><span>{formatStat(next.efficiency)}x training efficiency</span></p>
           <button className="o-training-button" type="submit" disabled={blocked || !unlocked || state.gold_coins < next.goldCost || !!state.active_combat_id || !!state.hospital_until}>
             Buy for {formatGold(next.goldCost)} Gold Coins
           </button></div>}

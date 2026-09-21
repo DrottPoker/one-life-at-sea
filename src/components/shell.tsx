@@ -1,31 +1,33 @@
 import { frontend } from "@/config/public";
 import Link from "next/link";
 import Image from "next/image";
-import { Anchor } from "lucide-react";
+import { Anchor, Compass, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function Masthead({ isAdmin = false }: { isAdmin?: boolean }) {
   return <header className="o-masthead">
     <Link href="/" className="o-brand" aria-label={frontend.site.name + " home"}>
-      <span className="o-brand-mark"><Anchor aria-hidden="true" /></span>
-      <span><span className="o-brand-title">{frontend.site.brandTop}</span><span className="o-brand-subtitle">{frontend.site.brandBottom}</span></span>
+      <span className="o-brand-mark"><Compass aria-hidden="true" /><Anchor aria-hidden="true" /></span>
+      <span className="o-brand-wordmark"><span className="o-brand-title">{frontend.site.brandTop}</span><span className="o-brand-subtitle">{frontend.site.brandBottom}</span></span>
     </Link>
-    {isAdmin && <Link href="/admin">Admin panel</Link>}
-    <p className="o-masthead-note">A name to make.<br />A life to remember.</p>
+    <div className="o-masthead-end">
+      {isAdmin && <Link href="/admin" className="o-admin-link">Admin panel</Link>}
+      <p className="o-masthead-note">A name to make.<br />A life to remember.</p>
+    </div>
   </header>;
 }
 
-export function Panel({ title, detail, children, className = "" }: { title: string; detail?: string; children: ReactNode; className?: string }) {
-  return <section className={`o-panel ${className}`}>
-    <header className="o-panel-title"><h1>{title}</h1>{detail && <small>{detail}</small>}</header>
+export function Panel({ title, detail, children, className = "", icon: Icon }: { title: string; detail?: string; children: ReactNode; className?: string; icon?: LucideIcon }) {
+  return <section className={"o-panel " + className}>
+    <header className="o-panel-title"><h1>{Icon && <Icon aria-hidden="true" />}{title}</h1>{detail && <small>{detail}</small>}</header>
     {children}
   </section>;
 }
 
 export function HarborArt({ short = false, className = "", priority = false }: { short?: boolean; className?: string; priority?: boolean }) {
   return <div className="o-art-frame"><Image src={frontend.art.harborPath} width={frontend.art.width} height={frontend.art.height}
-    className={`o-art ${short ? "o-short-art" : ""} ${className}`} priority={priority}
-    sizes={`(max-width: ${frontend.layout.mobileBreakpointPx}px) 100vw, ${frontend.art.desktopDisplayWidth}px`}
+    className={"o-art " + (short ? "o-short-art " : "") + className} preload={priority}
+    sizes={"(max-width: " + frontend.layout.mobileBreakpointPx + "px) 100vw, " + frontend.art.desktopDisplayWidth + "px"}
     alt={frontend.art.alt} /></div>;
 }
 

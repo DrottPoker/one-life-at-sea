@@ -81,7 +81,7 @@ function SessionFrame({ children, characterId, attack, hospitalUntil, seaState, 
   }, [characterId, instance, router]);
 
   if (blocked) return <main id="main" className="o-attack-loading"><span className="o-spinner" /> {hospitalUntil ? "Returning to hospital..." : attack ? "Returning to your battle..." : "Returning to your voyage..."}</main>;
-  return <GameRefreshContext value={refreshControl}><div className={attackScreen || (isAdmin && adminScreen) ? "o-attack-shell" : "game-shell"}>
+  return <GameRefreshContext value={refreshControl}><div className={attackScreen ? "o-attack-shell o-encounter-shell" : isAdmin && adminScreen ? "o-attack-shell" : "game-shell"}>
     {!attackScreen && <Masthead isAdmin={isAdmin} />}
     {children}
     {!attackScreen && <footer className="o-bottom"><span>{frontend.site.name}</span><span>A life to remember.</span></footer>}

@@ -1,3 +1,149 @@
+# Ny combat-design, 2026-09-21
+
+Attackvyn följer ägarens combat-referenser med mörkblå ytor, guldramar och
+tydliga orderknappar. Spelregler och databasflöden är oförändrade.
+
+- Egna och motståndarens kaptenskort visar hälsa, utrustning och relevanta stats.
+- De två levererade bilderna har optimerats till lokal WebP, 1774 x 887:
+  sjöstrid 406 328 byte, boarding 452 160 byte. Originalen är oförändrade.
+- Mittbilden följer deltagarens serverlagrade fas, även efter Disengage.
+- Energy, runda och ordernedräkning har samlats i sidhuvudet.
+- Primär attack är guld, Board/Disengage blå och Retreat röd. Textetiketter,
+  tangentbordsfokus, pending-tillstånd och befintliga spärrar finns kvar.
+- Combat log och People har kompaktare paneler med bibehållen information.
+- Mobilvyn placerar bilden över kaptenskorten och staplar orderknapparna.
+
+Verifierat:
+
+- Lint, TypeScript, 213 enhetstester och produktionsbygge passerade.
+- Samtliga fem combat-tester passerade i slutkörningen. Båda testerna för
+  försvararens handlingslås och det gemensamma designtestet passerade också.
+- Förberedelse, sjöstrid, boarding, Disengage, reträtt, publika rapporter,
+  flera angripare, samtidiga order och realtid ingick i webbläsarkontrollerna.
+- Ingen horisontell scroll på 320, 375, 600, 768, 800, 1024 och 1680 px.
+- Skärmbilder av båda stridsfaserna och mobilvyn granskades visuellt.
+- Localhost på port 3000 och båda bildfilerna svarade HTTP 200.
+
+Det nya bildtestet kontrollerar återgången till sjöstrid direkt efter Disengage.
+Ett efterföljande kanonskott kan följas av motståndarens boarding och därför
+byta fas igen. Den tidigare dokumenterade Next.js-loggvarningen om avbrutna
+RSC-strömmar förekom under navigationstesterna; alla slutliga tester passerade.
+
+Se [design och bildkällor](INTERFACE_DESIGN.md) och [combat-systemet](COMBAT_SYSTEM.md).
+
+# Nautisk designgrund, 2026-09-21
+
+Gränssnittet följer ägarens designreferens med mörkblå paneler, gulddetaljer,
+serifrubriker och ett begränsat pergamentkort i hamnen.
+
+- Den bifogade bakgrundsbilden har optimerats till lokal WebP, 1672 x 941,
+  471 144 byte. Originalbilden är oförändrad.
+- Bakgrunden ligger fast bakom den centrerade spelramen. Dokumentet och
+  spelinnehållet scrollar tillsammans utan separata scrollområden.
+- Hamnbilden är 156 px hög på desktop och 120 px i kompakt vy.
+- Karaktär och resurser har ett gemensamt kort. Menyn blir ett kompakt rutnät
+  på mobil; spelinnehållet använder då hela skärmbredden.
+- Hamnens spelarlista och destinationer visas sida vid sida på stora skärmar.
+  Marketplace är nu korrekt märkt Open i hamnkatalogen.
+- Gemensamma färger och paneler gäller även inventory, marknad, träning och
+  konto-/inloggningssidor. Befintliga spelregler och databasstruktur är oförändrade.
+- Next.js Image använder den aktuella preload-egenskapen.
+
+Verifierat:
+
+- Lint, TypeScript, 213 enhetstester och produktionsbygge passerade.
+- Efter slutlig justering passerade produktionsbygget och samtliga 25 berörda
+  webbläsartester i samma körning: design, navigation, inventory, marketplace,
+  träning och sjöresor.
+- Layout utan horisontell scroll verifierades på 320-1680 px; fast bakgrund,
+  bildhöjd, sidbyte och resursvisning kontrollerades i webbläsare.
+- Skärmbilder av hamn, marketplace, träning och inloggning granskades visuellt.
+- Localhost port 3000 visar den nya designen och svarar HTTP 200.
+- Configkontroll och git diff --check passerade.
+
+Den tidigare dokumenterade Next.js-loggvarningen om avbrutna RSC-strömmar
+förekom under interaktionstesterna även i denna körning. Samtliga tester passerade.
+
+Se [designgrund och underhåll](INTERFACE_DESIGN.md).
+
+# Avrundad statvisning, 2026-09-21
+
+Ägarens förtydligande: endast visningen ändras. Beräkningar och sparade värden
+behåller tidigare precision och träningens balans påverkas inte.
+
+- Befintliga Crew-/Ship-stats visas med högst två decimaler under 10 000.
+  Från 10 000 visas avrundade heltal, även i stridsvyerna.
+- Träningsökningar visar alltid högst två decimaler, även över 10 000.
+  Regeln gäller knappar, förhandsvisningar, pågående/färdiga jobb och resultatmeddelanden.
+- Onödiga slutnollor visas inte. formatStat och formatStatGain har separata ansvar.
+- Ingen ändring av träningsformel, intern avrundning, kvitton, sparade jobb eller databasstruktur.
+
+Verifierat:
+
+- `npm run check`: lint, TypeScript, 213 enhetstester och produktionsbygge passerade.
+- Samtliga 13 berörda webbläsartester passerade i en körning: träning, navigation,
+  stridsspärrar och strid, inklusive båda stridsfaserna.
+- Gränsvärden strax under/på/över 10 000 och stora belöningar kontrollerades.
+  UI visar exempelvis sparad stat 10000.625 som 10,001 medan databasen behåller 10000.625.
+- Desktop-/mobilbredder verifierades av träningssviten; mobilbilder granskades.
+- Localhost port 3000 svarade HTTP 200. `git diff --check` passerade.
+
+De tidigare dokumenterade Next.js-varningarna om avbrutna RSC-strömmar förekom
+även i denna körning. Ingen ny databas- eller balansmigration gjordes för visningsändringen.
+
+# Statberoende träning, 2026-09-21
+
+Crew Training och Ship Upgrades använder nu samma statberoende kurva:
+(efficiency / 5) * (1 + virtualStat / 1000)^0,6 per Energy, avrundad till sex
+decimaler. Den virtuella staten ökar före nästa Energy-enhet. Nivåeffektiviteten
+är 1,00; 1,15; 1,35; 1,55; 1,80; 2,05; 2,30; 2,55; 2,80; 3,00.
+
+- Crew kostar fortsatt 5 Energy och ger 5 XP direkt. En separat Perfect Drill
+  med 1 % chans dubblar normalökningen en gång, utan extra XP.
+- Ship kostar vald heltalsmängd Energy, minst 5, och tar 60 sekunder per Energy.
+  Belöning, XP och sluttid sparas vid start. Ingen Perfect Drill gäller Ship.
+- Stats är numeric i båda grupperna. Energy, XP och Gold Coins förblir heltal.
+  Samma stat och nivå ger exakt samma normala utbyte oavsett hur Ship-jobb delas upp.
+- XP-krav, priser och köpta nivåer bevaras. Gamla jobb och kvitton räknas aldrig om.
+  Nya kvitton sparar beräkningsunderlag och regelversion.
+- UI visar statens beräknade ökning och nivåns effektivitet. Crew-raderna har
+  bredare decimalfält på desktop och en separat knapp på mobil.
+- Hälsa och skadeformel är oförändrade. Ägarens framtida hälsoprogression utgår
+  från 100 Crew Health och Ship Health som startvärden.
+- JSON-importer använder explicita importattribut, så samma konfiguration kan
+  läsas i både Next.js och Node-baserade tester.
+
+Verifierat:
+
+- Ny migration 20260921000150_central_gameplay_config_6320997dd619 är applicerad
+  lokalt. Kontrollsummor före och efter bekräftar exakt bevarande av alla
+  karaktärsrader, XP/köpta nivåer, skeppsjobb och träningskvitton.
+- `npm run check`: lint, TypeScript, 201 enhetstester och produktionsbygge passerade.
+- `npm run test:db`: 1 152 assertioner i 22 filer passerade.
+- `npm run test:config:db`: 76 assertioner passerade. Alternativ skala,
+  exponent, effektivitet, Energykostnad och Perfect-chans installerades inom en
+  transaktion. Gamla jobb/kvitton bevarades och originalkonfigurationen återställdes.
+- Hela webbläsarsviten kördes: 63 av 64 passerade. Navigationstestet hittade både
+  en synlig och en dold cachead sida och rättades till att kontrollera den synliga vyn.
+  Därefter passerade samtliga sex tränings- och navigationstester på slutbygget.
+  Alla 64 distinkta testfall har därmed verifierats; ingen testretry användes.
+- Samtidiga Crew-pass verifierar en obruten kedja av aktuellt permanent statvärde
+  och rätt skalad belöning. Återförsök betalar och belönar en gång.
+- Desktop och mobil granskades visuellt; träningsvyerna kontrollerades vid
+  1 280, 768, 375 och 320 px utan horisontell overflow.
+- SQL-lint och Supabases säkerhetsrådgivare rapporterade inga fel.
+- `npm run audit:economy`: noll avvikelser i samtliga åtta kontroller.
+- Balansanalysen har körts om med den implementerade algoritmen.
+- Localhost på port 3000 svarade HTTP 200. `git diff --check` passerade.
+
+De tidigare dokumenterade Next.js-varningarna om avbrutna RSC-strömmar och
+Gzip-lyssnare förekommer fortfarande i breda webbläsartester. De är inte dolda
+eller rättade här. Ingen commit, push eller extern driftsättning har gjorts.
+
+Exakta regler och nivåtabell: [Träning och progression](TRAINING_FOUNDATION.md).
+Bakgrund, flerårssimulering och återstående balansfrågor:
+[Träningsresearch](TRAINING_BALANCE_RESEARCH.md).
+
 # Omedelbara sidbyten och återanvändning, 2026-09-21
 
 Sidval visar nu vänteläget direkt i innehållsytan. Menyikonerna ligger kvar och

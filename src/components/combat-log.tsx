@@ -1,5 +1,6 @@
 import { gameplay, frontend } from "@/config/public";
 import Link from "next/link";
+import { ScrollText, Users } from "lucide-react";
 import { ORDER_LABELS, type CombatEvent, type CombatOrder, type CombatPerson } from "@/lib/combat";
 
 function CaptainName({ id, name }: { id: string; name: string }) {
@@ -15,7 +16,7 @@ function EventAction({ id, name, order, hit, damage, phase }: { id: string; name
 export function CombatEvents({ events, defenderId, defenderName, newestFirst = false }: { events: CombatEvent[]; defenderId: string; defenderName: string; newestFirst?: boolean }) {
   const ordered = newestFirst ? [...events].reverse() : events;
   return <section className="o-combat-log" aria-labelledby="combat-log-heading">
-    <div className="o-section-bar"><h2 id="combat-log-heading">Combat log</h2><span>Server time ({frontend.site.logTimeZone})</span></div>
+    <div className="o-section-bar"><h2 id="combat-log-heading"><ScrollText aria-hidden="true" />Combat log</h2><span>Server time ({frontend.site.logTimeZone})</span></div>
     {ordered.length ? <ol>{ordered.map(event => <li key={event.sequence}>
       <header><strong>{event.kind === "round" ? event.phase === "sea" ? "Cannon combat" : "Boarding" : event.kind === "admin_end" ? "Ended by administrator" : event.kind === "hospital" ? "Hospital admission" : event.kind === "started" ? "Battle started" : "Joined battle"}</strong>
         <time dateTime={event.at} title={new Date(event.at).toISOString()}>{new Date(event.at).toLocaleTimeString(frontend.site.locale, { timeZone: frontend.site.logTimeZone })} {frontend.site.logTimeZone}</time>
@@ -55,7 +56,7 @@ export function outcomeLabel(outcome: string | null) {
 
 export function CombatPeople({ people, winnerId }: { people: CombatPerson[]; winnerId: string | null }) {
   return <section className="o-combat-people" aria-labelledby="people-heading">
-    <div className="o-section-bar"><h2 id="people-heading">People ({people.length})</h2><span>Combat contributions</span></div>
+    <div className="o-section-bar"><h2 id="people-heading"><Users aria-hidden="true" />People ({people.length})</h2><span>Combat contributions</span></div>
     <ul>{people.map(person => <li key={person.id} data-result={person.status}>
       <div><strong><CaptainName id={person.id} name={person.name} /></strong><span className="o-person-result">{person.id === winnerId && person.role === "attacker" ? "Final blow" : person.status === "active" ? person.role === "defender" ? "Defending" : person.phase === "sea" ? "At sea" : "Boarding" : person.status}</span></div>
       <dl><div><dt>Hits</dt><dd>{person.hits}</dd></div><div><dt>Ship damage</dt><dd>{person.ship_damage}</dd></div><div><dt>Crew damage</dt><dd>{person.crew_damage}</dd></div></dl>

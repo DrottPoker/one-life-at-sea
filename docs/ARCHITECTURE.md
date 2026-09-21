@@ -15,7 +15,11 @@ are preserved. See [CONFIGURATION.md](CONFIGURATION.md) for workflow and deploy 
 
 Next.js App Router, React, TypeScript and Tailwind. The accepted Caribbean harbor
 artwork is served locally from `public/images/harbor.webp`. Shared CSS tokens and
-React components implement the compact left navigation and blue panel design.
+React components implement the nautical navy-and-gold interface. The owner-supplied
+scenery is served as public/images/harbor-background.webp on a fixed decorative
+layer behind the centered game frame. The document scrolls normally; the compact
+harbor banner, sidebar resources and all gameplay views share the same theme.
+See [interface design](INTERFACE_DESIGN.md) for responsive behavior and asset ownership.
 
 Server Components load the current player. Client Components handle input,
 validation feedback, password visibility, pending states and the active navigation.
@@ -198,13 +202,17 @@ See [Energy recovery](ENERGY_RECOVERY.md).
 
 Training uses public train_crew, purchase_training_tier and start_ship_upgrade RPCs.
 A private authenticated mutator owns validation, RNG, Energy, carried-gold debits and XP.
-The old public/private train_stat functions are removed. Crew stats and XP use bigint;
-ship stats and job stat_gain use numeric to retain fractional improvements. Their existing
+The old public/private train_stat functions are removed. XP stays bigint; both groups'
+stats, tier efficiency and job stat_gain use numeric to retain fractional improvements. Their existing
 safe-integer ceiling is preserved. Character row types are separate from derived game state.
 The ship RPC accepts energy_amount instead of a size ID. A whole amount from the configured
 minimum (5) through recovered current Energy determines cost, duration (60 seconds per Energy)
-and proportional rewards. The per-Energy stat rate is rounded to six decimal places before
-multiplication, so splitting work does not change efficiency. Old jobs retain their snapshots;
+and stat-dependent rewards. private.training_gain rounds each Energy unit to six decimals
+using (efficiency / energyPerUnit) * (1 + virtualStat / statScale)^statExponent, then
+advances virtualStat before the next unit. Crew uses the same helper for five Energy,
+followed by one Perfect Drill roll that can double the full normal gain. Sequential ship
+jobs on the same stat and tier therefore preserve the exact gain regardless of job sizes.
+New receipts preserve the starting stat, normal gain, efficiency and configuration revision. Old jobs retain their snapshots;
 the nullable size_id and old size catalog remain historical metadata only.
 
 Private catalogs, per-character progression, idempotency receipts and ship jobs are protected by
@@ -218,7 +226,9 @@ before game-state reads and new actions. Combat preview and actual start settle 
 using the same observed_at as the fresh snapshots. Completion during an encounter only updates
 durable character stats; existing participant and defender snapshots remain frozen.
 
-The client shows separate crew and ship panels. Actions revalidate the shared layout, while
+The client shows separate crew and ship panels. Owned stats show at most two decimals
+below 10000 and rounded whole numbers from 10000; gains always show at most two
+decimals, including large gains. Formatting never changes stored precision or calculations. Actions revalidate the shared layout, while
 owner-only revision events update other tabs. The game context refreshes at ship deadlines,
 resource recovery, protection/combat deadlines and focus/reconnection. Its clock never grants
 rewards. Pending work completes logically offline and is materialized on server access without

@@ -1,7 +1,12 @@
 import { frontend } from "@/config/public";
 
-const statFormatter = new Intl.NumberFormat(frontend.site.locale, { maximumFractionDigits: 6 });
+const decimalFormatter = new Intl.NumberFormat(frontend.site.locale, { maximumFractionDigits: 2 });
+const wholeFormatter = new Intl.NumberFormat(frontend.site.locale, { maximumFractionDigits: 0 });
 
 export function formatStat(value: number): string {
-  return statFormatter.format(value);
+  return (value >= 10_000 ? wholeFormatter : decimalFormatter).format(value);
+}
+
+export function formatStatGain(value: number): string {
+  return decimalFormatter.format(value);
 }

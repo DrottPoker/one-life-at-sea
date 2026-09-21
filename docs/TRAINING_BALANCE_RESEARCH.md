@@ -1,12 +1,15 @@
 # Research: Torn-inspirerad träning över flera år
 
-Datum: 2026-09-21. Status: **research och balansförslag, inte implementerade spelregler**.
+Datum: 2026-09-21. Status: **grundförslaget är implementerat**.
+Aktuella, exakta regler finns i [träningsdokumentet](TRAINING_FOUNDATION.md).
+Researchen nedan beskriver bakgrund, jämförelse med det tidigare systemet och återstående balansfrågor.
 
 Ägarens inriktning: långsiktig statsutveckling över flera år, som Torn.
 Förtydligande 2026-09-21: 100 Crew Health och 100 Ship Health är startvärden.
 Båda ska kunna ökas genom ett framtida system. Hur ökningen tjänas in, dess
 kurva och eventuella slutliga gränser är ännu inte bestämda.
-Befintliga stats, regler, jobb, kvitton och speldata har inte ändrats.
+Befintliga stats, XP, köpta nivåer, jobb och kvitton bevaras. Nya handlingar använder
+statberoende träning med effektivitet 1-3 och omräkning för varje Energy.
 
 ## Slutsats
 
@@ -55,13 +58,13 @@ Wikins enkla uppskattning och den äldre textformeln i V2-tråden får därför 
 okritiskt användas för dagens stats över 50 miljoner. Den senare texten anger
 fortfarande det gamla taket trots att tråden länkar till en uppdaterad kalkylator.
 
-## Vårt verifierade utgångsläge
+## Verifierat utgångsläge före implementationen
 
 Källor: [gameplayconfig](../config/gameplay.json),
 [träningsregler](TRAINING_FOUNDATION.md) och
 [serverberäkningen](../supabase/templates/gameplay/training.sql).
 
-| Egenskap | Nu |
+| Egenskap | Före ändringen |
 | --- | --- |
 | Stats | Fyra för Crew och fyra för Ship, startvärde 10 vardera |
 | Crew | 5 Energy per pass; fast ökning från nivån |
@@ -85,19 +88,22 @@ Hundraminutstaket gör antalet inloggningar betydelsefullt. Med åtta timmars s�
 tom mätare vid läggdags och optimalt uttag resten av dygnet kan högst cirka
 1 060 återhämtad Energy användas under ett sådant dygn i hamn, utan extra källor.
 
-## Första kandidat att balansera vidare
+## Vald kurva
 
 En enkel, egen kurva som kan ge den önskade känslan utan ett permanent procentpåslag:
 
-`normal gain per 5 Energy = M × (1 + S / 1 000)^0,6`
+`normal gain per 5 Energy ≈ M × (1 + S / 1 000)^0,6`
+
+Implementationens exakta algoritm räknar en Energy i taget, avrundar till sex decimaler
+och höjer den virtuella staten före nästa enhet. Se [exakt beräkning](TRAINING_FOUNDATION.md#exakt-beräkning).
 
 - S är permanent värde i just den tränade staten. Utrustning och tillfälliga
   stridsbonusar ska inte blåsa upp basen för permanent träning.
 - M är övningens eller workshopens effektivitet.
-- Kandidat för tio nivåer: 1,00; 1,15; 1,35; 1,55; 1,80; 2,05; 2,30;
+- Implementerade tio nivåer: 1,00; 1,15; 1,35; 1,55; 1,80; 2,05; 2,30;
   2,55; 2,80; 3,00.
 - Crew behåller tills vidare 1 % Perfect Drill, separat från normalökningen.
-- Energy förblir heltal. Statfraktioner behöver sparas, även för Crew.
+- Energy förblir heltal. Statfraktioner sparas, även för Crew.
 - Värdena 1 000 och 0,6 är justerbara balansparametrar, inte uppgifter om Torn.
 
 | Befintlig stat | Första nivån, M = 1 | Sista nivån, M = 3 |
@@ -106,8 +112,8 @@ En enkel, egen kurva som kan ge den önskade känslan utan ett permanent procent
 | 100 | +1,06 | +3,18 |
 | 1 000 | +1,52 | +4,55 |
 | 10 000 | +4,22 | +12,65 |
-| 100 000 | +15,94 | +47,83 |
-| 1 000 000 | +63,13 | +189,40 |
+| 100 000 | +15,94 | +47,84 |
+| 1 000 000 | +63,13 | +189,41 |
 
 Tabellen visar normalpass utan Perfect Drill och är avrundad för läsbarhet.
 Ökningen blir större med staten, medan ökningen i procent minskar.
@@ -115,7 +121,7 @@ Sista nivån är inte tillgänglig för en ny spelare; kolumnen isolerar nivåns
 
 Detta är medvetet en mjukare kurva än ren proportionell statökning.
 Vid höga värden ger tio gånger större stat ungefär fyra gånger större gain,
-inte tio gånger. Ingen särskild hård statgräns behövs.
+inte tio gånger. Inget nytt balansmässigt stattak har införts; den befintliga tekniska gränsen kvarstår.
 
 Happy bör inte införas som ytterligare resurs samtidigt med denna första ändring.
 Ett framtida Morale-system kan fylla en liknande roll, men behöver egen ekonomi
@@ -129,7 +135,8 @@ Kör:
 `node scripts/analysis/training-balance.mjs`
 
 Simuleringen läser nuvarande startstats, XP-krav, priser och Perfect Drill-inställning.
-Den jämför dagens fasta ökningar med kandidaten.
+Den jämför den tidigare fasta nivåtrappan, lagrad uttryckligen i analysverktyget,
+med den implementerade statberoende modellen.
 
 Antaganden:
 
@@ -141,19 +148,19 @@ Antaganden:
   Inget påstående görs om exakt jobbplanering eller kalenderprognos.
 - Perfect Drill ersätts med sin genomsnittliga bonus. Det är en deterministisk
   approximation, inte en exakt förväntan för en slumpmässig sammansatt kurva.
-- Ingen avrundningsförlust, inga items, buffar eller strider modelleras.
+- Varje normal Energy-enhet avrundas till sex decimaler. Inga items, buffar eller strider modelleras.
 
 Resultat för **en Crew-stat**, inte summan av alla stats:
 
 | Energy till träning per dygn | Efter 30 dagar | Efter 1 år | Efter 3 år |
 | ---: | ---: | ---: | ---: |
-| 300 | 384 | 20 977 | 302 892 |
-| 600 | 936 | 107 715 | 1 742 236 |
-| 1 000 | 1 971 | 395 526 | 6 285 841 |
+| 300 | 385 | 20 987 | 302 997 |
+| 600 | 937 | 107 759 | 1 742 646 |
+| 1 000 | 1 972 | 395 656 | 6 286 901 |
 
-Vid 600 Energy/dygn ger dagens nivåtrappa cirka 2 582 827 i en Crew-stat efter
-ett år, mot kandidatens 107 715 under samma antaganden. Det är inte bevis för att
-ett visst absolut stattal är bättre. Det visar hur kraftig den nuvarande trappan är.
+Vid 600 Energy/dygn ger den tidigare nivåtrappan cirka 2 582 827 i en Crew-stat efter
+ett år, mot den nya kurvans 107 759 under samma antaganden. Det är inte bevis för att
+ett visst absolut stattal är bättre. Det visar hur kraftig den tidigare trappan var.
 
 Vid 600 Energy/dygn uppnår båda spåren XP-kravet för sista nivån omkring dag 334.
 Ett spår som får all Energy når kravet tidigare. Guld och tillgänglig hamntid kan
@@ -165,18 +172,18 @@ Vid 600 Energy/dygn, jämn fördelning och omedelbara nivåköp:
 
 | Exponent | Crew-stat efter 1 år | Efter 3 år |
 | ---: | ---: | ---: |
-| 0,5 | 61 497 | 598 950 |
-| 0,6 | 107 715 | 1 742 236 |
-| 0,7 | 233 757 | 8 499 566 |
+| 0,5 | 61 512 | 599 030 |
+| 0,6 | 107 759 | 1 742 646 |
+| 0,7 | 233 924 | 8 503 316 |
 
-En liten parameterändring ger stor långtidseffekt. Därför är 0,6 en kandidat att
+En liten parameterändring ger stor långtidseffekt. Därför är 0,6 en vald utgångspunkt att
 utvärdera, inte en redan bevisat balanserad siffra.
 
-Utan något nivåköp ger samma budget med exponent 0,6 cirka 17 541 efter ett år.
-Med alla nivåköp blir det cirka 107 715. Guld påverkar alltså även framtida
+Utan något nivåköp ger samma budget med exponent 0,6 cirka 17 545 efter ett år.
+Med alla nivåköp blir det cirka 107 759. Guld påverkar alltså även framtida
 statökningar genom den redan uppbyggda staten, inte bara dagens multiplikator.
 
-Om all Energy i stället går till Crew Attack blir den cirka 17 350 966 efter ett
+Om all Energy i stället går till Crew Attack blir den cirka 17 352 908 efter ett
 år, medan övriga stats står kvar på 10. Det är inte samma sak som stridsstyrka:
 en sådan karaktär saknar tränad träffsäkerhet, försvar och skepp. Ensidig,
 tvåstats- och balanserad träning måste ändå provas i riktiga stridssimuleringar.
@@ -218,7 +225,11 @@ Sea distance är en positionsregel, inte en garanti om likvärdig stridsstyrka.
 Skydd för nya spelare och vilka möten spelet uppmuntrar behöver därför bedömas
 separat. Flerårig beständig progression ger ofrånkomligen veteraner ett försprång.
 
-## Implementation om kandidaten väljs
+## Implementation och kvarstående balansarbete
+
+Kurva, decimaler, lås, sparade kvitton/jobb och gränssnitt är implementerade.
+XP-krav och priser behålls tills en faktisk intjäningsmodell finns. Punkten om
+PvP-simuleringar och hälsoprogression är fortsatt framtida arbete. Ursprunglig checklista:
 
 1. Kalibrera gainkurva, XP och nivåpriser tillsammans. Behåll åtta stats och
    separata Crew-/Ship-spår; XP kommer från betald Energy, inte från erhållna stats.
@@ -241,6 +252,6 @@ separat. Flerårig beständig progression ger ofrånkomligen veteraner ett förs
 9. Behåll gamla stats, kvitton och jobb. Ändra bara nya handlingar och skapa
    nya migrationer; kör även idempotens-, samtidighets- och avrundningstester.
 
-Analysverktyget har körts och lintats. Kontroller av växande absolut gain,
-avtagande procentuell gain och nivåmultiplikation passerade. Ingen spelkod eller
-databas ändrades, och ingen ny balans har installerats.
+Analysverktyget har körts om med avrundning och omräkning per Energy. Aktuell
+verifiering av implementation, bevarad data och tester redovisas i
+[implementationsstatus](IMPLEMENTATION_STATUS.md).

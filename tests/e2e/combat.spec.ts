@@ -83,6 +83,9 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await expect(page.locator(".o-masthead")).toHaveCount(0);
     const opponent = main.getByRole("region", { name: "Opponent ship and crew", exact: true });
     await expect(opponent.getByText("Unknown", { exact: true })).toHaveCount(2);
+    const scene = main.locator(".o-combat-scene img");
+    await expect(scene).toHaveAttribute("alt", "Two sailing ships face each other on the open sea.");
+    await expect.poll(() => scene.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
     await page.screenshot({ path: ".local/attack-prepare-desktop.jpg", type: "jpeg", quality: 75, fullPage: true });
     await main.getByRole("link", { name: "Back to profile", exact: true }).click();
     await expect(page).toHaveURL(new RegExp("/characters/" + d.id + "$"));
@@ -109,6 +112,14 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     expect((await a.api.rpc("train_crew", { stat: "attack", expected_tier_id: "crew_1", request_id: randomUUID() })).error?.message).toBe("IN_COMBAT");
     await main.getByRole("button", { name: /^Board Give up/ }).click();
     await expect(main.getByRole("button", { name: /^Crew attack Attack/ })).toBeVisible();
+    await expect(main.locator(".o-combat-stage")).toHaveAttribute("data-phase", "boarding");
+    await expect(scene).toHaveAttribute("alt", "Two pirate crews clash across the decks of their ships.");
+    await expect.poll(() => scene.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+    await page.screenshot({ path: ".local/attack-boarding-desktop.jpg", type: "jpeg", quality: 80, fullPage: true });
+    await page.setViewportSize({ width: 375, height: 1050 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: ".local/attack-boarding-mobile.jpg", type: "jpeg", quality: 80, fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 1050 });
     await main.getByRole("button", { name: /^Crew attack Attack/ }).click();
     await expect(main.getByText("Round 2 / 25", { exact: true })).toBeVisible();
     const persisted = await a.api.rpc("get_combat", { battle_id: battleId });
@@ -119,13 +130,18 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await expect(main.getByText("Round 2 / 25", { exact: true })).toBeVisible();
     await main.getByRole("button", { name: /^Disengage Take/ }).click();
     await expect(main.getByRole("button", { name: /^Fire cannons 1 salvo/ })).toBeVisible();
+    await expect(main.locator(".o-combat-stage")).toHaveAttribute("data-phase", "sea");
+    await expect(scene).toHaveAttribute("alt", "Two sailing ships face each other on the open sea.");
+    await expect.poll(() => scene.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+    await page.screenshot({ path: ".local/attack-sea-desktop.jpg", type: "jpeg", quality: 85, fullPage: true });
     await main.getByRole("button", { name: /^Fire cannons 1 salvo/ }).click();
     await expect(main.getByText("Round 4 / 25", { exact: true })).toBeVisible();
     await page.screenshot({ path: ".local/attack-active-desktop.jpg", type: "jpeg", quality: 75, fullPage: true });
-    for (const width of [768, 375, 320]) {
+    for (const width of [1680, 1024, 800, 768, 600, 375, 320]) {
       await page.setViewportSize({ width, height: 1050 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await expect(main.getByRole("button", { name: /^Retreat Take/ })).toBeEnabled();
+      if (width === 1680) await page.screenshot({ path: ".local/attack-wide-desktop.jpg", type: "jpeg", quality: 85, fullPage: true });
       if (width === 375) await page.screenshot({ path: ".local/attack-mobile.jpg", type: "jpeg", quality: 75, fullPage: true });
     }
     await main.getByRole("button", { name: /^Retreat Take/ }).click();

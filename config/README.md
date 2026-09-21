@@ -6,7 +6,7 @@ Alla justerbara spelregler och drift-/UI-inställningar samlas här. Nuvarande v
 | --- | --- |
 | gameplay.json | Energy, hälsa, återhämtning, träningskostnad och ökning, åtta startstats, stridskostnad, ammunition, rundor, tidsgränser, skydd, träff-/skadekurvor, boarding, grundutrustning hamnens sidstorlek samt seaTravel med avgångskostnad, restider, platstyper samt scoutingens pris och sidstorlek. Marketplace styr avgift, popularitetsfönster, sidstorlekar och batchgräns; inventory styr katalog och handelsbarhet. |
 | frontend.json | Spelnamn, språk-/datumformat, metadata, loggens tidszon, laddning/uppdateringsintervall, hamnbild och responsiva brytpunkter. |
-| theme.css | Färger, typsnitt, sidbredd, stridsbredd, sidopanel, bildhöjd, sidmarginal, touchstorlek och spinnerhastighet. |
+| theme.css | Färger, typsnitt, sidbredd, stridsbredd, sidopanel, bildhöjd, fast bakgrundsbild, sidmarginal, touchstorlek och spinnerhastighet. |
 | interface.css.template | Detaljerad CSS för gränssnittet; brytpunkter hämtas från frontend.json. |
 | auth.json | E-post-/lösenordslängder och väntetid för lösenordsåterställning. |
 | server.json | Lokala portar, Supabase-projekt-ID, databasåterförsök och isolerade testfönster. |
@@ -28,7 +28,10 @@ samma heltalsbelopp (5) på varje tick. Se [Energy](../docs/ENERGY_RECOVERY.md).
 
 Exempel: `training.energyCost` styr crew-träningens kostnad och knapptext.
 `training.shipMinEnergy` styr sliderns minimum (5), `shipSecondsPerEnergy` arbetstiden per Energy (60)
-och `shipEnergyPerUnit` hur många Energy som motsvarar workshopens basökning (5).
+och `training.energyPerUnit` referensenheten (5) för både Crew och Ship.
+Varje nivå har `efficiency`. `statScale` (1000) och `statExponent` (0,6) styr
+statberoendet. Varje Energy avrundas till sex decimaler och ökar den virtuella staten
+före nästa enhet. Se [exakta träningsregler](../docs/TRAINING_FOUNDATION.md).
 `combat.mitigation.fullReductionDefenseRatio` styr när Defense blockerar all skada.
 `startingStats.ship.attack` påverkar nya karaktärer; redan tränade stats skrivs inte om.
 
@@ -52,3 +55,7 @@ Nycklar, lösenord, anslutningar och miljöspecifik SITE_URL hör hemma i projek
 Lägg aldrig hemligheter i dessa versionshanterade filer. .env.example innehåller endast exempel.
 
 Se [den fullständiga guiden](../docs/CONFIGURATION.md) för verifiering, deployordning och begränsningar.
+
+Gränssnittets navy-/guldtema och den fasta hamnbakgrunden beskrivs i
+[designgrunden](../docs/INTERFACE_DESIGN.md). Bakgrundens sökväg ändras via
+--o-background-image i theme.css. Spelmodulen scrollar med dokumentet.

@@ -48,6 +48,7 @@ function TravelControls({ state }: { state: GameState }) {
   return <form action={action} aria-label={atHarbor ? "Leave The Harbor" : "Choose your next voyage"} aria-busy={pending}>
     <input type="hidden" name="expected_version" value={state.sea.version} />
     {atHarbor ? <div className="o-sea-departure">
+      <span className="o-departure-emblem" aria-hidden="true"><Ship /></span>
       <div><h2>The open sea awaits</h2><p className="o-copy">Sail to the waters just outside The Harbor. From there, choose where to go next.</p>
         <p className="o-copy">{gameplay.seaTravel.departureEnergyCost} Energy · {durationLabel(gameplay.seaTravel.outwardDurationSeconds)} to sea distance 1</p></div>
       <button className="o-primary" name="choice" value="depart" disabled={blocked || !!departureReason}><Ship size={16} aria-hidden="true" />Set sail</button>
@@ -68,7 +69,7 @@ function TravelControls({ state }: { state: GameState }) {
 
 export function SeaTravelPanel() {
   const state = useGameState();
-  return <Panel title={state.sea.state === "in_harbor" ? "Set sail" : "At Sea"} detail={state.sea.state === "traveling" ? "Journey in progress" : "Your voyage"}>
+  return <Panel icon={state.sea.state === "in_harbor" ? Ship : Compass} title={state.sea.state === "in_harbor" ? "Set sail" : "At Sea"} detail={state.sea.state === "traveling" ? "Journey in progress" : "Your voyage"}>
     {state.sea.state === "traveling" && state.sea.journey ? <Journey journey={state.sea.journey} observedAt={state.observed_at} /> :
       <TravelControls key={state.sea.version} state={state} />}
     <div className="o-panel-foot o-sea-note">Energy: +{gameplay.resources.energyRecoveryAmount} every {durationLabel(gameplay.resources.energyRecoverySeconds * 2)} at sea, including journeys, on the server clock. Scout to find ships at your Sea distance.</div>

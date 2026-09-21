@@ -62,17 +62,20 @@ export function validateConfig(config) {
     for (const [i, tier] of tiers.entries()) {
       check(/^[a-z][a-z0-9_]{0,47}$/.test(tier.id), "Tier IDs must be stable lowercase identifiers.");
       check(tier.goldCost <= g.economy.maxGoldCoins, "Tier price exceeds the Gold Coins limit.");
-      if (i) check(tier.xpRequired > tiers[i - 1].xpRequired && tier.statGain > tiers[i - 1].statGain && tier.goldCost > 0,
+      if (i) check(tier.xpRequired > tiers[i - 1].xpRequired && tier.efficiency > tiers[i - 1].efficiency && tier.goldCost > 0,
         "Tier XP and gains must increase and later tiers must cost Gold Coins.");
-      check(Number.isSafeInteger(tier.statGain * g.training.perfectMultiplier), "Perfect Drill gain exceeds the safe integer limit.");
+      check(Math.abs(tier.efficiency * 1_000_000 - Math.round(tier.efficiency * 1_000_000)) < 0.000001, "Tier efficiency supports at most six decimals.");
     }
   }
   check(g.training.shipMinEnergy <= g.resources.energyMax, "Minimum ship work exceeds maximum Energy.");
   check(Number.isSafeInteger(g.resources.energyMax * g.training.shipSecondsPerEnergy), "Ship duration exceeds the safe integer limit.");
   check(Number.isSafeInteger(g.resources.energyMax * g.training.xpPerEnergy), "Ship XP exceeds the safe integer limit.");
-  for (const tier of g.training.shipTiers) {
-    const rate = Math.round(tier.statGain * 1_000_000 / g.training.shipEnergyPerUnit);
-    check(rate > 0 && Number.isSafeInteger(rate * g.resources.energyMax), "Ship gain exceeds supported decimal precision.");
+  check(g.resources.energyMax <= 10_000, "Training supports at most 10000 Energy per action.");
+  for (const tier of [...g.training.crewTiers, ...g.training.shipTiers]) {
+    const rate = tier.efficiency / g.training.energyPerUnit;
+    check(Math.round(rate * 1_000_000) > 0, "Training gain must survive six-decimal rounding.");
+    const maximumGain = rate * (1 + Number.MAX_SAFE_INTEGER / g.training.statScale) ** g.training.statExponent * g.resources.energyMax * g.training.perfectMultiplier;
+    check(Number.isFinite(maximumGain) && maximumGain <= Number.MAX_SAFE_INTEGER, "Training gain exceeds the supported stat limit.");
   }
   check(Number.isSafeInteger(g.training.energyCost * g.training.xpPerEnergy), "Crew XP exceeds the safe integer limit.");
   check(g.economy.initialGoldCoins <= g.economy.maxGoldCoins, "Initial Gold Coins exceeds the balance limit.");
@@ -113,14 +116,14 @@ export function trainingCatalogSql(config) {
   const quote = value => "'" + value.replaceAll("'", "''") + "'";
   const rows = [["crew", config.gameplay.training.crewTiers], ["ship", config.gameplay.training.shipTiers]]
     .flatMap(([group, tiers]) => tiers.map((t, i) =>
-      "(" + [quote(group), quote(t.id), i, quote(t.name), t.xpRequired, t.goldCost, t.statGain].join(",") + ")")).join(",\n");
+      "(" + [quote(group), quote(t.id), i, quote(t.name), t.xpRequired, t.goldCost, t.efficiency].join(",") + ")")).join(",\n");
   let delimiter = "$catalog$";
   while (rows.includes(delimiter)) delimiter = delimiter.slice(0, -1) + "_$";
   return "do " + delimiter + " begin if exists(select 1 from private.training_tiers old left join (values\n" + rows +
-    "\n) incoming(training_group,id,position,name,xp_required,gold_cost,stat_gain) using(training_group,id) " +
+    "\n) incoming(training_group,id,position,name,xp_required,gold_cost,efficiency) using(training_group,id) " +
     "where incoming.id is null or incoming.position<>old.position) then raise exception 'Existing tier IDs and positions must be preserved'; end if; end " + delimiter + ";\n" +
-    "insert into private.training_tiers(training_group,id,position,name,xp_required,gold_cost,stat_gain) values\n" + rows +
-    "\non conflict(training_group,id) do update set name=excluded.name,xp_required=excluded.xp_required,gold_cost=excluded.gold_cost,stat_gain=excluded.stat_gain;\n";
+    "insert into private.training_tiers(training_group,id,position,name,xp_required,gold_cost,efficiency) values\n" + rows +
+    "\non conflict(training_group,id) do update set name=excluded.name,xp_required=excluded.xp_required,gold_cost=excluded.gold_cost,efficiency=excluded.efficiency;\n";
 }
 export function gameplaySql(config) {
   const template = read("supabase/templates/gameplay.sql").replace(/\{\{include\.([a-z-]+)\}\}\n/g,

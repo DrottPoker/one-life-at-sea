@@ -1,6 +1,6 @@
-import gameplay from "../../config/gameplay.json";
-import auth from "../../config/auth.json";
-import frontend from "../../config/frontend.json";
+import gameplay from "../../config/gameplay.json" with { type: "json" };
+import auth from "../../config/auth.json" with { type: "json" };
+import frontend from "../../config/frontend.json" with { type: "json" };
 
 // Only browser-safe settings belong in this module.
 export { gameplay, auth, frontend };

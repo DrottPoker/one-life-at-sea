@@ -21,11 +21,16 @@ describe("configuration contract", () => {
     ["fractional return duration", (c: ReturnType<typeof loadConfig>) => { c.gameplay.seaTravel.returnSecondsPerStep = 1.5; }],
     ["duplicate tier ID", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.crewTiers[1].id = c.gameplay.training.crewTiers[0].id; }],
     ["tier XP ordering", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.shipTiers[2].xpRequired = 0; }],
-    ["unsafe Perfect Drill", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.crewTiers[9].statGain = Number.MAX_SAFE_INTEGER; }],
+    ["unsafe Perfect Drill", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.crewTiers[9].efficiency = Number.MAX_SAFE_INTEGER; }],
     ["invalid minimum ship Energy", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.shipMinEnergy = 101; }],
     ["invalid ship duration", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.shipSecondsPerEnergy = 0; }],
     ["unsafe ship XP", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.xpPerEnergy = Number.MAX_SAFE_INTEGER; }],
-    ["unsafe ship gain", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.shipTiers[9].statGain = 1_000_000_000; }],
+    ["unsafe ship gain", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.shipTiers[9].efficiency = 1_000_000_000; }],
+    ["linear training exponent", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.statExponent = 1; }],
+    ["zero training scale", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.statScale = 0; }],
+    ["unbounded training loop", (c: ReturnType<typeof loadConfig>) => { c.gameplay.resources.energyMax = 10001; }],
+    ["lost gain precision", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.energyPerUnit = 1000000000; }],
+    ["excess efficiency precision", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.crewTiers[0].efficiency = 1.0000001; }],
     ["invalid chance", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.perfectChanceBps = 10001; }],
     ["paid first tier", (c: ReturnType<typeof loadConfig>) => { c.gameplay.training.crewTiers[0].goldCost = 1; }],
     ["misspelled key", (c: ReturnType<typeof loadConfig>) => Object.assign(c.gameplay.training, { energyCosts: 7 })],
@@ -53,7 +58,7 @@ describe("configuration contract", () => {
     const config = loadConfig(), baseline = revision(config);
     config.frontend.refresh.fallbackMs += 100;
     expect(revision(config)).toBe(baseline);
-    config.gameplay.training.crewTiers[0].statGain += 1;
+    config.gameplay.training.crewTiers[0].efficiency += 1;
     expect(revision(config)).not.toBe(baseline);
   });
   it("escapes SQL strings and rejects missing template parameters", () => {

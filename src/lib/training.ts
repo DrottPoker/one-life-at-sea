@@ -32,6 +32,21 @@ export function parseShipEnergy(value: unknown): number | null {
   return Number.isSafeInteger(amount) && amount >= gameplay.training.shipMinEnergy && amount <= gameplay.resources.energyMax ? amount : null;
 }
 
-export function shipStatGain(baseGain: number, energy: number): number {
-  return Math.round(baseGain * 1_000_000 / gameplay.training.shipEnergyPerUnit) * energy / 1_000_000;
+/**
+ * UI estimate of the server's six-decimal, per-Energy calculation.
+ * PostgreSQL numeric values and the saved receipt are authoritative.
+ */
+export function trainingStatGain(stat: number, efficiency: number, energy: number): number {
+  if (!Number.isFinite(stat) || stat < 1 || stat > Number.MAX_SAFE_INTEGER ||
+    !Number.isFinite(efficiency) || efficiency <= 0 || efficiency > 1000 ||
+    !Number.isSafeInteger(energy) || energy < 1 || energy > gameplay.resources.energyMax) {
+    throw new RangeError("Invalid training input.");
+  }
+  let gain = 0;
+  for (let unit = 0; unit < energy; unit++) {
+    const unitGain = Math.round(efficiency / gameplay.training.energyPerUnit *
+      (1 + (stat + gain) / gameplay.training.statScale) ** gameplay.training.statExponent * 1_000_000);
+    gain = Math.round(gain * 1_000_000 + unitGain) / 1_000_000;
+  }
+  return gain;
 }

@@ -2,7 +2,7 @@
 
 # PvP och gemensamma attacker
 
-Uppdaterat 2026-09-20. Detta dokument beskriver den implementerade versionen.
+Uppdaterat 2026-09-21. Detta dokument beskriver den implementerade versionen.
 [FIRST_COMBAT_PLAN.md](FIRST_COMBAT_PLAN.md) är den historiska planen för version 1.
 
 ## Flöde och sidlås
@@ -21,6 +21,20 @@ Uppdaterat 2026-09-20. Detta dokument beskriver den implementerade versionen.
 - Vinst, nederlag, reträtt, rundgräns eller timeout frigör deltagaren. Stängd flik avslutar inte striden direkt.
 - Avslutade möten har /combatlog/<battle-id>. Alla med länken kan läsa rapporten utan konto.
 - Äldre /attack?target=<id>&battle=<id>, /combat/prepare/<id> och /combat/<id> är enbart kompatibilitetsomdirigeringar.
+
+
+## Stridsvyn
+
+Designen följer ägarens combat-referenser från 2026-09-21. På desktop ligger
+kaptenens och motståndarens hälsa, utrustning och relevanta stats på varsin sida
+om en gemensam stridsbild. På mindre skärmar flyttas bilden ovanför kaptenskorten
+och orderknapparna staplas när utrymmet kräver det.
+
+Bilden byts mellan sjöstrid och boarding utifrån den egna deltagarens sparade
+stridsfas. Disengage återställer sjöbilden. Energy, runda och serverförankrad
+nedräkning visas i sidhuvudet. Motståndarens privata stats och ammunition är
+fortsatt dolda. Orderregler, kostnader, timeout, samtidighet och idempotens är
+oförändrade. Se [designgrund](INTERFACE_DESIGN.md) för komponenter och bildkällor.
 
 ## Flera angripare
 

@@ -95,7 +95,7 @@ test("defender can browse but open forms stay locked until the last attacker lea
     await expect(train).toBeEnabled({ timeout: 20000 });
     await expect(buy).toBeEnabled();
     await train.click();
-    await expect(crew.getByLabel("Attack stat", { exact: true })).toHaveText(/^1[12]$/);
+    await expect(crew.getByLabel("Attack stat", { exact: true })).toHaveText(/^1[12]\.01$/);
     await page.goto("/inventory");
     await expect(page.getByRole("button", { name: "Trash Linen Bandages", exact: true })).toBeEnabled();
     await page.goto("/characters/" + own.id);

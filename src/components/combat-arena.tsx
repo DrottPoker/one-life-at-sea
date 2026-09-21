@@ -4,14 +4,12 @@ import { gameplay } from "@/config/public";
 
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
-import { useServerCountdown } from "@/hooks/use-server-countdown";
-import { formatCountdown } from "@/lib/time";
 import { useRouter } from "next/navigation";
-import { Anchor, Crosshair, Flag, Swords, Undo2 } from "lucide-react";
+import { Anchor, ChevronRight, Crosshair, Ship, Swords, Undo2 } from "lucide-react";
 import { submitOrder } from "@/app/combat-actions";
-import { CombatantPanel } from "@/components/combatant-panel";
+import { CombatStage } from "@/components/combat-stage";
 import { CombatEvents, CombatPeople } from "@/components/combat-log";
-import { MAX_ROUNDS, type Battle, type CombatOrder, ORDER_LABELS } from "@/lib/combat";
+import { type Battle, type CombatOrder, ORDER_LABELS } from "@/lib/combat";
 
 const orderDetails: Record<CombatOrder, string> = {
   fire: `${gameplay.combat.ammoPerShot} salvo${gameplay.combat.ammoPerShot === 1 ? "" : "s"}. Damage the opposing hull.`,
@@ -20,12 +18,7 @@ const orderDetails: Record<CombatOrder, string> = {
   disengage: "Take a counterattack, then return to sea.",
   retreat: "Take a counterattack, then leave the fight.",
 };
-const orderIcons = { fire: Crosshair, board: Anchor, crew_attack: Swords, disengage: Undo2, retreat: Flag };
-
-function FightClock({ deadline, observedAt }: { deadline: string; observedAt: string }) {
-  const remaining = useServerCountdown(deadline, observedAt);
-  return <span className="o-fight-clock">Next order within <strong>{formatCountdown(remaining)}</strong></span>;
-}
+const orderIcons = { fire: Crosshair, board: Anchor, crew_attack: Swords, disengage: Undo2, retreat: Ship };
 
 export function CombatArena({ battle }: { battle: Battle }) {
   const router = useRouter();
@@ -57,22 +50,15 @@ export function CombatArena({ battle }: { battle: Battle }) {
   }
 
   return <>
-    <div className="o-combat-status">
-      <strong>{active ? battle.phase === "sea" ? "Cannon combat" : "Boarding" : "You have left this encounter"}</strong>
-      <span>Round {battle.round} / {MAX_ROUNDS}</span>
-      {active && <FightClock deadline={battle.deadline} observedAt={battle.observed_at} key={battle.observed_at} />}
-    </div>
-    <div className="o-combat-grid">
-      <CombatantPanel captain={battle.attacker} own phase={battle.phase} />
-      <CombatantPanel captain={battle.defender} own={false} phase={battle.phase} />
-    </div>
+    <CombatStage attacker={battle.attacker} defender={battle.defender} phase={battle.phase} />
     {active ? <section className="o-combat-orders" aria-labelledby="orders-heading">
-      <div className="o-section-bar"><h2 id="orders-heading">Your next order</h2><span>Both sides act together</span></div>
+      <div className="o-section-bar"><h2 id="orders-heading"><Anchor aria-hidden="true" />Your next order</h2><span>Both sides act together</span></div>
       <div className="o-order-buttons">{orders.map(order => {
         const Icon = orderIcons[order];
-        return <button key={order} onClick={() => giveOrder(order)} disabled={pending || (order === "fire" && (battle.attacker.ammo ?? 0) < gameplay.combat.ammoPerShot)}>
-          <span>{pending && selected === order ? <span className="o-spinner" aria-hidden="true" /> : <Icon aria-hidden="true" />}<strong>{ORDER_LABELS[order]}</strong></span>
-          <small>{orderDetails[order]}</small>
+        return <button key={order} data-tone={order === "retreat" ? "danger" : order === "fire" || order === "crew_attack" ? "primary" : "secondary"} onClick={() => giveOrder(order)} disabled={pending || (order === "fire" && (battle.attacker.ammo ?? 0) < gameplay.combat.ammoPerShot)}>
+          <span className="o-order-icon" aria-hidden="true">{pending && selected === order ? <span className="o-spinner" /> : <Icon />}</span>
+          <span className="o-order-copy"><strong>{ORDER_LABELS[order]}</strong><small>{orderDetails[order]}</small></span>
+          <ChevronRight className="o-order-chevron" aria-hidden="true" />
         </button>;
       })}</div>
       <p className="o-combat-rule">All attackers share the opposing health. The final blow ends the encounter. Retreat is your way out; inactivity triggers an automatic retreat with a counterattack.</p>

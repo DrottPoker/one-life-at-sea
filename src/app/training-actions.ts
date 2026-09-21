@@ -7,7 +7,7 @@ import { withDatabaseRetry } from "@/lib/database-retry";
 import { isUuid } from "@/lib/validation";
 import { isStat, isTrainingGroup, STAT_LABELS } from "@/lib/game";
 import { formatGold } from "@/lib/bank";
-import { formatStat } from "@/lib/format";
+import { formatStatGain } from "@/lib/format";
 import { parseShipEnergy, type TrainingResult } from "@/lib/training";
 
 const errors: Record<string, string> = {
@@ -57,8 +57,8 @@ export async function trainingAction(form: FormData, characterId: string): Promi
     return { error: true, retry: !message, message: message ?? "The action could not be confirmed. Retry it safely below." };
   }
   if (data.kind === "purchase") return { message: data.tier_name + " purchased for " + formatGold(data.gold_cost) + " Gold Coins." };
-  if (data.kind === "ship") return { message: "Work started. Ship " + STAT_LABELS[data.stat] + " +" + formatStat(data.stat_gain) +
+  if (data.kind === "ship") return { message: "Work started. Ship " + STAT_LABELS[data.stat] + " +" + formatStatGain(data.stat_gain) +
     " when complete." };
-  return { message: (data.perfect ? "Perfect Drill! " : "") + "Crew " + STAT_LABELS[data.stat] + " +" + formatGold(data.stat_gain) +
+  return { message: (data.perfect ? "Perfect Drill! " : "") + "Crew " + STAT_LABELS[data.stat] + " +" + formatStatGain(data.stat_gain) +
     ". Spent " + data.energy_cost + " Energy." };
 }

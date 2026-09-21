@@ -3,19 +3,25 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const gameplay = JSON.parse(readFileSync(new URL("../../config/gameplay.json", import.meta.url), "utf8"));
-const multipliers = [1, 1.15, 1.35, 1.55, 1.8, 2.05, 2.3, 2.55, 2.8, 3];
+const multipliers = gameplay.training.crewTiers.map(tier => tier.efficiency);
+const legacyGains = [1, 2, 4, 8, 20, 50, 125, 300, 750, 1500];
 const statNames = ["attack", "defense", "speed", "accuracy"];
 const checkpoints = [30, 90, 180, 365, 730, 1095];
 const drillEnergy = gameplay.training.energyCost;
 assert.equal(drillEnergy, 5, "This research model uses 5-Energy blocks.");
-assert.equal(gameplay.training.shipEnergyPerUnit, drillEnergy);
+assert.equal(gameplay.training.energyPerUnit, drillEnergy);
 const crewExpectedMultiplier = 1 + gameplay.training.perfectChanceBps / 10_000 * (gameplay.training.perfectMultiplier - 1);
 
-function candidateGain(stat, multiplier, exponent = 0.6) {
-  return multiplier * (1 + stat / 1_000) ** exponent;
+function candidateGain(stat, multiplier, exponent = gameplay.training.statExponent) {
+  let gain = 0;
+  for (let unit = 0; unit < drillEnergy; unit++) {
+    const step = Math.round(multiplier / gameplay.training.energyPerUnit * (1 + (stat + gain) / gameplay.training.statScale) ** exponent * 1e6);
+    gain = Math.round(gain * 1e6 + step) / 1e6;
+  }
+  return gain;
 }
 
-function simulate(dailyEnergy, { candidate = true, exponent = 0.6, starterOnly = false, focus = false } = {}) {
+function simulate(dailyEnergy, { candidate = true, exponent = gameplay.training.statExponent, starterOnly = false, focus = false } = {}) {
   assert.equal(dailyEnergy % drillEnergy, 0);
   const stats = ["crew", "ship"].flatMap(group => statNames.map(stat => gameplay.startingStats[group][stat]));
   const xp = [0, 0];
@@ -35,7 +41,7 @@ function simulate(dailyEnergy, { candidate = true, exponent = 0.6, starterOnly =
         goldSpent[group] += tiers[purchase].goldCost;
       }
       boughtTier[group] = tierIndex;
-      const raw = candidate ? candidateGain(stats[index], multipliers[tierIndex], exponent) : tiers[tierIndex].statGain;
+      const raw = candidate ? candidateGain(stats[index], multipliers[tierIndex], exponent) : legacyGains[tierIndex];
       // Deterministic mean-bonus approximation, not an exact stochastic expectation.
       stats[index] += raw * (group === 0 ? crewExpectedMultiplier : 1);
       xp[group] += drillEnergy * gameplay.training.xpPerEnergy;
@@ -57,19 +63,19 @@ assert.equal(gameplay.training.shipTiers.length, multipliers.length);
 for (const stat of [10, 100, 1_000, 10_000, 100_000, 1_000_000]) {
   assert(candidateGain(stat * 10, 1) > candidateGain(stat, 1));
   assert(candidateGain(stat * 10, 1) / (stat * 10) < candidateGain(stat, 1) / stat);
-  assert.equal(candidateGain(stat, 3), candidateGain(stat, 1) * 3);
+  assert(candidateGain(stat, 3) > candidateGain(stat, 1) * 2.99);
 }
 
 const output = {
-  model: { scale: 1_000, exponent: 0.6, multipliers, crewExpectedMultiplier, drillEnergy },
+  model: { scale: gameplay.training.statScale, exponent: gameplay.training.statExponent, multipliers, crewExpectedMultiplier, drillEnergy },
   assumptions: [
-    "Research proposal, not Torn's formula and not installed in the game.",
+    "Implemented stat-dependent curve, compared with the explicit legacy fixed-gain table; not Torn's formula.",
     "Daily Energy is already reserved for training, not all generated Energy.",
     "Eight stats rotate equally; focus scenario trains only Crew Attack.",
     "Gold is available for every tier as soon as XP permits, unless starterOnly.",
     "Current XP thresholds and prices; starting stats from gameplay config.",
     "Ship work is represented in 5-Energy blocks with no calendar delay or workshop downtime.",
-    "Perfect Drill uses its mean multiplier; no random rolls, rounding or fractional loss.",
+    "Normal gains round each Energy unit to six decimals; Perfect Drill uses its mean multiplier rather than random rolls.",
     "No items, income simulation, sea schedule, missed Energy ticks, combat or equipment.",
     "This is a progression illustration, not a PvP win-rate simulation.",
   ],

@@ -55,7 +55,7 @@ reset role;
 update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '1 hour',finishes_at=clock_timestamp()-interval '1 second' where character_id=(select a from h);
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"f6000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
-select is(public.get_game_state()->>'ship_attack','11','Existing ship work completes passively in hospital');
+select is(public.get_game_state()->>'ship_attack','11.00623','Existing ship work completes passively in hospital');
 select is(public.get_game_state()->'hospital_until',(select value from hr where key='until'),'Reads and passive work do not extend hospital stay');
 reset role;
 update public.characters set hospital_started_at=clock_timestamp()-interval '10 minutes',hospital_until=clock_timestamp()-interval '1 second'
@@ -66,7 +66,7 @@ select is((select public.get_hospital_status(a)->>'hospital_until' from h),null,
 select is(public.get_game_state()->>'hospital_until',null,'Discharge is automatic on server access');
 select is(public.get_game_state()->>'crew_health','100','Crew returns at full health');
 select is(public.get_game_state()->>'ship_health','100','Ship returns at full health');
-select is(public.get_game_state()->>'ship_attack','11','Discharge preserves trained stats');
+select is(public.get_game_state()->>'ship_attack','11.00623','Discharge preserves trained stats');
 select is(public.get_game_state()->>'gold_coins','1000','Discharge preserves gold');
 select is(public.get_game_state()->>'bank_gold_coins','500','Discharge preserves bank coins');
 select lives_ok($$select public.train_crew('attack','crew_1',gen_random_uuid())$$,'Training resumes after discharge');
