@@ -1,5 +1,6 @@
 "use client";
 
+import { usePlayerActivity } from "@/components/player-activity";
 import { frontend } from "@/config/public";
 
 import { Suspense, useEffect, useId, useMemo, useRef, useTransition, type ReactNode } from "react";
@@ -12,7 +13,8 @@ import { navigationRedirect } from "@/lib/game-navigation";
 import type { SeaPhase } from "@/lib/sea-travel";
 import type { AttackLock } from "@/lib/combat";
 
-function SessionFrame({ children, characterId, attack, hospitalUntil, seaState, isAdmin }: { isAdmin: boolean; children: ReactNode; characterId: string | null; attack: AttackLock | null; hospitalUntil: string | null; seaState: SeaPhase | null }) {
+function SessionFrame({ children, accountId, characterId, attack, hospitalUntil, seaState, isAdmin }: { accountId: string | null; isAdmin: boolean; children: ReactNode; characterId: string | null; attack: AttackLock | null; hospitalUntil: string | null; seaState: SeaPhase | null }) {
+  usePlayerActivity(accountId);
   const pathname = usePathname();
   const router = useRouter();
   const instance = useId();
@@ -88,6 +90,6 @@ function SessionFrame({ children, characterId, attack, hospitalUntil, seaState, 
   </div></GameRefreshContext>;
 }
 
-export function AppFrame(props: { isAdmin: boolean; children: ReactNode; characterId: string | null; attack: AttackLock | null; hospitalUntil: string | null; seaState: SeaPhase | null }) {
+export function AppFrame(props: { accountId: string | null; isAdmin: boolean; children: ReactNode; characterId: string | null; attack: AttackLock | null; hospitalUntil: string | null; seaState: SeaPhase | null }) {
   return <Suspense fallback={<main id="main" className="o-attack-loading">Loading...</main>}><SessionFrame {...props} /></Suspense>;
 }

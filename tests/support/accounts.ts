@@ -51,9 +51,12 @@ export async function loginTestAccount(page: Page, account: Pick<TestAccount, "e
 }
 
 export async function cleanupTestAccounts(accounts: TestAccount[]) {
+  if (!accounts.length) return;
   for (const account of accounts) {
     if (!/^[0-9a-f-]{36}$/.test(account.userId)) throw new Error("Invalid cleanup ID.");
-    await account.api.auth.signOut();
-    testSql("delete from auth.users where id='" + account.userId + "'");
   }
+  const ids = accounts.map(account => "'" + account.userId + "'::uuid").join(",");
+  // Remove all fixtures before network sign-out so a timeout cannot strand an account.
+  testSql("do $$ declare statistics_ids bigint[]; begin select array_agg(id) into statistics_ids from private.player_statistics_accounts where user_id=any(array[" + ids + "]); delete from auth.users where id=any(array[" + ids + "]); delete from private.player_statistics_accounts where id=any(statistics_ids); end $$;");
+  await Promise.all(accounts.map(account => account.api.auth.signOut()));
 }

@@ -64,6 +64,8 @@ kommer i senare etapper. Permanent karaktärsdöd har tagits bort och ersatts av
 
 ## Adminpanel
 
+- **Players**: antal spelare och konton, unika aktiva konton, nya registreringar och diagram för senaste månaden, 12 månader eller all historik. Varje konto räknas en gång per period, även med sparad inloggning. Spelarlistan har datum, sortering och aktivitetsfilter. Se [spelarstatistik](docs/PLAYER_STATISTICS.md).
+
 - **Economy**: total mängd Gold Coins, föremålsvärden och antal, rikaste spelarna, marknadsomsättning och historikdiagram. Automatisk mätning var femte minut. Se [ekonomiövervakningen](docs/ECONOMY_MONITORING.md).
 
 Ludorex har adminbehörighet lokalt. Öppna [Admin panel](http://127.0.0.1:3000/admin)

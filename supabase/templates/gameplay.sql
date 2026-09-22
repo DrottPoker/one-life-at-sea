@@ -27,3 +27,4 @@
 {{include.content-seed}}
 {{include.admin}}
 {{include.economy}}
+{{include.player-statistics}}

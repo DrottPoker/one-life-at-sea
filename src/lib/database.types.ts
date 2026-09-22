@@ -93,6 +93,9 @@ export type Database = {
       admin_get_loot_table: { Args: { target_id: string }; Returns: import("@/lib/loot").LootTable | null };
       admin_catalog: { Args: Record<string, never>; Returns: AdminResource[] };
       admin_economy: { Args: { period?: import("@/lib/economy").EconomyPeriod; item_search?: string; item_page?: number; item_sort?: import("@/lib/economy").EconomySort }; Returns: import("@/lib/economy").EconomyDashboard };
+      record_player_activity: { Args: Record<string, never>; Returns: undefined };
+      admin_player_statistics: { Args: { period?: import("@/lib/player-statistics").PlayerPeriod }; Returns: import("@/lib/player-statistics").PlayerStatistics };
+      admin_players: { Args: { search_term?: string; requested_page?: number; sort_by?: import("@/lib/player-statistics").PlayerSort; activity?: import("@/lib/player-statistics").PlayerActivityFilter }; Returns: import("@/lib/player-statistics").AdminPlayerList };
       admin_overview: { Args: Record<string, never>; Returns: Record<string, string> };
       admin_read: { Args: { resource: string; search_term?: string; requested_page?: number; filters?: Record<string, string | null> }; Returns: AdminPage };
       admin_mutate: { Args: { action: string; payload: AdminPayload; request_id: string; reason: string }; Returns: AdminReceipt };

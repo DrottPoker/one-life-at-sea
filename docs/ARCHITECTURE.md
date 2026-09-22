@@ -619,3 +619,7 @@ Admin content uses private loot_tables, loot_entries and activity_loot, with for
 ## Economy monitoring
 
 Private economy aggregation reuses the canonical market-value function and counts inventory plus marketplace escrow once. The admin-only RPC returns current totals, paginated items, wealth rankings and bounded history from one statement snapshot. A named pg_cron job stores world observations every five minutes in an RLS-protected private table. No player endpoint exposes economy intelligence. See [Economy monitoring](ECONOMY_MONITORING.md).
+
+## Player statistics
+
+Auth registration, sign-in and removal triggers maintain private timestamp-only account analytics. A session-validated activity RPC also records continuing sessions, with throttled writes and one row per account per UTC day. Admin RPCs return last-month, 12-month or all-time history, deduplicated active accounts and a paginated directory. Histories use at most 500 explicitly labelled intervals. Full activity coverage begins when session tracking is installed; imported latest sign-ins contribute only to partial historical period totals, never invented daily history. Hard deletion removes the Auth identifier while retaining aggregate history. See [Player statistics](PLAYER_STATISTICS.md).

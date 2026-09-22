@@ -4,8 +4,8 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } fr
 import { itemHistoryGeometry, nearestHistoryPoint, type ItemHistoryPoint } from "@/lib/item-history";
 import { economyDate, economyNumber } from "@/lib/economy";
 
-export function EconomyChart({ title, points, unit = "Gold Coins", daily = false, sampled = false }: {
-  title: string; points: ItemHistoryPoint[]; unit?: string; daily?: boolean; sampled?: boolean;
+export function EconomyChart({ title, points, unit = "Gold Coins", daily = false, sampled = false, caption, missingLabel = "Unpriced", maxGapMs, dateLabel }: {
+  title: string; points: ItemHistoryPoint[]; unit?: string; daily?: boolean; sampled?: boolean; caption?: string; missingLabel?: string; maxGapMs?: number; dateLabel?: (at: string) => string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(500);
@@ -21,7 +21,8 @@ export function EconomyChart({ title, points, unit = "Gold Coins", daily = false
   if (daily && points.length) graph.points.shift();
   const index = Math.max(0, Math.min(active ?? points.length - 1, points.length - 1));
   const selected = graph.points[index];
-  const maxGap = sampled ? (graph.end - graph.start) / 498 * 2 + 600000 : 600000;
+  const maxGap = maxGapMs ?? (sampled ? (graph.end - graph.start) / 498 * 2 + 600000 : 600000);
+  const format = (total: string | null) => total === null ? missingLabel : economyNumber(total);
   const line = graph.points.map((p, i, all) => (i === 0 || (!daily && Date.parse(p.at) - Date.parse(all[i - 1].at) > maxGap) ? "M " : "L ") + p.x + " " + p.y).join(" ");
   function pointer(event: PointerEvent<HTMLDivElement>) {
     const x = event.clientX - event.currentTarget.getBoundingClientRect().left;
@@ -34,20 +35,20 @@ export function EconomyChart({ title, points, unit = "Gold Coins", daily = false
   }
   return <section className="admin-card economy-chart-card" aria-label={title}>
     <h3>{title}</h3>
-    <div className="economy-chart-readout"><strong>{economyNumber(selected?.total ?? null)}</strong> <span>{unit}</span>
-      <small>{selected ? (daily ? selected.at.slice(0, 10) + " UTC" : economyDate(selected.at)) : "No observations yet"}</small></div>
+    <div className="economy-chart-readout"><strong>{format(selected?.total ?? null)}</strong> <span>{unit}</span>
+      <small>{selected ? (dateLabel?.(selected.at) ?? (daily ? selected.at.slice(0, 10) + " UTC" : economyDate(selected.at))) : "No observations yet"}</small></div>
     <div ref={ref} className="economy-chart" role="slider" tabIndex={0} aria-label={title + " timeline"}
       aria-valuemin={0} aria-valuemax={Math.max(0, points.length - 1)} aria-valuenow={index}
-      aria-valuetext={selected ? economyDate(selected.at) + ": " + economyNumber(selected.total) + " " + unit : "No observations"}
+      aria-valuetext={selected ? (dateLabel?.(selected.at) ?? economyDate(selected.at)) + ": " + format(selected.total) + " " + unit : "No observations"}
       onPointerMove={pointer} onPointerDown={pointer} onPointerLeave={() => setActive(null)} onKeyDown={keyboard}>
       <svg viewBox={`0 0 ${width} ${graph.height}`} width="100%" height={graph.height} aria-hidden="true">
         {graph.yTicks.map(t => <g key={t.y}><line className="economy-grid" x1={graph.left} x2={graph.right} y1={t.y} y2={t.y}/><text x={graph.left - 8} y={t.y + 4} textAnchor="end">{t.label}</text></g>)}
-        {daily ? graph.points.map(p => <line key={p.at} className="economy-bar" x1={p.x} x2={p.x} y1={p.y} y2={graph.bottom} strokeWidth={Math.max(2, (graph.right - graph.left) / 45)} />)
+        {daily ? graph.points.filter(p => p.total !== null).map(p => <line key={p.at} className="economy-bar" x1={p.x} x2={p.x} y1={p.y} y2={graph.bottom} strokeWidth={Math.max(0.5, (graph.right - graph.left) / Math.max(12, points.length * 1.5))} />)
           : <path className="economy-line" d={line} />}
         {graph.xTicks.map((t, i) => <text key={i} x={t.x} y={graph.bottom + 23} textAnchor={t.anchor as "start" | "middle" | "end"}>{t.date}{t.time && <tspan x={t.x} dy="16">{t.time}</tspan>}</text>)}
-        {selected && <g><line className="economy-cursor" x1={selected.x} x2={selected.x} y1={graph.top} y2={graph.bottom}/><circle cx={selected.x} cy={selected.y} r="4" className="economy-dot"/></g>}
+        {selected && selected.total !== null && <g><line className="economy-cursor" x1={selected.x} x2={selected.x} y1={graph.top} y2={graph.bottom}/><circle cx={selected.x} cy={selected.y} r="4" className="economy-dot"/></g>}
       </svg>
     </div>
-    <small>{daily ? "Daily completed sales. Today is partial." : "Observed totals. Gaps indicate missing measurements."} Hover, tap or use arrow keys.</small>
+    <small>{caption ?? (daily ? "Daily completed sales. Today is partial." : "Observed totals. Gaps indicate missing measurements.")} Hover, tap or use arrow keys.</small>
   </section>;
 }

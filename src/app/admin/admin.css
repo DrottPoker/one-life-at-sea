@@ -62,3 +62,5 @@
 .economy-ranking-scroll { max-height: 510px; }.economy-ranking-scroll th { position: sticky; top: 0; z-index: 1; }.economy-rank-bar { height: 4px; min-width: 110px; margin: 6px 0; background: #e5eff0; }.economy-block { display: block; }.economy-item { display: flex; align-items: center; gap: 10px; min-width: 170px; }.economy-item .o-item-thumb { flex: 0 0 42px; width: 42px; height: 34px; background: #edf3f6; border-color: #d8e2e8; }.economy-item img { object-fit: contain; }
 @media(max-width:850px) { .economy-grid-two { grid-template-columns: minmax(0,1fr); } }
 @media(max-width:400px) { .economy-market-stats { gap: 12px; }.economy-chart-readout strong { font-size: 21px; } }
+
+.player-statistics-summary { display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 14px 18px; border: 1px solid #d8e2e8; background: #fff; border-radius: 8px; margin: 16px 0; }.player-statistics-summary span { color: #536775; font-size: 13px; }.player-statistics-summary strong { color: #193040; margin-right: 4px; }.admin-player-list { margin-top: 30px; }.admin-player-list td { font-variant-numeric: tabular-nums; }

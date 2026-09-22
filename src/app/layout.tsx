@@ -22,6 +22,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const state = character ? await gameStateForPlayer() : null;
   const worldTime = await currentWorldTime();
   return <html lang={frontend.site.language}><body data-day-period={worldTime.period}><WorldClock initialTime={worldTime} /><a href="#main" className="skip-link">Skip to content</a>
-    <AppFrame seaState={state?.sea.state ?? null} isAdmin={isAdmin} hospitalUntil={state?.hospital_until ?? null} characterId={character?.id ?? null} attack={state?.active_attack ?? null}>{children}</AppFrame>
+    <AppFrame accountId={user?.id ?? null} seaState={state?.sea.state ?? null} isAdmin={isAdmin} hospitalUntil={state?.hospital_until ?? null} characterId={character?.id ?? null} attack={state?.active_attack ?? null}>{children}</AppFrame>
   </body></html>;
 }

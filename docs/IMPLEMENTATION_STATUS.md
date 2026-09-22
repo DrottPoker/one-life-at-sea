@@ -1,3 +1,57 @@
+# Unique active accounts and extended player history, 2026-09-22
+
+- Replaced login-event charts with unique active-account history. Accounts count once
+  per day/interval and once across the selected period, including continuing sessions.
+- Added last-month, 12-month and all-time periods for every player statistics chart.
+  Long all-time histories keep all dates in at most 500 labelled intervals.
+- Recent activity cards cover 24 hours, 7 days and one calendar month. The directory
+  filters and sorts on latest activity. No online-now estimate is displayed.
+- Added a session-validated, server-timed activity RPC and a quiet app-shell check.
+  Private daily rows and server throttling deduplicate tabs and repeated visits.
+  Earlier full daily activity remains unknown; tracking starts with this migration.
+- Applied local migration 20260922064801_central_gameplay_config_af03136ed7fe.
+- Verification: npm run check (lint, types, 321 unit tests and build),
+  npm run test:db (1,574 assertions in 31 files, 51 for player statistics),
+  npm run test:config:db (95 assertions), and 6 Playwright tests across player
+  statistics, admin and economy. Layouts checked at 1440/768/375/320px.
+- Existing Next aborted-stream/Gzip listener warnings remain in the combined browser
+  test server log; all browser page-error assertions passed.
+- Supabase security advisors: no issues. Desktop and mobile screenshots reviewed.
+- Local development server and database remain running with the applied changes.
+
+# Admin player statistics, 2026-09-22
+
+- Expanded /admin/players with current player/account counts, latest sign-in windows,
+  rolling registration counts and 7/30/90-day charts for registrations, account growth,
+  daily unique signed-in accounts and successful sign-in events.
+- Added registration/last-sign-in timestamps, activity filters, stable sorting and
+  server-side pagination to the player directory. Existing player tools remain linked.
+- Private Auth triggers track timestamp-only registrations, removals and daily sign-ins.
+  Repeated sign-ins add events but only one daily user. Real Auth token refresh was
+  verified not to increment sign-ins. No browser presence beacon is used.
+- Existing creation/latest-sign-in timestamps are imported. Daily history starts at
+  installation, returns null for earlier days, and clearly labels partial coverage.
+  Hard deletion clears the Auth identifier while retaining aggregate history.
+- Both RPCs check live admin membership. Analytics tables use RLS without client grants;
+  no emails, IP addresses, credentials or session payloads are exposed.
+- Reused the interactive chart with per-metric captions and unknown-value labels.
+  Transient failures preserve the prior view. Desktop/mobile screenshots were inspected.
+- Disposable test account cleanup now removes all database fixtures before network
+  sign-out, preventing interrupted cleanup from leaving accounts or analytics rows.
+  Final checks found no leftover statistics test accounts or missing account projections.
+
+Verification executed:
+- npm run check: lint, Next/TypeScript, 321 unit tests in 22 files, production build.
+- npm run test:db: 1,564 assertions in 31 files, including 41 new statistics assertions.
+- npm run test:config:db: 95 assertions; rollback restored the original revision.
+- Supabase security advisors: no issues.
+- Final Playwright run: all 6 tests across player-statistics, admin and admin-economy
+  passed, including real signup/sign-in/refresh and 1440/768/375/320px layouts.
+- Lint and typecheck rerun after test-cleanup changes, successful. Existing Next aborted
+  stream and Gzip listener warnings remained in the combined test server log; browser
+  page-error assertions passed. No framework warning suppression was added.
+- See [Player statistics](PLAYER_STATISTICS.md) for definitions and historical limits.
+
 # Admin economy monitoring, 2026-09-22
 
 - Added /admin/economy with navigation and overview shortcuts. Live totals cover carried

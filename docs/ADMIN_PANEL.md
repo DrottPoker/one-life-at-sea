@@ -1,7 +1,7 @@
 # Admin panel
 
-Open `/admin`, or use **Admin panel** in the header. The workspace has seven sections:
-Overview, Players, Items, Loot tables, Activities, Database and Audit log. Overview links
+Open `/admin`, or use **Admin panel** in the header. The workspace has eight sections:
+Overview, Economy, Players, Items, Loot tables, Activities, Database and Audit log. Overview links
 to the primary workflows, live game totals and recent administrative changes. Ludorex
 is the first authorized local administrator.
 
@@ -40,6 +40,12 @@ continues to seed the original catalog but does not overwrite those rows. Loot t
 and activity loot settings belong to the database and survive later config migrations.
 
 ## Player tools
+
+Players opens a statistics overview for account growth, new accounts and unique active
+accounts, with three interactive charts and last-month, 12-month and all-time periods.
+Repeated logins count once per period; continuing sessions also count. The searchable
+directory includes registration/last-activity timestamps, activity filters and sorting. See
+[Player statistics](PLAYER_STATISTICS.md) for exact definitions and history limits.
 
 - Search by captain name, character ID or account ID.
 - Inspect and edit names, carried/banked gold, Energy, health, eight combat stats,
