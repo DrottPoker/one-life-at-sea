@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { gameplay, durationLabel } from "@/config/public";
-import { Coins, Zap, Ship, Users, Heart } from "lucide-react";
+import { Coins, Zap, Ship, Users, Heart, Footprints } from "lucide-react";
 import { formatMorale, formatMoraleBonus } from "@/lib/morale";
 import { formatGold } from "@/lib/bank";
 import { useGameState } from "@/components/game-state";
-import { MAX_ENERGY, MAX_HEALTH } from "@/lib/game";
+import { MAX_ENERGY, MAX_HEALTH, MAX_STAMINA } from "@/lib/game";
 
 export function ResourceBars() {
   const state = useGameState();
@@ -32,6 +32,8 @@ export function ResourceBars() {
     { key: "energy", label: "Energy", value: state.energy, min: 0, max: MAX_ENERGY, Icon: Zap,
       description: "Increases by " + gameplay.resources.energyRecoveryAmount + " every " +
         durationLabel(gameplay.resources.energyRecoverySeconds * (state.sea.state === "in_harbor" ? 1 : 2)) + "." },
+    { key: "stamina", label: "Stamina", value: state.stamina, min: 0, max: MAX_STAMINA, Icon: Footprints,
+      description: "Increases by " + gameplay.stamina.recoveryAmount + " every " + durationLabel(gameplay.stamina.recoverySeconds) + ". Used for skill activities." },
     { key: "ship", label: "Ship Health", value: state.ship_health, min: 0, max: MAX_HEALTH, Icon: Ship,
       description: healthHint(gameplay.resources.shipRecoverySeconds) },
     { key: "crew", label: "Crew Health", value: state.crew_health, min: 0, max: MAX_HEALTH, Icon: Users,

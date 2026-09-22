@@ -91,11 +91,13 @@ Retry; dialogen kan stängas och öppnas igen utan att skapa en ny radering.
 
 ## Konfiguration och migrationer
 
-Katalog, kategorier och sidstorlek finns under inventory i
+Den ursprungliga katalogen, kategorier och sidstorlek finns under inventory i
 [gameplay.json](../config/gameplay.json). Schema och semantisk validering
 kontrollerar unika ID:n, kategorireferenser, typer, utrustningsplatser och lokala bildvägar.
 
-Configsynk bevarar alla tidigare definitioner och deras typ/utrustningsplats.
+Adminpanelen kan skapa och redigera föremål. De raderna får managed_by_admin=true och
+bevaras vid senare configsynk. Ursprungliga, oredigerade definitioner uppdateras fortsatt
+från config. ID, typ och utrustningsplats är beständiga. Se [Admin](ADMIN_PANEL.md).
 För att sluta erbjuda en definition sätts active till false; ägda exemplar förblir
 läsbara. Text och kategoritillhörighet kan ändras utan att skriva över individuella
 stats, mängder eller ägare. Flaggan tradable styr marknadens säljbarhet och
@@ -109,7 +111,8 @@ stats, mängder eller ägare. Flaggan tradable styr marknadens säljbarhet och
 
 ## Lokala provitems
 
-Vanliga karaktärer börjar med tomt inventory. Inga items delas ut automatiskt.
+Vanliga karaktärer börjar med tomt inventory. Lyckat Shore Fishing kan nu ge fem sorters
+fisk och en Silver Ring genom [lootsystemet](LOOT_TABLES.md).
 
 För en uttryckligt vald lokal testkaraktär:
 
@@ -132,7 +135,9 @@ Webbläsartester skapar separata testkonton och tar bort dem efteråt.
 
 Sex egna, transparenta PNG-bilder finns i [public/images/items](../public/images/items/).
 Samma original används för miniatyr och stor bild genom Nexts bildoptimering.
-En reservikon visas om en bild inte kan laddas. Produktionsprompter och ursprung
+Den gemensamma placeholder.svg används när bild saknas eller inte kan laddas.
+Admin kan ladda upp egna bilder till Supabase Storage. Dessa visas via den begränsade
+/api/item-images-rutten; originalbilderna i public optimeras fortfarande av Next. Produktionsprompter och ursprung
 finns i [itembilderna](ITEM_ART.md).
 
 - [inventory-panel.tsx](../src/components/inventory-panel.tsx): kategorier, rader och Trash-flöde.

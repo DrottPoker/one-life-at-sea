@@ -20,6 +20,7 @@ export function AdminRequestJournal({ userId, children }: { userId: string; chil
   const router = useRouter();
   const running = useRef(new Map<string, Promise<AdminResult>>());
   const [notice, setNotice] = useState("");
+  const [pendingIds, setPendingIds] = useState<string[]>([]);
   const snapshot = useSyncExternalStore(subscribe, () => {
     try { return sessionStorage.getItem(key) ?? empty; } catch { return empty; }
   }, () => empty);
@@ -35,7 +36,9 @@ export function AdminRequestJournal({ userId, children }: { userId: string; chil
   const send = useCallback((request: AdminRequest): Promise<AdminResult> => {
     const active = running.current.get(request.id);
     if (active) return active;
-    const work = (async () => {
+    setNotice("");
+    setPendingIds(previous => [...previous, request.id]);
+    const work = Promise.resolve().then(async () => {
       try {
         const existing = read();
         if (!existing.some(entry => entry.id === request.id)) write([...existing, request]);
@@ -51,14 +54,16 @@ export function AdminRequestJournal({ userId, children }: { userId: string; chil
       if (!result.retry) {
         try { write(read().filter(entry => entry.id !== request.id)); } catch { /* Replaying the retained receipt is safe. */ }
       }
+      if (result.receipt && request.action.startsWith("save_")) setNotice(result.message);
       return result;
-    })();
+    });
     running.current.set(request.id, work);
-    void work.finally(() => running.current.delete(request.id));
+    void work.finally(() => { running.current.delete(request.id); setPendingIds(previous => previous.filter(id => id !== request.id)); });
     return work;
   }, [read, write]);
   let requests: AdminRequest[] = [];
   try { requests = JSON.parse(snapshot) as AdminRequest[]; } catch { /* Keep the page usable if storage was edited. */ }
+  requests = Array.isArray(requests) ? requests.filter(request => request && typeof request.id === "string" && !pendingIds.includes(request.id)) : [];
   return <Journal.Provider value={{ send }}>
     {requests.length > 0 && <section className="admin-confirm" aria-label="Unconfirmed admin requests"><h2>Unconfirmed admin requests</h2>
       <p>These receipts survive page reloads in this tab. Check a receipt before submitting the same change again.</p>

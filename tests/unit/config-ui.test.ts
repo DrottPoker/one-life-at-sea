@@ -6,6 +6,7 @@ vi.mock("@/config/public", async importOriginal => {
   const actual = await importOriginal<typeof import("../../src/config/public")>();
   return { ...actual, gameplay: { ...actual.gameplay,
     resources: { ...actual.gameplay.resources, energyMax: 200, healthMax: 250, energyRecoverySeconds: 45, energyRecoveryAmount: 7, shipRecoverySeconds: 15, crewRecoverySeconds: 5 },
+    stamina: { ...actual.gameplay.stamina, maximum: 80, recoveryAmount: 2, recoverySeconds: 60 },
     training: { ...actual.gameplay.training, energyCost: 9, crewTiers: actual.gameplay.training.crewTiers.map((t, i) => i ? t : { ...t, efficiency: 4 }) },
   } };
 });
@@ -15,6 +16,7 @@ vi.mock("@/components/game-state", () => ({
     sea: { state: "in_harbor" },
     gold_coins: 1234, bank_gold_coins: 500,
     crew_morale: 0, morale_next_at: null,
+    stamina: 20, stamina_next_at: null,
     energy: 50, ship_health: 50, crew_health: 125, health_next_at: "2026-09-17T00:00:00Z",
     crew_attack: 10, crew_defense: 9999.994, crew_speed: 10000.625, crew_accuracy: 10000000000.625,
     active_attack: null, protected_until: null,
@@ -31,6 +33,8 @@ import { CombatantPanel } from "../../src/components/combatant-panel";
 describe("configured interface", () => {
   it("renders resource capacities, percentages and recovery rates from config", () => {
     const html = renderToStaticMarkup(createElement(ResourceBars));
+    expect(html).toContain('aria-valuemax="80"');
+    expect(html).toContain('Increases by 2 every 1 minute. Used for skill activities.');
     expect(html).toContain('aria-valuemax="200"');
     expect(html).toContain('aria-valuemax="250"');
     expect(html).toContain('width:25%');

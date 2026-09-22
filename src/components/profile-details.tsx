@@ -56,6 +56,7 @@ export function ProfileDetails({ profile, initialStatus, joined, age, ownProfile
   return <>
     <dl className="o-profile-details">
       <div><dt>Player ID</dt><dd><output aria-label="Player ID">{profile.player_number}</output></dd></div>
+      <div><dt>Character Level</dt><dd><output aria-label="Character Level">{hospital.character_level}</output></dd></div>
       <div><dt>Location</dt><dd><MapPin aria-hidden="true" />{location}</dd></div>
       {hospital.hospital_until && <>
         <div><dt>Status</dt><dd><HeartPulse aria-hidden="true" />In hospital</dd></div>

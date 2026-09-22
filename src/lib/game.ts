@@ -1,4 +1,5 @@
 import { gameplay } from "@/config/public";
+export const MAX_STAMINA = gameplay.stamina.maximum;
 export const MAX_ENERGY = gameplay.resources.energyMax;
 export const MAX_HEALTH = gameplay.resources.healthMax;
 export const TRAINING_COST = gameplay.training.energyCost;
@@ -11,6 +12,8 @@ export type GameState = Record<`${TrainingGroup}_${Stat}`, number> & {
   gold_coins: number;
   bank_gold_coins: number;
   hospital_until: string | null;
+  stamina: number;
+  stamina_next_at: string | null;
   energy: number;
   energy_next_at: string | null;
   crew_morale: number;

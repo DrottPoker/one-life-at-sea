@@ -3,6 +3,8 @@ import { GameLink as Link } from "@/components/game-navigation";
 import { notFound } from "next/navigation";
 import { Anchor } from "lucide-react";
 import { Panel } from "@/components/shell";
+import { ownSkillProgress } from "@/lib/skills-server";
+import { ProfileSkills } from "@/components/profile-skills";
 import { ProfileDetails } from "@/components/profile-details";
 import { DefenceOrders } from "@/components/defence-orders";
 import { requireCharacter, gameStateForPlayer } from "@/lib/player";
@@ -24,6 +26,7 @@ export default async function CharacterProfilePage({ params }: { params: Promise
   const { data: hospital, error: hospitalError } = await supabase.rpc("get_character_status", { target_id: profile.character_id });
   if (hospitalError || !hospital) throw new Error("The hospital status could not be loaded.");
   const ownProfile = viewer.id === profile.character_id;
+  const skills = ownProfile ? await ownSkillProgress() : null;
   const created = new Date(profile.created_at);
   const joined = new Intl.DateTimeFormat(frontend.site.locale, { day: "numeric", month: "long", year: "numeric", timeZone: frontend.site.logTimeZone }).format(created);
   const days = Math.max(0, Math.floor((Date.now() - created.getTime()) / 86_400_000));
@@ -41,6 +44,7 @@ export default async function CharacterProfilePage({ params }: { params: Promise
           <ProfileDetails key={profile.character_id} profile={profile} initialStatus={hospital} joined={joined} age={age} ownProfile={ownProfile} />
         </div>
       </div>
+      {skills && <ProfileSkills progress={skills} />}
       {ownProfile && <DefenceOrders />}
       <div className="o-panel-foot"><Link href={backUrl}>Back to {backLabel}</Link></div>
     </Panel>

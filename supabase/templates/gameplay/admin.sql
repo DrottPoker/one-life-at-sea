@@ -1,4 +1,17 @@
+insert into private.admin_resources(name,schema_name,table_name,editable,deletable,note) values
+('loot_tables','private','loot_tables','{}',false,'Edit in Loot tables.'),
+('loot_entries','private','loot_entries','{}',false,'Item chances managed in Loot tables.'),
+('activity_loot','private','activity_loot','{}',false,'Loot and difficulty managed in Activities.') on conflict(name) do nothing;
+update private.admin_resources set note='Create and edit in Items. Ownership type is permanent.' where name='item_definitions';
 -- Keep resource timestamps authoritative for administrative edits.
+insert into private.admin_resources(name,schema_name,table_name,editable,deletable,note) values
+('activity_requests','private','activity_requests','{}',false,'Durable activity receipts. Managed by the game.'),
+('activity_definitions','private','activity_definitions','{}',false,'Activities. Managed by gameplay configuration.') on conflict(name) do nothing;
+insert into private.admin_resources(name,schema_name,table_name,editable,deletable,note) values
+('character_skills','private','character_skills',array['xp'],false,'Private skill XP. Levels and public Character Level are derived automatically.'),
+('skill_definitions','private','skill_definitions','{}',false,'Skill catalog. Managed by gameplay configuration.'),
+('skill_levels','private','skill_levels','{}',false,'Level thresholds. Managed by gameplay configuration.') on conflict(name) do nothing;
+update private.admin_resources set editable=array_append(editable,'stamina') where name='characters' and not 'stamina'=any(editable);
 update private.admin_resources set editable=array_append(editable,'crew_morale') where name='characters' and not 'crew_morale'=any(editable);
 insert into private.admin_resources(name,schema_name,table_name,editable,deletable,note) values
 ('tavern_requests','private','tavern_requests','{}',false,'Durable tavern receipts. Managed by the game.') on conflict(name) do nothing;
@@ -12,7 +25,7 @@ declare
   identity jsonb; patch jsonb; clause text:='true'; primary_fields text[];
   before_row jsonb; after_row jsonb; result jsonb; captain_id uuid;
   definition private.item_definitions%rowtype; amount numeric; damage_value numeric; accuracy_value numeric;
-  audit_id uuid:=gen_random_uuid();
+  audit_id uuid:=gen_random_uuid(); content_result jsonb;
 begin
   if request_id is null or action is null or payload is null or jsonb_typeof(payload)<>'object'
     or length(payload::text)>16000 or reason is null or length(btrim(reason)) not between 3 and 500 then
@@ -24,7 +37,12 @@ begin
       raise exception 'REQUEST_CONFLICT' using errcode='22023'; end if;
     return previous.result;
   end if;
-  if action in ('update','delete') then
+  if action in ('save_item','save_loot_table','save_activity_loot') then
+    content_result:=case action when 'save_item' then private.admin_save_item(payload)
+      when 'save_loot_table' then private.admin_save_loot_table(payload) else private.admin_save_activity_loot(payload) end;
+    before_row:=content_result->'before'; after_row:=content_result->'after';
+    result:=jsonb_build_object('audit_id',audit_id,'message',content_result->>'message','id',content_result->>'id');
+  elsif action in ('update','delete') then
     select * into spec from private.admin_resources where name=payload->>'resource';
     if not found or (action='update' and cardinality(spec.editable)=0) or (action='delete' and not spec.deletable) then
       raise exception 'READ_ONLY_RESOURCE' using errcode='42501'; end if;
@@ -60,6 +78,7 @@ begin
     if action='update' then
       if spec.name='characters' then
         if patch ? 'crew_morale' then patch:=patch||jsonb_build_object('morale_updated_at',clock_timestamp()); end if;
+        if patch ? 'stamina' then patch:=patch||jsonb_build_object('stamina_updated_at',clock_timestamp()); end if;
         if patch ? 'energy' then patch:=patch||jsonb_build_object('energy_updated_at',clock_timestamp()); end if;
         if patch ? 'ship_health' then patch:=patch||jsonb_build_object('ship_recovery_at',clock_timestamp()); end if;
         if patch ? 'crew_health' then patch:=patch||jsonb_build_object('crew_recovery_at',clock_timestamp()); end if;

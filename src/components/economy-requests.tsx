@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useState, useSyncExternalStore, u
 import { marketAction } from "@/app/marketplace-actions";
 import { transferGold } from "@/app/bank-actions";
 import { trashInventoryItem } from "@/app/inventory-actions";
+import { performActivity } from "@/app/activity-actions";
+import type { ActivityResult } from "@/lib/activities";
 import { buyTavernMeal } from "@/app/tavern-actions";
 import type { TavernResult } from "@/lib/morale";
 import { trainingAction } from "@/app/training-actions";
@@ -21,6 +23,7 @@ type Journal = {
   inventory: (form: FormData) => Promise<TrashResult>;
   training: (form: FormData) => Promise<TrainingResult>;
   tavern: (form: FormData) => Promise<TavernResult>;
+  activity: (form: FormData) => Promise<ActivityResult>;
 };
 const Context = createContext<Journal | null>(null);
 const eventName = "economy-request-changed";
@@ -74,6 +77,7 @@ export function EconomyRequests({ characterId, children }: { characterId: string
     bank: form => send(formRequest("bank", form), () => transferGold(form, characterId)),
     inventory: form => send(formRequest("inventory", form), () => trashInventoryItem(form, characterId)),
     training: form => send(formRequest("training", form), () => trainingAction(form, characterId)),
+    activity: form => send(formRequest("activity", form), () => performActivity(form, characterId)),
     tavern: form => send(formRequest("tavern", form), () => buyTavernMeal(form, characterId)),
   };
   function check(request: EconomyRequest) {

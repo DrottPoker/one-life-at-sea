@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { changedValues, rowKey, type AdminResource, type AdminRow, type AdminValues } from "@/lib/admin";
+import { adminLabel, changedValues, rowKey, type AdminResource, type AdminRow, type AdminValues } from "@/lib/admin";
 import { DialogCloseButton } from "@/components/dialog-close-button";
 import { MutationForm } from "@/components/admin/mutation-form";
 
@@ -13,16 +13,16 @@ function EditorDialog({ resource, row, close }: { resource: AdminResource; row: 
   const changes = changedValues(row.values, values);
   return <dialog ref={dialog} className="admin-dialog" onCancel={close} onClose={close}>
     <DialogCloseButton onClose={close} label="Close" />
-    <div className="admin-header"><h2 className="o-dialog-title">{resource.name}: {row.values.display_name ?? row.values.item_id ?? "Record"}</h2></div>
+    <div className="admin-header"><h2 className="o-dialog-title">{adminLabel(resource.name)}: {row.values.display_name ?? row.values.item_id ?? "Record"}</h2></div>
     <p>{resource.note}</p>
     {resource.editable.length > 0 && <MutationForm action="update" payload={{ resource: resource.name, key: rowKey(resource, row), version: row.version, changes }}
       label="Review changes" summary={"Update " + resource.name + ". Only the listed changed fields will be saved."} disabled={!Object.keys(changes).length}>
       <div className="admin-fields">{resource.columns.filter(column => resource.editable.includes(column.name)).map(column =>
-        <label key={column.name}>{column.name}<small>{column.type}</small>
-          <input aria-label={column.name} value={values[column.name] ?? ""} disabled={values[column.name] === null}
+        <label key={column.name}>{adminLabel(column.name)}
+          <input aria-label={column.name} type={/^(integer|bigint|numeric|smallint)/.test(column.type) ? "number" : "text"} step="any" value={values[column.name] ?? ""} disabled={values[column.name] === null}
             onChange={event => setValues(previous => ({ ...previous, [column.name]: event.target.value }))} />
           {column.nullable && <span className="admin-null"><input type="checkbox" aria-label={column.name + " is NULL"}
-            checked={values[column.name] === null} onChange={event => setValues(previous => ({ ...previous, [column.name]: event.target.checked ? null : row.values[column.name] ?? "" }))} /> NULL</span>}
+            checked={values[column.name] === null} onChange={event => setValues(previous => ({ ...previous, [column.name]: event.target.checked ? null : row.values[column.name] ?? "" }))} /> Clear value</span>}
         </label>)}</div>
     </MutationForm>}
     <details open={!resource.editable.length}><summary>All stored values</summary><dl className="admin-record">{resource.columns.map(column =>

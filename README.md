@@ -64,6 +64,8 @@ kommer i senare etapper. Permanent karaktärsdöd har tagits bort och ersatts av
 
 ## Adminpanel
 
+- **Economy**: total mängd Gold Coins, föremålsvärden och antal, rikaste spelarna, marknadsomsättning och historikdiagram. Automatisk mätning var femte minut. Se [ekonomiövervakningen](docs/ECONOMY_MONITORING.md).
+
 Ludorex har adminbehörighet lokalt. Öppna [Admin panel](http://127.0.0.1:3000/admin)
 via länken i sidhuvudet.
 
@@ -100,9 +102,9 @@ npm run dev
 `setup:local` skapar `.env.local` utan att skriva ut nycklar och skriver aldrig över
 en befintlig fil. Vid följande starter räcker `db:start` och `dev`; efter nya migrationer kör du också `db:migrate`.
 
-- [Supabase Studio](http://127.0.0.1:55323): lokal databasadministration.
-- [Testinkorg](http://127.0.0.1:55324): lokala lösenordsåterställningsmejl.
-- API: port 55321. PostgreSQL: port 55322.
+- [Supabase Studio](http://127.0.0.1:54323): lokal databasadministration.
+- [Testinkorg](http://127.0.0.1:54324): lokala lösenordsåterställningsmejl.
+- API: port 54321. PostgreSQL: port 54322.
 
 Testinkorgen tar emot utvecklingsmejl lokalt; inga meddelanden skickas till riktiga
 inkorgar. Registrering använder inga mejl alls.
@@ -192,3 +194,20 @@ En Linux-VPS kan användas senare.
 - [Bildstil och karibisk färgriktning](docs/design/STYLE_REFERENCE.md)
 - [Gränssnittsriktning](docs/design/UI_DIRECTION.md)
 - [Kapten, skepp, besättning, överlevnad och strid: designunderlag under diskussion](docs/COMBAT_AND_PROGRESSION_DESIGN.md)
+
+Stamina visas i sidopanelen: max 50, +1 vid varje femminuterstick och grundkostnad 1 för
+kommande yrkesaktiviteter. Se [Stamina](docs/STAMINA.md).
+
+Windows kan reservera dynamiska portområden efter omstart. Projektets lokala Supabase använder
+54320-54324 eftersom det tidigare området 55320-55324 blev reserverat. Ändra portar i
+`config/server.json`, kör `npm run config:sync` och uppdatera lokal API-URL i `.env.local` tillsammans.
+
+Sju färdigheter har nu egna nivåer 1-99 och XP enligt RuneScapes klassiska kurva.
+Egna färdigheter syns på profilen; andra ser bara summan som Character Level (7-693).
+Aktiviteter som ger XP tillkommer senare. Se [Skills](docs/SKILLS.md).
+
+[Activities](docs/ACTIVITIES.md) fungerar nu på `/activities`: strandfiske, foraging och
+trädhuggning kostar 1 Stamina och ger 10 XP i respektive färdighet. Resultat visas direkt
+i raden och progressionen syns på den egna profilen. Loot och fler aktiviteter tillkommer senare.
+
+Admin content: use /admin/items to create items, /admin/loot for fixed/weighted loot tables and /admin/activities to link them to Shore Fishing. Optional images share a default placeholder. See docs/ADMIN_PANEL.md and docs/LOOT_TABLES.md.

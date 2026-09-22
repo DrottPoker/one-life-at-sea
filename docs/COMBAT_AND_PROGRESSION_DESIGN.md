@@ -1,3 +1,12 @@
+> Uppdatering 2026-09-22: [Activities](ACTIVITIES.md) ger nu 10 XP för strandfiske,
+> foraging och trädhuggning till en kostnad av 1 Stamina. Loot och nivåbonusar återstår.
+
+> Uppdatering 2026-09-22: färdighetssystemet är implementerat enligt [Skills](SKILLS.md).
+> Fishing, Logging, Cooking, Crafting, Crew Battling, Ship Battling och Foraging har nivå 1-99
+> med RuneScapes klassiska XP-kurva. Detaljerad progression är privat; summan av nivåerna
+> visas publikt som Character Level (7-693). Aktiviteter, XP-belöningar och nivåbonusar
+> återstår. Äldre öppna förslag om färdighetslista, kurva och nivåtak nedan är ersatta.
+
 > Uppdatering 2026-09-16: aktuella stridsregler och implementation finns i [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md). Den nya versionen använder en gemensam /attack-vy, flera angripare, realtid och publika rapporter. Äldre beskrivningar av separata prepare-sidor, exklusiv tvåpartsstrid eller privata slutrapporter nedan är historiska.
 
 # One Life At Sea: combat och progression
@@ -282,3 +291,12 @@ PvP-versionen. Detaljer som timeout, återhämtning, försvarsorder och formler 
 nu startregler för provspelning. Tidigare arbetsförslag i detta dokument ersätts
 för den avgränsade PvP-versionen av systembeskrivningen. Skills, guld, inventarier
 och flott-PvE byggs senare; deras öppna frågor kvarstår.
+
+## Accepted activity resource, 2026-09-22
+
+Profession activities use Stamina independently of training/combat Energy. Initial capacity is 50,
+recovery is 1 every fixed five-minute server tick and the initial cost is 1 per activity. Fishing,
+Logging, Foraging, Cooking and Crafting share this resource. Stamina, the seven private skills and the public summed Character Level are implemented.
+Shore Fishing, Foraging and Logging award skill XP. Shore Fishing also uses admin-managed
+loot tables, with catch success followed by fixed and level-weighted rewards. Food will restore Stamina, with
+amounts and limits still to be decided. See [Stamina](STAMINA.md).

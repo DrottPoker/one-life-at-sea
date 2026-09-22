@@ -592,3 +592,30 @@ Backfill and trigger installation are atomic. Identity-only anonymization leaves
 the projection intact; corrected/deleted sale fixtures rebuild their affected
 suffix. Public responses never include sale or participant identifiers.
 See [Item Market Value](ITEM_MARKET_VALUE.md).
+
+## Stamina
+
+Stamina is a separate integer resource for future profession activities: max 50, +1 per fixed UTC
+five-minute tick and 1 per activity. Private SQL settles recovery and serializes spending; the shared
+game state exposes server deadlines for the sidebar. See [Stamina](STAMINA.md) for integration rules.
+
+## Skills and Character Level
+
+Seven independent skill XP balances live in private.character_skills. A server-only award
+helper serializes updates per character; triggers project only their summed level into
+character_profiles. The owner-only get_own_skills RPC powers the profile Skills section.
+See [Skills](SKILLS.md) for privacy, XP thresholds and future activity integration.
+
+## Activities
+
+The /activities page uses owner-only skill progress and the shared resource state. The
+perform_activity RPC serializes a durable receipt, Stamina deduction and skill XP award
+inside one transaction. Server eligibility restricts the first three activities to the harbor
+outside combat/hospital. The existing economy journal handles uncertain responses and tabs.
+See [Activities](ACTIVITIES.md).
+
+Admin content uses private loot_tables, loot_entries and activity_loot, with foreign keys and RLS. Dedicated save actions participate in admin_audit transactions and version checks. perform_activity locks character, activity binding, table and selected item, then atomically commits loot/XP/Stamina/circulation/receipt. Public RPCs never accept random rolls or a reward item. Uploaded public item artwork uses a separate admin-write Storage bucket.
+
+## Economy monitoring
+
+Private economy aggregation reuses the canonical market-value function and counts inventory plus marketplace escrow once. The admin-only RPC returns current totals, paginated items, wealth rankings and bounded history from one statement snapshot. A named pg_cron job stores world observations every five minutes in an RLS-protected private table. No player endpoint exposes economy intelligence. See [Economy monitoring](ECONOMY_MONITORING.md).

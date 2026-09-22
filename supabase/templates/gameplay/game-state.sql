@@ -1,7 +1,7 @@
 create or replace function private.get_game_state()
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare c public.characters%rowtype; active private.combats%rowtype; engagement private.combat_engagements%rowtype; observed_at timestamptz;
-  recovered record; morale_state record; energy_tick_seconds bigint; ship_hp integer; crew_hp integer; health_next_at timestamptz; last_id uuid;
+  recovered record; stamina_state record; morale_state record; energy_tick_seconds bigint; ship_hp integer; crew_hp integer; health_next_at timestamptz; last_id uuid;
 begin
   if auth.uid() is null or not private.is_registered_player() then return null; end if;
   select * into c from public.characters where user_id=auth.uid();
@@ -13,6 +13,7 @@ begin
   select * into engagement from private.combat_engagements where character_id=c.id;
   select * into active from private.combats where id=engagement.combat_id;
   select * into recovered from private.character_energy_snapshot(c,observed_at);
+  select * into stamina_state from private.stamina_snapshot(c.stamina,c.stamina_updated_at,observed_at);
   select * into morale_state from private.morale_snapshot(c.crew_morale,c.morale_updated_at,observed_at);
   ship_hp:=case when active.id is not null or c.hospital_until is not null then c.ship_health else private.health_snapshot(c.ship_health,c.ship_recovery_at,observed_at,{{gameplay.resources.shipRecoverySeconds}}) end;
   crew_hp:=case when active.id is not null or c.hospital_until is not null then c.crew_health else private.health_snapshot(c.crew_health,c.crew_recovery_at,observed_at,{{gameplay.resources.crewRecoverySeconds}}) end;
@@ -27,6 +28,7 @@ begin
   return jsonb_build_object('energy',recovered.energy,'energy_next_at',case when recovered.energy<{{gameplay.resources.energyMax}} then
       date_bin(make_interval(secs=>energy_tick_seconds::double precision),greatest(observed_at,recovered.energy_updated_at),'1970-01-01Z'::timestamptz)
         +make_interval(secs=>energy_tick_seconds::double precision) end,
+    'stamina',stamina_state.stamina,'stamina_next_at',stamina_state.stamina_next_at,
     'crew_morale',morale_state.morale,'morale_next_at',morale_state.morale_next_at,
     'sea',private.sea_state(c),'gold_coins',c.gold_coins,'bank_gold_coins',c.bank_gold_coins,'training',private.training_state(c.id),
     'hospital_until',c.hospital_until,'observed_at',observed_at,'ship_health',ship_hp,'crew_health',crew_hp,'health_next_at',health_next_at,

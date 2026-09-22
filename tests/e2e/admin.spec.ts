@@ -111,7 +111,7 @@ test("admin edits players, grants equipment, recovers a lost grant and browses a
     await page.goto("/admin/players/" + player.id);
     for (const width of [1280, 768, 375, 320]) {
       await page.setViewportSize({ width, height: 1000 });
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Player tools at " + width + "px").toBe(true);
     }
     await page.setViewportSize({ width: 1280, height: 1000 });
     await page.screenshot({ path: ".local/admin-desktop.png", fullPage: true });

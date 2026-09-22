@@ -12,6 +12,7 @@ grant execute on function public.get_hospital_status(uuid) to authenticated;
 create or replace function public.get_character_status(target_id uuid)
 returns jsonb language sql stable security invoker set search_path='' as $$
   select jsonb_build_object(
+    'character_level',p.character_level,
     'location',case when p.arrives_at<=statement_timestamp() then p.arrival_location else p.location end,
     'arrives_at',case when p.arrives_at>statement_timestamp() then p.arrives_at end,
     'max_sea_distance',greatest(p.max_sea_distance,

@@ -171,6 +171,7 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-resource-label { display:flex; justify-content:space-between; gap:6px; font-size:12px; margin-bottom:5px; font-variant-numeric:tabular-nums; }
 .o-resource-track { height:7px; border:1px solid var(--o-line); border-radius:8px; background:var(--o-bg); overflow:hidden; }
 .o-resource-track > span { display:block; height:100%; background:var(--o-palette-e7ca83); }
+.o-resource-stamina > span { background:var(--o-stamina); }
 .o-resource-ship > span { background:var(--o-palette-72c9eb); }
 .o-resource-crew > span { background:var(--o-palette-83c9b4); }
 .o-resource-morale { position:relative; }
@@ -959,3 +960,41 @@ dialog button.o-dialog-close svg { width:18px; height:18px; }
 .o-player-search > div { display:flex; flex-wrap:wrap; gap:8px; }
 .o-player-search input { flex:1; min-width:0; width:100%; }
 .o-player-search p { margin:0; }
+
+.o-profile-skills { border-top:1px solid var(--o-line); padding:16px; }
+.o-profile-skills > header { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:12px; }
+.o-profile-skills h2 { margin:0; color:var(--o-gold); font:400 18px var(--o-display-font); }
+.o-profile-skills > header > span { font-size:12px; color:var(--o-muted); }
+.o-skills-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.o-skill { min-width:0; padding:12px; border:1px solid var(--o-line); background:var(--o-inset); }
+.o-skill-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px 12px; margin-bottom:10px; }
+.o-skill h3 { display:flex; align-items:center; gap:7px; margin:0; font-size:13px; }
+.o-skill h3 svg { width:15px; height:15px; color:var(--o-gold); }
+.o-skill-heading > span { color:var(--o-muted); font-size:12px; }
+.o-skill-heading output { color:var(--o-text); font-weight:700; }
+.o-skill-xp { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 10px; margin-top:7px; color:var(--o-muted); font-size:11px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+@media(max-width:600px) { .o-skills-grid { grid-template-columns:minmax(0,1fr); } .o-profile-skills { padding:12px; } }
+
+.o-activities-intro { margin:0; padding:16px; color:var(--o-muted); border-bottom:1px solid var(--o-line); }
+.o-activities-notice { padding:0 16px; }
+.o-activity { display:grid; grid-template-columns:54px minmax(0,1fr) 160px; gap:12px 16px; padding:18px 16px 8px; border-bottom:1px solid var(--o-line); }
+.o-activity:last-child { border-bottom:0; }
+.o-activity-icon { width:54px; height:54px; display:grid; place-items:center; background:var(--o-inset); border:1px solid var(--o-brass); color:var(--o-gold); }
+.o-activity-icon svg { width:28px; height:28px; stroke-width:1.5; }
+.o-activity-details { min-width:0; }
+.o-activity h2 { margin:0 0 5px; color:var(--o-gold); font:400 18px var(--o-display-font); }
+.o-activity-details > p { margin:0 0 12px; color:var(--o-muted); font-size:12px; }
+.o-activity-skill { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; margin-bottom:5px; font-size:11px; font-variant-numeric:tabular-nums; }
+.o-activity-action { display:flex; flex-direction:column; align-items:stretch; gap:7px; text-align:center; }
+.o-activity-action > span { font-size:12px; color:var(--o-text); }
+.o-activity-action > small { color:var(--o-muted); }
+.o-activity-feedback { grid-column:2/-1; min-height:20px; font-size:12px; color:var(--o-gold); }
+@media(max-width:600px) {
+  .o-activity { grid-template-columns:40px minmax(0,1fr); gap:10px; padding:14px 12px 8px; }
+  .o-activity-icon { width:40px; height:40px; }
+  .o-activity-icon svg { width:23px; height:23px; }
+  .o-activity-action { grid-column:1/-1; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; text-align:left; }
+  .o-activity-action > small { grid-column:1; grid-row:2; }
+  .o-activity-action > button { grid-column:2; grid-row:1/3; min-width:95px; }
+  .o-activity-feedback { grid-column:1/-1; }
+}

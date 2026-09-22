@@ -1,3 +1,5 @@
+{{include.skills}}
+{{include.stamina}}
 {{include.morale}}
 {{include.training}}
 {{include.resources}}
@@ -7,6 +9,8 @@
 {{include.game-state}}
 {{include.bank}}
 {{include.tavern}}
+{{include.content-schema}}
+{{include.activities}}
 {{include.hospital}}
 {{include.combat-report}}
 {{include.profile}}
@@ -19,4 +23,7 @@
 {{include.marketplace-read}}
 {{include.marketplace-sell}}
 {{include.marketplace-buy}}
+{{include.loot}}
+{{include.content-seed}}
 {{include.admin}}
+{{include.economy}}

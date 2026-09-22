@@ -204,3 +204,37 @@ och köp. Avaktiverat innehav finns kvar i inventory och osålda erbjudanden kan
 Alternativtestet verifierar 10 % för nya listings, bevarade 5 % för tidigare
 listings, ett sex timmars popularitetsfönster, ett två timmars värdefönster, sidstorlekar, batchgräns och
 icke-handelsbara items. Alla teständringar rullas tillbaka. Se [Marketplace](MARKETPLACE.md).
+
+## Stamina
+
+`gameplay.stamina` configures `maximum` (50), `recoveryAmount` (1), `recoverySeconds` (300) and
+`activityCost` (1). Recovery uses the same interval in every location. Values must be positive whole
+numbers; cost and recovery cannot exceed capacity. See [Stamina](STAMINA.md).
+
+## Skills
+
+`gameplay.skills.catalog` contains stable skill IDs and display names. `xpThresholds` contains
+99 strictly increasing integer thresholds, starting at zero. They are shared by SQL and UI.
+Removing existing skill IDs is rejected; adding a skill initializes it at zero XP and updates
+Character Level for existing players. See [Skills](SKILLS.md).
+
+## Activities
+
+`gameplay.activities.catalog` configures stable IDs, skills, names, descriptions, button labels,
+XP gains and availability. All initial entries grant 10 XP and use `stamina.activityCost` (1).
+Client offers are checked against server values; recorded receipts keep their original values.
+Disable activities instead of removing their IDs or changing their skill mapping.
+
+## Adminhanterade items och loot (2026-09-22)
+
+Items som skapas eller redigeras i adminpanelen får managed_by_admin=true. Configsync
+lämnar de raderna orörda. Övriga ursprungliga items uppdateras fortfarande från config.
+Kategorier, aktivitets-ID, XP och Stamina-kostnad ligger kvar i gameplay.json.
+Loot tables och activity_loot är databasägt innehåll och återställs inte av configsync.
+Starttabellen Harbor Shore skapas bara om den saknas. Se [Loot tables](LOOT_TABLES.md).
+Lokal Supabase Storage är aktiverad för bilduppladdning; en omstart krävs efter ändring
+av storage.enabled. Bibliotekets privata konton och hemligheter används inte för detta.
+
+## Economy observations
+
+The generated economy SQL installs a named pg_cron job every five minutes. It runs even when no admin page is open and retains actual observation times. Config sync updates the same job; it does not reset history. Restarted or stopped databases do not invent missing observations. See [Economy monitoring](ECONOMY_MONITORING.md).

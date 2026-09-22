@@ -52,6 +52,7 @@ async function expectNoFlash(page: Page) {
 }
 
 const actions = [
+  { name: "skill activity", path: "/activities", button: "Fish for 1 Stamina" },
   { name: "crew drill", path: "/harbor/crew-training", button: "Train Attack for 5 Energy" },
   { name: "training tier purchase", path: "/harbor/crew-training", button: "Buy for 250 Gold Coins" },
   { name: "ship work", path: "/harbor/ship-upgrades", button: "Start work" },

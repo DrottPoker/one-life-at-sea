@@ -5,6 +5,10 @@ const config = loadConfig();
 const originalRevision = revision(config);
 const originalShipSecondsPerEnergy = config.gameplay.training.shipSecondsPerEnergy;
 config.gameplay.economy.initialGoldCoins = 77;
+config.gameplay.activities.catalog[0].xpGain = 17;
+config.gameplay.skills.xpThresholds = config.gameplay.skills.xpThresholds.map(xp => xp * 2);
+config.gameplay.skills.catalog.push({ id: "mining", name: "Mining" });
+Object.assign(config.gameplay.stamina, { maximum: 80, recoveryAmount: 2, recoverySeconds: 60, activityCost: 3 });
 Object.assign(config.gameplay.morale, { lossPerEnergy: 0.2, recoveryAmount: 2, recoverySeconds: 60, statBonusBps: 250, trainingBonusBps: 300, tavernGain: 10, tavernGoldCost: 17 });
 config.gameplay.hospital.durationSeconds = 19;
 Object.assign(config.gameplay.resources, { energyMax: 120, energyRecoverySeconds: 60, energyRecoveryAmount: 3, healthMax: 150,
@@ -164,7 +168,17 @@ checks.push(
 "select is((select (private.combat_snapshot(c,clock_timestamp())#>>'{crew,attack}')::numeric from public.characters c where user_id=(select id from morale_config_user)),12.03::numeric,'Combat snapshot uses configured morale stat bonus');",
 "create temporary table morale_config_drill as select public.train_crew('attack','crew_1',gen_random_uuid()) value;",
 "select is((select (value->>'normal_gain')::numeric from morale_config_drill),round(private.training_gain(12,3,7)*1.003,6),'Crew gain uses configured morale training bonus');",
-"select is((public.get_game_state()->>'crew_morale')::numeric,8.6::numeric,'Morale cost uses configured cost per Energy');"
+"select is((public.get_game_state()->>'crew_morale')::numeric,8.6::numeric,'Morale cost uses configured cost per Energy');",
+"select is((public.get_game_state()->>'stamina')::integer,80,'New Stamina capacity follows config');",
+"select is((select stamina from private.stamina_snapshot(0,'2026-01-01Z','2026-01-01 00:02Z')),4,'Stamina recovery follows configured amount and interval');",
+"select is((select private.spend_activity_stamina(id) from public.characters where user_id=(select id from morale_config_user)),77,'Stamina spending follows configured activity cost');",
+"select is((public.get_own_skills()->>'character_level')::integer,8,'Adding a skill changes the starting total');",
+"select is(private.skill_level(83),1,'Skill levels use the configured threshold table');",
+"select is((select (private.award_skill_xp(id,'fishing',166)->>'character_level')::integer from public.characters where user_id=(select id from morale_config_user)),9,'Configured thresholds drive XP awards and the public total');",
+// Keep cost/XP checks independent of randomized inventory rewards.
+"update private.activity_loot set loot_table_id=null where activity_id='shore_fishing';",
+"select is((public.perform_activity('shore_fishing',3,17,gen_random_uuid())->>'xp_awarded')::integer,17,'Activity reward follows configuration');",
+"select is((public.get_game_state()->>'stamina')::integer,74,'Activity uses the configured Stamina cost');"
 );
 const sql = "begin;\ncreate extension if not exists pgtap with schema extensions;\nset local search_path=public,extensions;\n" +
   "create temporary table old_training_user as select gen_random_uuid() id;\n" +
@@ -178,7 +192,13 @@ const sql = "begin;\ncreate extension if not exists pgtap with schema extensions
   "insert into private.item_instances(character_id,item_id,damage,accuracy) select captain,'cutlass',d,50 from old_training_fixture cross join(values(32.15),(35.20),(48.70)) v(d);\n" +
   "create temp table old_sea_user as select gen_random_uuid() id;\ninsert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','SeaConfig'||translate(id::text,'0123456789','ghijklmnop')) from old_sea_user;\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_sea_user;\nselect public.depart_harbor((public.get_game_state()#>>'{sea,version}')::uuid,gen_random_uuid());\ncreate temp table old_sea_fixture as select c.id,c.travel_arrives_at,(select jsonb_agg(to_jsonb(o) order by o.position) from private.sea_route_options o where o.character_id=c.id) options from public.characters c where user_id=(select id from old_sea_user);\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_training_user;\n" +
   "create temporary table old_market_user as select gen_random_uuid() id;\ninsert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','OldMarket'||translate(id::text,'0123456789','ghijklmnop')) from old_market_user;\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_market_user;\ninsert into private.item_stacks(character_id,item_id,quantity) select id,'linen_bandages',1 from public.characters where user_id=(select id from old_market_user);\ncreate temporary table old_market_fixture as select public.create_market_listings(jsonb_build_array(jsonb_build_object('entry_id',s.id,'entry_type','stack','quantity',1,'unit_price',100)),gen_random_uuid()) value from private.item_stacks s join public.characters c on c.id=s.character_id where c.user_id=(select id from old_market_user);\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_training_user;\n" +
-  migrationSql(config) + "\nselect no_plan();\n" + checks.join("\n") + "\nselect * from finish();\nrollback;\n" +
+  "insert into private.item_definitions(id,category_id,name,description,effect_description,image_path,kind,stackable,active,tradable,managed_by_admin) values('config_admin_item','materials','Admin item','Admin-owned item','No effect','/images/items/placeholder.svg','passive',true,true,true,true);\n" +
+  "update private.item_definitions set name='Owner Sprat',managed_by_admin=true where id='sprat'; update private.loot_tables set name='Owner Shore' where id='harbor_shore'; update private.activity_loot set success_start=42 where activity_id='shore_fishing';\n" +
+  migrationSql(config) + "\nselect no_plan();\n" +
+  "select is((select name from private.item_definitions where id='config_admin_item'),'Admin item','Config preserves newly created admin items');\n" +
+  "select is((select name from private.item_definitions where id='sprat'),'Owner Sprat','Config preserves admin edits to seeded items');\n" +
+  "select is((select name from private.loot_tables where id='harbor_shore'),'Owner Shore','Config preserves edited loot tables');\n" +
+  "select is((select success_start from private.activity_loot where activity_id='shore_fishing'),42::numeric,'Config preserves activity loot settings');\n" + checks.join("\n") + "\nselect * from finish();\nrollback;\n" +
   "select case when public.get_gameplay_revision()='" + originalRevision + "' then 'CONFIG_RESTORED' else 'CONFIG_NOT_RESTORED' end;\n";
 const output = execFileSync("docker", ["exec", "-i", "supabase_db_" + config.server.local.supabaseProjectId,
   "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-q", "-t"], { input: sql, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 });

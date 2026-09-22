@@ -4,11 +4,11 @@
     "appPort": 3000,
     "testPort": 3100,
     "supabaseProjectId": "one-life-at-sea",
-    "supabaseApiPort": 55321,
-    "supabaseDbPort": 55322,
-    "supabaseShadowPort": 55320,
-    "supabaseStudioPort": 55323,
-    "supabaseMailPort": 55324
+    "supabaseApiPort": 54321,
+    "supabaseDbPort": 54322,
+    "supabaseShadowPort": 54320,
+    "supabaseStudioPort": 54323,
+    "supabaseMailPort": 54324
   },
   "databaseRetry": {
     "retries": 3,

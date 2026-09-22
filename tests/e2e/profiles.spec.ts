@@ -46,7 +46,7 @@ test("captain profiles open from the harbor and keep private character data prot
     localSql(`update public.characters set created_at=clock_timestamp()-interval '2 days',crew_attack=9876,ship_health=81 where id='${targetId}'`);
     const publicProfile = await owner.from("character_profiles").select("*").eq("character_id", targetId).single();
     expect(publicProfile.error).toBeNull();
-    expect(Object.keys(publicProfile.data!).sort()).toEqual(["arrival_location", "arrival_max_sea_distance", "arrives_at", "character_id", "created_at", "display_name", "location", "max_sea_distance", "player_number"]);
+    expect(Object.keys(publicProfile.data!).sort()).toEqual(["arrival_location", "arrival_max_sea_distance", "arrives_at", "character_id", "character_level", "created_at", "display_name", "location", "max_sea_distance", "player_number"]);
     expect(publicProfile.data).toMatchObject({ character_id: targetId, display_name: otherName, location: "the_harbor" });
     expect((await owner.from("characters").select("*").eq("id", targetId)).data).toEqual([]);
     expect((await owner.from("character_profiles").update({ display_name: "Forged Captain" }).eq("character_id", targetId)).error?.code).toBe("42501");

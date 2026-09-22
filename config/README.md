@@ -4,7 +4,7 @@ Alla justerbara spelregler och drift-/UI-inställningar samlas här. Nuvarande v
 
 | Fil | Vad du ändrar |
 | --- | --- |
-| gameplay.json | Crew Morale, tavernpriser, Energy, hälsa, återhämtning, träningskostnad och ökning, åtta startstats, stridskostnad, ammunition, rundor, tidsgränser, skydd, träff-/skadekurvor, boarding, grundutrustning hamnens sidstorlek samt seaTravel med avgångskostnad, restider, platstyper samt scoutingens pris och sidstorlek. Marketplace styr avgift, popularitetsfönster, sidstorlekar och batchgräns; inventory styr katalog och handelsbarhet. |
+| gameplay.json | Stamina, Crew Morale, tavernpriser, Energy, hälsa, återhämtning, träningskostnad och ökning, åtta startstats, stridskostnad, ammunition, rundor, tidsgränser, skydd, träff-/skadekurvor, boarding, grundutrustning hamnens sidstorlek samt seaTravel med avgångskostnad, restider, platstyper samt scoutingens pris och sidstorlek. Marketplace styr avgift, popularitetsfönster, sidstorlekar och batchgräns; inventory styr katalog och handelsbarhet. |
 | frontend.json | Spelnamn, språk-/datumformat, metadata, loggens tidszon, laddning/uppdateringsintervall, hamnbild, dag/natt-cykel och responsiva brytpunkter. |
 | theme.css | Färger, typsnitt, sidbredd, stridsbredd, sidopanel, bildhöjd, fast bakgrundsbild, sidmarginal, touchstorlek och spinnerhastighet. |
 | interface.css.template | Detaljerad CSS för gränssnittet; brytpunkter hämtas från frontend.json. |
@@ -66,3 +66,15 @@ Gränssnittets navy-/guldtema och den fasta hamnbakgrunden beskrivs i
 [designgrunden](../docs/INTERFACE_DESIGN.md). Bakgrundens sökväg ändras via
 --o-background-image och --o-night-background-image i theme.css. Spelmodulen scrollar med dokumentet.
 frontend.json innehåller dayNight: dag börjar 06:00 och natt 21:00 UTC. Se [dag/natt-cykeln](../docs/DAY_NIGHT_CYCLE.md).
+
+`stamina.maximum` är 50, `recoveryAmount` 1, `recoverySeconds` 300 och `activityCost` 1.
+Alla kommande yrkesaktiviteter använder samma grundkostnad. Se [Stamina](../docs/STAMINA.md).
+
+`skills.catalog` definierar färdigheter och `skills.xpThresholds` deras gemensamma
+XP-tabell för nivå 1-99. Samma tabell används i SQL och UI; befintliga XP bevaras vid synk.
+
+`activities.catalog` anger de tre första aktiviteterna, deras färdigheter och XP-belöning
+(10). Kostnaden är `stamina.activityCost` (1). Fältet `active` kan stänga av en aktivitet
+utan att historiska kvitton påverkas. Se [Activities](../docs/ACTIVITIES.md).
+
+Item definitions edited or created in Admin are preserved by config:sync (managed_by_admin). Loot tables and activity loot settings are database-owned. See docs/ADMIN_PANEL.md and docs/LOOT_TABLES.md. Local Storage is enabled for administrator item image uploads.

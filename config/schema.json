@@ -670,6 +670,100 @@
               "maximum": 9007199254740991
             }
           }
+        },
+        "stamina": {
+          "type": "object",
+          "properties": {
+            "maximum": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "recoveryAmount": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "recoverySeconds": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "activityCost": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        },
+        "skills": {
+          "type": "object",
+          "properties": {
+            "catalog": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "xpThresholds": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "integer": true,
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            }
+          }
+        },
+        "activities": {
+          "type": "object",
+          "properties": {
+            "catalog": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "skillId": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "buttonLabel": {
+                    "type": "string"
+                  },
+                  "xpGain": {
+                    "type": "number",
+                    "integer": true,
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },

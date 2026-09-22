@@ -106,3 +106,18 @@ The existing `tests/e2e/combat.spec.ts` exercises preparation, both phase images
 real orders, reloads, public reports and widths from 320 to 1680px. It writes
 ignored `.local/attack-*.jpg` screenshots. The combat action-lock suite covers
 defender restrictions independently of the presentation.
+
+Stamina appears after Energy in the condition sidebar, using a green track and the same accessible
+hover/focus/touch tooltip as the other resources. Its tooltip shows only the recovery rule and purpose.
+
+Profiles display public Character Level alongside Player ID. Only the owner receives the
+Skills section: seven compact cards with level, XP and progress to the next level, in two
+columns on desktop and one on mobile. Maxed skills display Maximum level. Other players
+receive neither these cards nor their underlying private data.
+
+Activities is a sidebar destination and a harbor directory entry. Three rows show a themed
+icon, description, skill level/XP progress, reward and action button. Desktop uses a three-column
+row; mobile places the action below the details. Result text stays inline with reserved space.
+Normal activity requests use the existing journal without flashing the recovery banner.
+
+Admin now has task-oriented navigation, overview shortcuts, an item catalog and dedicated item/loot/activity forms. Loot preview shows percentages per successful catch. Responsive cards, readable field labels and grouped database resources replace the database-first starting point. Review screens show human-readable values with technical JSON collapsed. In-flight admin saves do not show the recovery banner.

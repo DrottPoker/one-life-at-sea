@@ -11,6 +11,7 @@ const locations = [
   { href: "/players", label: "Players", Icon: Users },
   { href: "/sea", label: "At Sea", Icon: Compass },
   { href: "/harbor", label: "The Harbor", Icon: Anchor },
+  { href: "/activities", label: "Activities", Icon: Compass },
   { href: "/inventory", label: "Inventory", Icon: Package },
   { href: "/harbor/crew-training", label: "Crew Training", Icon: Swords },
   { href: "/harbor/ship-upgrades", label: "Ship Upgrades", Icon: Ship },

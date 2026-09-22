@@ -37,6 +37,22 @@ export function validateConfig(config) {
   check(g.morale.recoveryAmount <= g.morale.maximum, "Morale recovery exceeds the range.");
   check(g.morale.tavernGain <= g.morale.maximum * 2, "Tavern gain exceeds the morale range.");
   check(g.morale.tavernGoldCost <= g.economy.maxGoldCoins, "Tavern price exceeds the Gold Coins limit.");
+  check(g.stamina.activityCost <= g.stamina.maximum, "Activity cost exceeds maximum Stamina.");
+  check(g.stamina.recoveryAmount <= g.stamina.maximum, "Stamina recovery exceeds its cap.");
+  check(g.skills.catalog.length <= 100, "At most 100 skills are supported.");
+  check(new Set(g.skills.catalog.map(skill => skill.id)).size === g.skills.catalog.length, "Skill IDs must be unique.");
+  for (const skill of g.skills.catalog) {
+    check(/^[a-z][a-z0-9_]{0,47}$/.test(skill.id) && skill.name.length <= 60, "Invalid skill definition.");
+  }
+  check(g.skills.xpThresholds.length === 99 && g.skills.xpThresholds[0] === 0, "Skills start at level 1 and end at level 99.");
+  check(g.skills.xpThresholds.every((xp, i, rows) => i === 0 || xp > rows[i - 1]), "Skill XP thresholds must strictly increase.");
+  check(g.activities.catalog.length <= 100, "At most 100 activities are supported.");
+  check(new Set(g.activities.catalog.map(activity => activity.id)).size === g.activities.catalog.length, "Activity IDs must be unique.");
+  for (const activity of g.activities.catalog) {
+    check(/^[a-z][a-z0-9_]{0,47}$/.test(activity.id), "Invalid activity ID.");
+    check(g.skills.catalog.some(skill => skill.id === activity.skillId), "Unknown activity skill.");
+    check(activity.name.length <= 60 && activity.description.length <= 300 && activity.buttonLabel.length <= 40, "Activity text is too long.");
+  }
   const sea = g.seaTravel;
   check(sea.departureEnergyCost <= g.resources.energyMax, "Departure costs more than maximum Energy.");
   check(sea.scoutEnergyCost <= g.resources.energyMax, "Scouting costs more than maximum Energy.");
@@ -59,7 +75,7 @@ export function validateConfig(config) {
     check(inventory.categories.some(c => c.id === item.categoryId), "Unknown item category.");
     check(["equipment","consumable","passive"].includes(item.kind), "Unknown item kind.");
     check(item.kind === "equipment" ? ["crew_weapon","cannons"].includes(item.slot) : item.slot === "none", "Item slot does not match its kind.");
-    check(/^\/images\/items\/[a-z0-9-]+\.(png|webp)$/.test(item.imagePath), "Item images must be local inventory assets.");
+    check(item.imagePath === '/images/items/placeholder.svg' || /^\/images\/items\/[a-z0-9-]+\.(png|webp)$/.test(item.imagePath), "Item images must be local inventory assets.");
     check(item.name.length <= 100 && item.description.length <= 2000 && item.effectDescription.length <= 1000, "Item text is too long.");
   }
   for (const [group, tiers] of [["crew", g.training.crewTiers], ["ship", g.training.shipTiers]]) {
@@ -136,6 +152,8 @@ export function gameplaySql(config) {
   const template = read("supabase/templates/gameplay.sql").replace(/\{\{include\.([a-z-]+)\}\}\n/g,
     (_, name) => read("supabase/templates/gameplay/" + name + ".sql"));
   return render(template
+    .replace("{{activities.catalogSql}}", () => activityCatalogSql(config))
+    .replace("{{skills.catalogSql}}", () => skillCatalogSql(config))
     .replace("{{training.catalogSql}}", () => trainingCatalogSql(config))
     .replace("{{inventory.catalogSql}}", () => inventoryCatalogSql(config))
     .replace("{{seaTravel.catalogSql}}", () => seaTravelCatalogSql(config)), config);
@@ -179,13 +197,13 @@ export function inventoryCatalogSql(config) {
     "if exists(select 1 from private.item_categories old left join (values\n" + categories +
     "\n) incoming(id,name,position) using(id) where incoming.id is null) then raise exception 'Existing category IDs must be preserved'; end if; " +
     "if exists(select 1 from private.item_definitions old left join (values\n" + items +
-    "\n) incoming(" + columns + ") using(id) where incoming.id is null or old.kind<>incoming.kind or old.stackable<>incoming.stackable or old.slot is distinct from incoming.slot) " +
+    "\n) incoming(" + columns + ") using(id) where not old.managed_by_admin and (incoming.id is null or old.kind<>incoming.kind or old.stackable<>incoming.stackable or old.slot is distinct from incoming.slot)) " +
     "then raise exception 'Existing item IDs, kinds and slots must be preserved'; end if; end " + delimiter + ";\n" +
     "insert into private.item_categories(id,name,position) values\n" + categories +
     "\non conflict(id) do update set name=excluded.name,position=excluded.position;\n" +
     "insert into private.item_definitions(" + columns + ") values\n" + items +
     "\non conflict(id) do update set category_id=excluded.category_id,name=excluded.name,description=excluded.description," +
-    "effect_description=excluded.effect_description,image_path=excluded.image_path,active=excluded.active,tradable=excluded.tradable;\n";
+    "effect_description=excluded.effect_description,image_path=excluded.image_path,active=excluded.active,tradable=excluded.tradable where not item_definitions.managed_by_admin;\n";
 }
 
 export function seaTravelCatalogSql(config) {
@@ -195,4 +213,29 @@ export function seaTravelCatalogSql(config) {
   return "update private.sea_location_types set active=false;\n" +
     "insert into private.sea_location_types(id,name,active) values\n" + rows +
     "\non conflict(id) do update set name=excluded.name,active=excluded.active;\n";
+}
+
+export function skillCatalogSql(config) {
+  const quote = value => "'" + value.replaceAll("'", "''") + "'";
+  const skills = config.gameplay.skills;
+  const catalog = skills.catalog.map((skill, i) => "(" + [quote(skill.id), quote(skill.name), i].join(",") + ")").join(",\n");
+  const levels = skills.xpThresholds.map((xp, i) => "(" + (i + 1) + "," + xp + ")").join(",");
+  let delimiter = "$skills$";
+  while (catalog.includes(delimiter)) delimiter = delimiter.slice(0, -1) + "_$";
+  return "do " + delimiter + " begin if exists(select 1 from private.skill_definitions old left join (values " +
+    catalog + ") incoming(id,name,position) using(id) where incoming.id is null) then raise exception 'Existing skill IDs must be preserved'; end if; end " + delimiter + ";\n" +
+    "insert into private.skill_definitions(id,name,position) values " + catalog +
+    " on conflict(id) do update set name=excluded.name,position=excluded.position;\n" +
+    "insert into private.skill_levels(level,xp) values " + levels +
+    " on conflict(level) do update set xp=excluded.xp;\n";
+}
+
+export function activityCatalogSql(config) {
+  const quote = value => "'" + value.replaceAll("'", "''") + "'";
+  const rows = config.gameplay.activities.catalog.map((activity, i) => "(" + [quote(activity.id), quote(activity.skillId), activity.xpGain, activity.active, i].join(",") + ")").join(",");
+  return "do $activities$ begin if exists(select 1 from private.activity_definitions old left join (values " + rows +
+    ") incoming(id,skill_id,xp_gain,active,position) using(id) where incoming.id is null or incoming.skill_id<>old.skill_id) " +
+    "then raise exception 'Existing activity IDs and skills must be preserved'; end if; end $activities$;\n" +
+    "insert into private.activity_definitions(id,skill_id,xp_gain,active,position) values " + rows +
+    " on conflict(id) do update set xp_gain=excluded.xp_gain,active=excluded.active,position=excluded.position;\n";
 }

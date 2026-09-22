@@ -37,6 +37,8 @@ export type Character = {
   travel_started_at: string | null;
   travel_arrives_at: string | null;
   created_at: string;
+  stamina: number;
+  stamina_updated_at: string;
   energy_updated_at: string;
   morale_updated_at: string;
   crew_morale: number;
@@ -53,7 +55,7 @@ export type Character = {
   protected_until: string | null;
 } & Record<`${TrainingGroup}_${Stat}`, number>;
 
-export type CharacterProfile = { character_id: string } & Pick<Character, "player_number" | "display_name" | "location" | "created_at">;
+export type CharacterProfile = { character_id: string; character_level: number } & Pick<Character, "player_number" | "display_name" | "location" | "created_at">;
 
 export type Database = {
   public: {
@@ -72,6 +74,8 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      perform_activity: { Args: { activity_id: string; expected_stamina_cost: number; expected_xp_gain: number; request_id: string }; Returns: import("@/lib/activities").ActivityReceipt };
+      get_own_skills: { Args: Record<string, never>; Returns: import("@/lib/skills").SkillProgress | null };
       search_players: { Args: { search_term?: string; requested_page?: number }; Returns: PlayerSearchPage };
       list_market_items: { Args: { category_id?: string; search_term?: string; requested_page?: number }; Returns: MarketPage<MarketItem> };
       list_market_listings: { Args: { target_item?: string; own_only?: boolean; requested_page?: number }; Returns: MarketPage<MarketListing> };
@@ -86,7 +90,9 @@ export type Database = {
       return_to_harbor: { Args: { expected_version: string; request_id: string }; Returns: TravelReceipt };
       get_character_status: { Args: { target_id: string }; Returns: CharacterStatus | null };
       is_admin: { Args: Record<string, never>; Returns: boolean };
+      admin_get_loot_table: { Args: { target_id: string }; Returns: import("@/lib/loot").LootTable | null };
       admin_catalog: { Args: Record<string, never>; Returns: AdminResource[] };
+      admin_economy: { Args: { period?: import("@/lib/economy").EconomyPeriod; item_search?: string; item_page?: number; item_sort?: import("@/lib/economy").EconomySort }; Returns: import("@/lib/economy").EconomyDashboard };
       admin_overview: { Args: Record<string, never>; Returns: Record<string, string> };
       admin_read: { Args: { resource: string; search_term?: string; requested_page?: number; filters?: Record<string, string | null> }; Returns: AdminPage };
       admin_mutate: { Args: { action: string; payload: AdminPayload; request_id: string; reason: string }; Returns: AdminReceipt };

@@ -1,5 +1,6 @@
 "use server";
 
+import { withDatabaseRetry } from "@/lib/database-retry";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/validation";
@@ -12,7 +13,7 @@ export async function runAdminAction(action: AdminAction, payload: AdminPayload,
   const { data: { user }, error: authError } = await client.auth.getUser();
   if (authError || !user || user.is_anonymous) return { error: true, message: adminErrors.ADMIN_REQUIRED };
   // Every RPC checks current database membership, including receipt retries.
-  const { data, error } = await client.rpc("admin_mutate", { action, payload, request_id: requestId, reason: reason.trim() });
+  const { data, error } = await withDatabaseRetry(() => client.rpc("admin_mutate", { action, payload, request_id: requestId, reason: reason.trim() }));
   if (error || !data) {
     const message = adminErrors[error?.message ?? ""];
     if (message) return { error: true, message };

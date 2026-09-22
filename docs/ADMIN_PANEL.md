@@ -1,7 +1,43 @@
 # Admin panel
 
-The owner prioritizes functionality over visual polish. Open `/admin`, or use
-**Admin panel** in the header. Ludorex is the first authorized local administrator.
+Open `/admin`, or use **Admin panel** in the header. The workspace has seven sections:
+Overview, Players, Items, Loot tables, Activities, Database and Audit log. Overview links
+to the primary workflows, live game totals and recent administrative changes. Ludorex
+is the first authorized local administrator.
+
+## Content authoring
+
+1. **Items**: search/filter the catalog, create an item or edit its name, category,
+   description, effect text, active/tradable flags and image. Item IDs, ownership types
+   and equipment slots are permanent after creation. Effects are descriptive text;
+   creating a consumable does not add a new gameplay operation.
+2. **Loot tables**: create a named collection, add items, choose fixed percentages or
+   weights at level 1/mastery, and set quantity. Equipment also records damage/accuracy.
+   A level slider previews percentages of successful catches, with mastery at 99.
+3. **Activities**: select a table, starting/mastery catch chances and mastery level for
+   each existing activity. Select No loot to retain XP-only behavior. Changes apply to
+   new attempts immediately; earlier receipts preserve their original result.
+
+See [Loot tables](LOOT_TABLES.md) for the exact probability model and initial fish.
+No rarity classification is used. The database browser remains available for advanced
+inspection, with grouped resources and links back to the dedicated editors.
+
+Images are optional. `/images/items/placeholder.svg` is the shared default and broken
+images also fall back to it in inventory, marketplace and admin. Upload accepts PNG,
+JPG or WebP up to 4 MB; the picker checks decoding and dimensions up to 8192 × 8192.
+Supabase Storage enforces MIME/size limits and current admin membership. The public
+item-images bucket contains item artwork only. Upload paths are immutable UUIDs under
+the uploader's account ID; replacing an image creates a new object. The authenticated
+admin RPC verifies uploaded references exist. No arbitrary external URLs are accepted.
+Uploaded objects are not deleted automatically, preserving historical image references.
+
+All content saves use the existing audit/retry system with version checks. A linked
+table cannot be disabled; unlink it first. An item in an active table cannot be disabled;
+remove it from that table first. Definitions are not deleted through the panel.
+
+Admin-created and admin-edited item rows carry `managed_by_admin=true`. Configuration
+continues to seed the original catalog but does not overwrite those rows. Loot tables
+and activity loot settings belong to the database and survive later config migrations.
 
 ## Player tools
 
@@ -30,7 +66,7 @@ character/combat locks as gameplay.
 
 ## Database browser
 
-The browser exposes 25 allowlisted game/admin tables, including private combat,
+The browser exposes allowlisted game/admin tables, including private combat,
 bank history, jobs, inventory, circulation and request receipts. It provides:
 
 - Literal text search, exact column/value filtering and 50-row pagination.
@@ -40,9 +76,9 @@ bank history, jobs, inventory, circulation and request receipts. It provides:
 - An audit browser with request ID, administrator account ID, reason, timestamp,
   payload and before/after values. A grant of equipment records every new instance.
 
-Config-generated catalogs and derived projections are inspectable but not raw
-editable: `config/gameplay.json`, `npm run config:sync` and game operations remain
-authoritative. Historical receipts and audit records cannot be edited or deleted.
+Derived projections and historical records are inspectable but not raw editable.
+Items and loot use the dedicated content editors. Skill curves, activity cost/XP,
+training tiers and inventory categories still use config/gameplay.json and config:sync. Historical receipts and audit records cannot be edited or deleted.
 Account ownership/primary keys cannot be reassigned. This is a game administration
 panel; it does not expose arbitrary SQL, schema changes, account passwords,
 session tokens or infrastructure schemas. Account deletion and admin membership
@@ -66,7 +102,9 @@ Mutations and their audit receipt commit together. A per-administrator request
 UUID serializes retries. Reusing a UUID with a different action, payload or reason
 fails. Row edits/deletes compare the original database fingerprint after locking;
 stale screens cannot overwrite newer state. All changes require a 3-500 character
-reason and an explicit review step.
+reason and an explicit review step with a readable summary. Technical payloads are
+collapsed. In-flight requests stay hidden from the recovery banner; a genuinely
+unconfirmed request becomes recoverable after an uncertain response or reload.
 
 Before sending a mutation, the browser saves its request in account-scoped
 session storage. Unconfirmed requests can be checked again after a reload or
@@ -119,3 +157,19 @@ decimal. Database constraints enforce the same bounds for admin edits. Each
 change establishes a fresh morale checkpoint and is recorded in the existing
 audit log. Combat locks still apply. Tavern receipts are available as a read-only
 resource. Canonical admin mutation SQL is in supabase/templates/gameplay/admin.sql.
+
+Stamina is an editable character resource. Its integer balance is limited by the configured cap.
+An audited edit resets `stamina_updated_at` to the server time; direct player edits are denied.
+
+The `character_skills` resource permits audited corrections to `xp` only. Its composite key
+identifies the character and skill. The private skill level and public Character Level are
+derived automatically. Skill catalogs and threshold tables are read-only in the admin panel.
+
+`activity_definitions` and `activity_requests` are read-only administrator resources. Definitions
+are managed through gameplay configuration; receipts preserve committed cost, XP and
+loot. The separate activity_loot resource is managed from Activities. The player detail
+page also exposes Stamina, Crew Morale and private skill XP corrections.
+
+## Economy
+
+`/admin/economy` monitors Gold Coins (carried and banked), item circulation and market valuation, unpriced stock, trade turnover and fees. Independent wealth leaderboards link to player tools. Searchable item totals include market escrow exactly once. Charts record actual observations every five minutes through a private pg_cron job, independently of admin visits. Access is checked on every read; all totals preserve integer precision. See [Economy monitoring](ECONOMY_MONITORING.md) for definitions, limits and operations.

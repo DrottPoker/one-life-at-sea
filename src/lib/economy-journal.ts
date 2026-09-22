@@ -1,7 +1,7 @@
 import { isUuid } from "@/lib/validation";
 import { isMarketCommand, type MarketCommand } from "@/lib/marketplace";
 
-export type EconomyFormKind = "bank" | "inventory" | "training" | "tavern";
+export type EconomyFormKind = "bank" | "inventory" | "training" | "tavern" | "activity";
 export type EconomyRequest = { kind: "market"; id: string; command: MarketCommand } |
   { kind: EconomyFormKind; id: string; fields: Record<string, string> };
 type Outcome = { error?: boolean; retry?: boolean; message?: string };
@@ -9,6 +9,7 @@ type Failure = { error: true; retry?: boolean; message: string };
 type JournalStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 const formKeys: Record<EconomyFormKind, string[]> = {
+  activity: ["request_id", "activity_id", "stamina_cost", "xp_gain"],
   tavern: ["request_id", "gold_cost", "morale_gain"],
   bank: ["request_id", "direction", "amount"],
   inventory: ["request_id", "entry_id", "entry_type", "quantity"],
@@ -37,7 +38,7 @@ export function parseEconomyRequest(raw: string | null): EconomyRequest | null {
   if (request.kind === "market" && isMarketCommand(request.command) && request.command.request_id === request.id) {
     return { kind: "market", id: request.id, command: request.command };
   }
-  if (request.kind !== "bank" && request.kind !== "inventory" && request.kind !== "training" && request.kind !== "tavern") throw Error("Invalid saved action.");
+  if (request.kind !== "bank" && request.kind !== "inventory" && request.kind !== "training" && request.kind !== "tavern" && request.kind !== "activity") throw Error("Invalid saved action.");
   if (!request.fields || typeof request.fields !== "object" || Array.isArray(request.fields)) throw Error("Invalid saved fields.");
   const fields = request.fields as Record<string, unknown>;
   if (fields.request_id !== request.id || !Object.entries(fields).every(([key, value]) =>

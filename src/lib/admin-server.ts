@@ -35,13 +35,15 @@ export async function readAdminTable(resource: string, search = "", page = 0, fi
 }
 
 
-export async function activeAdminItemDefinitions() {
-  const first = await readAdminTable("item_definitions", "", 0, { active: "true" });
+export async function readAllAdminRows(resource: string, filters: Record<string, string | null> = {}) {
+  const first = await readAdminTable(resource, "", 0, filters);
   const rows = [...first.rows];
   for (let page = 1; BigInt(page * first.page_size) < BigInt(first.total); page++) {
-    const next = await readAdminTable("item_definitions", "", page, { active: "true" });
+    const next = await readAdminTable(resource, "", page, filters);
     if (next.page !== page) break;
     rows.push(...next.rows);
   }
   return rows;
 }
+
+export const activeAdminItemDefinitions = () => readAllAdminRows("item_definitions", { active: "true" });

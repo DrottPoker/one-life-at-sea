@@ -10,6 +10,17 @@ describe("configuration contract", () => {
     for (const [path, expected] of Object.entries(generatedFiles(config))) expect(read(path), path).toBe(expected);
   });
   it.each([
+    ["duplicate activity", (c: ReturnType<typeof loadConfig>) => { c.gameplay.activities.catalog[1].id = c.gameplay.activities.catalog[0].id; }],
+    ["unknown activity skill", (c: ReturnType<typeof loadConfig>) => { c.gameplay.activities.catalog[0].skillId = "missing"; }],
+    ["fractional activity XP", (c: ReturnType<typeof loadConfig>) => { c.gameplay.activities.catalog[0].xpGain = 0.5; }],
+    ["duplicate skill", (c: ReturnType<typeof loadConfig>) => { c.gameplay.skills.catalog[1].id = c.gameplay.skills.catalog[0].id; }],
+    ["nonzero starting XP", (c: ReturnType<typeof loadConfig>) => { c.gameplay.skills.xpThresholds[0] = 1; }],
+    ["repeated skill threshold", (c: ReturnType<typeof loadConfig>) => { c.gameplay.skills.xpThresholds[1] = 0; }],
+    ["missing level 99", (c: ReturnType<typeof loadConfig>) => { c.gameplay.skills.xpThresholds.pop(); }],
+    ["fractional stamina cost", (c: ReturnType<typeof loadConfig>) => { c.gameplay.stamina.activityCost = 0.5; }],
+    ["zero stamina interval", (c: ReturnType<typeof loadConfig>) => { c.gameplay.stamina.recoverySeconds = 0; }],
+    ["unaffordable stamina cost", (c: ReturnType<typeof loadConfig>) => { c.gameplay.stamina.activityCost = 51; }],
+    ["excessive stamina recovery", (c: ReturnType<typeof loadConfig>) => { c.gameplay.stamina.recoveryAmount = 51; }],
     ["morale precision", (c: ReturnType<typeof loadConfig>) => { c.gameplay.morale.lossPerEnergy = 0.25; }],
     ["morale recovery precision", (c: ReturnType<typeof loadConfig>) => { c.gameplay.morale.recoveryAmount = 1.25; }],
     ["morale range", (c: ReturnType<typeof loadConfig>) => { c.gameplay.morale.maximum = 0; }],

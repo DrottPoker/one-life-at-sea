@@ -1,3 +1,186 @@
+# Admin economy monitoring, 2026-09-22
+
+- Added /admin/economy with navigation and overview shortcuts. Live totals cover carried
+  and banked Gold Coins, circulating inventory and market escrow, item valuation,
+  unpriced stock, combined known wealth, market turnover and fees.
+- Separate top-20 rankings show coins, item wealth and combined wealth. Searchable item
+  pages expose inventory/listed quantities, market value and last completed sale.
+- Installed private economy_snapshots and one pg_cron job at five-minute UTC boundaries.
+  Automatic runs succeeded locally. History starts at installation, uses real observations,
+  preserves gaps and is bounded to 500 returned points including the live reading.
+- Prices reuse the canonical completed-sales weighted average. Never-traded items remain
+  explicitly unpriced. Escrow is counted once and stays attributed to the seller.
+- Decimal strings and BigInt preserve exact totals beyond JavaScript safe integers.
+  Admin membership is checked on every RPC; ordinary users cannot access the new data.
+- Responsive charts support pointer, touch and keyboard inspection. Background refresh
+  retains the prior view on transient failure and clears it if admin access is revoked.
+- Fixed long-name/identifier wrapping in player tools. The shared browser login helper
+  now confirms client event handlers before filling controlled fields, removing a race.
+- Disposable economy test accounts/items were removed. Their temporary large balances
+  were excluded from scheduled history. The cron job is active; integrity checks are clean.
+
+Verification executed:
+- npm run check: lint, Next/TypeScript, 321 unit tests across 22 files, production build.
+- npm run test:db: 1,523 assertions across 30 files, successful.
+- npm run test:config:db: 95 assertions; transaction rolled back and revision restored.
+- Supabase security advisors: no issues. audit:economy: all eight checks report zero.
+- Playwright admin-economy.spec.ts + admin.spec.ts: all 5 tests passed, including real
+  trades, access/revocation, filters, refresh failure and layouts at 1440/768/375/320px.
+- Desktop and mobile economy screenshots inspected. Existing Next cancellation messages
+  and the previously observed Gzip listener warning remain in the server test log;
+  browser page-error assertions and all five final tests passed.
+- See [Economy monitoring](ECONOMY_MONITORING.md) for valuation and operational limits.
+
+# Admin overhaul and loot tables, 2026-09-22
+
+- Rebuilt admin navigation and overview around Players, Items, Loot tables, Activities,
+  Database and Audit log. Added shortcuts, live totals, recent changes, friendly labels,
+  grouped database resources, readable review summaries and responsive cards/forms.
+- Item creation/editing supports category, type, text, enabled/tradable flags and optional
+  PNG/JPG/WebP uploads. Shared placeholder.svg covers omitted and broken artwork.
+  IDs and ownership shapes stay permanent; numeric names produce valid identifiers.
+- Loot tables support per-item fixed percentages or starting/mastery weights, quantity,
+  equipment stats and a level slider showing chances per successful catch. Activity
+  settings independently control table assignment, catch difficulty and mastery level.
+- Added Sprat, Sardine, Mackerel, Sea Bass, Red Snapper and Silver Ring. Harbor Shore is
+  assigned to Shore Fishing: success 70% at level 1 to 90% at 99, ring fixed at 1% per
+  successful catch. Both successful and failed attempts cost 1 Stamina and give 10 XP.
+- The server chooses loot using the pre-attempt skill level. Stamina, XP, inventory,
+  circulation and receipt commit atomically. Replays retain their catch/table version.
+- Content is private with RLS and audited admin RPCs. Stale editors cannot overwrite
+  newer content. Admin-created/edited items and loot settings survive config migrations.
+  Uploads require current admin membership; the bucket exposes item artwork publicly.
+- Local Storage enabled without resetting the database. Existing accounts and holdings
+  were preserved. Disposable content test accounts, tables and items were removed.
+- Player tools now include Stamina, Crew Morale and private skill XP corrections.
+  Ordinary in-flight admin saves no longer flash the unconfirmed-request banner.
+
+Verification executed:
+- npm run check: lint, Next type generation/TypeScript, 319 unit tests (21 files), build.
+- npm run test:db: 1,484 assertions across 29 files, all successful.
+- npm run test:config:db: 95 assertions, transaction rolled back, original revision restored.
+- Supabase local security advisors: no issues.
+- 18 distinct relevant browser scenarios passed across the final focused runs: admin
+  content/authorization/corrections/recovery, Activities, Inventory and activity feedback.
+  The final six-scenario admin/feedback rerun passed after the last validation change.
+- Actual browser screenshots checked for overview and loot editing; responsive widths
+  1440, 768, 375 and 320 had no horizontal document overflow.
+- localhost:3000/login returned HTTP 200; API and code revision match. Harbor Shore
+  remains assigned with 70/90 success and 1% ring chance after test cleanup.
+- Existing Next response-cancellation logs (destination stream closed early) still occur
+  during navigation/interrupted-response tests. One broader run also logged a Gzip drain
+  listener warning; no browser page errors or test failures remained. No framework patch
+  or global warning suppression was added.
+
+Applied local migrations:
+- 20260922022227_central_gameplay_config_c3da6619fb84.sql
+- 20260922023944_central_gameplay_config_358435846654.sql
+- 20260922024716_central_gameplay_config_f6351575618b.sql
+
+See [Admin panel](ADMIN_PANEL.md), [Loot tables](LOOT_TABLES.md) and [Activities](ACTIVITIES.md).
+
+# Activities, 2026-09-22
+
+- Ny sida /activities, länkad i navigationen och hamnens katalog.
+- Shore Fishing ger Fishing XP, Foraging ger Foraging XP och Logging ger Logging XP.
+- Alla tre kostar 1 Stamina och ger 10 XP per klick. Nio handlingar når nivå 2.
+- Aktiviteten utförs direkt. Resultat och eventuell nivåökning visas i raden.
+  Färdighetsprogression och sidans Stamina uppdateras samtidigt; profilen visar samma XP.
+- Servern kräver hamnläge utanför combat och hospital. Återhämtad Stamina kan användas
+  direkt; tomt saldo blockerar knappar och serveranrop.
+- Kostnad, XP, Character Level och kvitto är en atomär transaktion. Upprepade anrop med
+  samma ID returnerar samma resultat. Samtidiga unika anrop kan inte övertrassera Stamina.
+- Den gemensamma webbläsarjournalen skyddar tappade svar och samordnar flikar.
+  Normala aktiviteter infogar inte återställningsrutan, även om svaret hålls öppet.
+- Loot, föremål, nivåkrav, timer och fler aktiviteter är fortsatt senare arbete.
+- Migration 20260922004858_central_gameplay_config_440126a8a899.sql är applicerad lokalt.
+
+Verifierat:
+
+- Migrationen och de första 41 aktivitetskontrollerna provkördes i en återställd transaktion.
+- npm run check passerade: lint, typkontroll, 313 enhetstester och produktionsbygge.
+  Slutlig lint och typkontroll inkluderade även de nytillagda webbläsartesterna.
+- npm run test:db passerade: 1 432 assertions i 28 filer, varav 43 aktivitetskontroller.
+- Alternativ gameplayconfig: 91 assertions passerade, inklusive 3 Stamina/17 XP.
+  Originalkonfigurationen återställdes efter testet.
+- Supabase säkerhetsgranskning gav inga anmärkningar.
+- Fyra riktade webbläsartester passerade: hela klick-/profilflödet, dubbletter och
+  samtidiga anrop, återhämtning av ett bekräftat kvitto samt inga återställningsblinkningar
+  i två flikar. Åtta identiska anrop gav en belöning; tio unika med 3 Stamina gav tre.
+- Layouten testades vid 1440, 375 och 320 px och granskades visuellt på desktop och mobil.
+- Tidigare observerad Next-logg om avbruten destinationsström förekom vid navigation;
+  tester och kontroller av browser pageerror passerade.
+
+Detaljer: [Activities](ACTIVITIES.md). Loggar: .local/activities-check.log, activities-db.log,
+activities-config-db.log, activities-e2e.log och activities-migration-validation.log.
+
+# Färdigheter och Character Level, 2026-09-22
+
+- Fishing, Logging, Cooking, Crafting, Crew Battling, Ship Battling och Foraging
+  börjar på nivå 1 med 0 XP och har maxnivå 99.
+- RuneScapes klassiska kurva används: nivå 2 vid 83 XP, nivå 99 vid 13 034 431 XP.
+  XP-tabellen delas mellan SQL och UI. XP kan fortsätta efter maxnivån.
+- Character Level är summan av färdighetsnivåerna: start 7, max 693.
+  Värdet visas publikt på profilen. Det ger ingen egen stridsbonus.
+- Endast ägaren ser Skills med nivåer, XP och framsteg till nästa nivå.
+  Uppgifterna lagras privat och ägar-RPC:n har ingen parameter för målspelare.
+- Intern XP-tilldelning och den publika summan uppdateras under samma karaktärslås.
+  Ägarens privata progression och andra spelares totalsumma uppdateras live.
+- Administratörer kan göra auditerade XP-korrigeringar. Nivåer räknas automatiskt.
+- Inga aktiviteter eller automatiska XP-belöningar är tillagda. Befintlig Crew/Ship-
+  träning och dess egna XP-spår är oförändrade.
+- Migration 20260922000035_central_gameplay_config_594ae2c80aea.sql är applicerad
+  lokalt. Befintlig progression bevaras vid upprepad configsynk.
+
+Verifierat:
+
+- 44 nya databasassertions provkördes först med migrationen i en återställd transaktion.
+- npm run check passerade: lint, typkontroll, 301 enhetstester och produktionsbygge.
+- npm run test:db passerade: 1 389 assertions i 27 filer.
+- Alternativ gameplayconfig: 89 assertions passerade, inklusive dubblerade XP-trösklar
+  och en åttonde färdighet. Transaktionen återställde originalkonfigurationen.
+- Supabase säkerhetsgranskning gav inga anmärkningar.
+- Tre webbläsartester passerade: befintlig profilintegritet, privata färdigheter/
+  publik liveuppdatering och åtta samtidiga XP-tilldelningar utan förlorade increments.
+- Profilen kontrollerades vid 1440, 375 och 320 px samt visuellt på desktop och mobil.
+- Ett tidigare observerat Next-loggmeddelande om avbruten destinationsström förekom
+  under profilnavigering. Testerna och kontrollen av browser pageerror passerade.
+
+Detaljer: [Skills](SKILLS.md). Loggar: .local/skills-check.log, skills-db.log,
+skills-config-db.log, skills-e2e.log och skills-migration-validation.log.
+
+# Stamina, 2026-09-22
+
+- Stamina börjar på 50 och har max 50. Alla värden är heltal.
+- +1 vid varje fast femminuterstick i UTC, även offline, under resa och till havs.
+- Gemensam grundkostnad är 1 per kommande yrkesaktivitet. En privat serverfunktion
+  återhämtar och drar saldot under lås. Tom bar nekas utan att Energy ändras.
+- Ny grön bar efter Energy, med kort hover-, fokus- och touchbeskrivning utan klockslag.
+  Serverns nästa deadline styr automatisk uppdatering; full bar har ingen deadline.
+- Befintliga spelare får 50 vid införandet. Framtida configsynk fyller inte på saldon.
+- Administratörsändringar är auditerade och återställer återhämtningsankaret.
+- Fiske, crafting och övriga yrkesaktiviteter, skill-XP och matförbrukning är fortfarande
+  kommande arbete. Befintliga Energy-kostnader och tavernans moraleffekt är oförändrade.
+- Migration 20260921233559_central_gameplay_config_3390c859e6a2.sql är applicerad lokalt.
+- Windows hade reserverat 55271-55370 och blockerat projektets tidigare Supabase-portar.
+  Lokal Supabase använder nu 54320-54324; appen är kvar på port 3000. Befintliga data
+  bevarades genom Supabase stop/start med backup. Config, exempelmiljö och lokal API-URL
+  är uppdaterade tillsammans. Utvecklingsservern startades om.
+
+Verifierat:
+
+- Migration och 33 Stamina-assertions provkördes först i en återställd transaktion.
+- npm run check passerade: lint, typkontroll, 283 enhetstester och produktionsbygge.
+- npm run test:db passerade: 1 345 assertions i 26 filer.
+- npm run test:config:db passerade: 86 assertions; originalconfig återställdes.
+- Säkerhetsgranskning med Supabase db advisors gav inga anmärkningar.
+- Riktade webbläsartester för Stamina, Energy och responsiv design passerade.
+  Första designförsöket stoppades av ett Edge-uppstartsfel; omkörningen passerade.
+- Stamina testades på 1440, 375 och 320 px; mobilbilden granskades visuellt.
+
+Detaljer: [Stamina](STAMINA.md). Loggar: .local/stamina-check.log, stamina-db.log,
+stamina-config-db.log, stamina-e2e.log och stamina-e2e-final.log.
+
 # Kortare skeppsarbete med bibehållen hamnspärr, 2026-09-21
 
 Ägarens slutliga beslut är 30 sekunder per 5 Energy och fortsatt hamnlåsning.

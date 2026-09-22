@@ -333,6 +333,78 @@
         "effectDescription": "A keepsake from life at sea. No active effect.",
         "active": true,
         "tradable": true
+      },
+      {
+        "id": "sprat",
+        "name": "Sprat",
+        "categoryId": "materials",
+        "kind": "passive",
+        "slot": "none",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A small silvery fish caught close to the shore.",
+        "effectDescription": "Raw fish. Cooking will be available later.",
+        "active": true,
+        "tradable": true
+      },
+      {
+        "id": "sardine",
+        "name": "Sardine",
+        "categoryId": "materials",
+        "kind": "passive",
+        "slot": "none",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A bright, oily fish that travels in dense coastal schools.",
+        "effectDescription": "Raw fish. Cooking will be available later.",
+        "active": true,
+        "tradable": true
+      },
+      {
+        "id": "mackerel",
+        "name": "Mackerel",
+        "categoryId": "materials",
+        "kind": "passive",
+        "slot": "none",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A striped coastal fish with firm flesh.",
+        "effectDescription": "Raw fish. Cooking will be available later.",
+        "active": true,
+        "tradable": true
+      },
+      {
+        "id": "sea_bass",
+        "name": "Sea Bass",
+        "categoryId": "materials",
+        "kind": "passive",
+        "slot": "none",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A strong silver fish that hunts in the harbor shallows.",
+        "effectDescription": "Raw fish. Cooking will be available later.",
+        "active": true,
+        "tradable": true
+      },
+      {
+        "id": "red_snapper",
+        "name": "Red Snapper",
+        "categoryId": "materials",
+        "kind": "passive",
+        "slot": "none",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A red-scaled fish found around coastal rocks.",
+        "effectDescription": "Raw fish. Cooking will be available later.",
+        "active": true,
+        "tradable": true
+      },
+      {
+        "id": "silver_ring",
+        "name": "Silver Ring",
+        "categoryId": "miscellaneous",
+        "kind": "passive",
+        "slot": "none",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A tarnished silver ring recovered from the sea.",
+        "effectDescription": "A collectible keepsake. No active effect.",
+        "active": true,
+        "tradable": true
       }
     ]
   },
@@ -382,5 +454,175 @@
     "trainingBonusBps": 500,
     "tavernGain": 25,
     "tavernGoldCost": 1000
+  },
+  "stamina": {
+    "maximum": 50,
+    "recoveryAmount": 1,
+    "recoverySeconds": 300,
+    "activityCost": 1
+  },
+  "skills": {
+    "catalog": [
+      {
+        "id": "fishing",
+        "name": "Fishing"
+      },
+      {
+        "id": "logging",
+        "name": "Logging"
+      },
+      {
+        "id": "cooking",
+        "name": "Cooking"
+      },
+      {
+        "id": "crafting",
+        "name": "Crafting"
+      },
+      {
+        "id": "crew_battling",
+        "name": "Crew Battling"
+      },
+      {
+        "id": "ship_battling",
+        "name": "Ship Battling"
+      },
+      {
+        "id": "foraging",
+        "name": "Foraging"
+      }
+    ],
+    "xpThresholds": [
+      0,
+      83,
+      174,
+      276,
+      388,
+      512,
+      650,
+      801,
+      969,
+      1154,
+      1358,
+      1584,
+      1833,
+      2107,
+      2411,
+      2746,
+      3115,
+      3523,
+      3973,
+      4470,
+      5018,
+      5624,
+      6291,
+      7028,
+      7842,
+      8740,
+      9730,
+      10824,
+      12031,
+      13363,
+      14833,
+      16456,
+      18247,
+      20224,
+      22406,
+      24815,
+      27473,
+      30408,
+      33648,
+      37224,
+      41171,
+      45529,
+      50339,
+      55649,
+      61512,
+      67983,
+      75127,
+      83014,
+      91721,
+      101333,
+      111945,
+      123660,
+      136594,
+      150872,
+      166636,
+      184040,
+      203254,
+      224466,
+      247886,
+      273742,
+      302288,
+      333804,
+      368599,
+      407015,
+      449428,
+      496254,
+      547953,
+      605032,
+      668051,
+      737627,
+      814445,
+      899257,
+      992895,
+      1096278,
+      1210421,
+      1336443,
+      1475581,
+      1629200,
+      1798808,
+      1986068,
+      2192818,
+      2421087,
+      2673114,
+      2951373,
+      3258594,
+      3597792,
+      3972294,
+      4385776,
+      4842295,
+      5346332,
+      5902831,
+      6517253,
+      7195629,
+      7944614,
+      8771558,
+      9684577,
+      10692629,
+      11805606,
+      13034431
+    ]
+  },
+  "activities": {
+    "catalog": [
+      {
+        "id": "shore_fishing",
+        "name": "Shore Fishing",
+        "skillId": "fishing",
+        "description": "Cast your line from the shoreline and practice your fishing.",
+        "buttonLabel": "Fish",
+        "xpGain": 10,
+        "active": true
+      },
+      {
+        "id": "coastal_foraging",
+        "name": "Foraging",
+        "skillId": "foraging",
+        "description": "Explore the coastal undergrowth and practice finding useful plants.",
+        "buttonLabel": "Forage",
+        "xpGain": 10,
+        "active": true
+      },
+      {
+        "id": "woodland_logging",
+        "name": "Logging",
+        "skillId": "logging",
+        "description": "Head to the nearby woodland and practice chopping trees.",
+        "buttonLabel": "Chop trees",
+        "xpGain": 10,
+        "active": true
+      }
+    ]
   }
 }

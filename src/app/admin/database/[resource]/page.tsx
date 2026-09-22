@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { adminCatalog, readAdminTable } from "@/lib/admin-server";
-import { adminPageNumber } from "@/lib/admin";
+import { adminLabel, adminResourceGroup, adminPageNumber } from "@/lib/admin";
 import { DatabaseTable, AdminPagination } from "@/components/admin/database-table";
 
 export default async function AdminDatabase({ params, searchParams }: {
@@ -15,9 +15,9 @@ export default async function AdminDatabase({ params, searchParams }: {
   const field = resource.columns.some(column => column.name === query.field) ? query.field! : "";
   const value = (query.value ?? "").slice(0, 500);
   const data = await readAdminTable(name, search, adminPageNumber(query.page), field && value ? { [field]: value } : {});
-  return <div className="admin-database"><aside><h2>Tables</h2><nav aria-label="Database tables">{catalog.map(entry =>
-    <Link key={entry.name} href={"/admin/database/" + entry.name} aria-current={entry.name === name ? "page" : undefined}>{entry.name}</Link>)}</nav></aside>
-    <section><h2>{resource.schema}.{resource.table}</h2><p>{resource.note}</p>
+  return <div className="admin-database"><aside><h2>Database browser</h2><nav aria-label="Database tables">{["Players and inventory", "Game content", "Combat and travel", "History and receipts", "Audit and access"].map(group => <details key={group} open={adminResourceGroup(name) === group}><summary>{group}</summary>{catalog.filter(entry => adminResourceGroup(entry.name) === group).map(entry =>
+    <Link key={entry.name} href={"/admin/database/" + entry.name} aria-current={entry.name === name ? "page" : undefined}>{adminLabel(entry.name)}</Link>)}</details>)}</nav></aside>
+    <section><h2>{adminLabel(resource.name)}</h2><small>{resource.schema}.{resource.table}</small><p>{resource.note}</p>{resource.name === "item_definitions" && <Link href="/admin/items">Open item editor</Link>}{["loot_tables", "loot_entries"].includes(resource.name) && <Link href="/admin/loot">Open loot table editor</Link>}{resource.name === "activity_loot" && <Link href="/admin/activities">Open activity settings</Link>}
       <form className="admin-search"><label>Search records<input name="q" defaultValue={search} maxLength={200} /></label>
         <label>Exact column<select name="field" defaultValue={field}><option value="">All columns</option>{resource.columns.map(column => <option key={column.name}>{column.name}</option>)}</select></label>
         <label>Exact value<input name="value" defaultValue={value} maxLength={500} /></label><button>Search</button>

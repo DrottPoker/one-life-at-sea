@@ -39,6 +39,11 @@ type TestAccount = Awaited<ReturnType<typeof createTestAccount>>;
 
 export async function loginTestAccount(page: Page, account: Pick<TestAccount, "email" | "password">, hospital = false) {
   await page.goto("/login");
+  // Confirm client handlers are ready before filling controlled inputs.
+  await page.getByRole("button", { name: "Show", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Hide", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Hide", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Show", exact: true })).toHaveAttribute("aria-pressed", "false");
   await page.getByLabel("Email address", { exact: true }).fill(account.email);
   await page.getByLabel("Password", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: "Log in", exact: true }).click();

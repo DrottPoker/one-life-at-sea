@@ -15,6 +15,7 @@ export type SeaState = {
 export type TravelReceipt = { journey_id: string; kind: SeaJourney["kind"]; arrives_at: string };
 export type TravelResult = { message?: string; error?: boolean; retry?: boolean };
 export type CharacterStatus = {
+  character_level: number;
   max_sea_distance: number;
   can_attack_here: boolean;
   location: "the_harbor" | "open_sea" | "traveling";
