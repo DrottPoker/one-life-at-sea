@@ -11,7 +11,8 @@ usable. The previous page is hidden and inert while the content loader is visibl
   menu path and content switch. Only the active link can clear pending state.
 - `src/components/content-loading.tsx`: shared loading status and refresh hold.
 - `src/components/game-refresh.tsx` / `app-frame.tsx`: defer background updates
-  while a navigation or loading boundary is active.
+  while navigation, a loading boundary or a gameplay action is active. Realtime
+  events already covered by the current snapshot revision need no extra refresh.
 - `(game)/layout.tsx`: keeps the sidebar, resources and economy request journal
   mounted across game views.
 - `src/lib/supabase/server.ts`: shares one authenticated client within a server
@@ -58,3 +59,16 @@ overflow and reduced motion.
 The shared layout and server client affect all game features, so changes require
 the full browser suite in addition to lint, types, unit tests and build. Run results
 are recorded in `IMPLEMENTATION_STATUS.md`.
+
+The lightweight navigation RPC still settles due combat, hospital and travel under
+the existing locks, without loading full resources, training or combat history.
+See [server performance](PERFORMANCE.md) for the broader audit and repeatable measurements.
+
+## Player messages
+
+`/messages` and `/messages/<player-number>` are available in Hospital, at sea and
+while traveling. The existing active-attacker navigation lock still applies. The
+sidebar highlights Messages throughout its conversation routes. Profile entry and
+inbox conversation links avoid prefetch; fetching a message page never marks it read.
+Only the mounted, visible conversation sends a bounded read acknowledgment.
+See [Messages](MESSAGES.md) for the private inbox and retry behavior.

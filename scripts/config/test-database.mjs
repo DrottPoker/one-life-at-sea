@@ -6,6 +6,10 @@ const originalRevision = revision(config);
 const originalShipSecondsPerEnergy = config.gameplay.training.shipSecondsPerEnergy;
 config.gameplay.economy.initialGoldCoins = 77;
 config.gameplay.activities.catalog[0].xpGain = 17;
+config.gameplay.crafting.recipes[0].ingredients[0].quantity = 3;
+config.gameplay.crafting.recipes[0].ingredients.push({ itemId: "brass_compass", quantity: 2 });
+config.gameplay.crafting.recipes[0].outputQuantity = 2;
+config.gameplay.crafting.xpGain = 17;
 config.gameplay.skills.xpThresholds = config.gameplay.skills.xpThresholds.map(xp => xp * 2);
 config.gameplay.skills.catalog.push({ id: "mining", name: "Mining" });
 Object.assign(config.gameplay.stamina, { maximum: 80, recoveryAmount: 2, recoverySeconds: 60, activityCost: 3 });
@@ -24,6 +28,7 @@ for (const group of Object.values(config.gameplay.startingStats)) for (const sta
 Object.assign(config.gameplay.combat, { energyCost: 13, maxRounds: 7, startingAmmo: 6, ammoPerShot: 2,
   minimumHealth: 2, idleSeconds: 90, maxDurationSeconds: 360, protectionSeconds: 45 });
 config.gameplay.combat.hitChance.extremeRatio = 100;
+config.gameplay.notifications.pageSize = 2;
 config.gameplay.combat.mitigation.fullReductionDefenseRatio = 50;
 Object.assign(config.gameplay.combat.damage, { quadratic: 0, linear: 0, constant: 40 });
 config.gameplay.combat.equipment.cannons = "Captain's test cannons";
@@ -173,12 +178,35 @@ checks.push(
 "select is((select stamina from private.stamina_snapshot(0,'2026-01-01Z','2026-01-01 00:02Z')),4,'Stamina recovery follows configured amount and interval');",
 "select is((select private.spend_activity_stamina(id) from public.characters where user_id=(select id from morale_config_user)),77,'Stamina spending follows configured activity cost');",
 "select is((public.get_own_skills()->>'character_level')::integer,8,'Adding a skill changes the starting total');",
-"select is(private.skill_level(83),1,'Skill levels use the configured threshold table');",
-"select is((select (private.award_skill_xp(id,'fishing',166)->>'character_level')::integer from public.characters where user_id=(select id from morale_config_user)),9,'Configured thresholds drive XP awards and the public total');",
+"select is(private.skill_level(200),1,'Skill levels use the configured threshold table');",
+"select is((select (private.award_skill_xp(id,'fishing',400)->>'character_level')::integer from public.characters where user_id=(select id from morale_config_user)),9,'Configured thresholds drive XP awards and the public total');",
 // Keep cost/XP checks independent of randomized inventory rewards.
 "update private.activity_loot set loot_table_id=null where activity_id='shore_fishing';",
 "select is((public.perform_activity('shore_fishing',3,17,gen_random_uuid())->>'xp_awarded')::integer,17,'Activity reward follows configuration');",
 "select is((public.get_game_state()->>'stamina')::integer,74,'Activity uses the configured Stamina cost');"
+);
+checks.push(
+"select set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_craft_user;",
+"select is((select public.craft_item('oak_plank',version,request) from old_craft_fixture),(select value from old_craft_receipt),'Old crafting receipt survives changed ingredients and output');",
+"select is(public.list_crafting_recipes()#>>'{0,output,owned}','1','Recipe sync and receipt replay preserve previous output');",
+"select is((select xp from private.character_skills where character_id=(select captain from old_craft_fixture) and skill_id='crafting'),10::bigint,'Config and receipt replay preserve existing Crafting XP');",
+"select is(public.list_crafting_recipes()#>>'{0,xp_gain}','17','Crafting XP offer follows configuration');",
+"select is((select character_level from public.character_profiles where character_id=(select captain from old_craft_fixture)),8,'Rebalanced public levels match preserved XP and the added skill');",
+"select throws_ok($craft$select public.craft_item('oak_plank',version,gen_random_uuid()) from old_craft_fixture$craft$,'P0001','STALE_OFFER','Changed recipe rejects the old offer');",
+"select is(public.list_crafting_recipes()#>>'{0,output,quantity}','2','Recipe output follows configuration');",
+"select throws_ok($craft$select public.craft_item('oak_plank',public.list_crafting_recipes()#>>'{0,version}',gen_random_uuid())$craft$,'P0001','INSUFFICIENT_MATERIALS','All configured ingredients are required');",
+"select is((select quantity from private.item_stacks where character_id=(select captain from old_craft_fixture) and item_id='oak_logs'),5::bigint,'Missing second ingredient leaves logs untouched');",
+"insert into private.item_stacks(character_id,item_id,quantity) select captain,'brass_compass',2 from old_craft_fixture;",
+"select public.craft_item('oak_plank',public.list_crafting_recipes()#>>'{0,version}',gen_random_uuid());",
+"select is((select quantity from private.item_stacks where character_id=(select captain from old_craft_fixture) and item_id='oak_logs'),2::bigint,'Crafting uses configured ingredient cost');",
+"select is((select count(*) from private.item_stacks where character_id=(select captain from old_craft_fixture) and item_id='brass_compass'),0::bigint,'Crafting consumes the entire second ingredient');",
+"select is(public.list_crafting_recipes()#>>'{0,output,owned}','3','Crafting creates the configured output quantity');",
+"select is((select xp from private.character_skills where character_id=(select captain from old_craft_fixture) and skill_id='crafting'),27::bigint,'Changed Crafting XP applies only to a new craft');"
+);
+checks.push(
+"select private.emit_notification(captain,'test.config','config-'||n,jsonb_build_object('value',n)) from old_craft_fixture cross join generate_series(1,3) n;",
+"select is(jsonb_array_length(public.get_notifications()->'items'),2,'Notification page size follows configuration');",
+"select is(public.get_notification_summary()->>'unread_count','3','Summary counts unread notifications beyond the configured page');"
 );
 const sql = "begin;\ncreate extension if not exists pgtap with schema extensions;\nset local search_path=public,extensions;\n" +
   "create temporary table old_training_user as select gen_random_uuid() id;\n" +
@@ -194,9 +222,21 @@ const sql = "begin;\ncreate extension if not exists pgtap with schema extensions
   "create temporary table old_market_user as select gen_random_uuid() id;\ninsert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','OldMarket'||translate(id::text,'0123456789','ghijklmnop')) from old_market_user;\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_market_user;\ninsert into private.item_stacks(character_id,item_id,quantity) select id,'linen_bandages',1 from public.characters where user_id=(select id from old_market_user);\ncreate temporary table old_market_fixture as select public.create_market_listings(jsonb_build_array(jsonb_build_object('entry_id',s.id,'entry_type','stack','quantity',1,'unit_price',100)),gen_random_uuid()) value from private.item_stacks s join public.characters c on c.id=s.character_id where c.user_id=(select id from old_market_user);\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_training_user;\n" +
   "insert into private.item_definitions(id,category_id,name,description,effect_description,image_path,kind,stackable,active,tradable,managed_by_admin) values('config_admin_item','materials','Admin item','Admin-owned item','No effect','/images/items/placeholder.svg','passive',true,true,true,true);\n" +
   "update private.item_definitions set name='Owner Sprat',managed_by_admin=true where id='sprat'; update private.loot_tables set name='Owner Shore' where id='harbor_shore'; update private.activity_loot set success_start=42 where activity_id='shore_fishing';\n" +
+  "create temporary table old_craft_user as select gen_random_uuid() id;\n" +
+  "insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','CraftConfig'||translate(id::text,'0123456789','ghijklmnop')) from old_craft_user;\n" +
+  "select set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_craft_user;\n" +
+  "create temporary table old_craft_fixture as select c.id captain,gen_random_uuid() request,(select version from private.crafting_recipes where id='oak_plank') version from public.characters c where user_id=(select id from old_craft_user);\n" +
+  "insert into private.item_stacks(character_id,item_id,quantity) select captain,'oak_logs',10 from old_craft_fixture;\n" +
+  "create temporary table old_craft_receipt as select public.craft_item('oak_plank',version,request) value from old_craft_fixture;\n" +
+  "select set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_training_user;\n" +
+  "update private.loot_tables set name='Owner Woodland' where id='woodland_logging'; update private.loot_entries set quantity=3 where loot_table_id='woodland_logging'; update private.activity_loot set loot_table_id=null,mastery_level=99 where activity_id='woodland_logging';\n" +
   migrationSql(config) + "\nselect no_plan();\n" +
   "select is((select name from private.item_definitions where id='config_admin_item'),'Admin item','Config preserves newly created admin items');\n" +
   "select is((select name from private.item_definitions where id='sprat'),'Owner Sprat','Config preserves admin edits to seeded items');\n" +
+  "select is((select name from private.loot_tables where id='woodland_logging'),'Owner Woodland','Config preserves edited Logging loot table');\n" +
+  "select is((select quantity from private.loot_entries where loot_table_id='woodland_logging'),3,'Config preserves edited Logging quantity');\n" +
+  "select is((select loot_table_id from private.activity_loot where activity_id='woodland_logging'),null::text,'Config preserves deliberate Logging unlink');\n" +
+  "select is((select mastery_level from private.activity_loot where activity_id='woodland_logging'),99,'Later config sync preserves an admin-selected mastery level below the new cap');\n" +
   "select is((select name from private.loot_tables where id='harbor_shore'),'Owner Shore','Config preserves edited loot tables');\n" +
   "select is((select success_start from private.activity_loot where activity_id='shore_fishing'),42::numeric,'Config preserves activity loot settings');\n" + checks.join("\n") + "\nselect * from finish();\nrollback;\n" +
   "select case when public.get_gameplay_revision()='" + originalRevision + "' then 'CONFIG_RESTORED' else 'CONFIG_NOT_RESTORED' end;\n";

@@ -2,13 +2,14 @@
 
 The /activities page is available from the sidebar and the harbor directory. The initial
 activities are Shore Fishing (Fishing XP), Foraging (Foraging XP) and Logging (Logging XP).
-Each successful action costs 1 Stamina and grants 10 XP to its skill. Nine actions give
-90 XP and reach level 2 on the classic curve. All three are available from level 1.
+Each successful action costs 1 Stamina and grants 10 XP to its skill. Twenty actions give
+200 XP and reach level 2 on the rebalanced curve. All three are available from level 1.
 
 These are immediate actions with no timer, equipment requirement or morale modifier.
 Shore Fishing now uses the admin-managed Harbor Shore loot table: success roll first,
 fixed items second, then weighted fish. Both catches and misses cost 1 Stamina and grant
-10 XP. Foraging and Logging remain XP-only until a table is assigned. Energy, Gold Coins
+10 XP. Logging uses Woodland Logging and grants one Oak Log per successful attempt,
+with the same 70%-90% success curve. Foraging remains XP-only until a table is assigned. Energy, Gold Coins
 and training XP are unaffected. See [Loot tables](LOOT_TABLES.md). The
 activity row shows its skill level, XP progress, reward and cost. Results and level-ups
 appear in an expandable result panel below the activity, with no modal. Stamina and skill progression refresh when a completed receipt is confirmed.
@@ -74,7 +75,7 @@ its receipt. Cost, XP, inventory, circulation, level projection, notifications a
 A replay returns the saved catch without rerolling, even after rebalancing or unlinking loot.
 Invalid or failed actions leave no cost, reward or receipt. Concurrent unique requests
 cannot overspend the remaining Stamina. A skill at the safe-integer XP storage limit
-rejects further activity; reaching skill level 99 alone does not stop XP accumulation.
+rejects further activity; reaching skill level 100 alone does not stop XP accumulation.
 
 The shared browser economy journal saves the exact offer and UUID before sending. Web
 Locks coordinate tabs. Ordinary in-flight requests do not display the recovery banner.
@@ -96,7 +97,7 @@ still applies: detailed skill levels/XP belong only to their owner.
 
 ## Verification
 
-Database checks cover all three skills, nine-click level-up, atomic cost/reward, saved loot,
+Database checks cover all three skills, rebalanced early levels, atomic cost/reward, saved loot,
 stale/tampered offers, disabled activities, receipt replay, account isolation, rollback,
 Stamina recovery, zero balance, combat, travel and hospital. Alternative-config checks
 use 3 Stamina and 17 XP. Browser tests cover immediate feedback, profile persistence,

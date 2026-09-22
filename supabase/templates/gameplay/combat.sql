@@ -337,6 +337,7 @@ begin
     or (p.phase='boarding' and player_order not in ('crew_attack','disengage','retreat')) then return jsonb_build_object('error','INVALID_ORDER'); end if;
   if player_order='fire' and (p.snapshot->>'ammo')::integer<{{gameplay.combat.ammoPerShot}} then return jsonb_build_object('error','NO_AMMO'); end if;
   perform private.advance_shared_combat(battle_id,viewer_id,player_order,request_id,clock_timestamp(),false);
+  perform private.record_character_action(viewer_id);
   return jsonb_build_object('battle',private.combat_view(battle_id,viewer_id));
 end;
 $$;

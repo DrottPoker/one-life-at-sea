@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePlayerPresence } from "@/hooks/use-player-presence";
 import { subscribeToForeground } from "@/lib/browser-events";
 import { createClient } from "@/lib/supabase/browser";
 
 export function usePlayerActivity(accountId: string | null) {
+  usePlayerPresence(accountId);
   useEffect(() => {
     if (!accountId) return;
     const client = createClient();

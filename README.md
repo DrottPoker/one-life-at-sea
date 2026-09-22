@@ -23,6 +23,8 @@ Kodens ansvarsfördelning och fortsatt utveckling beskrivs i [kodstrukturen](doc
 - **Item Value**: viktat snittpris från genomförda köp under 12 timmar, bredvid Circ.
   Senaste Value behålls när inga nya köp finns i tidsfönstret.
   Samma utfällbara historikdiagram i Inventory och Marketplace. Se [värdehistoriken](docs/ITEM_MARKET_VALUE.md).
+- **Notifications** visar sparade notiser med olästräknare och automatisk uppdatering. En avslutad attack ger en gemensam notis med alla angripare, profillänkar och combat log. Fungerar även i Hospital och offline. Se [Notifications](docs/NOTIFICATIONS.md).
+- **Hideout** är spelarens hem i hamnen, med Cooking- och Crafting-nivåer, länkar till Inventory/Activities och plats för framtida hemuppgraderingar. Crafting öppnas på `/hideout/crafting`, där 5 Oak Logs direkt ger 1 Oak Plank och 10 Crafting XP. Matlagning och hemuppgraderingar kommer senare. Se [Hideout](docs/HIDEOUT.md) och [Crafting](docs/CRAFTING.md).
 - **Shipyard** är en klickbar platshållarvy.
 - **Set sail**: lämna hamnen för 5 Energy, öka Sea distance med 1 per minut och välj mellan två sparade platstyper.
   **Return to The Harbor** tar Sea distance gånger en minut. Resan fortsätter offline och Energy återhämtas med 5 var tionde minut till havs.
@@ -204,9 +206,9 @@ Windows kan reservera dynamiska portområden efter omstart. Projektets lokala Su
 54320-54324 eftersom det tidigare området 55320-55324 blev reserverat. Ändra portar i
 `config/server.json`, kör `npm run config:sync` och uppdatera lokal API-URL i `.env.local` tillsammans.
 
-Sju färdigheter har nu egna nivåer 1-99 och XP enligt RuneScapes klassiska kurva.
-Egna färdigheter syns på profilen; andra ser bara summan som Character Level (7-693).
-Aktiviteter som ger XP tillkommer senare. Se [Skills](docs/SKILLS.md).
+Sju färdigheter har egna nivåer 1-100 med en flackare XP-kurva och totalt 5 000 000 XP till maxnivå.
+Egna färdigheter syns på profilen; andra ser bara summan som Character Level (7-700).
+Activities och Crafting ger 10 XP per handling. Se [Skills](docs/SKILLS.md).
 
 [Activities](docs/ACTIVITIES.md) fungerar nu på `/activities`: strandfiske, foraging och
 trädhuggning kostar 1 Stamina och ger 10 XP i respektive färdighet. Resultat visas direkt

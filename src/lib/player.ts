@@ -4,7 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseConfig } from "@/lib/env";
-import { withDatabaseRetry } from "@/lib/database-retry";
+import { playerContext, playerSnapshot } from "@/lib/player-context";
 
 export const currentUser = cache(async () => {
   if (!getSupabaseConfig()) return null;
@@ -21,26 +21,23 @@ export async function requireUser() {
 }
 
 export const characterForUser = cache(async (userId: string) => {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("characters").select("*").eq("user_id", userId).maybeSingle();
-  if (error) throw new Error("Your character could not be loaded. Please try again.");
-  return data;
+  const { character } = await playerContext();
+  return character?.user_id === userId ? character : null;
 });
 
 export async function requireCharacter({ allowHospital = false, allowSea = false }: { allowHospital?: boolean; allowSea?: boolean } = {}) {
   const user = await requireUser();
   const [, character] = await Promise.all([assertGameplayRevision(), characterForUser(user.id)]);
   if (!character) redirect("/create-character");
-  const state = await gameStateForPlayer();
-  if (!allowHospital && state.hospital_until) redirect("/harbor/hospital");
-  if (!allowSea && state.sea.state !== "in_harbor") redirect("/sea");
+  if (!allowHospital || !allowSea) {
+    const state = await gameStateForPlayer();
+    if (!allowHospital && state.hospital_until) redirect("/harbor/hospital");
+    if (!allowSea && state.sea.state !== "in_harbor") redirect("/sea");
+  }
   return character;
 }
 
 export const gameStateForPlayer = cache(async () => {
   await Promise.all([requireUser(), assertGameplayRevision()]);
-  const supabase = await createClient();
-  const { data, error } = await withDatabaseRetry(() => supabase.rpc("get_game_state"));
-  if (error || !data) throw new Error("Your resources could not be loaded. Please try again.");
-  return data;
+  return (await playerSnapshot()).state;
 });

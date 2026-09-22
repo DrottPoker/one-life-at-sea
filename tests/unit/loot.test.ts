@@ -13,17 +13,17 @@ describe("loot probabilities", () => {
     expect(itemIdentifier("")).toBe("");
   });
   it("keeps fixed chances independent of level and normalizes only the remainder", () => {
-    for (let level = 1; level <= 99; level++) {
+    for (let level = 1; level <= 100; level++) {
       const chances = lootChances(entries, level);
       expect(chances[0].chance).toBe(1);
       expect(chances.reduce((sum, item) => sum + item.chance, 0)).toBeCloseTo(100, 10);
     }
     expect(lootChances(entries, 1)[1].chance).toBeCloseTo(89.1);
-    expect(lootChances(entries, 99)[1].chance).toBeCloseTo(9.9);
-    expect(lootChances(entries, 50)[1].chance).toBeCloseTo(49.5);
+    expect(lootChances(entries, 100)[1].chance).toBeCloseTo(9.9);
+    expect(lootChances(entries, 50.5)[1].chance).toBeCloseTo(49.5);
   });
   it("does not dilute later fixed items with earlier fixed items", () => {
-    const result = lootChances([...entries, entry("coin", { mode: "fixed", fixed_chance: 5, weight_start: 0, weight_end: 0 })], 50);
+    const result = lootChances([...entries, entry("coin", { mode: "fixed", fixed_chance: 5, weight_start: 0, weight_end: 0 })], 50.5);
     expect(result[0].chance).toBe(1); expect(result[3].chance).toBe(5);
     expect(result[1].chance).toBe(47);
   });

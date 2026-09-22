@@ -4,23 +4,24 @@ import { gameplay, frontend } from "@/config/public";
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useGameRefresh, useNavigationActivity } from "@/components/game-refresh";
 import { startFight } from "@/app/combat-actions";
 import { CombatStage } from "@/components/combat-stage";
 import { useGameState } from "@/components/game-state";
 import { COMBAT_COST, combatError, type CombatPreview } from "@/lib/combat";
 
 export function CombatPreparation({ preview }: { preview: CombatPreview }) {
-  const router = useRouter();
+  const refresh = useGameRefresh();
   const state = useGameState();
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
+  useNavigationActivity(pending);
   const request = useRef<string | null>(null);
   const inFlight = useRef(false);
   useEffect(() => {
-    const timer = setInterval(() => { if (document.visibilityState === "visible" && !inFlight.current) router.refresh(); }, frontend.refresh.combatPreviewMs);
+    const timer = setInterval(() => { if (document.visibilityState === "visible" && !inFlight.current) refresh.request(); }, frontend.refresh.combatPreviewMs);
     return () => clearInterval(timer);
-  }, [router]);
+  }, [refresh]);
 
   function start() {
     if (inFlight.current || state.active_combat_id) return;
@@ -31,8 +32,7 @@ export function CombatPreparation({ preview }: { preview: CombatPreview }) {
     startTransition(async () => {
       try {
         const result = await startFight(preview.defender.id, requestId);
-        if (result.battleId) router.refresh();
-        else setMessage(result.message ?? "The fight could not be started.");
+        if (!result.battleId) setMessage(result.message ?? "The fight could not be started.");
       } catch {
         setMessage("Connection interrupted. Try again to recover the same start request.");
       } finally { inFlight.current = false; }
@@ -57,7 +57,7 @@ export function CombatPreparation({ preview }: { preview: CombatPreview }) {
       <p>{combatError(preview.reason ?? "")}</p>
       {preview.target_protected_until && <p>Protection ends at <time dateTime={preview.target_protected_until}>
         {new Date(preview.target_protected_until).toLocaleTimeString(frontend.site.locale, { timeZone: frontend.site.logTimeZone })} {frontend.site.logTimeZone}</time>.</p>}
-      <button className="o-text-button" onClick={() => router.refresh()}>Check availability</button>
+      <button className="o-text-button" onClick={() => refresh.request()}>Check availability</button>
     </div>}
     <p className="o-combat-feedback" role="status">{message}</p>
     <div className="o-panel-foot o-combat-foot"><Link href={"/players/" + preview.defender.player_number}>Back to profile</Link><span>Opening this screen costs no Energy.</span></div>

@@ -300,3 +300,10 @@ Statsen ligger fast under deltagandet även när moralen senare tickar mot 0.
 Permanenta stats, Ship-stats och HP ändras inte. Motståndarens moral exponeras inte.
 Historiska strider använder sina befintliga snapshots.
 Se [Crew Morale](CREW_MORALE.md).
+
+## Sparade notiser
+
+När hela mötet avslutas får försvararen en samlad notis med alla angripare, även dem
+som redan lämnat mötet. Namnen länkar till profilerna och `[view]` till combat log.
+Notisen anger om attacken skickade försvararen till Hospital eller om angriparen förlorade (`attacked you but lost`). Notiser och rapporter
+kan läsas även i Hospital. Offlineattacker sparas på samma sätt. Se [Notifications](NOTIFICATIONS.md).

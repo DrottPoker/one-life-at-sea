@@ -2,24 +2,53 @@
 
 The owner selected seven skills: Fishing, Logging, Cooking, Crafting, Crew Battling,
 Ship Battling and Foraging. Every character starts with 0 XP and level 1 in each skill.
-Each skill ends at level 99. Character Level is the sum of all seven levels, starting
-at 7 and reaching 693. It does not grant an additional combat or resource bonus.
+Each skill ends at level 100. Character Level is the sum of all seven levels, starting
+at 7 and reaching 700. It does not grant an additional combat or resource bonus.
 
 ## XP curve
 
-The accepted curve is RuneScape's standard level curve:
+The curve has 100 levels and requires exactly **5,000,000 total XP** for level 100.
+The first increase costs 200 XP. Successive level costs grow by about 7.98%.
+Compared with the original classic curve, early levels are slightly slower while
+late levels require much less XP.
 
-XP(L) = floor(sum(n=1..L-1, floor(n + 300 * 2^(n/7))) / 4).
+For level L (1 through 100), thresholds are rounded to the nearest integer:
 
-Examples: level 2 requires 83 XP, level 10 requires 1,154, level 50 requires 101,333,
-level 92 requires 6,517,253 and level 99 requires 13,034,431 total XP.
-Reference: [OSRS Wiki, Experience](https://oldschool.runescape.wiki/w/Experience).
+```text
+XP(L) = round(200 * (r^(L - 1) - 1) / (r - 1))
+r = 1.079775901474282
+```
 
-The 99 integer thresholds are stored once in gameplay.skills.xpThresholds and shared
-by the generated SQL and interface. Levels are derived from XP, never independently
-editable. XP may continue after level 99 while the level stays capped. Stored XP and
-awards must be nonnegative safe integers, capped at 9,007,199,254,740,991 for safe JSON
-transport. Award inputs must be positive; overflow saturates without wrapping.
+The growth factor is the positive solution to `200 * (r^99 - 1) / (r - 1) = 5000000`.
+It was solved by bisection between 1 and 1.2; the last stored threshold is exactly
+5,000,000. The stored integer table is authoritative in both SQL and the interface.
+
+| Level | Total XP |
+| --- | ---: |
+| 1 | 0 |
+| 2 | 200 |
+| 3 | 416 |
+| 10 | 2,495 |
+| 25 | 13,311 |
+| 50 | 105,265 |
+| 75 | 731,748 |
+| 90 | 2,319,435 |
+| 99 | 4,630,405 |
+| 100 | 5,000,000 |
+
+At 10 XP per action, level 2 takes 20 actions. The higher initial cost and lower
+growth factor make the curve flatter while preserving the five-million-XP total.
+The final level costs 369,595 XP. Rounding is performed before storing thresholds.
+
+The 100 integer thresholds are stored once in `gameplay.skills.xpThresholds`. Levels
+are derived from XP and cannot be independently edited. Migration preserves all
+existing XP and recalculates skill levels and public Character Level. A character can
+therefore gain or lose levels when the curve changes, without losing earned XP.
+
+XP may continue after level 100 while the level stays capped. Stored XP and awards
+remain nonnegative safe integers, capped at 9,007,199,254,740,991 for JSON transport.
+Award inputs must be positive; the shared helper saturates without wrapping.
+Crafting checks capacity first so every successful craft awards its full configured XP.
 
 ## Privacy and profile
 
@@ -65,13 +94,14 @@ therefore increase the public total by one.
 ## Scope
 
 Progression, privacy and display are implemented. [Activities](ACTIVITIES.md) now provides
-Shore Fishing, Foraging and Logging for 1 Stamina and 10 XP each. Loot, cooking/crafting
-actions, level requirements and level bonuses remain future work. Crew Training and Ship Upgrades keep their own workshop/training
+Shore Fishing, Foraging and Logging for 1 Stamina and 10 XP each.
+[Crafting](CRAFTING.md) grants 10 Crafting XP per successful craft. Cooking, additional
+recipes, level requirements and level bonuses remain future work. Crew Training and Ship Upgrades keep their own workshop/training
 XP and do not award Crew Battling or Ship Battling skill XP automatically.
 
 ## Verification
 
-Unit tests cover the classic milestones and every exact level boundary. Database
+Unit tests cover the rebalanced milestones and every exact level boundary. Database
 tests cover initialization, all level boundaries, private API/table access, total
 projection, max level, invalid awards, transaction rollback, admin changes and cleanup.
 Alternative config tests double XP thresholds and add an eighth skill within a rolled-

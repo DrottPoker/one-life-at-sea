@@ -10,13 +10,21 @@ describe("configuration contract", () => {
     for (const [path, expected] of Object.entries(generatedFiles(config))) expect(read(path), path).toBe(expected);
   });
   it.each([
+    ["fractional crafting XP", (c: ReturnType<typeof loadConfig>) => { c.gameplay.crafting.xpGain = 0.5; }],
+    ["unknown recipe output", (c: ReturnType<typeof loadConfig>) => { c.gameplay.crafting.recipes[0].outputItemId = "missing"; }],
+    ["equipment recipe output", (c: ReturnType<typeof loadConfig>) => { c.gameplay.crafting.recipes[0].outputItemId = "cutlass"; }],
+    ["self-consuming recipe", (c: ReturnType<typeof loadConfig>) => { c.gameplay.crafting.recipes[0].outputItemId = "oak_logs"; }],
+    ["fractional recipe cost", (c: ReturnType<typeof loadConfig>) => { c.gameplay.crafting.recipes[0].ingredients[0].quantity = 0.5; }],
+    ["unsafe recipe output", (c: ReturnType<typeof loadConfig>) => { c.gameplay.crafting.recipes[0].outputQuantity = Number.MAX_SAFE_INTEGER + 1; }],
+    ["duplicate recipe", (c: ReturnType<typeof loadConfig>) => { c.gameplay.crafting.recipes.push(c.gameplay.crafting.recipes[0]); }],
+    ["duplicate ingredient", (c: ReturnType<typeof loadConfig>) => { c.gameplay.crafting.recipes[0].ingredients.push(c.gameplay.crafting.recipes[0].ingredients[0]); }],
     ["duplicate activity", (c: ReturnType<typeof loadConfig>) => { c.gameplay.activities.catalog[1].id = c.gameplay.activities.catalog[0].id; }],
     ["unknown activity skill", (c: ReturnType<typeof loadConfig>) => { c.gameplay.activities.catalog[0].skillId = "missing"; }],
     ["fractional activity XP", (c: ReturnType<typeof loadConfig>) => { c.gameplay.activities.catalog[0].xpGain = 0.5; }],
     ["duplicate skill", (c: ReturnType<typeof loadConfig>) => { c.gameplay.skills.catalog[1].id = c.gameplay.skills.catalog[0].id; }],
     ["nonzero starting XP", (c: ReturnType<typeof loadConfig>) => { c.gameplay.skills.xpThresholds[0] = 1; }],
     ["repeated skill threshold", (c: ReturnType<typeof loadConfig>) => { c.gameplay.skills.xpThresholds[1] = 0; }],
-    ["missing level 99", (c: ReturnType<typeof loadConfig>) => { c.gameplay.skills.xpThresholds.pop(); }],
+    ["missing level 100", (c: ReturnType<typeof loadConfig>) => { c.gameplay.skills.xpThresholds.pop(); }],
     ["Energy recovery above storage", (c: ReturnType<typeof loadConfig>) => { c.gameplay.resources.energyStorageMax = 99; }],
     ["Stamina recovery above storage", (c: ReturnType<typeof loadConfig>) => { c.gameplay.stamina.storageMaximum = 49; }],
     ["fractional stamina cost", (c: ReturnType<typeof loadConfig>) => { c.gameplay.stamina.activityCost = 0.5; }],

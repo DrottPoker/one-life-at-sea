@@ -21,9 +21,14 @@ begin
     health_next_at:=least(case when ship_hp<{{gameplay.resources.healthMax}} then c.ship_recovery_at+(ship_hp-c.ship_health+1)*make_interval(secs => {{gameplay.resources.shipRecoverySeconds}}) end,
       case when crew_hp<{{gameplay.resources.healthMax}} then c.crew_recovery_at+(crew_hp-c.crew_health+1)*make_interval(secs => {{gameplay.resources.crewRecoverySeconds}}) end);
   end if;
-  select b.id into last_id from private.combats b where b.defender_id=c.id
-    or exists(select 1 from private.combat_participants where combat_id=b.id and character_id=c.id)
-    order by b.started_at desc,b.id desc limit 1;
+  select recent.id into last_id from (
+    (select b.id,b.started_at from private.combats b where b.defender_id=c.id
+      order by b.started_at desc,b.id desc limit 1)
+    union all
+    (select b.id,b.started_at from private.combat_participants p
+      join private.combats b on b.id=p.combat_id where p.character_id=c.id
+      order by b.started_at desc,b.id desc limit 1)
+  ) recent order by recent.started_at desc,recent.id desc limit 1;
   energy_tick_seconds:={{gameplay.resources.energyRecoverySeconds}}::bigint*case when c.location='the_harbor' then 1 else 2 end;
   return jsonb_build_object('energy',recovered.energy,'energy_next_at',case when recovered.energy<{{gameplay.resources.energyMax}} then
       date_bin(make_interval(secs=>energy_tick_seconds::double precision),greatest(observed_at,recovered.energy_updated_at),'1970-01-01Z'::timestamptz)
@@ -31,6 +36,7 @@ begin
     'stamina',stamina_state.stamina,'stamina_next_at',stamina_state.stamina_next_at,
     'crew_morale',morale_state.morale,'morale_next_at',morale_state.morale_next_at,
     'sea',private.sea_state(c),'gold_coins',c.gold_coins,'bank_gold_coins',c.bank_gold_coins,'training',private.training_state(c.id),
+    'revision',coalesce((select revision from public.player_game_events where character_id=c.id),0),
     'hospital_until',c.hospital_until,'observed_at',observed_at,'ship_health',ship_hp,'crew_health',crew_hp,'health_next_at',health_next_at,
     'active_combat_id',active.id,'combat_next_at',active.deadline,'last_combat_id',last_id,
     'active_attack',case when engagement.role='attacker' then jsonb_build_object('battle_id',active.id,'target_id',active.defender_id,

@@ -1,3 +1,4 @@
+import { isMessagesPath } from "@/lib/messages";
 import { isPlayerNumber, isPlayerProfilePath } from "@/lib/player-identity";
 import { isUuid } from "@/lib/validation";
 
@@ -15,6 +16,7 @@ export type SeaState = {
 export type TravelReceipt = { journey_id: string; kind: SeaJourney["kind"]; arrives_at: string };
 export type TravelResult = { message?: string; error?: boolean; retry?: boolean };
 export type CharacterStatus = {
+  presence: import("@/lib/player-presence").PlayerPresence;
   character_level: number;
   max_sea_distance: number;
   can_attack_here: boolean;
@@ -24,7 +26,7 @@ export type CharacterStatus = {
 
 export function isSeaAccessiblePath(pathname: string, state: SeaPhase) {
   if (state === "in_harbor") return true;
-  if (pathname === "/sea") return true;
+  if (pathname === "/sea" || (pathname === "/notifications" || isMessagesPath(pathname)) || (pathname.startsWith("/combatlog/") && isUuid(pathname.slice(11)))) return true;
   return state === "at_sea" && (pathname === "/inventory" ||
     pathname === "/players" || isPlayerProfilePath(pathname) ||
     (pathname.startsWith("/attack/") && (isPlayerNumber(pathname.slice(8)) || isUuid(pathname.slice(8)))) ||

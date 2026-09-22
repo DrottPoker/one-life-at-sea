@@ -1,6 +1,6 @@
 import { gameplay } from "@/config/public";
 import { GameLink as Link } from "@/components/game-navigation";
-import { Compass, Utensils, Anchor, Store, Hammer, Swords, Ship, Landmark, HeartPulse } from "lucide-react";
+import { Compass, Utensils, Anchor, Store, Hammer, Swords, Ship, Landmark, HeartPulse, House } from "lucide-react";
 import { requireCharacter } from "@/lib/player";
 import { Panel, HarborArt } from "@/components/shell";
 
@@ -25,6 +25,7 @@ export default async function Harbor() {
     <HarborPlayers initial={roster} characterId={character.id} />
     <section className="o-panel" aria-label="Harbor directory"><header className="o-panel-title"><h2><Anchor aria-hidden="true" />Around the harbor</h2></header>
       <div className="o-directory-head" aria-hidden="true"><span>Location</span><span>Status</span></div>
+      <Link href="/hideout" className="o-directory-row"><House aria-hidden="true" /><span><strong>Hideout</strong><small>Your home, with room for cooking, crafting and future upgrades.</small></span><span className="o-directory-status">Your home</span></Link>
       <Link href="/activities" className="o-directory-row"><Compass aria-hidden="true" /><span><strong>Activities</strong><small>Fish, forage and chop trees to develop your skills.</small></span><span className="o-directory-status">{gameplay.stamina.activityCost} Stamina / activity</span></Link>
       <Link href="/harbor/crew-training" className="o-directory-row"><Swords aria-hidden="true" /><span><strong>Crew Training</strong><small>Train the crew that sails with you.</small></span><span className="o-directory-status">{gameplay.training.energyCost} Energy / drill</span></Link>
       <Link href="/harbor/ship-upgrades" className="o-directory-row"><Ship aria-hidden="true" /><span><strong>Ship Upgrades</strong><small>Improve your ship&apos;s four stats.</small></span><span className="o-directory-status">Timed work</span></Link>

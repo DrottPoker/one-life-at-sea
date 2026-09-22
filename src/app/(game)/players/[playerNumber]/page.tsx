@@ -40,7 +40,6 @@ export default async function CharacterProfilePage({ params }: { params: Promise
       <div className="o-profile">
         <div className="o-profile-portrait" aria-hidden="true"><Anchor /><span>{frontend.site.name.toUpperCase()}</span></div>
         <div className="o-profile-info">
-          <header className="o-profile-identity"><h2>{profile.display_name}</h2><p>Captain</p></header>
           <ProfileDetails key={profile.character_id} profile={profile} initialStatus={hospital} joined={joined} age={age} ownProfile={ownProfile} />
         </div>
       </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useNavigationActivity } from "@/components/game-refresh";
+
 import { GameLink as Link } from "@/components/game-navigation";
 import { useActionState } from "react";
 import { saveDefence } from "@/app/combat-actions";
@@ -8,6 +10,7 @@ import { useGameState } from "@/components/game-state";
 export function DefenceOrders() {
   const state = useGameState();
   const [result, action, pending] = useActionState(saveDefence, {});
+  useNavigationActivity(pending);
   const blocked = pending || !!state.active_combat_id || !!state.hospital_until || state.sea.state !== "in_harbor";
   return <section className="o-defence" aria-labelledby="defence-heading">
     <div className="o-section-bar"><h2 id="defence-heading">Defence orders</h2><span>Used while you are away</span></div>

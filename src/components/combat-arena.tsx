@@ -1,5 +1,7 @@
 "use client";
 
+import { useNavigationActivity } from "@/components/game-refresh";
+
 import { gameplay } from "@/config/public";
 
 import Link from "next/link";
@@ -23,6 +25,7 @@ const orderIcons = { fire: Crosshair, board: Anchor, crew_attack: Swords, diseng
 export function CombatArena({ battle }: { battle: Battle }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  useNavigationActivity(pending);
   const [message, setMessage] = useState("");
   const [selected, setSelected] = useState<CombatOrder | null>(null);
   const inFlight = useRef(false);

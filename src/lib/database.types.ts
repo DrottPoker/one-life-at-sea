@@ -74,6 +74,22 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      get_player_context: { Args: Record<string, never>; Returns: { character: Character | null; is_admin: boolean; config_revision: string } | null };
+      get_player_snapshot: { Args: Record<string, never>; Returns: { state: GameState; skills: import("@/lib/skills").SkillProgress; notifications: import("@/lib/notifications").NotificationSummary; messages: import("@/lib/messages").MessageSummary } | null };
+      get_message_summary: { Args: Record<string, never>; Returns: import("@/lib/messages").MessageSummary };
+      get_mail_summary: { Args: Record<string, never>; Returns: import("@/lib/messages").MailSummary };
+      get_mailbox: { Args: { folder?: import("@/lib/messages").MailFolder; query?: string; page?: number }; Returns: import("@/lib/messages").MailPage };
+      get_mail: { Args: { mail_id: string; include_history?: boolean }; Returns: import("@/lib/messages").MailDetail };
+      get_mail_ignored: { Args: Record<string, never>; Returns: import("@/lib/messages").MailPerson[] };
+      send_mail: { Args: { target_numbers: number[]; mail_subject: string; mail_body: string; request_id: string; reply_to_id?: string }; Returns: import("@/lib/messages").MailReceipt };
+      update_mail: { Args: { mail_ids: string[]; operation: import("@/lib/messages").MailOperation }; Returns: undefined };
+      set_mail_ignored: { Args: { target_player_number: number; ignored: boolean }; Returns: undefined };
+      get_notification_summary: { Args: Record<string, never>; Returns: import("@/lib/notifications").NotificationSummary };
+      get_notifications: { Args: { before_id?: string }; Returns: import("@/lib/notifications").NotificationPage };
+      mark_notification_read: { Args: { notification_id: string }; Returns: undefined };
+      mark_all_notifications_read: { Args: { through_id: string }; Returns: undefined };
+      list_crafting_recipes: { Args: Record<string, never>; Returns: import("@/lib/crafting").CraftingRecipe[] };
+      craft_item: { Args: { recipe_id: string; expected_version: string; request_id: string }; Returns: import("@/lib/crafting").CraftingReceipt };
       perform_activity: { Args: { activity_id: string; expected_stamina_cost: number; expected_xp_gain: number; request_id: string }; Returns: import("@/lib/activities").ActivityReceipt };
       get_own_skills: { Args: Record<string, never>; Returns: import("@/lib/skills").SkillProgress | null };
       search_players: { Args: { search_term?: string; requested_page?: number }; Returns: PlayerSearchPage };
@@ -93,6 +109,7 @@ export type Database = {
       admin_get_loot_table: { Args: { target_id: string }; Returns: import("@/lib/loot").LootTable | null };
       admin_catalog: { Args: Record<string, never>; Returns: AdminResource[] };
       admin_economy: { Args: { period?: import("@/lib/economy").EconomyPeriod; item_search?: string; item_page?: number; item_sort?: import("@/lib/economy").EconomySort }; Returns: import("@/lib/economy").EconomyDashboard };
+      record_player_presence: { Args: { tab_id: string; is_active: boolean; page_action?: boolean; closed?: boolean }; Returns: undefined };
       record_player_activity: { Args: Record<string, never>; Returns: undefined };
       admin_player_statistics: { Args: { period?: import("@/lib/player-statistics").PlayerPeriod }; Returns: import("@/lib/player-statistics").PlayerStatistics };
       admin_players: { Args: { search_term?: string; requested_page?: number; sort_by?: import("@/lib/player-statistics").PlayerSort; activity?: import("@/lib/player-statistics").PlayerActivityFilter }; Returns: import("@/lib/player-statistics").AdminPlayerList };

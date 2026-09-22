@@ -86,3 +86,9 @@ intjänad Energy räknas med tiominutersticks till havs och femminutersticks fr�
 intagningen eller en tidigare faktisk hemkomst. Energy är alltid heltal. Detta följer
 Hospital-regeln och inför ingen räddningshandling för spelaren. Se [resor](SEA_TRAVEL.md)
 och [Energy](ENERGY_RECOVERY.md).
+
+## Meddelanden
+
+Messages och konversationer fungerar under hela sjukhusvistelsen. Spelaren kan
+skicka och läsa privata meddelanden utan resurskostnad. Send message finns på
+andra spelares profiler. Se [meddelandesystemet](MESSAGES.md).

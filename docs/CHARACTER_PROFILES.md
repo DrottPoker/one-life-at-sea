@@ -45,3 +45,10 @@ Plats används aldrig för att påstå att spelaren är online.
 
 [Resor](SEA_TRAVEL.md), [strid](COMBAT_SYSTEM.md), [Hospital](HOSPITAL.md) och
 [verifiering](IMPLEMENTATION_STATUS.md) beskriver de anslutna funktionerna.
+
+## Private messages
+
+Other players' profiles include a Send message link to `/messages/<player-number>`.
+It opens the existing private conversation or an empty reply form for the first message.
+Own profiles omit this action. Messages are available in Hospital and during sea travel;
+existing active-attacker navigation locks still apply. See [Messages](MESSAGES.md).

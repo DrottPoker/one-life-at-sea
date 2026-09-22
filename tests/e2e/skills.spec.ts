@@ -11,16 +11,16 @@ test("profiles show private skills only to their owner and publish a live Charac
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   try {
-    testSql("select private.award_skill_xp('" + own.id + "','fishing',83); select private.award_skill_xp('" + other.id + "','crafting',1154);");
+    testSql("select private.award_skill_xp('" + own.id + "','fishing',200); select private.award_skill_xp('" + other.id + "','crafting',2495);");
     await loginTestAccount(page, own);
     await page.getByRole("link", { name: "My Profile", exact: true }).click();
     const skills = page.getByRole("region", { name: "Skills", exact: true });
     await expect(skills.getByRole("article")).toHaveCount(7);
     await expect(page.getByLabel("Character Level", { exact: true })).toHaveText("8");
     await expect(skills.getByLabel("Fishing level", { exact: true })).toHaveText("2");
-    await expect(skills.getByLabel("Fishing XP", { exact: true })).toHaveText("83");
-    await expect(skills.getByLabel("Fishing level progress", { exact: true })).toHaveAttribute("aria-valuetext", "91 XP to level 3");
-    testSql("select private.award_skill_xp('" + own.id + "','fishing',91);");
+    await expect(skills.getByLabel("Fishing XP", { exact: true })).toHaveText("200");
+    await expect(skills.getByLabel("Fishing level progress", { exact: true })).toHaveAttribute("aria-valuetext", "216 XP to level 3");
+    testSql("select private.award_skill_xp('" + own.id + "','fishing',216);");
     await expect(skills.getByLabel("Fishing level", { exact: true })).toHaveText("3");
     await expect(page.getByLabel("Character Level", { exact: true })).toHaveText("9");
     for (const width of [1440, 375, 320]) {
@@ -31,7 +31,7 @@ test("profiles show private skills only to their owner and publish a live Charac
     }
     const otherState = await other.api.rpc("get_own_skills");
     expect(otherState.error).toBeNull();
-    expect(otherState.data!.skills.find(skill => skill.id === "crafting")).toMatchObject({ xp: 1154, level: 10 });
+    expect(otherState.data!.skills.find(skill => skill.id === "crafting")).toMatchObject({ xp: 2495, level: 10 });
     expect((await own.api.rpc("get_own_skills")).data!.skills.find(skill => skill.id === "crafting")).toMatchObject({ xp: 0, level: 1 });
     const publicProfile = await own.api.from("character_profiles").select("*").eq("character_id", other.id).single();
     expect(publicProfile.data!.character_level).toBe(16);
@@ -41,7 +41,7 @@ test("profiles show private skills only to their owner and publish a live Charac
     await expect(skills).toHaveCount(0);
     await expect(page.getByLabel("Character Level", { exact: true })).toHaveText("16");
     await expect(page.getByLabel("Crafting XP", { exact: true })).toHaveCount(0);
-    testSql("select private.award_skill_xp('" + other.id + "','fishing',83);");
+    testSql("select private.award_skill_xp('" + other.id + "','fishing',200);");
     await expect(page.getByLabel("Character Level", { exact: true })).toHaveText("17");
     await expect(skills).toHaveCount(0);
     await page.screenshot({ path: ".local/skills-other.png", fullPage: true });
@@ -54,11 +54,11 @@ test("concurrent skill awards preserve every XP increment and the public sum", a
   try {
     await Promise.all(Array.from({ length: 8 }, (_, index) => execute("docker", ["exec", localDatabaseContainer,
       "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-Atc",
-      "select private.award_skill_xp('" + own.id + "','" + (index % 2 ? "fishing" : "crafting") + "',83);"])));
+      "select private.award_skill_xp('" + own.id + "','" + (index % 2 ? "fishing" : "crafting") + "',200);"])));
     const result = await own.api.rpc("get_own_skills");
     expect(result.error).toBeNull();
-    expect(result.data!.skills.find(skill => skill.id === "fishing")).toMatchObject({ xp: 332, level: 4 });
-    expect(result.data!.skills.find(skill => skill.id === "crafting")).toMatchObject({ xp: 332, level: 4 });
+    expect(result.data!.skills.find(skill => skill.id === "fishing")).toMatchObject({ xp: 800, level: 4 });
+    expect(result.data!.skills.find(skill => skill.id === "crafting")).toMatchObject({ xp: 800, level: 4 });
     expect(result.data!.character_level).toBe(13);
     expect((await own.api.from("character_profiles").select("character_level").eq("character_id", own.id).single()).data!.character_level).toBe(13);
   } finally { await cleanupTestAccounts([own]); }

@@ -1,4 +1,4 @@
-# Loot tables and shore fishing
+# Loot tables and gathering
 
 Implemented locally on 2026-09-22. Manage content through Admin > Items, Loot tables
 and Activities. There are no rarity categories. Inventory categories such as Materials
@@ -32,7 +32,7 @@ weighted item chance per successful catch =
   (100 - sum of fixed percentages) × item weight / sum of weights
 ```
 
-Mastery can be 2–99, independently for every linked activity. Above mastery, catch
+Mastery can be 2–100, independently for every linked activity. Above mastery, catch
 chance and weights remain at their mastery values. Fixed items do not use skill level.
 A fixed 1% means one in 100 successful catches on average. At 30% catch success its
 per-attempt chance is 0.3%; at 90% success it is 0.9%.
@@ -49,9 +49,9 @@ endpoints. Percentages and weights accept up to four decimal places. Quantity is
 ## Initial Harbor Shore table
 
 Shore Fishing is linked to Harbor Shore. It costs 1 Stamina and grants 10 Fishing XP
-per attempt. Catch success rises linearly from 70% at level 1 to 90% at level 99.
+per attempt. Catch success rises linearly from 70% at level 1 to 90% at level 100.
 
-| Item | Rule | Starting weight | Mastery weight | Chance at level 1, per catch | Chance at level 99, per catch |
+| Item | Rule | Starting weight | Mastery weight | Chance at level 1, per catch | Chance at level 100, per catch |
 | --- | --- | ---: | ---: | ---: | ---: |
 | Sprat | Weighted | 40 | 10 | 39.6% | 9.9% |
 | Sardine | Weighted | 30 | 15 | 29.7% | 14.85% |
@@ -63,14 +63,27 @@ per attempt. Catch success rises linearly from 70% at level 1 to 90% at level 99
 Each catch grants one item. Fish are passive Materials; the ring is a passive
 Miscellaneous collectible. All six are stackable and tradable, use the shared default
 image and have no consumable, cooking or combat effect yet. These are editable starting
-values, not fixed balance rules. Logging and Foraging initially remain XP-only.
+values, not fixed balance rules. Foraging remains XP-only.
+
+## Initial Woodland Logging table
+
+Logging is linked to Woodland Logging (`woodland_logging`). Its only entry is
+Oak Logs (`oak_logs`), with quantity 1 and a fixed 100% share of successful attempts.
+The activity success roll still applies: 70% at level 1, increasing to 90% at level 100.
+Each attempt continues to cost 1 Stamina and award 10 Logging XP, including misses.
+Five successful attempts supply the logs for one instant Oak Plank craft in Hideout.
+
+The table and activity binding are seeded once, following Harbor Shore's existing
+pattern. Later admin edits to quantity, chance, table contents or binding are preserved
+by config migrations, including intentionally unlinking Logging from its table.
 
 ## Administration and persistence
 
 private.loot_tables owns table identity, name, description, enabled status and a version
 UUID. private.loot_entries has foreign keys to the table and item, with one row per item.
 private.activity_loot binds existing activity IDs to a table and its difficulty curve.
-These tables use RLS without direct client grants. Admin read/write endpoints independently
+The level-cap migration moves old mastery-99 bindings to 100 once; custom lower
+mastery values and later admin edits remain unchanged. These tables use RLS without direct client grants. Admin read/write endpoints independently
 verify current database membership. No service-role credentials enter the browser.
 
 Content saves use admin_mutate with request UUID, reason, audit, before/after snapshots
@@ -89,7 +102,7 @@ admin-only uploads. Existing artwork and audited references are not automaticall
 
 ## Verification
 
-Tests cover exact fixed chances at all 99 levels, normalized weighted probabilities,
+Tests cover exact fixed chances at all 100 levels, normalized weighted probabilities,
 site difficulty, complete table validation, private access, immediate admin revocation,
 audited and stale edits, fallback images, failure before fixed loot, configured quantities,
 inventory/circulation, overflow rollback, receipt replay and unlinking/rebalancing. Browser

@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { frontend } from "@/config/public";
 import { subscribeToForeground } from "@/lib/browser-events";
 import { worldTimeAt, type WorldTime } from "@/lib/world-time";
 
 export function WorldClock({ initialTime }: { initialTime: WorldTime }) {
+  const [seed] = useState(initialTime.observed_at);
+  const observe = useRef<(timestamp: string) => void>(() => {});
   useEffect(() => {
-    let anchor = { time: Date.parse(initialTime.observed_at), elapsed: performance.now() };
+    let anchor = { time: Date.parse(seed), elapsed: performance.now() };
     let disposed = false;
     let transitionTimer: ReturnType<typeof setTimeout> | undefined;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
@@ -48,6 +50,10 @@ export function WorldClock({ initialTime }: { initialTime: WorldTime }) {
         request = null;
       }
     };
+    observe.current = timestamp => {
+      anchor = { time: Date.parse(timestamp), elapsed: performance.now() };
+      update();
+    };
     const foreground = () => { update(); void synchronize(); };
     update();
     void synchronize();
@@ -57,12 +63,15 @@ export function WorldClock({ initialTime }: { initialTime: WorldTime }) {
     const unsubscribe = subscribeToForeground(foreground, true);
     return () => {
       disposed = true;
+      observe.current = () => {};
       clearTimeout(transitionTimer);
       clearTimeout(retryTimer);
       clearInterval(interval);
       request?.abort();
       unsubscribe();
     };
-  }, [initialTime.observed_at]);
+  }, [seed]);
+  // A server render already carries fresh time; it needs no extra clock request.
+  useEffect(() => { observe.current(initialTime.observed_at); }, [initialTime.observed_at]);
   return null;
 }

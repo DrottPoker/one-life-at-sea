@@ -11,11 +11,11 @@ describe("sea navigation locks", () => {
   it.each(["/sea", "/inventory", "/characters/" + target, "/attack/" + target, "/combatlog/" + target])("permits %s at a sea stop", path => {
     expect(navigationRedirect(path, { ...base, sea_state: "at_sea" })).toBeNull();
   });
-  it.each(["/inventory", "/characters/" + target, "/attack/" + target, "/combatlog/" + target, "/harbor", "/"])("locks %s while traveling", path => {
+  it.each(["/inventory", "/characters/" + target, "/attack/" + target, "/harbor", "/"])("locks %s while traveling", path => {
     expect(navigationRedirect(path, { ...base, sea_state: "traveling" })).toBe("/sea");
   });
   it("keeps the waiting page and account recovery accessible", () => {
-    for (const path of ["/sea", "/reset-password", "/auth/callback"]) {
+    for (const path of ["/sea", "/notifications", "/combatlog/" + target, "/reset-password", "/auth/callback"]) {
       expect(navigationRedirect(path, { ...base, sea_state: "traveling" })).toBeNull();
     }
   });

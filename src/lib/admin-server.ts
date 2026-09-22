@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { playerContext } from "@/lib/player-context";
 import { notFound } from "next/navigation";
 import { requireUser, currentUser } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
@@ -7,10 +8,7 @@ import type { AdminPage } from "@/lib/admin";
 
 export const currentUserIsAdmin = cache(async () => {
   if (!await currentUser()) return false;
-  const client = await createClient();
-  const { data, error } = await client.rpc("is_admin");
-  if (error) throw new Error("Administrator access could not be verified.");
-  return data === true;
+  return (await playerContext()).is_admin;
 });
 
 export async function requireAdmin() {

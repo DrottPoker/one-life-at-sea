@@ -1,0 +1,44 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=public,extensions;
+select no_plan();
+insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
+('abcf0000-0000-4000-8000-000000000001','context-one@example.test',false,'{"character_name":"ContextOne"}'),
+('abcf0000-0000-4000-8000-000000000002','context-two@example.test',false,'{"character_name":"ContextTwo"}'),
+('abcf0000-0000-4000-8000-000000000003','context-anon@example.test',true,'{}');
+create temporary table context_fixture as select id from public.characters where user_id='abcf0000-0000-4000-8000-000000000001';
+grant select on context_fixture to authenticated;
+set local role anon;
+select throws_ok($$select public.get_player_context()$$,'42501',null,'Logged-out clients cannot load private player context');
+select throws_ok($$select public.get_player_snapshot()$$,'42501',null,'Logged-out clients cannot load private snapshots');
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"abcf0000-0000-4000-8000-000000000003","role":"authenticated"}',true);
+select is(public.get_player_context(),null::jsonb,'Anonymous accounts have no player context');
+select is(public.get_player_snapshot(),null::jsonb,'Anonymous accounts have no private snapshot');
+select set_config('request.jwt.claims','{"sub":"abcf0000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select is(public.get_player_context()#>>'{character,user_id}','abcf0000-0000-4000-8000-000000000001','Context contains only the current account');
+select is(public.get_player_context()->>'is_admin','false','Players do not become administrators');
+select is(public.get_player_context()->>'config_revision',public.get_gameplay_revision(),'Context verifies current gameplay revision');
+select is(public.get_player_snapshot()->'skills',public.get_own_skills(),'Batched skills match the private skill read');
+select is(public.get_player_snapshot()->'notifications',public.get_notification_summary(),'Batched inbox summary matches the private read');
+select is(public.get_player_snapshot()#>>'{state,stamina}',public.get_game_state()->>'stamina','Snapshot resources match the current state');
+select is(public.get_player_snapshot()#>>'{state,revision}',(select revision::text from public.player_game_events where character_id=(select id from context_fixture)),'Snapshot includes its authoritative event revision');
+select is(public.get_navigation_lock()->>'sea_state','in_harbor','Navigation reports the current harbor state');
+select public.perform_activity('shore_fishing',1,10,gen_random_uuid());
+select is((select s->>'xp' from jsonb_array_elements(public.get_player_snapshot()#>'{skills,skills}') s where s->>'id'='fishing'),'10','Snapshot includes committed activity XP');
+select is(public.get_player_snapshot()#>>'{state,stamina}','49','Snapshot includes the committed cost');
+select set_config('request.jwt.claims','{"sub":"abcf0000-0000-4000-8000-000000000002","role":"authenticated"}',true);
+select is(public.get_player_context()#>>'{character,user_id}','abcf0000-0000-4000-8000-000000000002','An account switch changes the entire context');
+select is((select s->>'xp' from jsonb_array_elements(public.get_player_snapshot()#>'{skills,skills}') s where s->>'id'='fishing'),'0','Another account cannot read the first account XP');
+reset role;
+delete from public.characters where user_id='abcf0000-0000-4000-8000-000000000002';
+set local role authenticated;
+select is(public.get_player_context()->'character','null'::jsonb,'Unfinished accounts retain a context without a character');
+select is(public.get_player_snapshot(),null::jsonb,'Unfinished accounts have no gameplay snapshot');
+select is(public.get_navigation_lock(),'{"attack":null,"hospital_until":null,"sea_state":null}'::jsonb,'Unfinished accounts can reach character creation');
+select set_config('request.jwt.claims','{"sub":"abcf0000-0000-4000-8000-000000000003","role":"authenticated"}',true);
+select is(public.get_navigation_lock(),'{"attack":null,"hospital_until":null,"sea_state":null}'::jsonb,'Anonymous account navigation keeps its previous empty lock');
+reset role;
+select * from finish();
+rollback;

@@ -33,7 +33,6 @@ export default async function PlayersPage({ searchParams }: {
     <ul className="o-roster-list" aria-label="Player search results">
       {data.players.map(player => <li key={player.character_id}>
         <Link className="o-roster-name" href={playerProfileUrl(player.player_number)} prefetch={false}>{player.display_name}</Link>
-        <small className="o-player-number">[{player.player_number}]</small>
       </li>)}
       {data.total === 0 && <li className="o-roster-empty">No players match your search.</li>}
     </ul>

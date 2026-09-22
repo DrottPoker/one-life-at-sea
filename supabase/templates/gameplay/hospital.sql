@@ -126,14 +126,38 @@ begin
   perform private.settle_combat_context(array[viewer_id]);
   perform private.assert_can_act(viewer_id);
   update public.characters set defence_order=preset where id=viewer_id;
+  perform private.record_character_action(viewer_id);
   return jsonb_build_object('preset',preset);
 end;
 $$;
 
+create or replace function private.get_navigation_lock()
+returns jsonb language plpgsql volatile security definer set search_path='' as $$
+declare viewer_id uuid; c public.characters%rowtype; attack jsonb;
+begin
+  if auth.uid() is null or not private.is_registered_player() then
+    return jsonb_build_object('attack',null,'hospital_until',null,'sea_state',null);
+  end if;
+  select id into viewer_id from public.characters where user_id=auth.uid();
+  if viewer_id is null then
+    return jsonb_build_object('attack',null,'hospital_until',null,'sea_state',null);
+  end if;
+  perform private.settle_combat_context(array[viewer_id]);
+  select * into c from public.characters where id=viewer_id;
+  select jsonb_build_object('battle_id',e.combat_id,'target_id',b.defender_id,
+    'target_player_number',target.player_number) into attack
+    from private.combat_engagements e join private.combats b on b.id=e.combat_id
+    join public.characters target on target.id=b.defender_id
+    where e.character_id=viewer_id and e.role='attacker';
+  return jsonb_build_object('attack',attack,'hospital_until',c.hospital_until,
+    'sea_state',case c.location when 'the_harbor' then 'in_harbor' when 'traveling' then 'traveling' else 'at_sea' end);
+end;
+$$;
+revoke all on function private.get_navigation_lock() from public,anon,authenticated;
+grant execute on function private.get_navigation_lock() to authenticated;
 create or replace function public.get_navigation_lock()
 returns jsonb language sql volatile security invoker set search_path='' as $$
-  select jsonb_build_object('attack',s->'active_attack','hospital_until',s->'hospital_until','sea_state',s#>>'{sea,state}')
-  from (select public.get_game_state() s) state;
+  select private.get_navigation_lock();
 $$;
 revoke all on function public.get_navigation_lock() from public,anon,authenticated;
 grant execute on function public.get_navigation_lock() to authenticated;

@@ -1,3 +1,333 @@
+# Ordinary mail limits and future faction policy, 2026-09-22
+
+- Reduced new ordinary mail to 10 recipients in the composer and authoritative
+  database function. The ordinary 30-recipient-deliveries-per-minute quota remains.
+- Documented faction-wide mail as a separate future permission-controlled capability
+  supporting every member, including 100+ members. Its server-resolved membership,
+  durable batched delivery and separate quota remain planned, not implemented.
+- Older committed bulk requests retain their original receipts after the lower limit.
+  New request IDs cannot reuse that allowance; uncommitted older drafts must be reduced.
+- Applied local migration 20260922155025_central_gameplay_config_49c606af3a60.sql
+  after 10 recipient-boundary and historical-receipt assertions passed in rollback.
+- Lint, typecheck, production build, 397 unit tests, 1873 database assertions and
+  all six mail browser scenarios passed. Database advisors reported no issues.
+
+# Player mail with multiple recipients, 2026-09-22
+
+- Replaced the conversation UI with Inbox, Compose, Outbox, Saved and Ignore list.
+  Added subjects, private bulk sends to up to 20 recipients, individual replies,
+  accessible reply history, full-text search, numbered pages and bulk mailbox actions.
+- Introduced immutable mail envelopes and independent owner mailbox copies. Saving,
+  reading and deleting affect only the viewer. Co-recipients cannot discover each
+  other through mail payloads, search or another recipient's replies/history.
+- Preserved existing messages, send/read timestamps and request UUIDs through a
+  repeatable import. Old profile routes and pending sends recover through Compose.
+  Confirming one request preserves unrelated older pending drafts.
+- Kept lightweight unread counts in the shared snapshot and reused owner refresh
+  events. No per-second polling or extra Realtime subscription was added.
+- Applied local migration 20260922150844_central_gameplay_config_29c4c0002794.sql
+  after successful rollback previews. Extended rollback coverage passed 87 assertions.
+- The broad browser run exposed context teardown timeouts after successful Hideout
+  and profile-presence assertions. Their fixtures now close pages before account
+  cleanup; the same login-navigation cleanup in crafting was corrected as well.
+- Final lint, typecheck, production build, 396 unit tests, 1863 database assertions
+  and 114 alternate-configuration assertions passed. Supabase advisors found no issues.
+- The full browser run completed with 111 passed, one opt-in benchmark skipped and
+  the two teardown timeouts above. After the fixture fixes and final mail refinements,
+  all 13 targeted mail, hideout, crafting and presence scenarios passed in one run.
+  This includes the two previously failing tests; the full suite was not rerun afterward.
+- Reviewed desktop and 320px mail screenshots. Browser assertions cover narrow inboxes,
+  long history subjects, ignore-list wrapping, private mass delivery, safe search Enter,
+  and preservation of an unrelated legacy pending send during another mail's retry.
+- Localhost remains running on port 3000. See MESSAGES.md for the complete mail contract.
+
+# Private player messages, 2026-09-22
+
+- Added profile Send message, a private conversation per player pair, paged inbox and
+  message history, replies, timestamps and live unread counts in the masthead.
+- Reused owner game events and the shared server snapshot for refresh. Hospital and
+  travel allow Messages; existing active-attacker navigation remains unchanged.
+- Added private, indexed message tables, authenticated participant RPCs, atomic send
+  receipts, bounded read acknowledgments and server-enforced text/rate limits.
+- Unconfirmed sends retain their account/recipient-bound request in session storage
+  and can be retried after a lost response or reload without duplicate delivery.
+- Applied local migration 20260922140916_central_gameplay_config_bdbf593a50a1.sql
+  after rollback previews verified the schema and 51 messaging assertions.
+- Lint, typecheck, production build, 395 unit tests, 1830 database assertions and
+  114 alternate-configuration assertions passed; Supabase advisors reported no issues.
+- All four dedicated browser scenarios passed, including live delivery, safe retries,
+  concurrent sends, history, Hospital/travel access and hidden-tab read state.
+  Desktop screenshots and 320/375px overflow checks passed.
+- Full browser regression passed: 111 scenarios, with the opt-in performance benchmark
+  skipped. After the final long-name wrapping adjustment, npm run check and all four
+  message browser scenarios passed again. Localhost /messages responds successfully.
+- See MESSAGES.md for the complete contract and configuration.
+
+# Shared server and transaction responsiveness, 2026-09-22
+
+- Audited shared reads, mutations, realtime refresh, navigation and database locking
+  across activities, crafting, bank, training, tavern, inventory, market, travel,
+  scouting, combat, profiles, notifications and administration.
+- Batched player context and resource/skill/inbox reads, removed redundant pre-action
+  state reads for existing recovery exceptions, and narrowed navigation snapshots.
+- Kept existing combat hospital guards and all authoritative transaction checks.
+- The broad run caught an unfinished-account navigation case; restored its empty
+  navigation lock. Fixed stale admin-dialog and material-catalog test assumptions.
+- Server renders now update the world-clock anchor without an extra HTTP fetch;
+  notification actions also hold background refresh during their own revalidation.
+- Added event-revision-aware refresh coalescing, hidden-tab deferral and action holds;
+  removed an extra post-start combat refresh and improved last-combat lookup.
+- Applied local migrations 20260922122540_central_gameplay_config_fc6ab438153a.sql
+  and 20260922124858_central_gameplay_config_81fe201ec710.sql after rollback
+  previews verified private reads, ownership checks and unfinished-account navigation.
+- Initial matched local production benchmark: activity click-to-ready median
+  231ms -> 143ms; p95 323ms -> 190ms. Detailed scope, page timings, limitations
+  and the opt-in benchmark command are in PERFORMANCE.md.
+- Final independent local production measurement: activity median 153ms and p95
+  209ms, bank median 141ms, crew training median 157ms. Activity median latency
+  is 34% below the 231ms baseline; these are local samples, not a hosted guarantee.
+- Verification: lint, typecheck, production build, 390 unit tests, 1776 database
+  assertions, 114 alternate-configuration assertions and Supabase advisors passed.
+- The broad browser run had 102 passes, four failures and one opt-in benchmark skip.
+  All four failures were fixed: unfinished-account navigation, admin-dialog cleanup,
+  the expanded material catalog and the current Stamina tooltip. The final focused
+  run passed all 19 scenarios, including those four and the new clock-request check.
+  The final performance benchmark also passed.
+
+# Profile status shown by a larger dot, 2026-09-22
+
+- Removed the separate Player status detail row from all profiles.
+- Enlarged the heading's live status dot from 8px to 12px and aligned it with
+  the first line of the name. Its tooltip and accessible label identify the status.
+- Added a shared subtle vertical gradient with a darker lower edge for all presence,
+  connection and unread notification dots. Read notification markers stay transparent.
+- Updated presence browser assertions for the dot and absence of the old row.
+- Verification: npm run check passed (lint, types, 379 unit tests and build);
+  both presence browser scenarios passed, including responsive layout and live updates.
+  After the shading update, config:check and an Edge style check passed for all six
+  visible dot states and transparent read markers; the screenshot was visually reviewed.
+
+# Profile identity heading and cleaner Players results, 2026-09-22
+
+- All character profiles now display a live status dot followed by bold `Name [ID]`.
+  The ID moved from its separate detail row into the heading. Presence text and
+  last action share the heading's existing timer and authoritative status snapshot.
+- Players search results show names only. Number search, profile addresses and all
+  other uses of the permanent public identifier remain unchanged.
+- Updated existing profile, player-number and presence browser expectations.
+  Fixed the presence timing test to await initial page-action writes before taking
+  the baseline and advancing its simulated clock.
+- Verification: npm run check passed (lint, types, 379 unit tests and build), all five
+  relevant browser scenarios passed after the test timing correction, and final
+  lint and git diff --check passed. The mobile profile screenshot was visually reviewed;
+  responsive checks cover desktop through 320px. No database migration was required.
+- Documented the identity format and repaired invalid UTF-8 in affected Swedish docs.
+
+# Remove link underlines throughout the interface, 2026-09-22
+
+- Removed text underlines from the shared anchor and text-button styles, combat
+  names, Hideout links, notification hover styles and the admin stylesheet.
+- Removed unused underline offsets and regenerated interface CSS from its template.
+  Existing link colors, hover feedback and keyboard focus outlines remain visible.
+- Documented the project-wide no-underline convention in INTERFACE_DESIGN.md.
+- Verification: application/configuration search found no remaining underline
+  declarations; config sync, production build and git diff --check passed.
+  An ad hoc Edge check verified four real authentication links and 28 computed-style
+  checks across seven component variants in normal, hover, active and keyboard-focus
+  states, including admin styles. No database changes were needed.
+
+# Attacker defeat notification text, 2026-09-22
+
+- Incoming attack notifications now say `attacked you but lost` when the saved
+  encounter outcome is `defended`. Hospital, retreat and draw wording is preserved.
+- New notifications snapshot the outcome. Existing attack notifications are enriched
+  from their saved completed combat while preserving IDs, timestamps and read state.
+- Applied local migration 20260922114446_central_gameplay_config_a9671e243699.sql
+  after rollback previews confirmed the new outcome and preserved existing read state.
+- Verification: npm run check passed (lint, types, 379 unit tests and build), all
+  1,756 database assertions passed, and all three notification browser scenarios
+  passed, including a defeated attacker and persistence after reload.
+  git diff --check passed. Known aborted-navigation stream messages remain in logs.
+
+# Persistent notifications and grouped attack events, 2026-09-22
+
+- Added `/notifications`, a masthead unread badge and a sidebar entry. Compact rows
+  show linked attackers, event text, UTC date/time, read state and a combat report link.
+- One completed encounter creates one notification for its defender, including every
+  attacker, even those who already retreated. Hospitalization uses saved final health.
+- Private transactional emitter supports future kinds with versioned payloads and
+  stable deduplication keys. Owner-only APIs provide cursor pagination, single read
+  and mark-all-read through a loaded cutoff; later arrivals remain unread.
+- Existing owner game-event subscriptions refresh notifications and counts, including
+  across tabs. Offline notifications and read state persist without browser storage.
+- Inbox and combat reports are readable in Hospital and during travel. Active attacker
+  navigation locks remain intact. No past completed encounters were backfilled.
+- Applied local migration 20260922112657_central_gameplay_config_d8ee4d557fee.sql after
+  a successful rollback preview with 41 notification database assertions.
+- Verification: npm run check passed (lint, types, 375 unit tests, production build);
+  all 1,753 database assertions, 114 alternative-config assertions and six focused
+  browser scenarios passed. Supabase security advisors reported no issues.
+  Mobile and desktop screenshots were visually reviewed; git diff --check passed.
+  Browser tests also cover existing navigation, combat locks and Hospital redirection.
+  Known aborted-navigation stream messages remain in server logs without test failures.
+- See [Notifications](NOTIFICATIONS.md) for storage, access rules and new event types.
+
+# Flatter XP curve with a 200 XP first level, 2026-09-22
+
+- Level 2 now requires 200 XP while level 100 still requires exactly 5,000,000.
+  Re-solved the geometric growth factor to 1.079775901474282, about 7.98% growth
+  per level. Level 10 requires 2,495 XP and level 50 requires 105,265 XP.
+- Existing earned XP is preserved and derived levels recalculate. Skill cap 100,
+  Character Level cap 700 and XP awards remain unchanged.
+- Updated configuration, progression fixtures and current documentation.
+- Applied local migration 20260922110654_central_gameplay_config_7ebef272a365.sql
+  after a successful rollback preview. Database readback confirmed the milestones.
+- Verification: npm run check passed (lint, types, 360 unit tests and build);
+  1,712 database assertions and 112 alternative-config assertions passed.
+  Four focused browser scenarios passed on the first run. Crafting assertions
+  completed, but Edge context teardown timed out; an isolated rerun with tracing
+  passed in 13.6 seconds. No reproducible application failure was found.
+  Known aborted-navigation stream messages remain in server logs.
+  git diff --check passed.
+- See [Skills](SKILLS.md) for the updated curve and milestones.
+
+# Five million XP per skill, 2026-09-22
+
+- Level 100 now requires exactly 5,000,000 total XP per skill. Retained the geometric
+  curve shape and halved its scale before rounding each threshold to a whole number.
+  Level 2 is 100 XP, level 10 is 1,294 XP and level 50 is 70,922 XP.
+- Existing earned XP is preserved; derived skill and Character Levels recalculate.
+  Skill cap 100, Character Level cap 700 and current XP awards remain unchanged.
+- Updated milestone, progress, level-up and configuration fixtures and current docs.
+- Applied local migration 20260922105811_central_gameplay_config_399e93429f5c.sql
+  after a successful rollback preview. Final database readback confirmed level 100
+  at 5,000,000 XP and level 2 at 100 XP.
+- Verification: npm run check passed (lint, types, 360 unit tests and build);
+  1,712 database assertions, 112 alternative-config assertions and five focused
+  browser scenarios for Skills, Activities, Crafting and Hideout passed.
+  git diff --check passed. Known aborted-navigation stream messages remained in
+  browser server logs; all browser scenarios and client error checks passed.
+- See [Skills](SKILLS.md) for the authoritative curve and milestones.
+
+# Crafting XP and rebalanced level 100 skills, 2026-09-22
+
+- Every new successful craft grants 10 Crafting XP, configured by crafting.xpGain.
+  XP, inventory, level changes and the saved receipt commit together. UI shows the
+  reward and confirmed level-ups. Replays never award again; historical receipts
+  without XP remain unchanged. XP storage overflow rejects without spending items.
+- All seven skills now cap at 100. The owner confirmed Character Level remains
+  their sum, from 7 through 700. All earned XP is preserved and levels recalculate.
+- Replaced the classic curve with a gentler geometric curve: 200 XP for level 2,
+  2,588 for level 10, 141,845 for level 50 and exactly 10,000,000 for level 100.
+  See [Skills](SKILLS.md) for the formula and milestones.
+- Skill and loot mastery constraints, admin inputs/defaults/previews and regression
+  fixtures support level 100. Old mastery-99 bindings move to 100 once; later admin
+  settings and custom lower mastery levels remain untouched by config sync.
+- Applied local migration 20260922104418_central_gameplay_config_b3212b2020e3.sql.
+  A rollback preview verified preserved XP, recalculated public totals, old receipt
+  replay with no retroactive award, mastery migration and the new XP reward.
+- Verification: npm run check passed (lint, types, 360 unit tests and build);
+  1,712 database assertions, 112 alternative-config assertions and all 11 browser
+  scenarios for Activities, Crafting, Hideout and Skills passed. Final lint and
+  git diff --check passed; the Crafting mobile XP display was visually reviewed.
+- Updated obsolete level/XP expectations and corrected test-only savepoint/count
+  handling. Known Next aborted-navigation stream messages appeared in browser logs;
+  browser error checks and all scenarios passed.
+- See [Crafting](CRAFTING.md) and [Loot tables](LOOT_TABLES.md).
+
+# Last action minute precision, 2026-09-22
+
+- Last action now displays Just now for the entire first minute, then whole minutes,
+  hours or days. It never displays seconds ago.
+- Replaced the per-second profile timer with scheduled minute boundaries and exact
+  presence lease deadlines. Online/Idle/Offline expiry remains timely. Existing
+  server polling still discovers new actions automatically.
+- Updated label/timing regression tests and existing browser text expectations.
+- Verification: npm run check passed (lint, types, 357 unit tests and build).
+  git diff --check passed. Browser scenarios were not rerun for this display change.
+- See [Player presence](PLAYER_PRESENCE.md).
+
+# Logging supplies Oak Logs, 2026-09-22
+
+- Added the admin-editable Woodland Logging loot table and linked Logging to it.
+  Its sole entry is one Oak Log per success, with a fixed 100% share of successful
+  attempts. Activity success follows the existing 70%-90% curve across levels 1-99.
+- Logging still costs 1 Stamina and grants 10 XP per attempt. Five successful
+  attempts now supply the 5 logs required by the instant Hideout Oak Plank recipe.
+- One-time content seeding preserves later admin table, quantity and binding edits,
+  including deliberate unlinking. Existing request receipts remain idempotent.
+- Applied local migration 20260922102310_central_gameplay_config_549a0f8e0cfd.sql.
+- Verification: npm run check passed (lint, types, 353 unit tests and build);
+  all 1,706 database assertions passed, including the Logging-to-Crafting flow;
+  107 alternative-configuration assertions passed with the original state restored.
+  Final readback confirmed the live local table has only Oak Logs. git diff --check passed.
+- The first config sync hit a transient file-write error; repeating sync succeeded
+  with the same generated migration and did not create a duplicate.
+- See [Loot tables](LOOT_TABLES.md) and [Crafting](CRAFTING.md).
+
+# Hideout home page, 2026-09-22
+
+- Added /hideout as the signed-in captain's home in The Harbor, linked from the
+  shared navigation and harbor directory. The welcome uses the owner's real name.
+- Kitchen/Cooking and Workshop/Crafting show existing private skill level and XP.
+  Cooking, Crafting and home/workspace upgrades are clearly marked as future features.
+  Inventory and Activities links provide useful navigation from home.
+- No new mutable home state, resource costs, rewards, recipes or upgrade balance.
+  Existing authentication, hospital, sea/journey and attacker navigation rules apply.
+- Responsive navy/gold layout uses shared components and Lucide icons. Sidebar and
+  resources stay mounted during navigation. No database migration was introduced.
+- Verification: npm run check passed (lint, typecheck, 339 unit tests and build).
+  Lint and typecheck passed again with the new browser tests. Both Hideout scenarios
+  and the existing cold-navigation browser scenario passed across the final runs.
+- Browser checks cover anonymous redirects, private skill ownership, keyboard/history
+  navigation, existing sidebar/resources, inventory/activity links and hospital/sea
+  restrictions. Layouts passed at 1440/768/375/320px; desktop/mobile captures reviewed.
+- Corrected the disposable hospital fixture to preserve its start/end constraint.
+  Existing Next aborted-navigation stream logs appeared during route redirection tests.
+- See [Hideout](HIDEOUT.md) for current scope and future gameplay boundaries.
+
+# Updated profile idle thresholds, 2026-09-22
+
+- Idle now starts after five minutes without input or two continuous minutes with
+  the game tab/window unfocused or hidden, whichever threshold is reached first.
+- Short focus losses retain Online. Returning to focus resets both clocks; repeated
+  blur/visibility events preserve the original absence deadline. Background input
+  cannot reset inactivity. Last action and offline lease timing are unchanged.
+- Settings: presence.idleSeconds=300 and presence.unfocusedSeconds=120.
+- Applied local migration 20260922085043_central_gameplay_config_df76545a5b7f.sql.
+- Verification: npm run check passed with 339 unit tests; all 1,636 database assertions
+  passed. Final lint and production build passed after timer-rounding hardening.
+- Both presence browser scenarios passed across the validation runs. The final focused
+  test verifies Online before five minutes/two minutes, Idle after each deadline,
+  duplicate focus signals, interrupted absence, unchanged Last action and multiple tabs.
+  Headless focus/visibility are explicitly simulated; browser effects and RPCs run live.
+- Existing Next aborted-navigation stream messages appeared in the earlier combined
+  run; the final focused run passed without those messages.
+
+# Profile presence and last action, 2026-09-22
+
+- Profiles now show Online, Idle and Offline with a labelled green/gold/grey indicator,
+  plus a Last action timer. Own and other-player profiles use the same public snapshot.
+- Presence is independent of character actions: focused input stays Online, inactivity
+  for two minutes or an unfocused tab becomes Idle, and disconnected tabs expire after
+  a 90-second lease. Live sessions and multiple tabs are reconciled independently.
+- Page navigation and committed player commands record server timestamps. Heartbeats,
+  passive defence, automatic recovery/arrival, receipt replays and rejected commands
+  do not update Last action. Earlier character-action history remains unknown.
+- Profiles refresh every 15 seconds; the timer and known lease expiry advance every
+  second. Failed reads show Unavailable and retain the labelled last known action.
+- Private tables use RLS without client grants. Presence reports verify live matching
+  Auth sessions; public snapshots contain no account/session/tab identifiers.
+- Applied local migration 20260922083131_central_gameplay_config_f74a3c5b4d94.sql.
+- Verification: npm run check passed (lint, types, 339 unit tests, production build).
+  All 1,636 database assertions across 33 files passed, including 31 presence checks.
+  All 95 alternative-configuration assertions passed and restored original config.
+  Security advisors found no issues. Lint and types passed again after browser tests.
+- All three profile browser tests passed, covering automatic status/action changes,
+  timeout/resume, multiple tabs, logout, failed reads/retry and existing profile privacy.
+  Layout checks passed at 1440/768/375/320px; desktop/mobile screenshots were reviewed.
+- See [Player presence](PLAYER_PRESENCE.md) for definitions and disconnect timing.
+
 # Smooth activity result closing, 2026-09-22
 
 - Previous results collapse with their spacing over 150 ms when another activity returns

@@ -3,7 +3,7 @@ create table if not exists private.skill_definitions (
   id text primary key, name text not null, position integer not null check(position>=0)
 );
 create table if not exists private.skill_levels (
-  level integer primary key check(level between 1 and 99), xp bigint not null check(xp>=0)
+  level integer primary key check(level between 1 and 100), xp bigint not null check(xp>=0)
 );
 create table if not exists private.character_skills (
   character_id uuid not null references public.characters(id) on delete cascade,
@@ -14,6 +14,8 @@ alter table private.skill_definitions enable row level security;
 alter table private.skill_levels enable row level security;
 alter table private.character_skills enable row level security;
 revoke all on private.skill_definitions,private.skill_levels,private.character_skills from public,anon,authenticated;
+alter table private.skill_levels drop constraint if exists skill_levels_level_check;
+alter table private.skill_levels add constraint skill_levels_level_check check(level between 1 and 100);
 {{skills.catalogSql}}
 
 create or replace function private.skill_level(experience bigint)

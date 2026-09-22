@@ -1,10 +1,11 @@
 > Uppdatering 2026-09-22: [Activities](ACTIVITIES.md) ger nu 10 XP för strandfiske,
-> foraging och trädhuggning till en kostnad av 1 Stamina. Loot och nivåbonusar återstår.
+> foraging och trädhuggning till en kostnad av 1 Stamina. Crafting ger 10 XP per craft.
+> Fishing och Logging har loot-tabeller; nivåbonusar återstår.
 
 > Uppdatering 2026-09-22: färdighetssystemet är implementerat enligt [Skills](SKILLS.md).
-> Fishing, Logging, Cooking, Crafting, Crew Battling, Ship Battling och Foraging har nivå 1-99
-> med RuneScapes klassiska XP-kurva. Detaljerad progression är privat; summan av nivåerna
-> visas publikt som Character Level (7-693). Aktiviteter, XP-belöningar och nivåbonusar
+> Fishing, Logging, Cooking, Crafting, Crew Battling, Ship Battling och Foraging har nivå 1-100
+> med en flackare kurva och totalt 5 miljoner XP till nivå 100. Detaljerad progression är privat; summan av nivåerna
+> visas publikt som Character Level (7-700). Ytterligare aktiviteter och nivåbonusar
 > återstår. Äldre öppna förslag om färdighetslista, kurva och nivåtak nedan är ersatta.
 
 > Uppdatering 2026-09-16: aktuella stridsregler och implementation finns i [COMBAT_SYSTEM.md](COMBAT_SYSTEM.md). Den nya versionen använder en gemensam /attack-vy, flera angripare, realtid och publika rapporter. Äldre beskrivningar av separata prepare-sidor, exklusiv tvåpartsstrid eller privata slutrapporter nedan är historiska.

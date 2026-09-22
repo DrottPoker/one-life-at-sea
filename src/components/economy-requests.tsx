@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useState, useSyncExternalStore, u
 import { marketAction } from "@/app/marketplace-actions";
 import { transferGold } from "@/app/bank-actions";
 import { trashInventoryItem } from "@/app/inventory-actions";
+import { craftItem } from "@/app/crafting-actions";
+import type { CraftingResult } from "@/lib/crafting";
 import { performActivity } from "@/app/activity-actions";
 import type { ActivityResult } from "@/lib/activities";
 import { buyTavernMeal } from "@/app/tavern-actions";
@@ -23,6 +25,7 @@ type Journal = {
   inventory: (form: FormData) => Promise<TrashResult>;
   training: (form: FormData) => Promise<TrainingResult>;
   tavern: (form: FormData) => Promise<TavernResult>;
+  crafting: (form: FormData) => Promise<CraftingResult>;
   activity: (form: FormData) => Promise<ActivityResult>;
 };
 const Context = createContext<Journal | null>(null);
@@ -65,11 +68,12 @@ export function EconomyRequests({ characterId, children }: { characterId: string
 
   async function send<T extends { error?: boolean; retry?: boolean; message?: string }>(request: EconomyRequest, execute: () => Promise<T>) {
     if (!navigator.locks) return { error: true, message: "This browser cannot safely save actions. Use a browser with Web Locks support." };
+    const release = refresh.hold();
     try {
       return await navigator.locks.request(key, () => executeSavedRequest(localStorage, key, request, execute, changed));
     } catch {
       return { error: true, retry: true, message: "The action could not be confirmed. Check the saved action before trying again." };
-    }
+    } finally { release(); }
   }
   const journal: Journal = {
     unconfirmed: raw !== null,
@@ -77,6 +81,7 @@ export function EconomyRequests({ characterId, children }: { characterId: string
     bank: form => send(formRequest("bank", form), () => transferGold(form, characterId)),
     inventory: form => send(formRequest("inventory", form), () => trashInventoryItem(form, characterId)),
     training: form => send(formRequest("training", form), () => trainingAction(form, characterId)),
+    crafting: form => send(formRequest("crafting", form), () => craftItem(form, characterId)),
     activity: form => send(formRequest("activity", form), () => performActivity(form, characterId)),
     tavern: form => send(formRequest("tavern", form), () => buyTavernMeal(form, characterId)),
   };

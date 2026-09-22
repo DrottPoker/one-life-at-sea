@@ -14,7 +14,7 @@ test("players are searchable by name or public number and old links retain their
     await input.fill(other.name.toUpperCase());
     await page.getByRole("button", { name: "Search", exact: true }).click();
     await expect(results.getByRole("link", { name: other.name, exact: true })).toHaveAttribute("href", "/players/" + other.playerNumber);
-    await expect(results.getByText("[" + other.playerNumber + "]", { exact: true })).toBeVisible();
+    await expect(results.getByText("[" + other.playerNumber + "]", { exact: true })).toHaveCount(0);
 
     await input.fill(String(other.playerNumber));
     await page.getByRole("button", { name: "Search", exact: true }).click();
@@ -37,7 +37,7 @@ test("players are searchable by name or public number and old links retain their
     const renamed = other.name + "Renamed";
     testSql("update public.characters set display_name='" + renamed + "' where id='" + other.id + "'");
     await page.goto("/players/" + other.playerNumber);
-    await expect(page.getByRole("heading", { name: renamed, exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: renamed + " [" + other.playerNumber + "]", exact: true })).toBeVisible();
     await expect(page.getByRole("status", { name: "Player ID", exact: true })).toHaveText(String(other.playerNumber));
     await page.goto("/players?q=" + encodeURIComponent("#" + other.playerNumber));
     await expect(results.getByRole("link", { name: renamed, exact: true })).toBeVisible();

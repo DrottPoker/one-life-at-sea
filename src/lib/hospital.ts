@@ -1,3 +1,5 @@
+import { isMessagesPath } from "@/lib/messages";
+import { isUuid } from "@/lib/validation";
 import { isPlayerProfilePath } from "@/lib/player-identity";
 
 export type HospitalPatient = { character_id: string; player_number: number; display_name: string; hospital_until: string };
@@ -8,6 +10,6 @@ export type HospitalRoster = {
 export type HospitalStatus = { hospital_until: string | null; observed_at: string };
 
 export function isHospitalAccessiblePath(pathname: string) {
-  return pathname === "/harbor/hospital" || pathname === "/inventory" ||
+  return (pathname === "/notifications" || isMessagesPath(pathname)) || (pathname.startsWith("/combatlog/") && isUuid(pathname.slice(11))) || pathname === "/harbor/hospital" || pathname === "/inventory" ||
     pathname === "/players" || isPlayerProfilePath(pathname);
 }

@@ -75,10 +75,14 @@ listings or permissions. Realtime, mutation revalidation and resource deadlines
 continue to reconcile authoritative game state without a browser document reload.
 
 The server Supabase client is memoized with React `cache` within a server render,
-never shared between player requests. Existing request-scoped player/revision reads
-are reused. Independent admin/character and character/revision reads run concurrently
-to shorten serial server waits. Auth checks, gameplay revision checks and proxy
-navigation locks still run. See [NAVIGATION.md](NAVIGATION.md) for the verification scope.
+never shared between player requests. `get_player_context` combines identity, admin
+membership and gameplay revision; `get_player_snapshot` combines authoritative game
+state, skills and notification counts. Mutations that already permit hospital/sea
+receipt recovery avoid a redundant pre-mutation state read. Proxy navigation settles
+only the state needed for its existing guards. Auth, eligibility and revision checks
+remain authoritative. Snapshot revisions suppress already-covered realtime refreshes;
+actions and navigation hold background updates until completion. See
+[NAVIGATION.md](NAVIGATION.md) and [PERFORMANCE.md](PERFORMANCE.md).
 
 Automatic prefetching runs in production mode. Use `npm run build` and
 `npm run start` to assess it locally; `npm run dev` also has compilation
@@ -103,6 +107,7 @@ hides them by default and can conceal this type of layout shift.
 | `/auth/link-error` | Recovery from expired, reused or invalid account links. |
 | `/reset-password` | Sets a new password for an authenticated session. |
 | `/create-character` | Compatibility path for older unfinished accounts only; all new registrations already have a character and return to the harbor. |
+| `/notifications` | Private inbox, unread badge, read controls and linked combat reports; accessible in Hospital and at sea. |
 | `/inventory` | Owned item stacks and equipment instances, category/search filters, inline details and confirmed Trash. Readable in Hospital. |
 | `/players` | Registered-player directory with name/public-number search and pagination. |
 | `/players/[playerNumber]` | Identity profile, permanent public number, Attack link and own defence orders. |
@@ -117,6 +122,13 @@ hides them by default and can conceal this type of layout shift.
 | `/harbor/shipyard` | Placeholder view. |
 | `/harbor/crew-training` | Immediate drills, training XP, purchased exercises and Perfect Drill. |
 | `/harbor/ship-upgrades` | Timed work, automatic offline completion, XP and purchased workshops. |
+
+## Notifications
+
+A private persistent inbox at `/notifications` uses an internal transactional emitter
+and the existing owner-only game event signal. Completed attacks produce one grouped
+notification containing all attackers and the public combat report link. See
+[Notifications](NOTIFICATIONS.md) for event registration, privacy and pagination.
 
 ## Authentication
 
@@ -604,7 +616,9 @@ game state exposes server deadlines for the sidebar. See [Stamina](STAMINA.md) f
 Seven independent skill XP balances live in private.character_skills. A server-only award
 helper serializes updates per character; triggers project only their summed level into
 character_profiles. The owner-only get_own_skills RPC powers the profile Skills section.
-See [Skills](SKILLS.md) for privacy, XP thresholds and future activity integration.
+Skills cap at 100 with 5,000,000 total XP; Character Level is their sum, capped at 700.
+Changing thresholds preserves stored XP and recomputes the public sum.
+See [Skills](SKILLS.md) for privacy, XP thresholds and activity integration.
 
 ## Activities
 
@@ -631,3 +645,34 @@ wrapping item thumbnails, quantities and name tooltips. A shared reward adapter 
 legacy loot and future item arrays plus Gold Coins. Rewards remain server-authoritative;
 this presentation support adds no loot rolls or payouts. Network uncertainty remains
 separate from an actual failed activity. See [Activities](ACTIVITIES.md).
+
+## Profile presence
+
+Private per-tab Auth-session leases distinguish Online, Idle and Offline. A separate
+character timestamp records page navigation and committed player commands, excluding
+heartbeats and passive game changes. Existing profile snapshots expose only aggregate
+presence deadlines and last action, refreshing automatically with server-anchored time.
+See [Player presence](PLAYER_PRESENCE.md) for timing, access and lifecycle details.
+
+## Hideout
+
+`/hideout` is the authenticated captain's home view in The Harbor. It loads owner
+identity and existing private Cooking/Crafting progress through the normal server
+helpers. Crafting links to `/hideout/crafting`, with owner-only stock from
+`list_crafting_recipes` and atomic `craft_item` commands. Its private catalog is generated
+from gameplay config; exact input/output versions and saved receipts protect retries.
+Crafting grants 10 XP in the same transaction as materials and its saved receipt.
+Crafting uses existing circulation, Last action, game refresh and economy journal
+mechanisms. Cooking and home upgrades remain future gameplay. Existing navigation
+locks apply to both home and its workshop. See [Hideout](HIDEOUT.md) and [Crafting](CRAFTING.md).
+
+## Player mail
+
+The profile Send message action opens `/messages/compose?to=<player-number>`. Immutable
+mail envelopes have independent owner mailbox copies for Inbox, Outbox and Saved.
+Mass sends, subjects, private replies/history, indexed search and owner ignore lists use
+authenticated invoker RPCs backed by private, ownership-filtered database helpers.
+Ordered character locks serialize sending and ignores; request receipts prevent duplicate
+bulk delivery. Owner events refresh mail and the shared snapshot's lightweight unread count.
+Legacy conversations are imported without resetting read state; their old routes redirect
+to Compose and uncertain sends retain their original request IDs. See [Messages](MESSAGES.md).

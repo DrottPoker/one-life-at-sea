@@ -66,3 +66,7 @@ tidsstämpel med annan UTC-offset. Webbläsartester täcker initial HTML utan
 JavaScript, öppen sida vid båda växlingarna, felställd datorklocka, annan tidszon,
 förlorad tidssynk och klockåtkomst under Hospital.
 Se aktuella körresultat i [implementationsstatus](IMPLEMENTATION_STATUS.md).
+
+Server-rendered clock updates now adjust the existing client anchor directly. They
+do not restart synchronization or add an HTTP request per gameplay action. Initial,
+foreground, interval and offline-retry synchronization remain active.

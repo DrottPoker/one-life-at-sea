@@ -42,8 +42,9 @@ without counting additional players. Signup's automatic sign-in is included.
 
 `usePlayerActivity` runs inside the authenticated app shell. Opening or returning to
 an existing session records activity; visible pages also check once per minute.
-Hidden or closed pages do not continually generate activity. No extra game actions,
-resource changes, refresh flashes or online-now UI are introduced. Errors are silent
+Hidden or closed pages do not continually generate activity. This analytics check does not change character Last action or resources and causes no
+refresh flashes. Profile presence uses a separate tab/session signal, described in
+[Player presence](PLAYER_PRESENCE.md). Errors are silent
 and retry on the next check. Requests time out after ten seconds and are aborted on
 sign-out or unmount. The server throttles writes to once per minute across tabs,
 except when the UTC date changes or today's row is missing.

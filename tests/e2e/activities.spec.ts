@@ -15,20 +15,20 @@ test("activities spend Stamina, advance the right skills and persist on the prof
     await expect(page).toHaveURL(/\/activities$/);
     const stamina = page.getByRole("progressbar", { name: "Stamina", exact: true });
     const fish = page.getByRole("button", { name: "Fish for 1 Stamina", exact: true });
-    for (let count = 1; count <= 9; count++) {
+    for (let count = 1; count <= 20; count++) {
       await fish.click();
       await expect(stamina).toHaveAttribute("aria-valuenow", String(50 - count));
       await expect(page.getByLabel("Shore Fishing XP", { exact: true })).toHaveText(String(10 * count));
     }
     await expect(page.getByRole("region", { name: "Shore Fishing", exact: true })).toContainText("Fishing reached level 2!");
     await page.getByRole("button", { name: "Forage for 1 Stamina", exact: true }).click();
-    await expect(stamina).toHaveAttribute("aria-valuenow", "40");
+    await expect(stamina).toHaveAttribute("aria-valuenow", "29");
     await expect(page.getByLabel("Foraging XP", { exact: true })).toHaveText("10");
     const foragingResult = page.getByRole("region", { name: "Foraging result", exact: true });
     await expect(foragingResult.getByRole("heading", { name: "Success", exact: true })).toBeVisible();
     await expect(foragingResult.getByRole("list", { name: "Activity rewards" })).toHaveCount(0);
     await page.getByRole("button", { name: "Chop trees for 1 Stamina", exact: true }).click();
-    await expect(stamina).toHaveAttribute("aria-valuenow", "39");
+    await expect(stamina).toHaveAttribute("aria-valuenow", "28");
     await expect(page.getByLabel("Logging XP", { exact: true })).toHaveText("10");
     await expect(page.getByRole("progressbar", { name: "Energy", exact: true })).toHaveAttribute("aria-valuenow", "100");
     for (const width of [1440, 375, 320]) {
@@ -45,7 +45,7 @@ test("activities spend Stamina, advance the right skills and persist on the prof
     await expect(stamina).toHaveAttribute("aria-valuenow", "50");
     await page.getByRole("link", { name: "My Profile", exact: true }).click();
     await expect(page.getByLabel("Fishing level", { exact: true })).toHaveText("2");
-    await expect(page.getByLabel("Fishing XP", { exact: true })).toHaveText("90");
+    await expect(page.getByLabel("Fishing XP", { exact: true })).toHaveText("200");
     await expect(page.getByLabel("Character Level", { exact: true })).toHaveText("8");
     expect(errors).toEqual([]);
   } finally { await cleanupTestAccounts([own]); }

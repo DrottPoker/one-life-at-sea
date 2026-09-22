@@ -20,6 +20,7 @@ returns jsonb language sql stable security invoker set search_path='' as $$
     'hospital_until',(select hospital_until from public.hospital_patients
       where character_id=target_id and hospital_until>statement_timestamp()),
     'can_attack_here',private.can_attack_here(target_id),
+    'presence',private.get_player_presence(target_id),
     'observed_at',statement_timestamp())
   from public.character_profiles p where p.character_id=target_id;
 $$;

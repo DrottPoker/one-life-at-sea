@@ -4,6 +4,25 @@
     "gameplay": {
       "type": "object",
       "properties": {
+        "messages": { "type": "object", "properties": {
+          "maxRecipients": { "type": "number", "integer": true, "minimum": 1, "maximum": 50 },
+          "subjectMaxLength": { "type": "number", "integer": true, "minimum": 1, "maximum": 200 },
+          "pageSize": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 },
+          "conversationPageSize": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 },
+          "maxLength": { "type": "number", "integer": true, "minimum": 1, "maximum": 10000 },
+          "perMinute": { "type": "number", "integer": true, "minimum": 1, "maximum": 120 }
+        } },
+        "notifications": { "type": "object", "properties": {
+          "pageSize": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 }
+        } },
+        "presence": {
+          "type": "object",
+          "properties": {
+            "idleSeconds": { "type": "number", "integer": true, "minimum": 30, "maximum": 3600 },
+            "unfocusedSeconds": { "type": "number", "integer": true, "minimum": 1, "maximum": 3600 },
+            "leaseSeconds": { "type": "number", "integer": true, "minimum": 90, "maximum": 300 }
+          }
+        },
         "resources": {
           "type": "object",
           "properties": {
@@ -459,6 +478,35 @@
               "integer": true,
               "minimum": 1,
               "maximum": 2147483647
+            }
+          }
+        },
+        "crafting": {
+          "type": "object",
+          "properties": {
+            "xpGain": { "type": "number", "integer": true, "minimum": 1, "maximum": 9007199254740991 },
+            "recipes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "name": { "type": "string" },
+                  "outputItemId": { "type": "string" },
+                  "outputQuantity": { "type": "number", "integer": true, "minimum": 1, "maximum": 9007199254740991 },
+                  "ingredients": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "itemId": { "type": "string" },
+                        "quantity": { "type": "number", "integer": true, "minimum": 1, "maximum": 9007199254740991 }
+                      }
+                    }
+                  },
+                  "active": { "type": "boolean" }
+                }
+              }
             }
           }
         },

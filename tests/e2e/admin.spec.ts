@@ -97,7 +97,7 @@ test("admin edits players, grants equipment, recovers a lost grant and browses a
     await deletion.getByRole("button", { name: "Review deletion" }).click();
     await deletion.getByRole("button", { name: "Confirm change" }).click();
     await expect.poll(async () => (await player.api.rpc("list_inventory", { category_id: "medical" })).data?.total).toBe(0);
-    if (await dialog.isVisible()) await dialog.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
     await page.getByRole("navigation", { name: "Administration", exact: true }).getByRole("link", { name: "Audit log" }).click();
     await page.getByLabel("Search records").fill("Recover interrupted grant");
     await page.getByRole("combobox", { name: "Exact column", exact: true }).selectOption("actor_id");

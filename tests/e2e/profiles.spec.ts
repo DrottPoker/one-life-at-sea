@@ -69,14 +69,14 @@ test("captain profiles open from the harbor and keep private character data prot
 
     await sidebar.getByRole("link", { name: "My Profile", exact: true }).focus();
     await page.keyboard.press("Enter");
-    await expect(main.getByRole("heading", { name: ownerName, exact: true })).toBeVisible();
+    await expect(main.getByRole("heading", { name: new RegExp("^" + ownerName + " \\[\\d+\\]$") })).toBeVisible();
     await expect(main.getByText("Your character", { exact: true })).toBeVisible();
     await expect(main.getByText("Less than a day", { exact: true })).toBeVisible();
     await main.getByRole("link", { name: "Back to The Harbor", exact: true }).click();
     const roster = page.getByRole("region", { name: /^Captains in The Harbor/ });
     await roster.getByRole("link", { name: otherName, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/players/${target.data!.player_number}$`));
-    await expect(main.getByRole("heading", { name: otherName, exact: true })).toBeVisible();
+    await expect(main.getByRole("heading", { name: otherName + " [" + target.data!.player_number + "]", exact: true })).toBeVisible();
     await expect(main.getByText("2 days", { exact: true })).toBeVisible();
     await expect(main.locator("time")).toHaveAttribute("datetime", publicProfile.data!.created_at);
     await expect(main.getByText("Your character", { exact: true })).toHaveCount(0);
@@ -92,19 +92,19 @@ test("captain profiles open from the harbor and keep private character data prot
     await page.goBack();
     await expect(page).toHaveURL(/\/harbor$/);
     await page.goForward();
-    await expect(main.getByRole("heading", { name: otherName, exact: true })).toBeVisible();
+    await expect(main.getByRole("heading", { name: otherName + " [" + target.data!.player_number + "]", exact: true })).toBeVisible();
     expect(await originalSidebar.evaluate(element => element.isConnected)).toBe(true);
     expect(documents).toEqual([]);
     await page.screenshot({ path: ".local/profile-desktop.jpg", type: "jpeg", quality: 75, fullPage: true });
     for (const width of [768, 375, 320]) {
       await page.setViewportSize({ width, height: 1000 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      await expect(main.getByRole("heading", { name: otherName, exact: true })).toBeVisible();
+      await expect(main.getByRole("heading", { name: otherName + " [" + target.data!.player_number + "]", exact: true })).toBeVisible();
       if (width === 375) await page.screenshot({ path: ".local/profile-mobile.jpg", type: "jpeg", quality: 75, fullPage: true });
     }
 
     await page.goto(`/characters/${targetId}`);
-    await expect(main.getByRole("heading", { name: otherName, exact: true })).toBeVisible();
+    await expect(main.getByRole("heading", { name: otherName + " [" + target.data!.player_number + "]", exact: true })).toBeVisible();
     for (const invalidId of ["not-a-captain", "ffffffff-ffff-ffff-ffff-ffffffffffff"]) {
       await page.goto(`/characters/${invalidId}`);
       await expect(main.getByRole("heading", { name: "Character not found", exact: true })).toBeVisible();

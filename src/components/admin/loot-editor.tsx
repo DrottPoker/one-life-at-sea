@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { MAX_SKILL_LEVEL } from "@/lib/skills";
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 import { MutationForm } from "@/components/admin/mutation-form";
@@ -53,8 +54,8 @@ export function LootEditor({ table, items }: { table?: LootTable; items: AdminRo
       {issue && <p className="admin-help" role="status">{issue}</p>}
     </section><aside className="admin-card admin-loot-preview"><h2>Chance preview</h2>
       <p>Percentage of <strong>successful catches</strong>. Catch difficulty is set separately for each activity.</p>
-      <label>Preview skill level: <output>{level}</output><input aria-label="Preview skill level" type="range" min={1} max={99} value={level} onChange={event => setLevel(Number(event.target.value))} /></label>
-      <small>This preview reaches mastery at level 99. Linked activities may use another mastery level.</small>
+      <label>Preview skill level: <output>{level}</output><input aria-label="Preview skill level" type="range" min={1} max={MAX_SKILL_LEVEL} value={level} onChange={event => setLevel(Number(event.target.value))} /></label>
+      <small>This preview reaches mastery at level {MAX_SKILL_LEVEL}. Linked activities may use another mastery level.</small>
       <div className="admin-help">Fixed items: <strong>{fixed.toLocaleString("en-GB", { maximumFractionDigits: 4 })}%</strong><br />Weighted pool: <strong>{Math.max(0, 100 - fixed).toLocaleString("en-GB", { maximumFractionDigits: 4 })}%</strong></div>
       {!issue && chances.map(entry => <div className="admin-chance-row" key={entry.item_id}>
         <div><span>{items.find(item => item.values.id === entry.item_id)?.values.name ?? entry.item_id}</span><strong>{entry.chance.toLocaleString("en-GB", { maximumFractionDigits: 4 })}%</strong></div>

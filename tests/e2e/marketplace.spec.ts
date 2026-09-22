@@ -193,7 +193,7 @@ test("offers expand by twenty, retain earlier rows, refresh in price order and r
   await loginTestAccount(page, buyer);
   await page.goto("/harbor/marketplace?category=materials");
   await expect(page.getByRole("heading", { name: "Materials", exact: true })).toBeVisible();
-  await expect(page.locator(".o-market-card")).toHaveCount(1);
+  await expect(page.locator('.o-market-card[data-item-id="oak_planks"]')).toHaveCount(1);
   const offers = await openOffers(page, "Oak Planks");
   const marketRows = offers.locator("tbody tr");
   const more = offers.getByRole("button", { name: "Show more listings", exact: true });

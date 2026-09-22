@@ -19,9 +19,23 @@ create table if not exists private.activity_loot (
   loot_table_id text references private.loot_tables(id),
   success_start numeric not null default 70 check(success_start between 0 and 100 and success_start=trunc(success_start,4)),
   success_end numeric not null default 90 check(success_end between success_start and 100 and success_end=trunc(success_end,4)),
-  mastery_level integer not null default 99 check(mastery_level between 2 and 99),
+  mastery_level integer not null default 100 check(mastery_level between 2 and 100),
   version uuid not null default gen_random_uuid()
 );
+-- Move the former cap once; later admin mastery edits remain authoritative.
+do $mastery_cap$
+declare previous_cap boolean;
+begin
+  select exists(select 1 from pg_constraint where conrelid='private.activity_loot'::regclass
+    and conname='activity_loot_mastery_level_check' and pg_get_constraintdef(oid) like '%<= 99%') into previous_cap;
+  alter table private.activity_loot drop constraint if exists activity_loot_mastery_level_check;
+  alter table private.activity_loot add constraint activity_loot_mastery_level_check check(mastery_level between 2 and 100);
+  alter table private.activity_loot alter column mastery_level set default 100;
+  if previous_cap then
+    update private.activity_loot set mastery_level=100,version=gen_random_uuid() where mastery_level=99;
+  end if;
+end;
+$mastery_cap$;
 create index if not exists activity_loot_table_idx on private.activity_loot(loot_table_id);
 alter table private.activity_loot enable row level security;
 revoke all on private.activity_loot from public,anon,authenticated;

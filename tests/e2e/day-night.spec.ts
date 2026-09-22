@@ -83,3 +83,23 @@ test("world time remains readable with authenticated hospital navigation locks",
     expect(snapshot).toEqual(worldTimeAt(Date.parse(snapshot.observed_at)));
   } finally { await cleanupTestAccounts([account]); }
 });
+
+
+test("gameplay refreshes reuse server time without extra clock fetches", async ({ page }) => {
+  const account = await createTestAccount("clock-requests");
+  try {
+    await loginTestAccount(page, account);
+    await page.goto("/activities");
+    await page.waitForLoadState("networkidle");
+    let clockRequests = 0;
+    page.on("request", request => { if (new URL(request.url()).pathname === "/api/world-time") clockRequests++; });
+    for (let count = 1; count <= 3; count++) {
+      await page.getByRole("button", { name: "Fish for 1 Stamina", exact: true }).click();
+      await expect(page.getByLabel("Shore Fishing XP", { exact: true })).toHaveText(String(count * 10));
+    }
+    await page.waitForLoadState("networkidle");
+    expect(clockRequests).toBe(0);
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await expect.poll(() => clockRequests).toBe(1);
+  } finally { await cleanupTestAccounts([account]); }
+});

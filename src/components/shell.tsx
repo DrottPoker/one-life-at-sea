@@ -1,16 +1,28 @@
 import { frontend } from "@/config/public";
 import Link from "next/link";
 import Image from "next/image";
-import { Anchor, Compass, type LucideIcon } from "lucide-react";
+import { Anchor, Compass, Bell, Mail, type LucideIcon } from "lucide-react";
+import type { MessageSummary } from "@/lib/messages";
+import type { NotificationSummary } from "@/lib/notifications";
 import type { ReactNode } from "react";
 
-export function Masthead({ isAdmin = false }: { isAdmin?: boolean }) {
+export function Masthead({ isAdmin = false, notifications, messages }: { messages?: MessageSummary | null; isAdmin?: boolean; notifications?: NotificationSummary | null }) {
   return <header className="o-masthead">
     <Link href="/" className="o-brand" aria-label={frontend.site.name + " home"}>
       <span className="o-brand-mark"><Compass aria-hidden="true" /><Anchor aria-hidden="true" /></span>
       <span className="o-brand-wordmark"><span className="o-brand-title">{frontend.site.brandTop}</span><span className="o-brand-subtitle">{frontend.site.brandBottom}</span></span>
     </Link>
     <div className="o-masthead-end">
+      {messages !== undefined && <Link href="/messages" className="o-notification-bell" prefetch={false}
+        aria-label={messages ? "Messages, " + messages.unread_count + " unread" : "Messages, count unavailable"}>
+        <Mail aria-hidden="true" /><span>Messages</span>
+        {(messages === null || messages.unread_count > 0) && <span className="o-notification-badge" aria-hidden="true">{messages ? messages.unread_count > 99 ? "99+" : messages.unread_count : "?"}</span>}
+      </Link>}
+      {notifications !== undefined && <Link href="/notifications" className="o-notification-bell" prefetch={false}
+        aria-label={notifications ? "Notifications, " + notifications.unread_count + " unread" : "Notifications, count unavailable"}>
+        <Bell aria-hidden="true" /><span>Notifications</span>
+        {(notifications === null || notifications.unread_count > 0) && <span className="o-notification-badge" aria-hidden="true">{notifications ? notifications.unread_count > 99 ? "99+" : notifications.unread_count : "?"}</span>}
+      </Link>}
       {isAdmin && <Link href="/admin" className="o-admin-link">Admin panel</Link>}
       <p className="o-masthead-note">A name to make.<br />A life to remember.</p>
     </div>

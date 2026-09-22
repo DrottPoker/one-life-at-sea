@@ -1,3 +1,5 @@
+import { MAX_SKILL_LEVEL } from "@/lib/skills";
+
 export const DEFAULT_ITEM_IMAGE = "/images/items/placeholder.svg";
 export type LootEntry = {
   item_id: string; mode: "fixed" | "weighted"; fixed_chance: number; weight_start: number; weight_end: number;
@@ -7,13 +9,13 @@ export type LootTable = { id: string; name: string; description: string; active:
 export type ActivityLoot = {
   activity_id: string; loot_table_id: string | null; success_start: number; success_end: number; mastery_level: number; version: string | null;
 };
-export function levelFactor(level: number, masteryLevel = 99) {
+export function levelFactor(level: number, masteryLevel = MAX_SKILL_LEVEL) {
   return Math.max(0, Math.min(1, (level - 1) / (masteryLevel - 1)));
 }
 export function catchChance(settings: Pick<ActivityLoot, "success_start" | "success_end" | "mastery_level">, level: number) {
   return settings.success_start + (settings.success_end - settings.success_start) * levelFactor(level, settings.mastery_level);
 }
-export function lootChances(entries: LootEntry[], level: number, masteryLevel = 99) {
+export function lootChances(entries: LootEntry[], level: number, masteryLevel = MAX_SKILL_LEVEL) {
   const fixed = entries.reduce((sum, entry) => sum + (entry.mode === "fixed" ? entry.fixed_chance : 0), 0);
   const factor = levelFactor(level, masteryLevel);
   const weights = entries.map(entry => entry.mode === "weighted" ? entry.weight_start + (entry.weight_end - entry.weight_start) * factor : 0);

@@ -11,7 +11,7 @@ test("Stamina renders its capacity, tooltip and recovered balance across live up
     await expect(bar).toHaveAttribute("aria-valuemax", "50");
     await expect(bar).toHaveAttribute("aria-valuenow", "50");
     await bar.hover();
-    await expect(page.getByRole("tooltip")).toHaveText("Increases by 1 every 5 minutes. Used for skill activities.");
+    await expect(page.getByRole("tooltip")).toHaveText("Increases by 1 every 5 minutes. Used for skill activities. Recovery paused at 50. Storage limit: 200.");
     await page.keyboard.press("Escape");
     await expect(page.getByRole("tooltip")).toHaveCount(0);
     testSql("update public.characters set stamina=2,stamina_updated_at=clock_timestamp()+interval '1 day' where id='" + own.id + "'; select private.notify_training('" + own.id + "');");

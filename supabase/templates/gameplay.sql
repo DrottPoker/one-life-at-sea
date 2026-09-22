@@ -13,12 +13,12 @@
 {{include.activities}}
 {{include.hospital}}
 {{include.combat-report}}
-{{include.profile}}
 {{include.player-directory}}
 {{include.circulation-tracking}}
 {{include.market-value-tracking}}
 {{include.market-value-history}}
 {{include.inventory}}
+{{include.crafting}}
 {{include.circulation-history}}
 {{include.marketplace-read}}
 {{include.marketplace-sell}}
@@ -28,3 +28,12 @@
 {{include.admin}}
 {{include.economy}}
 {{include.player-statistics}}
+{{include.presence}}
+{{include.profile}}
+{{include.notifications}}
+{{include.messages}}
+{{include.mail-schema}}
+{{include.mail-send}}
+{{include.mail-read}}
+{{include.mail-actions}}
+{{include.player-context}}

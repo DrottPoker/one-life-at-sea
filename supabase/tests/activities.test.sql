@@ -36,7 +36,7 @@ select throws_ok($$select public.perform_activity('coastal_foraging',1,10,reques
 select throws_ok($$select public.perform_activity('shore_fishing',1,11,request) from activity_fixture$$,'22023','REQUEST_CONFLICT','An ID cannot switch its reward');
 select public.perform_activity('shore_fishing',1,10,gen_random_uuid()) from generate_series(1,8);
 select is((public.get_game_state()->>'stamina')::integer,11,'Nine actions cost nine Stamina');
-select is((public.get_own_skills()->>'character_level')::integer,8,'Ninth fishing action reaches level two and increases Character Level');
+select is((public.get_own_skills()->>'character_level')::integer,7,'Nine attempts stay below the new first level threshold');
 select public.perform_activity('coastal_foraging',1,10,gen_random_uuid());
 select public.perform_activity('woodland_logging',1,10,gen_random_uuid());
 select is((public.get_game_state()->>'stamina')::integer,9,'Foraging and logging have the same cost');

@@ -215,7 +215,8 @@ numbers; cost and recovery cannot exceed capacity. See [Stamina](STAMINA.md).
 ## Skills
 
 `gameplay.skills.catalog` contains stable skill IDs and display names. `xpThresholds` contains
-99 strictly increasing integer thresholds, starting at zero. They are shared by SQL and UI.
+100 strictly increasing integer thresholds, starting at zero and currently ending at
+5,000,000 XP. They are shared by SQL and UI.
 Removing existing skill IDs is rejected; adding a skill initializes it at zero XP and updates
 Character Level for existing players. See [Skills](SKILLS.md).
 

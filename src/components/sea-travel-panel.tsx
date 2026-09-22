@@ -1,5 +1,7 @@
 "use client";
 
+import { useNavigationActivity } from "@/components/game-refresh";
+
 import { useActionState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Anchor, Compass, Ship, Waves } from "lucide-react";
@@ -39,6 +41,7 @@ function TravelControls({ state }: { state: GameState }) {
     if (!response.error) router.replace("/sea");
     return response;
   }, {});
+  useNavigationActivity(pending);
   const blocked = pending || !!result.retry || !!state.active_combat_id;
   const atHarbor = state.sea.state === "in_harbor";
   const departureReason = state.hospital_until ? "You must leave hospital before sailing." :

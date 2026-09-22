@@ -72,10 +72,34 @@ frontend.json innehåller dayNight: dag börjar 06:00 och natt 21:00 UTC. Se [da
 Alla kommande yrkesaktiviteter använder samma grundkostnad. Se [Stamina](../docs/STAMINA.md).
 
 `skills.catalog` definierar färdigheter och `skills.xpThresholds` deras gemensamma
-XP-tabell för nivå 1-99. Samma tabell används i SQL och UI; befintliga XP bevaras vid synk.
+XP-tabell för nivå 1-100, med 200 XP till nivå 2 och totalt 5 000 000 XP till nivå 100. Samma tabell används i SQL och UI; befintliga XP bevaras vid synk.
 
 `activities.catalog` anger de tre första aktiviteterna, deras färdigheter och XP-belöning
 (10). Kostnaden är `stamina.activityCost` (1). Fältet `active` kan stänga av en aktivitet
 utan att historiska kvitton påverkas. Se [Activities](../docs/ACTIVITIES.md).
 
 Item definitions edited or created in Admin are preserved by config:sync (managed_by_admin). Loot tables and activity loot settings are database-owned. See docs/ADMIN_PANEL.md and docs/LOOT_TABLES.md. Local Storage is enabled for administrator item image uploads.
+
+`presence.idleSeconds` styr inaktivitet innan Idle (300 sekunder).
+`presence.unfocusedSeconds` styr sammanhängande tid utan fokus eller med dold flik innan
+Idle (120 sekunder). Den tidsgräns som nås först gäller. Återvunnet fokus återställer
+båda räknarna. `presence.leaseSeconds` styr hur länge en närvarosignal gäller (90 sekunder);
+webbläsaren skickar en signal var
+30:e sekund med standardvärdet. Last action registreras separat från signalerna.
+Se [Player presence](../docs/PLAYER_PRESENCE.md).
+
+`crafting.recipes` anger recept, ingredienser, resultat och aktiv status. Första
+receptet är 5 Oak Logs till 1 Oak Plank utan väntetid eller andra kostnader.
+`crafting.xpGain` ger 10 Crafting XP per lyckad craft.
+Kör config:sync och db:migrate efter receptändringar. Gamla kvitton behåller sitt
+resultat; gamla erbjudanden måste uppdateras innan ny crafting. Se [Crafting](../docs/CRAFTING.md).
+
+`notifications.pageSize` styr antalet rader per sida i notislistan (1-100, standard 20).
+Nya notistyper ansluts via den gemensamma databasfunktionen och en typrenderare, se [Notifications](../docs/NOTIFICATIONS.md).
+
+### Player messages
+
+`gameplay.messages` owns inbox page size, conversation page size, message length and
+per-sender send rate. Defaults are 20 conversations, 50 messages, 5,000 characters
+and 30 new messages per minute. Confirmed retries do not consume the rate limit.
+See [Messages](../docs/MESSAGES.md) for delivery, privacy and configuration behavior.

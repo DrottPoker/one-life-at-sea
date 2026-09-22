@@ -34,6 +34,10 @@ förblir exakta heltal. Ändra inte startvärdet eller befintliga nummer via con
 - Gamla `/characters/<uuid>` och `/attack/<uuid>` fortsätter fungera och omdirigerar till nummeradresser.
 - Combat log behåller stridens UUID i sin adress.
 
+Profilrubriken visar en automatiskt uppdaterad statusprick följd av `Namn [ID]`
+på både den egna och andras profiler. Den separata ID-raden i profilen är borttagen.
+Players-listan visar bara namn; sökning med publikt nummer och profillänkar fungerar fortsatt.
+
 Publika nummer visas i sidopanel, profil, hamnlista, patientlista, scouting,
 marknadsannonser och stridsvyer. Adminsidan visar både publikt nummer och interna
 UUID:n. Äldre stridssnapshots kompletteras med nummer vid läsning utan att ändra

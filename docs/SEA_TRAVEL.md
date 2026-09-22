@@ -127,3 +127,10 @@ Tester finns i `supabase/tests/sea-travel.test.sql`,
 Alternativ konfiguration verifieras i `scripts/config/test-database.mjs`.
 Webbläsartestet innehåller en verklig 60-sekundersresa och samtidiga RPC-anrop
 från separata anslutningar. Övriga tidsförflyttningar gäller bara testkonton.
+
+## Meddelanden under resan
+
+Messages och privata konversationer är tillgängliga både vid en havsplats och under
+pågående färd. Meddelanden förbrukar ingen Energy och påverkar inte resans tidsgränser.
+Det befintliga navigationslåset för en aktiv attackerare kvarstår.
+Se [meddelandesystemet](MESSAGES.md).

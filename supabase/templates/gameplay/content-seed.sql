@@ -9,7 +9,15 @@ begin
       ('harbor_shore','red_snapper','weighted',1,15);
     insert into private.loot_entries(loot_table_id,item_id,mode,fixed_chance) values('harbor_shore','silver_ring','fixed',1);
     insert into private.activity_loot(activity_id,loot_table_id,success_start,success_end,mastery_level)
-      values('shore_fishing','harbor_shore',70,90,99) on conflict(activity_id) do nothing;
+      values('shore_fishing','harbor_shore',70,90,100) on conflict(activity_id) do nothing;
+  end if;
+  if not exists(select 1 from private.loot_tables where id='woodland_logging') then
+    insert into private.loot_tables(id,name,description)
+      values('woodland_logging','Woodland Logging','Oak logs gathered from the woodland near The Harbor.');
+    insert into private.loot_entries(loot_table_id,item_id,mode,fixed_chance,quantity)
+      values('woodland_logging','oak_logs','fixed',100,1);
+    insert into private.activity_loot(activity_id,loot_table_id,success_start,success_end,mastery_level)
+      values('woodland_logging','woodland_logging',70,90,100) on conflict(activity_id) do nothing;
   end if;
 end;
 $seed$;

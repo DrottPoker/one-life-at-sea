@@ -53,6 +53,22 @@ at narrower widths. Marketplace is correctly labelled Open.
 There are no placeholder messages, quests, daily objectives, market quotes or
 other invented data from the mockup.
 
+## Links and names
+
+Links and linked player names never use text underlines, including hover, focus,
+active and visited states. This applies across authentication, gameplay, notifications,
+combat reports and administration. Text-style buttons follow the same convention.
+Links retain their existing colors, hover feedback and visible keyboard-focus outlines.
+Keep this rule in the shared interface template and the admin stylesheet.
+
+Profile headings use a compact bold `Name [ID]` with a 12px live presence dot before
+the name. A subtle vertical gradient darkens the lower edge for depth in every
+status color. Presence is shown by the dot, with a tooltip and accessible label, instead
+of a separate detail row. Long names wrap without splitting the bracketed number.
+The Players directory shows names without separate public number badges.
+The connection indicator and unread notification dots share the same shading.
+Read notification markers remain transparent.
+
 ## Maintenance
 
 Edit `config/theme.css` for palette, typography, frame size, sidebar width,

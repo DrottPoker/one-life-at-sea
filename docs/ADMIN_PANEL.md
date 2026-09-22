@@ -13,7 +13,7 @@ is the first authorized local administrator.
    creating a consumable does not add a new gameplay operation.
 2. **Loot tables**: create a named collection, add items, choose fixed percentages or
    weights at level 1/mastery, and set quantity. Equipment also records damage/accuracy.
-   A level slider previews percentages of successful catches, with mastery at 99.
+   A level slider previews percentages of successful catches, with mastery at 100.
 3. **Activities**: select a table, starting/mastery catch chances and mastery level for
    each existing activity. Select No loot to retain XP-only behavior. Changes apply to
    new attempts immediately; earlier receipts preserve their original result.

@@ -46,7 +46,7 @@ export function validateConfig(config) {
   for (const skill of g.skills.catalog) {
     check(/^[a-z][a-z0-9_]{0,47}$/.test(skill.id) && skill.name.length <= 60, "Invalid skill definition.");
   }
-  check(g.skills.xpThresholds.length === 99 && g.skills.xpThresholds[0] === 0, "Skills start at level 1 and end at level 99.");
+  check(g.skills.xpThresholds.length === 100 && g.skills.xpThresholds[0] === 0, "Skills start at level 1 and end at level 100.");
   check(g.skills.xpThresholds.every((xp, i, rows) => i === 0 || xp > rows[i - 1]), "Skill XP thresholds must strictly increase.");
   check(g.activities.catalog.length <= 100, "At most 100 activities are supported.");
   check(new Set(g.activities.catalog.map(activity => activity.id)).size === g.activities.catalog.length, "Activity IDs must be unique.");
@@ -79,6 +79,18 @@ export function validateConfig(config) {
     check(item.kind === "equipment" ? ["crew_weapon","cannons"].includes(item.slot) : item.slot === "none", "Item slot does not match its kind.");
     check(item.imagePath === '/images/items/placeholder.svg' || /^\/images\/items\/[a-z0-9-]+\.(png|webp)$/.test(item.imagePath), "Item images must be local inventory assets.");
     check(item.name.length <= 100 && item.description.length <= 2000 && item.effectDescription.length <= 1000, "Item text is too long.");
+  }
+  check(g.crafting.recipes.length <= 100, "At most 100 crafting recipes are supported.");
+  check(new Set(g.crafting.recipes.map(recipe => recipe.id)).size === g.crafting.recipes.length, "Recipe IDs must be unique.");
+  for (const recipe of g.crafting.recipes) {
+    check(/^[a-z][a-z0-9_]{0,47}$/.test(recipe.id) && recipe.name.length <= 100, "Invalid crafting recipe.");
+    check(recipe.ingredients.length <= 16, "At most 16 ingredients are supported.");
+    check(new Set(recipe.ingredients.map(ingredient => ingredient.itemId)).size === recipe.ingredients.length, "Recipe ingredients must be unique.");
+    check(!recipe.ingredients.some(ingredient => ingredient.itemId === recipe.outputItemId), "A recipe cannot consume its output.");
+    for (const id of [recipe.outputItemId, ...recipe.ingredients.map(ingredient => ingredient.itemId)]) {
+      const item = inventory.items.find(item => item.id === id);
+      check(item && item.kind !== "equipment", "Recipes require known stackable items.");
+    }
   }
   for (const [group, tiers] of [["crew", g.training.crewTiers], ["ship", g.training.shipTiers]]) {
     check(new Set(tiers.map(t => t.id)).size === tiers.length, group + " tier IDs must be unique.");
@@ -155,6 +167,7 @@ export function gameplaySql(config) {
     (_, name) => read("supabase/templates/gameplay/" + name + ".sql"));
   return render(template
     .replace("{{activities.catalogSql}}", () => activityCatalogSql(config))
+    .replace("{{crafting.catalogSql}}", () => craftingCatalogSql(config))
     .replace("{{skills.catalogSql}}", () => skillCatalogSql(config))
     .replace("{{training.catalogSql}}", () => trainingCatalogSql(config))
     .replace("{{inventory.catalogSql}}", () => inventoryCatalogSql(config))
@@ -240,4 +253,24 @@ export function activityCatalogSql(config) {
     "then raise exception 'Existing activity IDs and skills must be preserved'; end if; end $activities$;\n" +
     "insert into private.activity_definitions(id,skill_id,xp_gain,active,position) values " + rows +
     " on conflict(id) do update set xp_gain=excluded.xp_gain,active=excluded.active,position=excluded.position;\n";
+}
+
+export function craftingCatalogSql(config) {
+  const quote = value => "'" + value.replaceAll("'", "''") + "'";
+  const recipes = config.gameplay.crafting.recipes;
+  const rows = recipes.map((recipe, index) => {
+    const version = createHash("sha256").update(JSON.stringify({
+      outputItemId: recipe.outputItemId, outputQuantity: recipe.outputQuantity, xpGain: config.gameplay.crafting.xpGain,
+      ingredients: [...recipe.ingredients].sort((a, b) => a.itemId.localeCompare(b.itemId)),
+    })).digest("hex");
+    return "(" + [quote(recipe.id), quote(recipe.name), quote(recipe.outputItemId), recipe.outputQuantity,
+      quote(version), recipe.active, index].join(",") + ")";
+  }).join(",\n");
+  const ingredients = recipes.flatMap(recipe => recipe.ingredients.map(ingredient =>
+    "(" + [quote(recipe.id), quote(ingredient.itemId), ingredient.quantity].join(",") + ")")).join(",\n");
+  return "update private.crafting_recipes set active=false;\n" +
+    "insert into private.crafting_recipes(id,name,output_item_id,output_quantity,version,active,position) values\n" + rows +
+    "\non conflict(id) do update set name=excluded.name,output_item_id=excluded.output_item_id,output_quantity=excluded.output_quantity,version=excluded.version,active=excluded.active,position=excluded.position;\n" +
+    "delete from private.crafting_ingredients where recipe_id in(" + recipes.map(recipe => quote(recipe.id)).join(",") + ");\n" +
+    "insert into private.crafting_ingredients(recipe_id,item_id,quantity) values\n" + ingredients + ";\n";
 }

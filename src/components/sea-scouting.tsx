@@ -1,5 +1,7 @@
 "use client";
 
+import { useNavigationActivity } from "@/components/game-refresh";
+
 import { GameLink as Link } from "@/components/game-navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Binoculars, Ship } from "lucide-react";
@@ -63,6 +65,7 @@ function ScoutControls() {
     if (!response.retry) request.current = null;
     return response;
   }, {});
+  useNavigationActivity(pending);
   const reason = state.active_combat_id ? "Finish your current battle before scouting." :
     state.energy < gameplay.seaTravel.scoutEnergyCost ? "You need " + gameplay.seaTravel.scoutEnergyCost + " Energy to scout." : null;
   return <form action={action} className="o-panel-body" aria-label="Scout nearby ships" aria-busy={pending}>
