@@ -37,6 +37,8 @@ export function validateConfig(config) {
   check(g.morale.recoveryAmount <= g.morale.maximum, "Morale recovery exceeds the range.");
   check(g.morale.tavernGain <= g.morale.maximum * 2, "Tavern gain exceeds the morale range.");
   check(g.morale.tavernGoldCost <= g.economy.maxGoldCoins, "Tavern price exceeds the Gold Coins limit.");
+  check(g.resources.energyMax <= g.resources.energyStorageMax, "Energy recovery cap exceeds its storage limit.");
+  check(g.stamina.maximum <= g.stamina.storageMaximum, "Stamina recovery cap exceeds its storage limit.");
   check(g.stamina.activityCost <= g.stamina.maximum, "Activity cost exceeds maximum Stamina.");
   check(g.stamina.recoveryAmount <= g.stamina.maximum, "Stamina recovery exceeds its cap.");
   check(g.skills.catalog.length <= 100, "At most 100 skills are supported.");
@@ -90,13 +92,13 @@ export function validateConfig(config) {
     }
   }
   check(g.training.shipMinEnergy <= g.resources.energyMax, "Minimum ship work exceeds maximum Energy.");
-  check(Number.isSafeInteger(g.resources.energyMax * g.training.shipSecondsPerEnergy), "Ship duration exceeds the safe integer limit.");
-  check(Number.isSafeInteger(g.resources.energyMax * g.training.xpPerEnergy), "Ship XP exceeds the safe integer limit.");
-  check(g.resources.energyMax <= 10_000, "Training supports at most 10000 Energy per action.");
+  check(Number.isSafeInteger(g.resources.energyStorageMax * g.training.shipSecondsPerEnergy), "Ship duration exceeds the safe integer limit.");
+  check(Number.isSafeInteger(g.resources.energyStorageMax * g.training.xpPerEnergy), "Ship XP exceeds the safe integer limit.");
+  check(g.resources.energyStorageMax <= 10_000, "Training supports at most 10000 Energy per action.");
   for (const tier of [...g.training.crewTiers, ...g.training.shipTiers]) {
     const rate = tier.efficiency / g.training.energyPerUnit;
     check(Math.round(rate * 1_000_000) > 0, "Training gain must survive six-decimal rounding.");
-    const maximumGain = rate * (1 + Number.MAX_SAFE_INTEGER / g.training.statScale) ** g.training.statExponent * g.resources.energyMax * g.training.perfectMultiplier;
+    const maximumGain = rate * (1 + Number.MAX_SAFE_INTEGER / g.training.statScale) ** g.training.statExponent * g.resources.energyStorageMax * g.training.perfectMultiplier;
     check(Number.isFinite(maximumGain) && maximumGain <= Number.MAX_SAFE_INTEGER, "Training gain exceeds the supported stat limit.");
   }
   check(Number.isSafeInteger(g.training.energyCost * g.training.xpPerEnergy), "Crew XP exceeds the safe integer limit.");

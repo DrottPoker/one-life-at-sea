@@ -8,7 +8,8 @@
     "crewHealthInitial": 100,
     "shipRecoverySeconds": 30,
     "crewRecoverySeconds": 10,
-    "energyRecoveryAmount": 5
+    "energyRecoveryAmount": 5,
+    "energyStorageMax": 1000
   },
   "training": {
     "energyCost": 5,
@@ -459,7 +460,8 @@
     "maximum": 50,
     "recoveryAmount": 1,
     "recoverySeconds": 300,
-    "activityCost": 1
+    "activityCost": 1,
+    "storageMaximum": 200
   },
   "skills": {
     "catalog": [

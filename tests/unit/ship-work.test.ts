@@ -3,11 +3,11 @@ import { formatStat, formatStatGain } from "../../src/lib/format";
 import { parseShipEnergy, trainingStatGain } from "../../src/lib/training";
 
 describe("variable ship work", () => {
-  it.each(["", "0", "1", "4", "-5", "5.5", "1e1", "101", "9007199254740991", null, 5])("rejects invalid Energy %s", value => {
+  it.each(["", "0", "1", "4", "-5", "5.5", "1e1", "1001", "9007199254740991", null, 5])("rejects invalid Energy %s", value => {
     expect(parseShipEnergy(value)).toBeNull();
   });
   it("accepts whole Energy from the minimum to the cap", () => {
-    for (const amount of [5, 6, 37, 100]) expect(parseShipEnergy(String(amount))).toBe(amount);
+    for (const amount of [5, 6, 37, 100, 101, 1000]) expect(parseShipEnergy(String(amount))).toBe(amount);
   });
 });
 
@@ -37,7 +37,7 @@ describe("stat-dependent training", () => {
       expect(trainingStatGain(stat, 3, 5)).toBeGreaterThan(lower);
     }
   });
-  it.each([[NaN, 1, 5], [0, 1, 5], [10, Infinity, 5], [10, 0, 5], [10, 1, 0], [10, 1, 5.5], [10, 1, 101]])(
+  it.each([[NaN, 1, 5], [0, 1, 5], [10, Infinity, 5], [10, 0, 5], [10, 1, 0], [10, 1, 5.5], [10, 1, 1001]])(
     "rejects invalid preview input (%s, %s, %s)", (stat, efficiency, energy) => {
       expect(() => trainingStatGain(stat, efficiency, energy)).toThrow(RangeError);
     });

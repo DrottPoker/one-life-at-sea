@@ -31,9 +31,11 @@ export function ResourceBars() {
   const resources = [
     { key: "energy", label: "Energy", value: state.energy, min: 0, max: MAX_ENERGY, Icon: Zap,
       description: "Increases by " + gameplay.resources.energyRecoveryAmount + " every " +
-        durationLabel(gameplay.resources.energyRecoverySeconds * (state.sea.state === "in_harbor" ? 1 : 2)) + "." },
+        durationLabel(gameplay.resources.energyRecoverySeconds * (state.sea.state === "in_harbor" ? 1 : 2)) + "." +
+        (state.energy >= MAX_ENERGY ? " Recovery paused at " + MAX_ENERGY + ". Storage limit: " + gameplay.resources.energyStorageMax + "." : "") },
     { key: "stamina", label: "Stamina", value: state.stamina, min: 0, max: MAX_STAMINA, Icon: Footprints,
-      description: "Increases by " + gameplay.stamina.recoveryAmount + " every " + durationLabel(gameplay.stamina.recoverySeconds) + ". Used for skill activities." },
+      description: "Increases by " + gameplay.stamina.recoveryAmount + " every " + durationLabel(gameplay.stamina.recoverySeconds) + ". Used for skill activities." +
+        (state.stamina >= MAX_STAMINA ? " Recovery paused at " + MAX_STAMINA + ". Storage limit: " + gameplay.stamina.storageMaximum + "." : "") },
     { key: "ship", label: "Ship Health", value: state.ship_health, min: 0, max: MAX_HEALTH, Icon: Ship,
       description: healthHint(gameplay.resources.shipRecoverySeconds) },
     { key: "crew", label: "Crew Health", value: state.crew_health, min: 0, max: MAX_HEALTH, Icon: Users,
@@ -50,11 +52,11 @@ export function ResourceBars() {
       const morale = resource.key === "morale", hintId = "resource-hint-" + resource.key;
       return <div className="o-resource" key={resource.key}
         onPointerEnter={event => { if (event.pointerType !== "touch") setActiveHint(resource.key); }}
-        onPointerLeave={event => { if (!event.currentTarget.contains(document.activeElement)) setActiveHint(null); }}>
+        onPointerLeave={event => { if (!event.currentTarget.contains(document.activeElement)) setActiveHint(current => current === resource.key ? null : current); }}>
         <div className="o-resource-control" role={morale ? "meter" : "progressbar"} tabIndex={0}
-          aria-label={resource.label} aria-valuemin={resource.min} aria-valuemax={resource.max} aria-valuenow={resource.value}
-          aria-valuetext={morale ? formatMorale(resource.value) + " morale" : resource.value + " of " + resource.max}
-          aria-describedby={hintId} onFocus={() => setActiveHint(resource.key)} onBlur={() => setActiveHint(null)}
+          aria-label={resource.label} aria-valuemin={resource.min} aria-valuemax={Math.max(resource.max, resource.value)} aria-valuenow={resource.value}
+          aria-valuetext={morale ? formatMorale(resource.value) + " morale" : resource.value > resource.max ? resource.value + ", above recovery limit of " + resource.max : resource.value + " of " + resource.max}
+          aria-describedby={hintId} onFocus={() => setActiveHint(resource.key)} onBlur={() => setActiveHint(current => current === resource.key ? null : current)}
           onPointerDown={event => { if (event.pointerType === "touch") { event.currentTarget.focus(); setActiveHint(resource.key); } }}>
           <div className="o-resource-label"><span><resource.Icon aria-hidden="true" />{resource.label}</span>
             {morale ? <output aria-label="Crew morale value">{formatMorale(resource.value)}</output> : <span>{resource.value} / {resource.max}</span>}
@@ -62,7 +64,7 @@ export function ResourceBars() {
           <div className={"o-resource-track o-resource-" + resource.key}>
             <span data-negative={morale && resource.value < 0} style={morale ?
               { left: (50 + Math.min(0, resource.value) / resource.max * 50) + "%", width: (Math.abs(resource.value) / resource.max * 50) + "%" } :
-              { width: (resource.value / resource.max * 100) + "%" }} />
+              { width: (Math.min(1, resource.value / resource.max) * 100) + "%" }} />
           </div>
         </div>
         <div className="o-resource-tooltip" id={hintId} role="tooltip" hidden={activeHint !== resource.key}>

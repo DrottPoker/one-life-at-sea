@@ -1,9 +1,10 @@
 # Stamina
 
-Stamina funds profession activities independently of Energy. The initial balance and cap are 50.
+Stamina funds profession activities independently of Energy. The initial balance and natural recovery cap are 50; the storage limit is 200.
 Each activity costs 1 Stamina. Recovery grants 1 at fixed five-minute UTC boundaries (:00, :05,
 :10 and so on), including offline, travel, sea, hospital and combat. No recovery is banked above
-the cap. Values are whole numbers. A depleted bar needs 50 ticks (about 4 hours 10 minutes) to fill.
+the recovery cap. Administrative grants can overfill it up to 200. Excess Stamina is preserved,
+without recovery until the balance falls below 50. Values are whole numbers. A depleted bar needs 50 ticks (about 4 hours 10 minutes) to fill.
 
 The owner selected Stamina for Fishing, Logging, Foraging, Cooking, Crafting and similar skills.
 Skill XP/levels and profile display are implemented in [Skills](SKILLS.md). [Activities](ACTIVITIES.md)
@@ -14,11 +15,11 @@ Crew Morale. Food restoration amounts and consumption limits remain undecided.
 
 ## Configuration and storage
 
-All balance values live under gameplay.stamina in config/gameplay.json: maximum, recoveryAmount,
+All balance values live under gameplay.stamina in config/gameplay.json: maximum, storageMaximum, recoveryAmount,
 recoverySeconds and activityCost. The schema requires positive integers and validates cost and recovery
 against capacity. The generated migration adds characters.stamina and stamina_updated_at. Existing
 characters receive a full bar once; later config synchronization never refills existing balances.
-Lowering the cap below existing stored balances fails instead of deleting excess player resources.
+Lowering the storage limit below existing stored balances fails instead of deleting excess player resources.
 
 private.stamina_snapshot counts UTC boundaries since the settlement checkpoint, returns the recovered
 balance and next deadline, and tolerates a future checkpoint without granting extra recovery.
@@ -40,6 +41,9 @@ Administrators may edit Stamina through the existing audited interface; edits re
 checkpoint. Normal players cannot directly update the balance or timestamp.
 
 ## Verification
+
+supabase/tests/resource-overflow.test.sql additionally covers overfill, admin grants, spending, retries,
+recovery resumption and hard limits for both resources.
 
 supabase/tests/stamina.test.sql covers boundaries, midnight, offline catch-up, caps, future checkpoints,
 spending, insufficient balance, ownership, access controls, game-state recovery, travel and admin edits.

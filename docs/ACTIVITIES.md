@@ -11,8 +11,40 @@ fixed items second, then weighted fish. Both catches and misses cost 1 Stamina a
 10 XP. Foraging and Logging remain XP-only until a table is assigned. Energy, Gold Coins
 and training XP are unaffected. See [Loot tables](LOOT_TABLES.md). The
 activity row shows its skill level, XP progress, reward and cost. Results and level-ups
-appear inline in the row, with no modal. Stamina and skill progression refresh on success.
+appear in an expandable result panel below the activity, with no modal. Stamina and skill progression refresh when a completed receipt is confirmed.
 The profile reflects the same XP and public Character Level.
+
+## Activity result panel
+
+A confirmed receipt opens a compact panel below the activity. Successful catches show
+Success and their item thumbnails/quantities. Misses show Failure while retaining the
+actual XP gain and Stamina cost. Activities with XP only show Success without an empty
+reward row. Pending or rejected requests are not labelled as a failed catch: uncertain
+responses show Unconfirmed, while known errors explain why the action could not complete.
+
+The latest result stays visible until another result arrives or its close button is used.
+Closing restores focus to the activity button. Normal game-state refreshes preserve the
+panel. Hovering, focusing or tapping a reward shows its item name; Escape or an outside
+interaction dismisses the tooltip. Tooltips stay within the viewport. Item artwork reuses
+the inventory fallback, including the shared dummy image. Announcements for screen readers
+are separate from tooltips. The result opens by expanding its actual height over 240 ms
+with eased motion, smoothly moving the following rows down. Clipping ends when the slide
+finishes so item tooltips remain visible. Repeated attempts update an already-open result
+without collapsing it first. Switching activities or dismissing a result collapses the old
+panel and its spacing over 150 ms before removing it. Closing results are inert and hidden
+from assistive technology. Interrupted slides resume from their current height, and
+reduced-motion settings complete the change immediately.
+
+Rewards are a wrapping row, with no fixed item count. The presentation layer accepts the
+current single-item loot receipt and an optional future rewards object containing an items
+array and a positive gold_coins amount. The latter can show items, Gold Coins, or both.
+An optional outcome field explicitly selects success/failure for future activity types;
+existing receipts derive this from loot.caught. Explicit rewards replace legacy loot in
+the view, so rewards are not displayed twice. Failure never renders a reward.
+
+This is display support only: current drop counts, loot odds and actual currency payouts
+are unchanged. Future multi-item/gold awards must be granted atomically by the server and
+included in its durable receipt. The browser never grants rewards from displayed values.
 
 ## Eligibility
 
@@ -70,3 +102,5 @@ Stamina recovery, zero balance, combat, travel and hospital. Alternative-config 
 use 3 Stamina and 17 XP. Browser tests cover immediate feedback, profile persistence,
 mobile layouts, resource recovery, concurrent/duplicate requests and saved-action recovery.
 The shared feedback test holds a response open while checking two tabs for banner flashes.
+
+Result-panel tests also cover legacy receipt compatibility, multiple item rewards, item-only/coin-only/combined outcomes, tooltip input methods, dismissal, and mobile wrapping. Future reward formats are tested with presentation receipts belonging only to disposable test characters.

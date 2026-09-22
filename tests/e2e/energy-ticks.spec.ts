@@ -23,7 +23,7 @@ test("fixed Energy deadlines show the current rate and recovered sea Energy can 
     await energyBar.focus();
     await expect(hint).toBeVisible();
     await page.keyboard.press("Tab");
-    await expect(hint).toHaveText("Increases by 1 every 5 minutes. Used for skill activities.");
+    await expect(hint).toHaveText("Increases by 1 every 5 minutes. Used for skill activities. Recovery paused at 50. Storage limit: 200.");
     await page.keyboard.press("Tab");
     await expect(hint).toHaveText("Recovers 1 HP every 30 seconds outside combat.");
     await page.keyboard.press("Escape");

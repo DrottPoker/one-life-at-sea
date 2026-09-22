@@ -60,6 +60,12 @@
               "integer": true,
               "minimum": 1,
               "maximum": 2147483647
+            },
+            "energyStorageMax": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 10000
             }
           }
         },
@@ -693,6 +699,12 @@
               "maximum": 2147483647
             },
             "activityCost": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "storageMaximum": {
               "type": "number",
               "integer": true,
               "minimum": 1,

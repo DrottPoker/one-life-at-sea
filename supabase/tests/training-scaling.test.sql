@@ -16,7 +16,7 @@ select throws_ok($$select private.training_gain(0,1,5)$$,'22023','INVALID_TRAINI
 select throws_ok($$select private.training_gain('NaN',1,5)$$,'22023','INVALID_TRAINING_INPUT','NaN stats rejected');
 select throws_ok($$select private.training_gain(10,'Infinity',5)$$,'22023','INVALID_TRAINING_INPUT','Infinite efficiency rejected');
 select throws_ok($$select private.training_gain(10,1,0)$$,'22023','INVALID_TRAINING_INPUT','Empty work rejected');
-select throws_ok($$select private.training_gain(10,1,101)$$,'22023','INVALID_TRAINING_INPUT','Work loop bounded by Energy cap');
+select throws_ok($$select private.training_gain(10,1,1001)$$,'22023','INVALID_TRAINING_INPUT','Work loop bounded by Energy cap');
 select throws_ok($$select private.training_gain(9007199254740991,1,5)$$,'P0001','PROGRESSION_LIMIT','Overflow rejected before charging');
 
 select ok(bool_and(private.training_gain(s*10,1,5)>private.training_gain(s,1,5)

@@ -34,7 +34,7 @@ export function crewTrainingStatGain(stat: number, efficiency: number, energy: n
 export function parseShipEnergy(value: unknown): number | null {
   if (typeof value !== "string" || !/^[0-9]{1,10}$/.test(value)) return null;
   const amount = Number(value);
-  return Number.isSafeInteger(amount) && amount >= gameplay.training.shipMinEnergy && amount <= gameplay.resources.energyMax ? amount : null;
+  return Number.isSafeInteger(amount) && amount >= gameplay.training.shipMinEnergy && amount <= gameplay.resources.energyStorageMax ? amount : null;
 }
 
 /**
@@ -44,7 +44,7 @@ export function parseShipEnergy(value: unknown): number | null {
 export function trainingStatGain(stat: number, efficiency: number, energy: number): number {
   if (!Number.isFinite(stat) || stat < 1 || stat > Number.MAX_SAFE_INTEGER ||
     !Number.isFinite(efficiency) || efficiency <= 0 || efficiency > 1000 ||
-    !Number.isSafeInteger(energy) || energy < 1 || energy > gameplay.resources.energyMax) {
+    !Number.isSafeInteger(energy) || energy < 1 || energy > gameplay.resources.energyStorageMax) {
     throw new RangeError("Invalid training input.");
   }
   let gain = 0;

@@ -68,7 +68,8 @@ gäller nya karaktärer; tidigare saldon bevaras. Karaktärens saldo och banksal
 Energy använder resources.energyRecoveryAmount (5) per resources.energyRecoverySeconds (300).
 Intervallet ligger på fasta UTC-gränser från Unix-epoken, gemensamma för alla kaptener.
 Till havs och under resor används dubbla intervallet (600 sekunder) med samma heltalsbelopp.
-Energy kapas vid energyMax (100). Tidsankaret anger senaste avräkning, inte en egen timer.
+Återhämtning stannar vid energyMax (100). energyStorageMax (1 000) tillåter överfyllning,
+vars överskott bevaras tills det spenderas. Tidsankaret anger senaste avräkning, inte en egen timer.
 Se [Energy](ENERGY_RECOVERY.md) för byte av takt, offlineankomst och migration.
 
 Hospital använder hospital.durationSeconds (300). Intagningen sparar start- och sluttid;
@@ -108,7 +109,7 @@ Nya stridsformler och kostnader gäller efter applicerad migration. Pågående d
 sparade stats, HP, ammunition och deadlines, medan nästa order använder de aktuella reglerna.
 Planera balansändringar mellan pågående strider om blandade regler är olämpliga.
 
-Att sänka Energy- eller hälsomax under sparade värden stoppas av databaskravet.
+Att sänka Energys lagringsgräns eller hälsomax under sparade värden stoppas av databaskravet.
 Ingen automatisk klippning eller nollställning sker. Sådana balansändringar behöver en separat, avsiktlig
 datamigration. Historiska rundnummer och ammunition får finnas kvar över nykonfigurerade gränser;
 nya handlingar kontrolleras av de konfigurerade RPC-reglerna.
@@ -207,7 +208,7 @@ icke-handelsbara items. Alla teständringar rullas tillbaka. Se [Marketplace](MA
 
 ## Stamina
 
-`gameplay.stamina` configures `maximum` (50), `recoveryAmount` (1), `recoverySeconds` (300) and
+`gameplay.stamina` configures `maximum` (natural recovery cap, 50), `storageMaximum` (hard limit, 200), `recoveryAmount` (1), `recoverySeconds` (300) and
 `activityCost` (1). Recovery uses the same interval in every location. Values must be positive whole
 numbers; cost and recovery cannot exceed capacity. See [Stamina](STAMINA.md).
 

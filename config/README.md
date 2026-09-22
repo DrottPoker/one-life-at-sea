@@ -67,7 +67,8 @@ Gränssnittets navy-/guldtema och den fasta hamnbakgrunden beskrivs i
 --o-background-image och --o-night-background-image i theme.css. Spelmodulen scrollar med dokumentet.
 frontend.json innehåller dayNight: dag börjar 06:00 och natt 21:00 UTC. Se [dag/natt-cykeln](../docs/DAY_NIGHT_CYCLE.md).
 
-`stamina.maximum` är 50, `recoveryAmount` 1, `recoverySeconds` 300 och `activityCost` 1.
+`resources.energyStorageMax` är 1 000; återhämtning stannar vid `energyMax` (100).
+`stamina.storageMaximum` är 200 och `stamina.maximum` är återhämtningsgränsen 50, `recoveryAmount` 1, `recoverySeconds` 300 och `activityCost` 1.
 Alla kommande yrkesaktiviteter använder samma grundkostnad. Se [Stamina](../docs/STAMINA.md).
 
 `skills.catalog` definierar färdigheter och `skills.xpThresholds` deras gemensamma

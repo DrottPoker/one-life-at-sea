@@ -205,7 +205,7 @@ function. It locks the caller and any combat peer, settles an expired encounter,
 and reads health alongside the current engagement. Ordinary Energy and health
 recovery are computed from database time, capped at 100. The shared
 `private.energy_tick_snapshot` function counts fixed UTC boundaries: +5 every five minutes
-at harbor and every ten minutes at sea, including travel. Energy is an integer, capped at 100,
+at harbor and every ten minutes at sea, including travel. Energy is an integer with a natural recovery cap of 100 and a storage limit of 1,000,
 with no time banked at the cap. `energy_updated_at` is a settlement checkpoint, not a
 player-specific timer. Offline recovery uses the same boundaries; no per-player worker or cron
 is required. `energy_next_at` gives the next server boundary for UI refresh and display.
@@ -595,7 +595,7 @@ See [Item Market Value](ITEM_MARKET_VALUE.md).
 
 ## Stamina
 
-Stamina is a separate integer resource for future profession activities: max 50, +1 per fixed UTC
+Stamina is a separate integer resource for profession activities: recovery cap 50, storage limit 200, +1 per fixed UTC
 five-minute tick and 1 per activity. Private SQL settles recovery and serializes spending; the shared
 game state exposes server deadlines for the sidebar. See [Stamina](STAMINA.md) for integration rules.
 
@@ -623,3 +623,11 @@ Private economy aggregation reuses the canonical market-value function and count
 ## Player statistics
 
 Auth registration, sign-in and removal triggers maintain private timestamp-only account analytics. A session-validated activity RPC also records continuing sessions, with throttled writes and one row per account per UTC day. Admin RPCs return last-month, 12-month or all-time history, deduplicated active accounts and a paginated directory. Histories use at most 500 explicitly labelled intervals. Full activity coverage begins when session tracking is installed; imported latest sign-ins contribute only to partial historical period totals, never invented daily history. Hard deletion removes the Auth identifier while retaining aggregate history. See [Player statistics](PLAYER_STATISTICS.md).
+
+## Activity result presentation
+
+The Activities client renders confirmed receipts as inline Success/Failure panels with
+wrapping item thumbnails, quantities and name tooltips. A shared reward adapter supports
+legacy loot and future item arrays plus Gold Coins. Rewards remain server-authoritative;
+this presentation support adds no loot rolls or payouts. Network uncertainty remains
+separate from an actual failed activity. See [Activities](ACTIVITIES.md).

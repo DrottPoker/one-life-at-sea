@@ -6,7 +6,8 @@ import { gameplay, frontend } from "@/config/public";
 import { useGameState } from "@/components/game-state";
 import { useEconomyRequests } from "@/components/economy-requests";
 import { skillProgress, type SkillProgress } from "@/lib/skills";
-import type { ActivityResult } from "@/lib/activities";
+import { ActivityFeedback } from "@/components/activity-outcome";
+import { activityOutcome, type ActivityResult } from "@/lib/activities";
 
 const icons = { fishing: Fish, logging: Axe, foraging: Leaf };
 const format = new Intl.NumberFormat(frontend.site.locale);
@@ -14,6 +15,7 @@ const format = new Intl.NumberFormat(frontend.site.locale);
 export function ActivitiesPanel({ progress }: { progress: SkillProgress }) {
   const state = useGameState(), journal = useEconomyRequests();
   const request = useRef<FormData | null>(null);
+  const [dismissed, setDismissed] = useState<ActivityResult | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [result, action, pending] = useActionState<ActivityResult, FormData>(async (_previous, form) => {
     if (!request.current) { form.set("request_id", crypto.randomUUID()); request.current = form; }
@@ -26,6 +28,7 @@ export function ActivitiesPanel({ progress }: { progress: SkillProgress }) {
   const locked = !!state.active_combat_id || !!state.hospital_until || state.sea.state !== "in_harbor";
   const enoughStamina = state.stamina >= gameplay.stamina.activityCost;
   return <div className="o-activities">
+    <div className="sr-only" role="status" aria-atomic="true">{result !== dismissed && result.message ? (result.receipt ? activityOutcome(result.receipt) + ". " : "") + result.message : ""}</div>
     <p className="o-activities-intro">Explore the shore, practice a skill and earn experience.</p>
     {!enoughStamina && <p className="o-copy o-activities-notice" role="status">You need {gameplay.stamina.activityCost} Stamina to do an activity. Stamina recovers over time.</p>}
     {locked && <p className="o-copy o-activities-notice">Activities are available in The Harbor, outside combat and hospital.</p>}
@@ -54,14 +57,16 @@ export function ActivitiesPanel({ progress }: { progress: SkillProgress }) {
           <input type="hidden" name="stamina_cost" value={gameplay.stamina.activityCost} />
           <input type="hidden" name="xp_gain" value={activity.xpGain} />
           <span>+{format.format(activity.xpGain)} {skillName} XP</span>
-          <button type="submit" className="o-training-button" aria-label={retry ? "Retry " + activity.name : activity.buttonLabel + " for " + gameplay.stamina.activityCost + " Stamina"}
+          <button id={"perform-" + activity.id} type="submit" className="o-training-button" aria-label={retry ? "Retry " + activity.name : activity.buttonLabel + " for " + gameplay.stamina.activityCost + " Stamina"}
             disabled={pending || (!retry && (locked || journal.unconfirmed || !!result.retry || !enoughStamina || xpLimit))}>
             {pending && active === activity.id ? "Working..." : retry ? "Check activity" : activity.buttonLabel}
           </button>
           <small>{gameplay.stamina.activityCost} Stamina</small>
         </form>
-        <div className="o-activity-feedback" role="status" aria-atomic="true">
-          {result.activity_id === activity.id && result.message && <span className={result.error ? "o-field-error" : ""}>{result.message}</span>}
+        <div className="o-activity-feedback">
+          <ActivityFeedback result={result !== dismissed && result.activity_id === activity.id && (result.receipt || result.message) ? result : null}
+            activityName={activity.name}
+            onClose={() => { setDismissed(result); document.getElementById("perform-" + activity.id)?.focus(); }} />
         </div>
       </section>;
     })}</div>

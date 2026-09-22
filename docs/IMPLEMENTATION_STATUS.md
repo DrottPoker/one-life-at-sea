@@ -1,3 +1,65 @@
+# Smooth activity result closing, 2026-09-22
+
+- Previous results collapse with their spacing over 150 ms when another activity returns
+  a result or the close button is used. New results still expand over 240 ms.
+- Results remain mounted through the exit motion, with closing controls inert.
+  Interrupted animations start from the current height; reduced motion completes immediately.
+- Validation: lint, production build/type checking, generated-config check and diff check passed.
+  Both focused activity browser tests passed, including rewards, close focus and mobile layouts.
+  Browser measurements confirmed 88.58/11.25/0 px at 0/75/149 ms and no final spacing jump.
+  Reversing a close resumed at the measured 11.25 px; reduced motion used zero duration.
+  The disposable-account measurement passed; deleting its account during a background refresh
+  emitted a resource-load message at teardown.
+
+# Resource overfill, 2026-09-22
+
+- Energy supports 0-1,000 and Stamina 0-200. Natural recovery still stops at 100/50.
+- Snapshots preserve surplus and advance checkpoints without banking missed ticks.
+  Recovery resumes on the next fixed boundary after spending below the recovery cap.
+- Resource bars show the full balance against the normal cap and never overflow their track.
+  Admin fields show both limits and validate whole numbers; database range errors identify the resource.
+- Ship work accepts stored Energy through 1,000, preserving its per-Energy duration and harbor lock.
+- Applied local migration 20260922075005_central_gameplay_config_62ef340d2fbb.sql.
+- Validation: lint, typecheck, 327 unit tests, production build, 1,605 database assertions
+  and 95 alternative-configuration assertions passed. Security advisors found no issues.
+- Both browser tests passed: admin overfill, bounded bars at mobile width, 1,000-Energy
+  ship work, recovery deadlines and keyboard/mouse tooltips. Fixed a stale pointer-leave
+  event clearing a tooltip that had moved to another resource through keyboard focus.
+- Localhost returned HTTP 200; live constraints confirm 1,000 Energy and 200 Stamina.
+  Browser runs emitted the existing Next.js aborted-navigation stream warning; no page errors.
+
+# Smooth activity result expansion, 2026-09-22
+
+- Replaced the result's opacity/translation effect with a 240 ms eased height expansion.
+  Following activity rows move down with the result, including multi-row rewards.
+- Animation clips content only during opening; tooltips remain unclipped afterward.
+  Reduced-motion preference still shows the result immediately.
+- Repeated attempts keep the open result mounted rather than collapsing and reopening it.
+- Validation: lint, production build, generated-config check and diff check passed.
+  Browser measurements confirmed increasing heights at 0/60/120/240 ms and matching
+  movement of the following row. Reduced motion displayed full height without animation.
+  Both focused activity browser tests passed, including repeated attempts, rewards,
+  tooltips, closing and 320px layout. Localhost returned HTTP 200.
+
+# Inline activity results, 2026-09-22
+
+- Added dismissible inline Success/Failure panels under activities with XP and cost.
+- Item rewards show artwork, quantity and name tooltips for mouse, keyboard and touch.
+  Missing artwork uses the shared item placeholder. Rewards wrap on narrow screens.
+- Added presentation support for future multiple-item, Gold Coins-only and combined
+  rewards. Current server loot/payout behavior remains unchanged; no migration needed.
+- Uncertain responses and rejected actions are distinct from confirmed failed catches.
+  Screen-reader announcements do not repeat when opening tooltips; reduced motion is supported.
+- Verification: lint and typecheck passed; all 325 unit tests passed; final production
+  build passed. Activity progression, concurrency, saved-request recovery and the admin
+  item/upload/loot flow passed in browser tests. The final focused run passed both the
+  result-panel test and the two-tab no-recovery-flash test (2/2).
+- Responsive result screenshots reviewed at 1440px and 375px; overflow and tooltip
+  bounds checked down to 320px. Fixed tooltips disappearing during scroll and intercepting
+  the close button on mobile. Future multi-item/coin receipts are isolated test fixtures.
+- Existing Next aborted-stream messages were observed during browser navigation; browser
+  page-error assertions passed. No database or reward-rule migration was introduced.
+
 # Unique active accounts and extended player history, 2026-09-22
 
 - Replaced login-event charts with unique active-account history. Accounts count once

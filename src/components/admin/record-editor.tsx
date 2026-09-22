@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { gameplay } from "@/config/public";
 import { adminLabel, changedValues, rowKey, type AdminResource, type AdminRow, type AdminValues } from "@/lib/admin";
 import { DialogCloseButton } from "@/components/dialog-close-button";
 import { MutationForm } from "@/components/admin/mutation-form";
@@ -11,6 +12,8 @@ function EditorDialog({ resource, row, close }: { resource: AdminResource; row: 
   const [values, setValues] = useState<AdminValues>(() => Object.fromEntries(resource.editable.map(key => [key, row.values[key]])));
   useEffect(() => { dialog.current?.showModal(); }, []);
   const changes = changedValues(row.values, values);
+  const resourceLimits: Record<string, number> = resource.name === "characters" ?
+    { energy: gameplay.resources.energyStorageMax, stamina: gameplay.stamina.storageMaximum } : {};
   return <dialog ref={dialog} className="admin-dialog" onCancel={close} onClose={close}>
     <DialogCloseButton onClose={close} label="Close" />
     <div className="admin-header"><h2 className="o-dialog-title">{adminLabel(resource.name)}: {row.values.display_name ?? row.values.item_id ?? "Record"}</h2></div>
@@ -19,8 +22,9 @@ function EditorDialog({ resource, row, close }: { resource: AdminResource; row: 
       label="Review changes" summary={"Update " + resource.name + ". Only the listed changed fields will be saved."} disabled={!Object.keys(changes).length}>
       <div className="admin-fields">{resource.columns.filter(column => resource.editable.includes(column.name)).map(column =>
         <label key={column.name}>{adminLabel(column.name)}
-          <input aria-label={column.name} type={/^(integer|bigint|numeric|smallint)/.test(column.type) ? "number" : "text"} step="any" value={values[column.name] ?? ""} disabled={values[column.name] === null}
+          <input aria-label={column.name} type={/^(integer|bigint|numeric|smallint)/.test(column.type) ? "number" : "text"} step={resourceLimits[column.name] ? 1 : "any"} min={resourceLimits[column.name] ? 0 : undefined} max={resourceLimits[column.name]} value={values[column.name] ?? ""} disabled={values[column.name] === null}
             onChange={event => setValues(previous => ({ ...previous, [column.name]: event.target.value }))} />
+          {resourceLimits[column.name] && <small>Whole number, 0-{resourceLimits[column.name]}. Recovery stops at {column.name === "energy" ? gameplay.resources.energyMax : gameplay.stamina.maximum}.</small>}
           {column.nullable && <span className="admin-null"><input type="checkbox" aria-label={column.name + " is NULL"}
             checked={values[column.name] === null} onChange={event => setValues(previous => ({ ...previous, [column.name]: event.target.checked ? null : row.values[column.name] ?? "" }))} /> Clear value</span>}
         </label>)}</div>

@@ -31,7 +31,7 @@ alter table public.characters
   alter column crew_health set default {{gameplay.resources.crewHealthInitial}},
   alter column defence_order set default {{gameplay.combat.defaultDefenceOrder}},
   drop constraint characters_energy_check,
-  add constraint characters_energy_check check(energy between 0 and {{gameplay.resources.energyMax}}),
+  add constraint characters_energy_check check(energy between 0 and {{gameplay.resources.energyStorageMax}}),
   drop constraint characters_ship_health_check,
   add constraint characters_ship_health_check check(ship_health between 0 and {{gameplay.resources.healthMax}}),
   drop constraint characters_crew_health_check,
@@ -57,9 +57,9 @@ alter table private.combat_participants
 create or replace function private.energy_tick_snapshot(stored_energy integer,anchor timestamptz,observed_at timestamptz,tick_seconds bigint)
 returns table(energy integer,energy_updated_at timestamptz)
 language sql immutable strict security invoker set search_path='' as $$
-  select least({{gameplay.resources.energyMax}},stored_energy+greatest(0,
+  select greatest(stored_energy,least({{gameplay.resources.energyMax}},stored_energy+greatest(0,
     floor(extract(epoch from observed_at)/tick_seconds)-floor(extract(epoch from anchor)/tick_seconds))
-    *{{gameplay.resources.energyRecoveryAmount}})::integer,greatest(anchor,observed_at);
+    *{{gameplay.resources.energyRecoveryAmount}}))::integer,greatest(anchor,observed_at);
 $$;
 revoke all on function private.energy_tick_snapshot(integer,timestamptz,timestamptz,bigint) from public,anon,authenticated;
 

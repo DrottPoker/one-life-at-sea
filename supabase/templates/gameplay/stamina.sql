@@ -5,15 +5,15 @@ alter table public.characters
 alter table public.characters alter column stamina set default {{gameplay.stamina.maximum}};
 alter table public.characters drop constraint if exists characters_stamina_check;
 alter table public.characters add constraint characters_stamina_check
-  check(stamina between 0 and {{gameplay.stamina.maximum}});
+  check(stamina between 0 and {{gameplay.stamina.storageMaximum}});
 
 create or replace function private.stamina_snapshot(stored_stamina integer,anchor timestamptz,observed_at timestamptz)
 returns table(stamina integer,stamina_updated_at timestamptz,stamina_next_at timestamptz)
 language sql immutable strict security invoker set search_path='' as $$
   with recovered as (
-    select least({{gameplay.stamina.maximum}},stored_stamina+greatest(0,
+    select greatest(stored_stamina,least({{gameplay.stamina.maximum}},stored_stamina+greatest(0,
       floor(extract(epoch from observed_at)/{{gameplay.stamina.recoverySeconds}})
-      -floor(extract(epoch from anchor)/{{gameplay.stamina.recoverySeconds}}))*{{gameplay.stamina.recoveryAmount}})::integer as value,
+      -floor(extract(epoch from anchor)/{{gameplay.stamina.recoverySeconds}}))*{{gameplay.stamina.recoveryAmount}}))::integer as value,
       greatest(anchor,observed_at) as checkpoint
   )
   select value,checkpoint,case when value<{{gameplay.stamina.maximum}} then

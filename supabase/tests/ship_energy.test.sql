@@ -16,7 +16,7 @@ set local role authenticated;
 select throws_ok($$select public.start_ship_upgrade('attack',null,'ship_1',gen_random_uuid())$$,'22023','INVALID_ENERGY','Null Energy is rejected');
 select throws_ok($$select public.start_ship_upgrade('attack',0,'ship_1',gen_random_uuid())$$,'22023','INVALID_ENERGY','Zero Energy is rejected');
 select throws_ok($$select public.start_ship_upgrade('attack',4,'ship_1',gen_random_uuid())$$,'22023','INVALID_ENERGY','Below-minimum Energy is rejected');
-select throws_ok($$select public.start_ship_upgrade('attack',101,'ship_1',gen_random_uuid())$$,'22023','INVALID_ENERGY','Above-cap Energy is rejected');
+select throws_ok($$select public.start_ship_upgrade('attack',1001,'ship_1',gen_random_uuid())$$,'22023','INVALID_ENERGY','Above-cap Energy is rejected');
 select throws_ok($$select private.training_action('ship','{"stat":"attack","tier_id":"ship_1","energy_amount":5.5}',gen_random_uuid())$$,'22023','INVALID_ENERGY','Fractional Energy is rejected by the authoritative action');
 select is(public.get_game_state()->>'energy','100','Invalid requests do not debit Energy');
 insert into ship_receipts select public.start_ship_upgrade('attack',6,'ship_1',request) from ship_fixture;

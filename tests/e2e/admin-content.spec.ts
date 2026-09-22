@@ -68,7 +68,9 @@ test("admin authors items and loot, uploads artwork, links fishing and receives 
     await loginTestAccount(playerPage, player);
     await playerPage.goto("/activities");
     await playerPage.getByRole("button", { name: "Fish for 1 Stamina", exact: true }).click();
-    await expect(playerPage.getByRole("region", { name: "Shore Fishing", exact: true })).toContainText("Caught 2 × Test Pearl " + tag);
+    const fishingResult = playerPage.getByRole("region", { name: "Shore Fishing result", exact: true });
+    await expect(fishingResult.getByRole("heading", { name: "Success", exact: true })).toBeVisible();
+    await expect(fishingResult.getByRole("button", { name: "2 × Test Pearl " + tag, exact: true })).toBeVisible();
     const request = { activity_id: "shore_fishing", expected_stamina_cost: 1, expected_xp_gain: 10, request_id: randomUUID() };
     const repeated = await Promise.all(Array.from({ length: 8 }, () => player.api.rpc("perform_activity", request)));
     expect(repeated.every(result => !result.error && JSON.stringify(result.data) === JSON.stringify(repeated[0].data))).toBe(true);

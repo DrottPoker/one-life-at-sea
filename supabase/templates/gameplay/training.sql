@@ -83,7 +83,7 @@ declare current_value numeric:=stat_value; unit_gain numeric; total_gain numeric
 begin
   if not (stat_value between 1 and 9007199254740991)
     or not (efficiency between 0.000001 and 1000)
-    or not (energy_amount between 1 and {{gameplay.resources.energyMax}}) then
+    or not (energy_amount between 1 and {{gameplay.resources.energyStorageMax}}) then
     raise exception 'INVALID_TRAINING_INPUT' using errcode='22023';
   end if;
   for i in 1..energy_amount loop
@@ -158,7 +158,7 @@ begin
       if exists(select 1 from private.ship_upgrade_jobs where character_id=viewer_id and applied_at is null) then raise exception 'SHIP_WORK_ACTIVE'; end if;
       if jsonb_typeof(payload->'energy_amount') is distinct from 'number'
         or (payload->>'energy_amount')::numeric<>trunc((payload->>'energy_amount')::numeric)
-        or (payload->>'energy_amount')::numeric not between {{gameplay.training.shipMinEnergy}} and {{gameplay.resources.energyMax}}
+        or (payload->>'energy_amount')::numeric not between {{gameplay.training.shipMinEnergy}} and {{gameplay.resources.energyStorageMax}}
       then raise exception 'INVALID_ENERGY' using errcode='22023'; end if;
       energy_cost:=(payload->>'energy_amount')::integer;
     end if;

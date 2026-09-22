@@ -1,5 +1,6 @@
 "use server";
 
+import { gameplay } from "@/config/public";
 import { withDatabaseRetry } from "@/lib/database-retry";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -17,6 +18,11 @@ export async function runAdminAction(action: AdminAction, payload: AdminPayload,
   if (error || !data) {
     const message = adminErrors[error?.message ?? ""];
     if (message) return { error: true, message };
+    if (error?.code === "23514") {
+      for (const [field, label, maximum] of [["energy", "Energy", gameplay.resources.energyStorageMax], ["stamina", "Stamina", gameplay.stamina.storageMaximum]] as const) {
+        if (error.message.includes("characters_" + field + "_check")) return { error: true, message: label + " must be a whole number from 0 to " + maximum + "." };
+      }
+    }
     if (error?.code?.startsWith("22") || error?.code?.startsWith("23")) {
       return { error: true, message: "These values violate a database rule. Check types, ranges, unique names and referenced IDs." };
     }

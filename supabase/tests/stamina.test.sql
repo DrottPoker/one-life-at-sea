@@ -21,7 +21,7 @@ create temporary table stamina_fixture as select
 grant select on stamina_fixture to authenticated;
 select is((select stamina from public.characters where id=(select a from stamina_fixture)),50,'New characters start full');
 select throws_ok($$update public.characters set stamina=-1 where id=(select a from stamina_fixture)$$,'23514',null,'Negative Stamina is rejected');
-select throws_ok($$update public.characters set stamina=51 where id=(select a from stamina_fixture)$$,'23514',null,'Stamina above the cap is rejected');
+select throws_ok($$update public.characters set stamina=201 where id=(select a from stamina_fixture)$$,'23514',null,'Stamina above the cap is rejected');
 select ok(not has_function_privilege('authenticated','private.spend_activity_stamina(uuid)','EXECUTE'),'Spending helper is not client callable');
 select ok(not has_function_privilege('anon','private.spend_activity_stamina(uuid)','EXECUTE'),'Anonymous users cannot invoke spending');
 select throws_ok($$select private.spend_activity_stamina(a) from stamina_fixture$$,'42501','UNAUTHORIZED','Spending requires a player identity');

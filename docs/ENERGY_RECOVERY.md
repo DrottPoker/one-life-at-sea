@@ -10,7 +10,8 @@ och den tidigare pausen till havs.
 | Hamnen, inklusive Hospital | +5 Energy | :00, :05, :10, :15, :20, :25, :30, :35, :40, :45, :50, :55 |
 | Havsplats och pågående resa i båda riktningarna | +5 Energy | :00, :10, :20, :30, :40, :50 |
 
-Energy lagras och returneras som heltal, med högst 100. Ingen delad tilldelning
+Energy lagras och returneras som heltal, med högst 1 000. Naturlig återhämtning stannar vid 100.
+Överskott bevaras utan nygenerering tills saldot faller under 100. Ingen delad tilldelning
 på 2,5 används. Alla kaptener använder samma servergränser, oavsett senaste
 handling, inloggning, webbläsarklocka eller tidszon. Hälsans timers ändras inte.
 
@@ -35,7 +36,7 @@ Upprepade läsningar och idempotenta återförsök kan inte dela ut samma Energy
 
 `energy_next_at` innehåller nästa absoluta servergräns, eller null vid full Energy.
 GameStateProvider hämtar bekräftad spelstatus vid denna deadline. Sidopanelen visar
-aktuell takt och nästa klockslag med tidszon; klienten delar inte ut Energy själv.
+aktuellt saldo och återhämtningstakt i en tooltip; klienten delar inte ut Energy själv.
 
 ## Byte av plats
 
@@ -54,7 +55,7 @@ stridslås och hälsoregler ändras inte.
 ## Konfiguration och migration
 
 `resources.energyRecoveryAmount` är 5, `energyRecoverySeconds` är 300 och
-`energyMax` är 100. Havets intervall är alltid dubbla basintervallet. Beloppet är
+`energyMax` är återhämtningsgränsen 100 och `energyStorageMax` är lagringsgränsen 1 000. Havets intervall är alltid dubbla basintervallet. Beloppet är
 fortfarande ett heltal även med alternativ konfiguration.
 
 Canonical SQL finns i `supabase/templates/gameplay/resources.sql`, med integration
@@ -72,6 +73,10 @@ Den tidigare individuella timerns delintervall överförs inte som extra Energy.
 Nästa tillskott följer det nya gemensamma klockslaget.
 
 ## Verifiering
+
+`supabase/tests/resource-overflow.test.sql` provar överfyllning, hårda gränser, adminpåfyllning,
+förbrukning och återupptagen återhämtning. `tests/e2e/resource-overflow.spec.ts` verifierar
+adminflödet, fyllda bars, mobilbredd och skeppsarbete med 1 000 Energy.
 
 `supabase/tests/energy-ticks.test.sql` provar gränser före/exakt på/efter ticks,
 olika tidigare handlingstider, heltal, maxvärde, offlineåterhämtning, klockåtergång,

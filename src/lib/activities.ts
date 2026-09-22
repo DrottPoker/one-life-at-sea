@@ -1,9 +1,16 @@
 import { gameplay } from "@/config/public";
+import { DEFAULT_ITEM_IMAGE } from "@/lib/loot";
+import { formatGold } from "@/lib/bank";
+
+export type ActivityItemReward = { item_id: string; name: string; image_path: string; quantity: number };
+export type ActivityRewards = { items: ActivityItemReward[]; gold_coins: number };
 
 export type ActivityReceipt = {
   activity_id: string; skill_id: string; stamina_cost: number; stamina_after: number;
   xp_awarded: number; xp: number; previous_level: number; level: number; character_level: number;
   config_revision: string;
+  outcome?: "success" | "failure";
+  rewards?: { items?: ActivityItemReward[]; gold_coins?: number };
   loot?: { caught: boolean; table_id: string; table_version: string; skill_level: number; success_chance: number; item_id?: string; name?: string; image_path?: string; quantity?: number } | null;
 };
 export type ActivityResult = { message?: string; error?: boolean; retry?: boolean; activity_id?: string; receipt?: ActivityReceipt };
@@ -17,9 +24,29 @@ export function parseActivityForm(form: FormData) {
   return { activity_id: activity, expected_stamina_cost: staminaCost, expected_xp_gain: xpGain };
 }
 
-export function activityMessage(receipt: ActivityReceipt) {
+export function activityOutcome(receipt: ActivityReceipt) {
+  return receipt.outcome ?? (receipt.loot?.caught === false ? "failure" : "success");
+}
+
+export function activityRewards(receipt: ActivityReceipt): ActivityRewards {
+  if (activityOutcome(receipt) === "failure") return { items: [], gold_coins: 0 };
+  if (receipt.rewards) return { items: receipt.rewards.items ?? [], gold_coins: receipt.rewards.gold_coins ?? 0 };
+  const loot = receipt.loot;
+  return { items: loot?.caught && loot.name && loot.quantity ? [{
+    item_id: loot.item_id ?? "legacy_item", name: loot.name, image_path: loot.image_path || DEFAULT_ITEM_IMAGE, quantity: loot.quantity,
+  }] : [], gold_coins: 0 };
+}
+
+export function activityProgressMessage(receipt: ActivityReceipt) {
   const skill = gameplay.skills.catalog.find(entry => entry.id === receipt.skill_id)?.name ?? "Skill";
-  const loot = receipt.loot ? receipt.loot.caught ? "Caught " + receipt.loot.quantity + " × " + receipt.loot.name + ". " : "Nothing caught. " : "";
-  return loot + "+" + receipt.xp_awarded + " " + skill + " XP. Spent " + receipt.stamina_cost + " Stamina." +
+  return "+" + receipt.xp_awarded + " " + skill + " XP. Spent " + receipt.stamina_cost + " Stamina." +
     (receipt.level > receipt.previous_level ? " " + skill + " reached level " + receipt.level + "!" : "");
+}
+
+export function activityMessage(receipt: ActivityReceipt) {
+  const rewards = activityRewards(receipt);
+  const items = rewards.items.map(item => item.quantity + " × " + item.name).join(", ");
+  const loot = activityOutcome(receipt) === "failure" ? "Nothing caught. " : items ? (receipt.rewards ? "Received " : "Caught ") + items + ". " : "";
+  const gold = rewards.gold_coins > 0 ? "+" + formatGold(rewards.gold_coins) + " Gold Coins. " : "";
+  return loot + gold + activityProgressMessage(receipt);
 }
