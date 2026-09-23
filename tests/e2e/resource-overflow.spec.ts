@@ -1,11 +1,14 @@
 import { test, expect } from "@playwright/test";
 import { createTestAccount, cleanupTestAccounts, loginTestAccount, testSql } from "../support/accounts";
 
+import { seedShipMaterials } from "../support/inventory";
+
 test("admin overfills resources, bars stay bounded and ship work can spend the surplus", async ({ page }) => {
   const own = await createTestAccount("resource-overflow");
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   try {
+    seedShipMaterials(own.id);
     testSql("insert into private.admin_members(user_id) values('" + own.userId + "');");
     await loginTestAccount(page, own);
     await page.goto("/admin/players/" + own.id);

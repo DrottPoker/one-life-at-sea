@@ -15,7 +15,8 @@
     "combatPreviewMs": 5000,
     "resourceMinimumMs": 500,
     "resourceGraceMs": 150,
-    "countdownTickMs": 1000
+    "countdownTickMs": 1000,
+    "requestTimeoutMs": 10000
   },
   "art": {
     "harborPath": "/images/harbor.webp",

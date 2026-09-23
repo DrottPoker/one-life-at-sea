@@ -1,6 +1,6 @@
 # Resor till havs
 
-Implementerat lokalt 2026-09-20. [Designunderlag](SEA_TRAVEL_PLAN.md) och
+Implementerat lokalt 2026-09-20. [Designunderlag](archive/plans/SEA_TRAVEL_PLAN.md) och
 [verifieringsresultat](IMPLEMENTATION_STATUS.md).
 
 ## Spelloop

@@ -17,7 +17,6 @@ revoke all on function private.item_market_value_at(text,timestamptz) from publi
 create or replace function private.get_item_market_value(target_item text,period text default 'all')
 returns jsonb language plpgsql stable security definer set search_path='' as $$
 declare
-  viewer_id uuid:=private.combat_captain();
   observed timestamptz:=statement_timestamp();
   tracked timestamptz;
   range_start timestamptz;
@@ -27,6 +26,7 @@ declare
   sampled boolean:=false;
   points jsonb:='[]'::jsonb;
 begin
+  perform private.combat_captain();
   if period is null or period not in ('1m','3m','6m','1y','3y','all') then
     raise exception 'INVALID_PERIOD' using errcode='22023'; end if;
   if not exists(select 1 from private.item_definitions where id=target_item) then

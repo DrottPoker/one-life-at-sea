@@ -220,7 +220,12 @@ test("legacy profile links recover old pending sends without duplicate mail", as
   try {
     const id = crypto.randomUUID();
     testSql(`select set_config('request.jwt.claims','{"sub":"${sender.userId}","role":"authenticated"}',false);
-      select private.send_player_message(${recipient.playerNumber},'Old pending message','${id}'); select private.import_legacy_mail();`);
+      with thread as (
+        insert into private.message_threads(participant_a,participant_b)
+        values(least('${sender.id}'::uuid,'${recipient.id}'::uuid),greatest('${sender.id}'::uuid,'${recipient.id}'::uuid)) returning id
+      ) insert into private.player_messages(thread_id,sender_id,recipient_id,request_id,body)
+        select id,'${sender.id}','${recipient.id}','${id}','Old pending message' from thread;
+      select private.import_legacy_mail();`);
     await loginTestAccount(page, sender);
     await page.evaluate(({ characterId, number, requestId }) => sessionStorage.setItem("pending-message:" + characterId + ":" + number, JSON.stringify({ id: requestId, body: "Old pending message" })), { characterId: sender.id, number: recipient.playerNumber, requestId: id });
     await page.goto("/messages/" + recipient.playerNumber);

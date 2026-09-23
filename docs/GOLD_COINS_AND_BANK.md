@@ -69,9 +69,4 @@ ut- och hemresa, är både insättning och uttag spärrade även via RPC.
 
 ## Beständiga återförsök
 
-Ekonomihandlingar sparar request-ID före anropet och kan återhämtas efter
-omladdning eller navigation. Pågående handlingar visar ingen återhämtningsruta.
-Först när anropet har avslutats utan säker bekräftelse visas **Unconfirmed action**
-med **Check saved action**. Detta gäller även mellan flikar och efter omladdning.
-Samma karaktär måste vara inloggad.
-Se [ekonomigranskningen](ECONOMY_AUDIT.md) för skydd, tester och avgränsning.
+Gemensam lagring, kontobindning och återhämtning mellan flikar beskrivs i [ekonomiintegritet](ECONOMY_AUDIT.md).

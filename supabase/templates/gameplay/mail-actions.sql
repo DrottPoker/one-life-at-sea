@@ -39,7 +39,3 @@ $$;
 create or replace function public.set_mail_ignored(target_player_number bigint,ignored boolean) returns void language sql volatile security invoker set search_path='' as $$ select private.set_mail_ignored(target_player_number,ignored); $$;
 revoke all on function private.update_mail(bigint[],text),public.update_mail(bigint[],text),private.set_mail_ignored(bigint,boolean),public.set_mail_ignored(bigint,boolean) from public,anon,authenticated;
 grant execute on function private.update_mail(bigint[],text),public.update_mail(bigint[],text),private.set_mail_ignored(bigint,boolean),public.set_mail_ignored(bigint,boolean) to authenticated;
--- Imported conversation tables remain an inaccessible archive. New writes use mail only.
-revoke all on function private.send_player_message(bigint,text,uuid),public.send_player_message(bigint,text,uuid),
-  private.get_message_inbox(bigint),public.get_message_inbox(bigint),private.get_message_conversation(bigint,bigint),public.get_message_conversation(bigint,bigint),
-  private.mark_messages_read(bigint,bigint),public.mark_messages_read(bigint,bigint) from public,anon,authenticated;

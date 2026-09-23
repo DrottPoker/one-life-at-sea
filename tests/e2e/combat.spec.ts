@@ -1,38 +1,16 @@
-import { isLocalTestApi, localDatabaseContainer, localAppUrl } from "../support/local";
-import { test, expect, type Page } from "@playwright/test";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { execFileSync } from "node:child_process";
-import { randomBytes, randomUUID } from "node:crypto";
+import { localAppUrl } from "../support/local";
+import { test, expect } from "@playwright/test";
+import { type SupabaseClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 import type { Database } from "../../src/lib/database.types";
 import type { CombatResponse } from "../../src/lib/combat";
 
-process.loadEnvFile(".env.local");
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-if (!isLocalTestApi(url)) throw new Error("Combat tests require local Supabase.");
-const client = () => createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-const suffix = () => [...randomBytes(10)].map(value => String.fromCharCode(97 + value % 26)).join("");
-function uuid(value: string) {
-  if (!/^[0-9a-f-]{36}$/.test(value)) throw new Error("Invalid fixture ID.");
-  return value;
-}
-function sql(statement: string) {
-  execFileSync("docker", ["exec", localDatabaseContainer, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c", statement],
-    { stdio: ["ignore", "pipe", "pipe"] });
-}
+import { createTestAccount, createTestClient as client, cleanupTestAccounts as cleanup, loginTestAccount as login, testSql as sql } from "../support/accounts";
+
 async function captain() {
-  const api = client();
-  const email = "combat-" + suffix() + "@example.test";
-  const password = randomBytes(24).toString("hex");
-  const name = "Captain" + suffix();
-  const signup = await api.auth.signUp({ email, password, options: { data: { character_name: name } } });
-  expect(signup.error).toBeNull();
-  const userId = uuid(signup.data.user!.id);
-  const result = await api.from("characters").select("id, player_number").single();
-  expect(result.error).toBeNull();
-  // Combat scenarios use explicit baseline stats; signup defaults are tested with training.
-  sql("update public.characters set energy_updated_at=clock_timestamp()+interval '1 day',ship_attack=1,ship_defense=1,ship_speed=1,ship_accuracy=1,crew_attack=1,crew_defense=1,crew_speed=1,crew_accuracy=1 where id=\'" + uuid(result.data!.id) + "\'");
-  return { api, email, password, name, userId, id: uuid(result.data!.id), playerNumber: result.data!.player_number };
+  const own = await createTestAccount("combat");
+  sql("update public.characters set ship_attack=1,ship_defense=1,ship_speed=1,ship_accuracy=1,crew_attack=1,crew_defense=1,crew_speed=1,crew_accuracy=1 where id='" + own.id + "'");
+  return own;
 }
 function battle(data: CombatResponse | null) {
   expect(data).not.toBeNull();
@@ -45,20 +23,6 @@ async function start(api: SupabaseClient<Database>, targetId: string, requestId:
     if (result.error?.code !== "40001" || i === 3) return result;
   }
 }
-async function login(page: Page, account: Awaited<ReturnType<typeof captain>>) {
-  await page.goto("/login");
-  await page.getByLabel("Email address", { exact: true }).fill(account.email);
-  await page.getByLabel("Password", { exact: true }).fill(account.password);
-  await page.getByRole("button", { name: "Log in", exact: true }).click();
-  await expect(page).toHaveURL(/\/harbor$/);
-}
-async function cleanup(accounts: Awaited<ReturnType<typeof captain>>[]) {
-  for (const account of accounts) {
-    await account.api.auth.signOut();
-    sql("delete from auth.users where id='" + account.userId + "'");
-  }
-}
-
 test.use({ launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] } });
 
 test("fullscreen attack keeps preparation and both phases on one route, locks navigation, then publishes a report", async ({ page, browser }) => {
@@ -93,7 +57,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await main.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
     await expect(main.getByRole("button", { name: /^Fire cannons 1 salvo/ })).toBeVisible();
     await expect(page).toHaveURL(new RegExp("/attack/" + d.playerNumber + "$"));
-    const battleId = uuid((await a.api.rpc("get_attack_lock")).data!.battle_id);
+    const battleId = (await a.api.rpc("get_attack_lock")).data!.battle_id!;
     const lockedUrl = page.url();
     await expect(opponent.getByText("Basic cannons", { exact: true })).toBeVisible();
     await expect(main.getByRole("progressbar", { name: "Your Ship Health", exact: true })).toHaveAttribute("aria-valuenow", "63");
@@ -195,7 +159,7 @@ test("simultaneous starts join once; duplicate orders, independent phases, timeo
     expect((await a.api.rpc("get_game_state")).data?.energy).toBe(90);
     expect((await b.api.rpc("get_game_state")).data?.energy).toBe(90);
     expect((await b.api.rpc("get_combat", { battle_id: id })).data?.round).toBe(0);
-    sql("update private.combat_participants set phase='boarding' where combat_id='" + uuid(id) + "' and character_id='" + a.id + "'");
+    sql("update private.combat_participants set phase='boarding' where combat_id='" + id + "' and character_id='" + a.id + "'");
     sql("update private.combats set state=jsonb_set(jsonb_set(state,'{defender,ship_health}','1'),'{defender,crew_health}','1') where id='" + id + "'");
     sql("update public.characters set ship_health=1,crew_health=1 where id='" + d.id + "'");
     let finished = false;
@@ -237,7 +201,7 @@ test("joined attackers and an online defender receive shared HP live; the defend
     await page.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
     await expect(page.getByRole("button", { name: /^Fire cannons 1 salvo/ })).toBeVisible();
     await expect(page).toHaveURL(sharedUrl);
-    const id = uuid((await a.api.rpc("get_attack_lock")).data!.battle_id);
+    const id = (await a.api.rpc("get_attack_lock")).data!.battle_id!;
     await pageB.goto(sharedUrl);
     const ownB = pageB.getByRole("region", { name: "Your ship and crew", exact: true });
     await expect(ownB.getByRole("link", { name: b.name, exact: true })).toBeVisible();
@@ -294,7 +258,7 @@ test("a shared victory opens the same report for both attackers and the target l
     const sharedUrl = page.url();
     await page.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
     await expect(page.getByRole("button", { name: /^Fire cannons 1 salvo/ })).toBeVisible();
-    const id = uuid((await a.api.rpc("get_attack_lock")).data!.battle_id);
+    const id = (await a.api.rpc("get_attack_lock")).data!.battle_id!;
     await pageB.goto(sharedUrl);
     await pageB.getByRole("button", { name: "Join battle 10 Energy", exact: true }).click();
     await expect(pageB.getByRole("button", { name: /^Fire cannons 1 salvo/ })).toBeVisible();
@@ -340,7 +304,7 @@ test("extreme stats distinguish guaranteed misses from blocked hits in sea and c
     await page.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
     await page.getByRole("button", { name: /^Fire cannons 1 salvo/ }).click();
     await expect(page.getByText("Round 1 / 25", { exact: true })).toBeVisible();
-    const id = uuid((await a.api.rpc("get_attack_lock")).data!.battle_id);
+    const id = (await a.api.rpc("get_attack_lock")).data!.battle_id!;
     const log = page.getByRole("region", { name: "Combat log", exact: true });
     await expect(log.getByText("Missed", { exact: true })).toHaveCount(1);
     await expect(log.getByText("Blocked · 0 damage", { exact: true })).toHaveCount(1);

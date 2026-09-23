@@ -1,3 +1,4 @@
+import { seedShipMaterials } from "../support/inventory";
 import { test, expect, type Page } from "@playwright/test";
 import { createTestAccount, cleanupTestAccounts, loginTestAccount, testSql } from "../support/accounts";
 import type { GameState } from "../../src/lib/game";
@@ -229,7 +230,7 @@ test("departure stays locked until the thirty-second ship job completes", async 
   await expect(page.getByRole("button", { name: "Set sail", exact: true })).toBeDisabled();
   await expect(page.getByText("You need 5 Energy to leave.", { exact: true })).toBeVisible();
   testSql("update public.characters set energy=100,energy_updated_at=clock_timestamp()+interval '1 day' where id='" + own.id + "';");
-  testSql("insert into private.item_stacks(character_id,item_id,quantity) select '" + own.id + "',item_id,10 from (values('oak_planks'),('iron_nails')) m(item_id);");
+  seedShipMaterials(own.id, 10);
   expect((await own.api.rpc("start_ship_upgrade", { stat: "attack", energy_amount: 5, expected_workshop_id: "ship_1", request_id: crypto.randomUUID() })).error).toBeNull();
   await page.reload();
   const before = await state(own);

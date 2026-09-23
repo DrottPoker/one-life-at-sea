@@ -1,4 +1,4 @@
-import { MailIgnoreList } from "@/components/mail-ignore-list";
+import { MailIgnoreList } from "@/components/messages/mail-ignore-list";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 

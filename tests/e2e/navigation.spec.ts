@@ -1,13 +1,6 @@
-import { isLocalTestApi, localDatabaseContainer } from "../support/local";
+import { cleanupTestRegistrations } from "../support/accounts";
 import { test, expect } from "@playwright/test";
 import { randomBytes } from "node:crypto";
-import { execFileSync } from "node:child_process";
-
-process.loadEnvFile(".env.local");
-const databaseUrl = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!);
-if (!isLocalTestApi(databaseUrl.href)) {
-  throw new Error("Navigation tests require this project's local Supabase.");
-}
 
 test("game navigation preserves the shell, prefetches and only loads content", async ({ page }) => {
   const suffix = [...randomBytes(10)].map(value => String.fromCharCode(97 + value % 26)).join("");
@@ -133,7 +126,7 @@ test("game navigation preserves the shell, prefetches and only loads content", a
     blockedPath = null;
     release?.();
     await page.unrouteAll({ behavior: "wait" });
-    execFileSync("docker", ["exec", localDatabaseContainer, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
-      `delete from auth.users where email='${email}'`], { stdio: ["ignore", "pipe", "pipe"] });
+    await page.close();
+    cleanupTestRegistrations([email]);
   }
 });

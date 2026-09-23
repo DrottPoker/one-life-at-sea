@@ -78,7 +78,7 @@ end;
 $$;
 
 create or replace function private.resolve_combat_round(input_state jsonb, player_order text, rolls double precision[])
-returns jsonb language plpgsql immutable security invoker set search_path = ''
+returns jsonb language plpgsql stable security invoker set search_path = ''
 as $$
 declare
   a jsonb := input_state->'attacker';

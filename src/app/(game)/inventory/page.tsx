@@ -1,4 +1,4 @@
-import { InventoryPanel } from "@/components/inventory-panel";
+import { InventoryPanel } from "@/components/inventory/inventory-panel";
 import { Panel } from "@/components/shell";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";

@@ -1,6 +1,6 @@
 # Inventory
 
-Implementerat lokalt 2026-09-19 enligt första etappen i [inventoryplanen](INVENTORY_PLAN.md).
+Implementerat lokalt 2026-09-19 enligt första etappen i [inventoryplanen](archive/plans/INVENTORY_PLAN.md).
 
 ## Spelarens vy
 
@@ -144,14 +144,14 @@ Webbläsartester skapar separata testkonton och tar bort dem efteråt.
 
 ## Bilder och klientkod
 
-Sex egna, transparenta PNG-bilder finns i [public/images/items](../public/images/items/).
+Sex egna, transparenta PNG-bilder finns i [public/images/items](../public/images/items).
 Samma original används för miniatyr och stor bild genom Nexts bildoptimering.
 Den gemensamma placeholder.svg används när bild saknas eller inte kan laddas.
 Admin kan ladda upp egna bilder till Supabase Storage. Dessa visas via den begränsade
 /api/item-images-rutten; originalbilderna i public optimeras fortfarande av Next. Produktionsprompter och ursprung
 finns i [itembilderna](ITEM_ART.md).
 
-- [inventory-panel.tsx](../src/components/inventory-panel.tsx): kategorier, rader och Trash-flöde.
+- [inventory-panel.tsx](../src/components/inventory/inventory-panel.tsx): kategorier, rader och Trash-flöde.
 - [item-details.tsx](../src/components/inventory/item-details.tsx): expanderade detaljer och cirkulationsdiagram.
 - [item-image.tsx](../src/components/inventory/item-image.tsx): gemensam bildvisning och fallback.
 - [inventory.ts](../src/lib/inventory.ts): typer, filter och heltalsvalidering.
@@ -171,9 +171,4 @@ omdirigeras inventorysidan till /sea. Se [resor](SEA_TRAVEL.md).
 
 ## Beständiga återförsök
 
-Ekonomihandlingar sparar request-ID före anropet och kan återhämtas efter
-omladdning eller navigation. Pågående handlingar visar ingen återhämtningsruta.
-Först när anropet har avslutats utan säker bekräftelse visas **Unconfirmed action**
-med **Check saved action**. Detta gäller även mellan flikar och efter omladdning.
-Samma karaktär måste vara inloggad.
-Se [ekonomigranskningen](ECONOMY_AUDIT.md) för skydd, tester och avgränsning.
+Gemensam lagring, kontobindning och återhämtning mellan flikar beskrivs i [ekonomiintegritet](ECONOMY_AUDIT.md).

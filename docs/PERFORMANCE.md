@@ -68,7 +68,7 @@ Remove-Item Env:MEASURE_PERFORMANCE
 
 The opt-in test creates and cleans up a disposable account and writes raw samples
 and summaries to `.local/performance-comparison.json`. It measures direct RPCs,
-15 serial activity clicks, bank transfers, crew training and ten full page loads.
+15 serial activity clicks, bank transfers, crew training and three full-document visits to each of ten pages.
 It is skipped in ordinary correctness runs. Click measurements stop when the request
 is no longer pending and the authoritative resource/XP change is visible, not at
 first paint. The bank clears its input after a successful transfer, so its measurement
@@ -118,3 +118,18 @@ These are local measurements, not a hosted latency guarantee or a capacity test.
 Public deployment measurements must also cover client/server/database region distance,
 concurrent players and long histories. Retain the fixture-based benchmark to compare
 future changes under the same conditions.
+
+## Measurements from the project audit, 2026-09-23
+
+The current production build uses Next.js 16.3.6 and Supabase JS 2.117.1.
+The existing benchmark ran as part of the full browser suite against local PostgreSQL.
+
+| Measurement | Samples | Median, ms | p95, ms |
+| --- | ---: | ---: | ---: |
+| Activity click to ready | 15 | 154 | 170 |
+| Bank transfer to confirmed balance | 10 | 136 | 180 |
+| Crew training to confirmed Energy | 5 | 140 | 217 |
+| Activity RPC | 15 | 11 | 14 |
+| Game-state RPC | 15 | 9 | 11 |
+
+Raw samples: `.local/performance-audit-2026-09-23.json`. These results describe this local run; they are not a controlled before/after speed claim or a concurrent-load benchmark. The earlier measurements above remain historical comparisons.

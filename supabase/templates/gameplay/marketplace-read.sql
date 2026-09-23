@@ -37,8 +37,9 @@ revoke all on function private.receive_market_item(private.market_listings,uuid,
 
 create or replace function private.list_market_items(category_id text default null,search_term text default '',requested_page integer default 0)
 returns jsonb language plpgsql stable security definer set search_path='' as $$
-declare viewer uuid:=private.combat_captain(); page_size integer:={{gameplay.marketplace.pageSize}}; observed timestamptz:=statement_timestamp(); result jsonb;
+declare page_size integer:={{gameplay.marketplace.pageSize}}; observed timestamptz:=statement_timestamp(); result jsonb;
 begin
+  perform private.combat_captain();
   if requested_page is null or requested_page<0 or search_term is null or length(search_term)>100 then raise exception 'INVALID_FILTER' using errcode='22023'; end if;
   if category_id is not null and not exists(select 1 from private.item_categories c where c.id=category_id) then raise exception 'INVALID_CATEGORY' using errcode='22023'; end if;
   with sales as (

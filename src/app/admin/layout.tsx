@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return <main id="main" className="admin-shell">
     <header className="admin-header"><h1>Administration</h1><Link href="/harbor">Return to game</Link></header>
     <AdminNavigation />
-    <div className="admin-content"><AdminRequestJournal userId={user.id}>{children}</AdminRequestJournal></div>
+    <div className="admin-content"><AdminRequestJournal key={user.id} userId={user.id}>{children}</AdminRequestJournal></div>
   </main>;
 }
 

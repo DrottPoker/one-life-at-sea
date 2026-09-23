@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { MailWorkspace } from "@/components/mail-workspace";
+import { MailWorkspace } from "@/components/messages/mail-workspace";
 import { requireCharacter } from "@/lib/player";
 import { isMessageId, type MailViewParams } from "@/lib/messages";
 

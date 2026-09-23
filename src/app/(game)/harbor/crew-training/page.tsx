@@ -1,6 +1,6 @@
 import { GameLink as Link } from "@/components/game-navigation";
 import { requireCharacter } from "@/lib/player";
-import { CrewTrainingPanel } from "@/components/crew-training-panel";
+import { CrewTrainingPanel } from "@/components/training/crew-training-panel";
 
 export const metadata = { title: "Crew Training" };
 

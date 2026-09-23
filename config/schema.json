@@ -903,6 +903,12 @@
         "refresh": {
           "type": "object",
           "properties": {
+            "requestTimeoutMs": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 2147483647
+            },
             "realtimeDebounceMs": {
               "type": "number",
               "integer": true,

@@ -25,8 +25,8 @@ vi.mock("@/components/game-state", () => ({
 vi.mock("@/components/economy-requests", () => ({ useEconomyRequests: () => ({ unconfirmed: false, training: async () => ({}) }) }));
 
 import { ResourceBars } from "../../src/components/resource-bars";
-import { CrewTrainingPanel } from "../../src/components/crew-training-panel";
-import { CombatantPanel } from "../../src/components/combatant-panel";
+import { CrewTrainingPanel } from "../../src/components/training/crew-training-panel";
+import { CombatantPanel } from "../../src/components/combat/combatant-panel";
 
 describe("configured interface", () => {
   it("renders resource capacities, percentages and recovery rates from config", () => {

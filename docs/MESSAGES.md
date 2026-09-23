@@ -174,3 +174,7 @@ The user-provided mail design was the layout reference. The final generation pro
 > envelopes, folds or objects on top. Soft even lighting, no perspective, no drop shadow
 > outside the paper. This is a production background asset, NOT a screenshot or UI
 > mockup. No text, no watermark.
+
+## Retired conversation API
+
+The former send_player_message, get_message_inbox, get_message_conversation and mark_messages_read RPCs are removed. No current client uses them. Legacy tables remain private and retain their data for idempotent import into the current mail system. The active get_message_summary wrapper lives with the mail read functions. Components are grouped under src/components/messages/.

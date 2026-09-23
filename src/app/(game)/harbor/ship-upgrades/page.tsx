@@ -1,7 +1,7 @@
 import { GameLink as Link } from "@/components/game-navigation";
 import { requireCharacter } from "@/lib/player";
 import { Panel } from "@/components/shell";
-import { ShipUpgradePanel } from "@/components/ship-upgrade-panel";
+import { ShipUpgradePanel } from "@/components/training/ship-upgrade-panel";
 
 export const metadata = { title: "Ship Upgrades" };
 

@@ -1,4 +1,4 @@
-import { MailWorkspace } from "@/components/mail-workspace";
+import { MailWorkspace } from "@/components/messages/mail-workspace";
 import { requireCharacter } from "@/lib/player";
 import type { MailViewParams } from "@/lib/messages";
 

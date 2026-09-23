@@ -1,3 +1,4 @@
+import { cleanupTestUsers } from "../support/accounts";
 import { isLocalTestApi, localDatabaseContainer, localAppUrl } from "../support/local";
 import { test, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
@@ -121,8 +122,9 @@ test("captain profiles open from the harbor and keep private character data prot
     } finally { await loggedOut.close(); }
     expect(errors).toEqual([]);
   } finally {
+    await page.close();
     await owner.auth.signOut();
     await other.auth.signOut();
-    for (const id of created) localSql(`delete from auth.users where id='${uuid(id)}'`);
+    cleanupTestUsers(created);
   }
 });

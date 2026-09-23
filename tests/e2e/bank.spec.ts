@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { createTestAccount, createTestClient as client, cleanupTestAccounts, testSql } from "../support/accounts";
+import { createTestAccount, createTestClient as client, cleanupTestAccounts, loginTestAccount, testSql } from "../support/accounts";
 
 const accounts: Awaited<ReturnType<typeof createTestAccount>>[] = [];
 async function account() {
@@ -20,11 +20,7 @@ test("bank transfers persist, update both tabs and fit the sidebar and mobile", 
   seedCoins(own.id, 1000);
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.name));
-  await page.goto("/login");
-  await page.getByLabel("Email address", { exact: true }).fill(own.email);
-  await page.getByLabel("Password", { exact: true }).fill(own.password);
-  await page.getByRole("button", { name: "Log in", exact: true }).click();
-  await expect(page).toHaveURL(/\/harbor$/);
+  await loginTestAccount(page, own);
   const carried = page.getByLabel("Gold Coins on character", { exact: true });
   await expect(carried).toHaveText("1,000");
   await page.getByRole("navigation", { name: "Harbor locations" }).getByRole("link", { name: "Bank", exact: true }).click();
@@ -79,7 +75,6 @@ test("bank transfers persist, update both tabs and fit the sidebar and mobile", 
   await expect(carried).toHaveText("1,000");
   expect(errors).toEqual([]);
   await otherTab.close();
-  await own.api.auth.signOut();
 });
 
 test("concurrent transfers cannot overspend, duplicate or access other coins", async () => {
@@ -103,18 +98,12 @@ test("concurrent transfers cannot overspend, duplicate or access other coins", a
   expect((await other.api.from("characters").select("gold_coins,bank_gold_coins").eq("id", own.id)).data).toEqual([]);
   expect((await other.api.rpc("get_game_state")).data).toMatchObject({ gold_coins: 0, bank_gold_coins: 0 });
   expect((await client().rpc("transfer_gold", { direction: "deposit", amount: 1, request_id: randomUUID() })).error?.code).toBe("42501");
-  await own.api.auth.signOut();
-  await other.api.auth.signOut();
 });
 
 test("retry after a lost response reuses the transfer without charging twice", async ({ page }) => {
   const own = await account();
   seedCoins(own.id, 100);
-  await page.goto("/login");
-  await page.getByLabel("Email address", { exact: true }).fill(own.email);
-  await page.getByLabel("Password", { exact: true }).fill(own.password);
-  await page.getByRole("button", { name: "Log in", exact: true }).click();
-  await expect(page).toHaveURL(/\/harbor$/);
+  await loginTestAccount(page, own);
   await page.goto("/harbor/bank");
   let lostResponse = false;
   await page.route("**/harbor/bank", async route => {
@@ -133,6 +122,5 @@ test("retry after a lost response reuses the transfer without charging twice", a
   await expect(page.getByText("Deposited 40 Gold Coins.", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Gold Coins on character", { exact: true })).toHaveText("60");
   await expect(page.getByLabel("Bank balance", { exact: true })).toHaveText("40");
-  await own.api.auth.signOut();
 });
 

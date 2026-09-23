@@ -3,7 +3,7 @@
 # PvP och gemensamma attacker
 
 Uppdaterat 2026-09-21. Detta dokument beskriver den implementerade versionen.
-[FIRST_COMBAT_PLAN.md](FIRST_COMBAT_PLAN.md) är den historiska planen för version 1.
+[FIRST_COMBAT_PLAN.md](archive/plans/FIRST_COMBAT_PLAN.md) är den historiska planen för version 1.
 
 ## Flöde och sidlås
 

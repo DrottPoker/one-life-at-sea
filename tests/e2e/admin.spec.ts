@@ -1,3 +1,4 @@
+import { seedShipMaterials } from "../support/inventory";
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { createTestAccount, testSql as sql,
@@ -150,7 +151,7 @@ test("admin remains accessible in hospital and combat, and revocation is immedia
     const log = await admin.api.rpc("get_combat_log", { battle_id: combatId });
     expect(log.error).toBeNull();
     expect(log.data?.events.some(event => event.kind === "admin_end")).toBe(true);
-    sql("insert into private.item_stacks(character_id,item_id,quantity) select '" + admin.id + "',item_id,10 from (values('oak_planks'),('iron_nails')) m(item_id) on conflict(character_id,item_id) do update set quantity=item_stacks.quantity+excluded.quantity;");
+    seedShipMaterials(admin.id, 10);
     const job = await admin.api.rpc("start_ship_upgrade", { stat: "attack", energy_amount: 5, expected_workshop_id: "ship_1", request_id: randomUUID() });
     expect(job.error).toBeNull();
     await page.reload();
@@ -187,3 +188,20 @@ test("concurrent repeated item grants commit once and unique grants serialize", 
   } finally { await cleanup([admin, player]); }
 });
 
+
+test("malformed saved admin requests remain intact without crashing the page", async ({ page }) => {
+  const own = await account(true), errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  const key = "one-life-at-sea:admin-requests:" + own.userId;
+  const raw = JSON.stringify([{ id: randomUUID(), action: "update", reason: { invalid: true }, payload: {} }]);
+  try {
+    await login(page, own);
+    await page.goto("/admin");
+    await page.evaluate(({ key, raw }) => sessionStorage.setItem(key, raw), { key, raw });
+    await page.reload();
+    await expect(page.getByRole("alert").filter({ hasText: "Saved admin requests could not be read" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Game overview" })).toBeVisible();
+    expect(await page.evaluate(key => sessionStorage.getItem(key), key)).toBe(raw);
+    expect(errors).toEqual([]);
+  } finally { await page.close(); await cleanup([own]); }
+});

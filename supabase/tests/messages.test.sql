@@ -18,8 +18,14 @@ select ok(not has_table_privilege('authenticated','private.mail_boxes','UPDATE')
 select ok(not has_table_privilege('authenticated','private.mail_ignored','SELECT'),'Ignore lists are private');
 select ok(not has_sequence_privilege('authenticated','private.mail_messages_id_seq','USAGE'),'Mail sequence is private');
 select ok(not has_function_privilege('authenticated','private.import_legacy_mail()','EXECUTE'),'Import is not client callable');
-select ok(not has_function_privilege('authenticated','public.send_player_message(bigint,text,uuid)','EXECUTE'),'Legacy writes are disabled');
-select ok(not has_function_privilege('authenticated','public.get_message_conversation(bigint,bigint)','EXECUTE'),'Legacy reads are disabled');
+select ok(to_regprocedure('public.send_player_message(bigint,text,uuid)') is null,'Retired public.send_player_message is absent');
+select ok(to_regprocedure('private.send_player_message(bigint,text,uuid)') is null,'Retired private.send_player_message is absent');
+select ok(to_regprocedure('public.get_message_inbox(bigint)') is null,'Retired public.get_message_inbox is absent');
+select ok(to_regprocedure('private.get_message_inbox(bigint)') is null,'Retired private.get_message_inbox is absent');
+select ok(to_regprocedure('public.get_message_conversation(bigint,bigint)') is null,'Retired public.get_message_conversation is absent');
+select ok(to_regprocedure('private.get_message_conversation(bigint,bigint)') is null,'Retired private.get_message_conversation is absent');
+select ok(to_regprocedure('public.mark_messages_read(bigint,bigint)') is null,'Retired public.mark_messages_read is absent');
+select ok(to_regprocedure('private.mark_messages_read(bigint,bigint)') is null,'Retired private.mark_messages_read is absent');
 set local role anon;
 select throws_ok($$select public.get_mailbox()$$,'42501',null,'Logged out users cannot read mail');
 select throws_ok($$select public.send_mail(array[100001]::bigint[],'Hi','Body',gen_random_uuid())$$,'42501',null,'Logged out users cannot send');
@@ -104,7 +110,15 @@ select ok((select last_action_at is not null from private.character_actions wher
 select ok((select revision>0 from public.player_game_events where character_id=(select id from mail_fixture where display_name='MailTwo')),'Delivery signals owner live refresh');
 -- Legacy migration preserves receipts and read state without resurrecting deleted copies.
 select set_config('request.jwt.claims','{"sub":"afff0000-0000-4000-8000-000000000001","role":"authenticated"}',true);
-insert into mail_results values('legacy',private.send_player_message((select player_number from mail_fixture where display_name='MailTwo'),'Legacy body','afff0000-0000-4000-8000-000000000013'));
+with pair as (
+  select a.id sender,b.id recipient from mail_fixture a,mail_fixture b where a.display_name='MailOne' and b.display_name='MailTwo'
+), thread as (
+  insert into private.message_threads(participant_a,participant_b) select least(sender,recipient),greatest(sender,recipient) from pair returning id
+), message as (
+  insert into private.player_messages(thread_id,sender_id,recipient_id,request_id,body)
+  select thread.id,pair.sender,pair.recipient,'afff0000-0000-4000-8000-000000000013','Legacy body' from thread,pair returning id
+)
+insert into mail_results select 'legacy',jsonb_build_object('message_id',id::text) from message;
 update private.player_messages set read_at=created_at where request_id='afff0000-0000-4000-8000-000000000013';
 select private.import_legacy_mail();
 select is((select b.read_at from private.mail_boxes b join private.mail_messages m on m.id=b.mail_id where m.request_id='afff0000-0000-4000-8000-000000000013' and b.direction='inbox'),

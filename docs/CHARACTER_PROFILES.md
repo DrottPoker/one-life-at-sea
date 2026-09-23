@@ -1,6 +1,6 @@
 # Karaktärsprofiler
 
-Uppdaterat 2026-09-21.
+Uppdaterat 2026-09-23.
 
 ## Innehåll och åtkomst
 
@@ -21,7 +21,7 @@ SQL kontrollerar dessutom stridsvillkoren vid start. Den egna profilen visar fö
 
 ## Publik datagräns
 
-`public.character_profiles` innehåller `character_id`, `player_number`, `display_name`,
+`public.character_profiles` innehåller `character_id`, `player_number`, `character_level`, `display_name`,
 `location`, `created_at`, `arrives_at`, `arrival_location`, `max_sea_distance` och
 `arrival_max_sea_distance`. Det sista fältet är ett eventuellt planerat nytt rekord
 som räknas först vid ankomst. En kortare resa innehåller inget kommande rekord.
@@ -46,9 +46,10 @@ Plats används aldrig för att påstå att spelaren är online.
 [Resor](SEA_TRAVEL.md), [strid](COMBAT_SYSTEM.md), [Hospital](HOSPITAL.md) och
 [verifiering](IMPLEMENTATION_STATUS.md) beskriver de anslutna funktionerna.
 
-## Private messages
+## Brevpost
 
-Other players' profiles include a Send message link to `/messages/<player-number>`.
-It opens the existing private conversation or an empty reply form for the first message.
-Own profiles omit this action. Messages are available in Hospital and during sea travel;
-existing active-attacker navigation locks still apply. See [Messages](MESSAGES.md).
+Andra spelares profiler länkar till brevskrivaren med mottagaren förvald. Den egna profilen visar ingen sådan åtgärd. Brevpost kan användas i Hospital och under resa; angriparens stridslås gäller fortfarande. Se [Brevpost](MESSAGES.md).
+
+## Level och närvaro
+
+Profilen visar Character Level från [Skills](SKILLS.md) och separat [närvarostatus](PLAYER_PRESENCE.md). Närvarons lease och senaste aktivitet är skilda från platsen; en kapten i hamnen behöver inte vara online.

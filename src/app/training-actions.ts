@@ -21,7 +21,7 @@ const errors: Record<string, string> = {
   NOT_ENOUGH_XP: "Keep training to unlock this tier.",
   NOT_ENOUGH_GOLD: "You need more Gold Coins on your character. Withdraw stored coins from the bank.",
   NOT_ENOUGH_ENERGY: "You do not have enough Energy for this action.",
-  INSUFFICIENT_MATERIALS: "You do not have enough Oak Planks or Iron Nails for this job.",
+  INSUFFICIENT_MATERIALS: "You do not have enough materials for this job.",
   MATERIAL_UNAVAILABLE: "A required shipbuilding material is currently unavailable.",
   SHIP_WORK_ACTIVE: "Your ship already has work in progress.",
   PROGRESSION_LIMIT: "This action would exceed the progression limit.",

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { randomBytes } from "node:crypto";
-import { createTestAccount, createTestClient, cleanupTestAccounts, loginTestAccount, testSql } from "../support/accounts";
+import { createTestAccount, createTestClient, cleanupTestAccounts, cleanupTestRegistrations, loginTestAccount, testSql } from "../support/accounts";
 
 test("registration rejects numbers and spaces in the browser and server action", async ({ page }) => {
   const tag = randomBytes(10).toString("hex");
@@ -37,7 +37,7 @@ test("registration rejects numbers and spaces in the browser and server action",
     await page.getByRole("button", { name: "Create account", exact: true }).click();
     await expect(page).toHaveURL(/\/harbor$/);
     await expect(page.getByRole("heading", { name: "Welcome ashore, " + name + ".", exact: true })).toBeVisible();
-  } finally { testSql("delete from auth.users where email='" + email + "'"); }
+  } finally { await page.close(); cleanupTestRegistrations([email]); }
 });
 
 test("direct Auth rejects invalid names and an unfinished account can choose a valid name", async ({ page }) => {
@@ -49,7 +49,7 @@ test("direct Auth rejects invalid names and an unfinished account can choose a v
       expect((await api.auth.signUp({ email, password, options: { data: { character_name: name } } })).error).not.toBeNull();
       expect(testSql("select count(*) from auth.users where email='" + email + "'").trim()).toBe("0");
     }
-  } finally { testSql("delete from auth.users where email='" + email + "'"); }
+  } finally { cleanupTestRegistrations([email]); }
 
   const account = await createTestAccount("unfinished-name");
   try {

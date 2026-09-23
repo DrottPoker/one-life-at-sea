@@ -1,3 +1,4 @@
+import { cleanupTestUsers } from "../support/accounts";
 import { isLocalTestApi, localDatabaseContainer } from "../support/local";
 import { test, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
@@ -127,8 +128,9 @@ test("harbor roster receives real events and recovers after a connection loss", 
     expect(errors).toEqual([]);
   } finally {
     await context.setOffline(false);
+    await Promise.all(context.pages().map(page => page.close()));
     await observer.auth.signOut();
     await visitor.auth.signOut();
-    for (const id of created) localSql(`delete from auth.users where id='${uuid(id)}'`);
+    cleanupTestUsers(created);
   }
 });

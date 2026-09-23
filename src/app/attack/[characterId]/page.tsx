@@ -4,8 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
 import { attackUrl, type Battle, type CombatPreview } from "@/lib/combat";
 import { findPlayerProfile } from "@/lib/player-profile";
-import { CombatHeading } from "@/components/combat-heading";
-import { AttackSession } from "@/components/attack-session";
+import { CombatHeading } from "@/components/combat/combat-heading";
+import { AttackSession } from "@/components/combat/attack-session";
 import { GameStateProvider } from "@/components/game-state";
 
 export const metadata = { title: "Attacking" };

@@ -6,6 +6,11 @@ begin
 end;
 $$;
 
+create or replace function public.get_message_summary()
+returns jsonb language sql stable security invoker set search_path='' as $$ select private.get_message_summary(); $$;
+revoke all on function private.get_message_summary(),public.get_message_summary() from public,anon,authenticated;
+grant execute on function private.get_message_summary(),public.get_message_summary() to authenticated;
+
 create or replace function private.get_mail_summary()
 returns jsonb language plpgsql stable security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); result jsonb;
@@ -52,7 +57,7 @@ $$;
 
 create or replace function private.get_mail(mail_id bigint,include_history boolean default false)
 returns jsonb language plpgsql stable security definer set search_path='' as $$
-declare viewer_id uuid:=private.combat_captain(); result jsonb; history jsonb:='[]';
+declare viewer_id uuid:=private.combat_captain(); result jsonb; history jsonb:='[]'::jsonb;
 begin
   select private.mail_json(m,b,true) into result from private.mail_messages m join private.mail_boxes b on b.mail_id=m.id
     where m.id=get_mail.mail_id and b.character_id=viewer_id and b.deleted_at is null;

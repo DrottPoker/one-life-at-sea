@@ -6,7 +6,7 @@ import { Panel } from "@/components/shell";
 import { ownSkillProgress } from "@/lib/skills-server";
 import { ProfileSkills } from "@/components/profile-skills";
 import { ProfileDetails } from "@/components/profile-details";
-import { DefenceOrders } from "@/components/defence-orders";
+import { DefenceOrders } from "@/components/combat/defence-orders";
 import { requireCharacter, gameStateForPlayer } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 import { isPlayerNumber } from "@/lib/player-identity";

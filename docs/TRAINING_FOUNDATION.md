@@ -1,7 +1,7 @@
 # Träning och progression
 
 Uppdaterat och implementerat lokalt 2026-09-23. Balansen kommer från [gameplayconfig](../config/gameplay.json).
-[Implementationsplanen](TRAINING_PROGRESSION_PLAN.md) är designunderlaget. Skeppsarbete förbrukar nu material.
+[Implementationsplanen](archive/plans/TRAINING_PROGRESSION_PLAN.md) är designunderlaget. Skeppsarbete förbrukar nu material.
 
 ## Spelregler
 
@@ -254,15 +254,10 @@ Hälsans befintliga återhämtning ändras inte. Se [resor](SEA_TRAVEL.md).
 
 ## Beständiga återförsök
 
-Ekonomihandlingar sparar request-ID före anropet och kan återhämtas efter
-omladdning eller navigation. Pågående handlingar visar ingen återhämtningsruta.
-Först när anropet har avslutats utan säker bekräftelse visas **Unconfirmed action**
-med **Check saved action**. Detta gäller även mellan flikar och efter omladdning.
-Samma karaktär måste vara inloggad.
-Se [ekonomigranskningen](ECONOMY_AUDIT.md) för skydd, tester och avgränsning.
+Gemensam lagring, kontobindning och återhämtning mellan flikar beskrivs i [ekonomiintegritet](ECONOMY_AUDIT.md).
 
 ## Research om statberoende träning
 
 Ett Torn-inspirerat förslag för flerårig progression finns i
-[balansresearchen](TRAINING_BALANCE_RESEARCH.md). Kurvan är nu implementerad enligt reglerna ovan, med avrundning och omräkning per Energy.
+[balansresearchen](research/TRAINING_BALANCE_RESEARCH.md). Kurvan är nu implementerad enligt reglerna ovan, med avrundning och omräkning per Energy.
 Analysen illustrerar progression över flera år; slutlig ekonomi och PvP-balans återstår.

@@ -3,6 +3,8 @@ import { createTestAccount, cleanupTestAccounts, loginTestAccount, testSql } fro
 import { inventoryFixtureSql } from "../../scripts/inventory-fixture.mjs";
 import { economyJournalKey } from "../../src/lib/economy-journal";
 
+import { seedShipMaterials } from "../support/inventory";
+
 type Captain = Awaited<ReturnType<typeof createTestAccount>>;
 type ObservedWindow = Window & { recoveryInsertions: number };
 const accounts: Captain[] = [];
@@ -26,6 +28,7 @@ async function captain() {
   const own = await createTestAccount("economy-feedback");
   accounts.push(own);
   testSql(inventoryFixtureSql(own.id));
+  seedShipMaterials(own.id);
   testSql("update public.characters set gold_coins=1000 where id='" + own.id + "';" +
     "update private.character_training set xp=100 where character_id='" + own.id + "' and training_group='crew';");
   return own;

@@ -5,6 +5,31 @@ import { frontend } from "../../src/config/public";
 afterEach(() => vi.useRealTimers());
 
 describe("snapshot refresh lifecycle", () => {
+  it("recovers from a hung request and ignores its late response", async () => {
+    vi.useFakeTimers();
+    let resolve!: (value: string) => void;
+    let signal: AbortSignal | undefined;
+    const load = vi.fn().mockImplementationOnce((requestSignal: AbortSignal) => {
+      signal = requestSignal;
+      return new Promise<string>(done => { resolve = done; });
+    }).mockResolvedValue("recovered");
+    const onData = vi.fn(), onError = vi.fn();
+    const poller = createSnapshotPoller({ load, onData, onError });
+    try {
+      poller.schedule();
+      await vi.advanceTimersByTimeAsync(frontend.refresh.realtimeDebounceMs);
+      await vi.advanceTimersByTimeAsync(frontend.refresh.requestTimeoutMs);
+      expect(signal?.aborted).toBe(true);
+      expect(onError).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(frontend.refresh.fallbackMs);
+      expect(onData).toHaveBeenCalledWith("recovered");
+      resolve("stale");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(onData).toHaveBeenCalledTimes(1);
+    } finally { poller.dispose(); }
+  });
+
+
   it("coalesces events and serializes an update arriving during a request", async () => {
     vi.useFakeTimers();
     let resolve!: (value: string) => void;
@@ -16,7 +41,7 @@ describe("snapshot refresh lifecycle", () => {
       await vi.advanceTimersByTimeAsync(frontend.refresh.realtimeDebounceMs);
       expect(load).toHaveBeenCalledTimes(1);
       poller.schedule(); poller.schedule();
-      await vi.advanceTimersByTimeAsync(frontend.refresh.fallbackMs);
+      await vi.advanceTimersByTimeAsync(frontend.refresh.requestTimeoutMs - 1);
       expect(load).toHaveBeenCalledTimes(1);
       resolve("first");
       await vi.advanceTimersByTimeAsync(frontend.refresh.realtimeDebounceMs);

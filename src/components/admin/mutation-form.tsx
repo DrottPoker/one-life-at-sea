@@ -6,12 +6,12 @@ import { useRouter } from "next/navigation";
 import { useAdminRequests } from "@/components/admin/request-journal";
 import { adminLabel, type AdminAction, type AdminPayload, type AdminResult } from "@/lib/admin";
 
-type Request = { action: AdminAction; payload: AdminPayload; reason: string; id: string };
+import type { AdminRequest } from "@/lib/admin-journal";
 export function MutationForm({ action, payload, label, summary, children, disabled = false, successHref }: {
   action: AdminAction; payload: AdminPayload; label: string; summary: string; children?: ReactNode; disabled?: boolean; successHref?: string;
 }) {
   const router = useRouter(), journal = useAdminRequests();
-  const [review, setReview] = useState<Request | null>(null), [pending, setPending] = useState(false);
+  const [review, setReview] = useState<AdminRequest | null>(null), [pending, setPending] = useState(false);
   const [result, setResult] = useState<AdminResult | null>(null);
   const inFlight = useRef(false), reasonInput = useRef<HTMLInputElement>(null);
   async function submit() {

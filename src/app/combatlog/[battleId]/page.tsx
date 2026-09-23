@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/validation";
-import { CombatEvents, CombatPeople, outcomeLabel } from "@/components/combat-log";
-import { ShareCombatLog } from "@/components/share-combat-log";
+import { CombatEvents, CombatPeople, outcomeLabel } from "@/components/combat/combat-log";
+import { ShareCombatLog } from "@/components/combat/share-combat-log";
 
 export const metadata = { title: "Combat log" };
 

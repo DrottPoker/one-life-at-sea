@@ -62,8 +62,9 @@ Anonyma besökare och anonyma auth-konton saknar åtkomst. Klienter får inte sk
 
 list_hospital_patients returnerar 20 namn per sida i stabil alfabetisk ordning och filtrerar
 bort utgångna vistelser med databastid. Därför försvinner även offlinepatienter i rätt tid
-utan bakgrundsjobb. get_hospital_status läser samma RLS-skyddade projektion för en profil
-med sluttid och databastid som enda fält. Privata karaktärsvärden exponeras inte.
+utan bakgrundsjobb. Profilen hämtar aktuell plats och Hospital-deadline genom
+get_character_status. Den äldre get_hospital_status finns kvar för kompatibilitet.
+Privata karaktärsvärden exponeras inte.
 Ägarens hälsa sparas vid nästa serveråtkomst. Realtime, närmaste utskrivning,
 fokus/återanslutning och reservkontroll uppdaterar gränssnittet.
 

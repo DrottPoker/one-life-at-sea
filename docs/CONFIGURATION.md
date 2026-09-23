@@ -1,97 +1,23 @@
-# Konfiguration och projektstruktur
+# Konfiguration
 
-Uppdaterat 2026-09-21.
+## Källor och generering
 
-## Källor och ansvar
+[Filkartan](../config/README.md) visar vilken configfil som äger varje typ av inställning.
+`gameplay.json` är gemensam värdekälla för app och SQL; databasen avgör fortfarande alla utfall.
+Generatorn läser ordningen i `supabase/templates/gameplay.sql`, sätter ihop delarna och ersätter typkontrollerade tokens. Textvärden SQL-citeras.
 
-```text
-config/                    Justerbara värden och gränssnittets tema/CSS
-src/config/                Typade importvägar och kontroll av databasversion
-src/app/                   Next.js-rutter och serverhandlingar
-src/components/            Återanvändbara gränssnitt och funktionskomponenter
-src/hooks/                 Gemensamma React-livscykler
-src/lib/                   Typer, dataåtkomst och domänfunktioner
-src/styles/                Genererad CSS, redigeras inte manuellt
-supabase/templates/        Underhållbar SQL-logik med config-tokens
-supabase/migrations/       Oföränderliga databasmigrationer
-supabase/tests/            Transaktionella databastester
-scripts/config/            Validering, generering och alternativt balanstest
-tests/unit/                Enhetstester, inklusive configkontrakt
-tests/e2e/                 Webbläsartester
-tests/support/             Gemensam lokal testmiljö
-.env.local                 Ignorerade hemligheter och miljöanslutningar
-```
+`npm run config:sync` uppdaterar genererad CSS, Supabase-TOML och gameplayrevision. Ändrad gameplay eller SQL skapar en ny migration via Supabase CLI; tidigare migrationer skrivs aldrig om. Körningen är idempotent. Temaändringar kräver ingen databasmigration.
 
-Startpunkt: [config/README.md](../config/README.md). Native konfigurationsfiler som next.config.ts,
-playwright.config.ts och vitest.config.ts finns kvar där verktygen kräver dem, men hämtar inställningar från config/.
-supabase/config.toml är en genererad adapter. package.json innehåller kommandon och beroendeversioner.
+`config:check` jämför källor med genererade filer och senaste configmigrationen. Det körs före start, bygge, migration och integrationstester. Schema och sambandkontroller avvisar okända fält, fel typer, oförenliga gränser och numeriska överflöden.
 
-### Gameplay
+Servern jämför appens gameplayrevision med databasen inom aktuell förfrågan.
+Webbläsarimporten innehåller bara publika värden. Serverinställningar är server-only.
+Hemligheter finns i ignorerad `.env.local` eller driftmiljön.
 
-config/gameplay.json är värdekällan för både app och databas. Privata SQL-funktioner beräknar fortfarande
-alla utfall och debiteringar. Webbläsaren kan inte välja kostnad, skadevärde eller slumpresultat.
+## Ändra spelregler eller SQL
 
-scripts/config läser inkluderingsordningen i supabase/templates/gameplay.sql, sätter ihop delarna i
-supabase/templates/gameplay/ och ersätter typkontrollerade skalära tokens. Ändra funktionen i rätt
-funktionsdel; genererad SQL jämförs fortfarande i sin helhet mot senaste configmigrationen.
-Training innehåller crewTiers och shipTiers. Generatorn skriver deterministiska SQL-kataloger
-från dessa listor. Nivå-ID och ordning får inte ändras eller tas bort när de har installerats.
-XP-krav och efficiency måste stiga och första nivån är gratis vid 0 XP.
-Båda träningsgrupper använder energyPerUnit (5), statScale (1000) och statExponent (0,6).
-Varje Energy räknas med den virtuellt ökade valda staten, avrundat till sex decimaler.
-Se [träningsreglerna](TRAINING_FOUNDATION.md) för den exakta algoritmen.
-Skeppsarbete använder dessutom shipMinEnergy (5) och shipSecondsPerEnergy (6, alltså 30 sekunder per 5 Energy).
-Sliderns maxvärde är aktuell Energy. Konfigurationen begränsar Energykapaciteten till
-10 000 för att hålla beräkningen ändlig; dagens kapacitet är fortsatt 100.
-Effektivitet måste vara positiv, högst 1000, ha högst sex decimaler och ge en positiv
-avrundad Energy-enhet. Exponenten måste ligga mellan 0,01 och 0,99.
-Perfect Drill-chansen anges i basispunkter: 100 är 1 %. Sammansatta belöningar,
-XP och tider kontrolleras mot sina numeriska gränser. Pågående jobb och kvitton
-behåller sparade utfall vid configbyten. Alternativa kurvor testas med rollback.
-Textvärden citeras och SQL-escapas. En ändring ger en ny migration via Supabase CLI; äldre migrationer
-skrivs aldrig om. Samma värden används för kolumndefaults, relevanta CHECK-gränser, RPC-validering,
-återhämtning, deltagarlogik och skadefunktioner.
-
-Gränssnittet läser samma publika JSON-värden. Även knapptexter, valideringsmeddelanden, återhämtningstexter,
-rundräknare och hälsostaplarnas procent använder dem. Hälsomax är gemensamt för Ship och Crew i denna version;
-deras starthälsa och återhämtningstakt kan ändras separat.
-
-private-funktionernas befintliga rättigheter och låsordning bevaras via CREATE OR REPLACE.
-get_gameplay_revision() returnerar en versionshash.
-Den innehåller inga konton, hemligheter eller spelarstats.
-
-Gold Coins använder economy.initialGoldCoins (0) och economy.maxGoldCoins
-(9 007 199 254 740 991 per saldo). Bankkontot börjar alltid på 0. Startsaldoändringar
-gäller nya karaktärer; tidigare saldon bevaras. Karaktärens saldo och banksaldot
-är separata även i RPC och UI. Se [bankreglerna](GOLD_COINS_AND_BANK.md).
-
-Energy använder resources.energyRecoveryAmount (5) per resources.energyRecoverySeconds (300).
-Intervallet ligger på fasta UTC-gränser från Unix-epoken, gemensamma för alla kaptener.
-Till havs och under resor används dubbla intervallet (600 sekunder) med samma heltalsbelopp.
-Återhämtning stannar vid energyMax (100). energyStorageMax (1 000) tillåter överfyllning,
-vars överskott bevaras tills det spenderas. Tidsankaret anger senaste avräkning, inte en egen timer.
-Se [Energy](ENERGY_RECOVERY.md) för byte av takt, offlineankomst och migration.
-
-Hospital använder hospital.durationSeconds (300). Intagningen sparar start- och sluttid;
-ett configbyte påverkar nya vistelser, inte redan sparade sluttider. Utskrivning ger full
-Ship Health och Crew Health enligt resources.healthMax. Se [Hospital](HOSPITAL.md).
-
-### Skydd mot config som inte stämmer
-
-- Configvalideringen nekar okända fält, fel typer, negativa kostnader, ogiltiga kurvor och oförenliga gränser.
-- config:check jämför aktuella källor med genererade filer och senaste configmigrationen.
-- Kontrollen körs före dev, start, build, db:start, db:migrate och databastester.
-- Serverns resursläsningar och spelhandlingar kontrollerar att den kompilerade gameplayversionen
-  stämmer med databasens. Kontrollen cachas bara inom den aktuella React-förfrågan.
-- Revisionen beror på gameplayvärden och SQL-mallens innehåll; en färgändring kräver ingen databasändring.
-- Den publika config-importen innehåller endast gameplay, frontend och authgränser.
-  Serverinställningar importeras separat genom en server-only-modul.
-
-Efter en produktionsuppdatering ska öppna klienter laddas om så att de får det nya frontendbygget.
-
-## Arbetsflöden
-
-### Ändra ett gameplayvärde
+1. Ändra rätt fält i `gameplay.json` eller rätt SQL-del.
+2. Kör följande mot den lokala miljön:
 
 ```powershell
 npm run config:sync
@@ -99,144 +25,78 @@ npm run db:migrate
 npm run test:db
 npm run test:config:db
 npm run check
+npm run test:e2e
 ```
 
-config:sync är idempotent. Om ingenting ändrats skapas ingen ny migration.
-db:migrate använder uttryckligen lokal Supabase. Molnmigrationer och publicering görs inte av dessa kommandon.
+`db:migrate` använder uttryckligen lokal Supabase. Molnmigration och publicering ingår inte.
+Produktionsklienter behöver få det nya bygget; revisionen ska stämma på båda sidor.
 
-Nya startvärden gäller nya karaktärer. Befintlig progression och historiska rapporter bevaras.
-Nya stridsformler och kostnader gäller efter applicerad migration. Pågående deltagare behåller sina
-sparade stats, HP, ammunition och deadlines, medan nästa order använder de aktuella reglerna.
-Planera balansändringar mellan pågående strider om blandade regler är olämpliga.
+Startvärden gäller nya karaktärer. Befintlig progression skrivs inte över.
+Pågående jobb, resor, Hospital-vistelser och kvitton behåller sparade utfall/deadlines.
+Aktiva stridsdeltagare behåller snapshots, medan nya order använder aktuella regler; planera balansändringar mellan strider om blandade regler är olämpliga.
 
-Att sänka Energys lagringsgräns eller hälsomax under sparade värden stoppas av databaskravet.
-Ingen automatisk klippning eller nollställning sker. Sådana balansändringar behöver en separat, avsiktlig
-datamigration. Historiska rundnummer och ammunition får finnas kvar över nykonfigurerade gränser;
-nya handlingar kontrolleras av de konfigurerade RPC-reglerna.
+Att sänka en lagrings- eller hälsogräns under sparade värden stoppas av databasen.
+Det finns ingen tyst klippning. En sådan ändring kräver en avsiktlig datamigration.
+Historiska rundor och ammunition får överstiga nya gränser; nya handlingar valideras mot aktiva regler.
 
-### Ändra frontend
+## Stabil identitet och innehåll
 
-theme.css kan ändras direkt. Efter frontend.json eller interface.css.template:
+Träningsnivåer behåller installerade ID:n och ordning. XP-krav och effektivitet måste stiga; första nivån är gratis vid 0 XP. Kurvor och sammansatta resultat valideras mot tillåtna numeriska gränser. Se [Träning](TRAINING_FOUNDATION.md).
 
-```powershell
-npm run config:sync
-npm run dev
-```
+Skill-ID:n får inte tas bort. Nya skills initialiseras och påverkar Character Level enligt [Skills](SKILLS.md).
+Aktivitets-ID och koppling till skill är stabila; avaktivera i stället för att radera.
+Item-ID, ägartyp och utrustningsplats består; ägda antal och individuella stats skrivs inte över.
+Gamla platstyper kan avaktiveras medan sparade destinationer består.
 
-Ett nytt produktionsbygge behövs för JSON-värden som skickas till webbläsaren.
-Typografisk layout, färger och responsiva regler finns i config/. Komponenternas struktur ligger kvar i React.
+Adminskapade eller adminredigerade items har `managed_by_admin=true` och skrivs inte över av configsync.
+Loot tables och activity loot är databasägt innehåll. Startdata infogas bara om den saknas.
+Se [Admin](ADMIN_PANEL.md) och [Loot](LOOT_TABLES.md).
 
-### Ändra lokal drift eller Auth
+Avgiftssatsen sparas på varje marknadslisting. Historiska köp och kvitton räknas inte om vid configbyte.
+Värdehistorik kan beräknas från bevarade köp när tidsfönstret ändras.
+Ekonomiövervakningens namngivna cronjobb uppdateras utan att observationshistorik återställs.
 
-Ändra server.json, auth.json eller supabase.toml och kör config:sync.
-Starta om Next.js för dess driftsinställningar. För Supabase:
+## Var reglerna beskrivs
+
+| Inställningar | Funktion |
+| --- | --- |
+| `resources`, `stamina`, `morale`, `hospital` | [Energy](ENERGY_RECOVERY.md), [Stamina](STAMINA.md), [Morale](CREW_MORALE.md), [Hospital](HOSPITAL.md) |
+| `training`, `startingStats`, `combat` | [Träning](TRAINING_FOUNDATION.md), [Combat](COMBAT_SYSTEM.md) |
+| `skills`, `activities`, `crafting` | [Skills](SKILLS.md), [Activities](ACTIVITIES.md), [Crafting](CRAFTING.md) |
+| `inventory`, `marketplace`, `economy` | [Inventory](INVENTORY.md), [Marketplace](MARKETPLACE.md), [värde](ITEM_MARKET_VALUE.md), [cirkulation](ITEM_CIRCULATION.md), [Bank](GOLD_COINS_AND_BANK.md) |
+| `seaTravel`, scouting | [Resor](SEA_TRAVEL.md), [Scouting](SEA_SCOUTING.md) |
+| `messages`, `notifications`, `presence` | [Brevpost](MESSAGES.md), [Notiser](NOTIFICATIONS.md), [Närvaro](PLAYER_PRESENCE.md) |
+
+Återhämtningsgräns och lagringsgräns är olika: överfyllda resurser bevaras tills de används.
+Materialkostnader och skeppsarbetets slider följer faktisk lagrad Energy.
+Brevpostens sidstorlek gäller brev, inte det äldre konversationssystemet.
+
+## Frontend och lokal drift
+
+`theme.css` kan ändras direkt. Efter `frontend.json` eller CSS-mallen körs `config:sync`.
+Ett nytt produktionsbygge behövs för JSON som skickas till webbläsaren.
+`frontend.refresh.requestTimeoutMs` begränsar en snapshotläsning så att ett hängande anrop inte blockerar framtida uppdateringar. Sena svar ignoreras.
+Dag/natt, visuella tokens och layout beskrivs i [design](INTERFACE_DESIGN.md) och [dag/natt](DAY_NIGHT_CYCLE.md).
+
+Efter server-/Auth-/TOML-ändringar körs `config:sync` och berörda tjänster startas om:
 
 ```powershell
 npm run db:stop
 npm run db:start
 ```
 
-Använd inte db reset eller stop --no-backup. Efter port-/projektbyte måste .env.local peka på den
-avsedda lokala stacken och SITE_URL matcha appens adress. setup:local skapar endast en saknad .env.local
-och skriver aldrig över en befintlig fil. Ett nytt Supabase-projekt-ID innebär en separat lokal databas.
+Använd inte reset eller `--no-backup`. Port- eller projektbyte kräver rätt anslutning i `.env.local` och motsvarande `SITE_URL`.
+`setup:local` skapar bara en saknad miljöfil.
+Nytt Supabase-projekt-ID betyder separat lokal databas.
+Lokala TOML-inställningar konfigurerar inte en hosted miljö.
 
-Auth-lösenordets minimilängd och återställningsintervallet hämtas från auth.json även i genererad TOML.
-TOML-inställningar gäller den lokala Supabase-stacken. En hosted Supabase-miljö konfigureras separat.
-Säkerhetsheaders finns i next.ts. Hemligheter och produktionsanslutningar finns i .env.local eller driftmiljön.
+## Lägga till inställningar och verifiera
 
-### Lägga till en inställning
+Lägg värdet i rätt configfil och typen/gränsen i `schema.json`.
+Lägg sambandkontroller i `scripts/config/core.mjs` när enskilda fältgränser inte räcker.
+Koppla värdet till faktisk användning och uppdatera det berörda funktionsdokumentet.
+Rutter, behörigheter, låsordning och enhetsomvandlingar är programlogik, inte godtyckliga balansparametrar.
 
-1. Lägg värdet i rätt configfil och beskriv det i config/README.md.
-2. Lägg motsvarande typ/gräns i schema.json och eventuell sambandkontroll i scripts/config/core.mjs.
-3. Koppla in värdet där det faktiskt används. Gameplay i SQL använder en token i gameplay.sql.
-4. Kör config:sync, applicera migration vid behov och lägg till ett meningsfullt beteendetest.
-
-Statuskoder, rutter, behörighetsregler, statnamn, SQL-lås och enhetsomvandlingar är programlogik.
-De exponeras inte som godtyckliga balansvärden. Nya mekaniker kräver implementation, inte bara fler configfält.
-
-## Verifiering
-
-- Enhetstester verifierar felaktiga inställningar, SQL-citering, generering, revisionsändring och synkroniserade filer.
-- De befintliga databastesterna kontrollerar den fastställda standardbalansen och behörigheterna.
-- test:config:db använder en alternativ konfiguration i en enda lokal transaktion, kontrollerar faktisk
-  skapande-/tränings-/stridslogik, resor och marknadshandel och gör ROLLBACK. Aktuella configfiler och sparade konton ändras inte.
-- Webbläsartester täcker registrering, träning, navigation, profiler, hamnlista, strid, inventory, resor, scouting och marketplace.
-- Inventorys kategorier, definitioner och sidstorlek finns i gameplay.inventory. Tidigare ID:n,
-  itemtyp och utrustningsplats bevaras vid synk. Avaktivera definitioner i stället för att ta bort dem.
-  Ägda antal och individuella stats skrivs inte över. Se [Inventory](INVENTORY.md).
-- Exakta körresultat dokumenteras i IMPLEMENTATION_STATUS.md.
-
-Referenstester med fasta förväntade värden beskriver en avsiktlig balans. Vid ett senare balansbeslut
-behöver dessa förväntningar uppdateras medvetet; de ersätts inte automatiskt med implementationens värden.
-
-### Cirkulationsdiagram
-
-inventory.historyMaxPoints styr maximalt antal interna historikpunkter (500) plus
-vänster och höger ändpunkt. Den fullständiga historiken sparas i databasen; stora
-perioder hämtar begränsade stickprov genom ett tidsindex. Se [Item Circulation](ITEM_CIRCULATION.md).
-
-### Resor till havs
-
-`seaTravel.departureEnergyCost` är 5, `outwardDurationSeconds` är 60 och
-`returnSecondsPerStep` är 60. `locationTypes` kräver minst två aktiva typer
-med unika ID:n och namn. Nuvarande katalog har fyra typer.
-Gamla typer avaktiveras vid borttagning ur config; sparade val och destinationer
-består. Ändrade tider gäller nya färder, inklusive ny hemresa från en äldre havsplats.
-Påbörjade resors sparade deadlines skrivs inte om. Konfigurationsdatabastestet
-verifierar kostnad, ut-/hemrestid, namn och bevarade pågående resor.
-
-### Marketplace
-
-`marketplace.feeBps` är 500 (5 %), `popularityHours` är 12, `valueWindowHours` är 12, `pageSize` är 30,
-`listingsPageSize` är 20 per expansion och `maxBatchSize` är 25. Avgiftssatsen sparas i varje ny
-listing och tillämpas på dess ackumulerade försäljning, avrundat nedåt. Ett senare
-configbyte påverkar inte äldre listings.
-
-Value använder `valueWindowHours` för antalsviktat snittpris från genomförda köp.
-Tomma fönster behåller senaste icke-tomma värde; endast aldrig handlade items visar N/A.
-Historiken delar `inventory.historyMaxPoints` med Circ. Ett ändrat fönster räknar
-om värden från beständiga köpdata; inga pengar eller kvitton skrivs om.
-Se [Item Market Value](ITEM_MARKET_VALUE.md).
-
-`inventory.items[].tradable` måste vara true och definitionen aktiv för nya listings
-och köp. Avaktiverat innehav finns kvar i inventory och osålda erbjudanden kan
-återtas. Add Listings filtrerar säljbarhet före `inventory.pageSize` tillämpas.
-
-Alternativtestet verifierar 10 % för nya listings, bevarade 5 % för tidigare
-listings, ett sex timmars popularitetsfönster, ett två timmars värdefönster, sidstorlekar, batchgräns och
-icke-handelsbara items. Alla teständringar rullas tillbaka. Se [Marketplace](MARKETPLACE.md).
-
-## Stamina
-
-`gameplay.stamina` configures `maximum` (natural recovery cap, 50), `storageMaximum` (hard limit, 200), `recoveryAmount` (1), `recoverySeconds` (300) and
-`activityCost` (1). Recovery uses the same interval in every location. Values must be positive whole
-numbers; cost and recovery cannot exceed capacity. See [Stamina](STAMINA.md).
-
-## Skills
-
-`gameplay.skills.catalog` contains stable skill IDs and display names. `xpThresholds` contains
-100 strictly increasing integer thresholds, starting at zero and currently ending at
-5,000,000 XP. They are shared by SQL and UI.
-Removing existing skill IDs is rejected; adding a skill initializes it at zero XP and updates
-Character Level for existing players. See [Skills](SKILLS.md).
-
-## Activities
-
-`gameplay.activities.catalog` configures stable IDs, skills, names, descriptions, button labels,
-XP gains and availability. All initial entries grant 10 XP and use `stamina.activityCost` (1).
-Client offers are checked against server values; recorded receipts keep their original values.
-Disable activities instead of removing their IDs or changing their skill mapping.
-
-## Adminhanterade items och loot (2026-09-22)
-
-Items som skapas eller redigeras i adminpanelen får managed_by_admin=true. Configsync
-lämnar de raderna orörda. Övriga ursprungliga items uppdateras fortfarande från config.
-Kategorier, aktivitets-ID, XP och Stamina-kostnad ligger kvar i gameplay.json.
-Loot tables och activity_loot är databasägt innehåll och återställs inte av configsync.
-Starttabellen Harbor Shore skapas bara om den saknas. Se [Loot tables](LOOT_TABLES.md).
-Lokal Supabase Storage är aktiverad för bilduppladdning; en omstart krävs efter ändring
-av storage.enabled. Bibliotekets privata konton och hemligheter används inte för detta.
-
-## Economy observations
-
-The generated economy SQL installs a named pg_cron job every five minutes. It runs even when no admin page is open and retains actual observation times. Config sync updates the same job; it does not reset history. Restarted or stopped databases do not invent missing observations. See [Economy monitoring](ECONOMY_MONITORING.md).
+Alternativtestet applicerar andra värden i en lokal transaktion, provar verkliga databasfunktioner och gör rollback.
+Referenstester med fasta utfall dokumenterar avsiktlig balans; ändra dem medvetet vid balansbeslut.
+Aktuella körresultat finns i [Status](IMPLEMENTATION_STATUS.md).

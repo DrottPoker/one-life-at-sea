@@ -129,7 +129,7 @@ kan fortfarande återtas, men kan inte köpas. En ändrad avgift påverkar nya l
 - [Läsning och itemöverföring](../supabase/templates/gameplay/marketplace-read.sql),
   [skapande och återtagning](../supabase/templates/gameplay/marketplace-sell.sql)
   och [köp](../supabase/templates/gameplay/marketplace-buy.sql) är de kanoniska SQL-källorna.
-- [Marknadskomponenter](../src/components/marketplace/), [typer och belopp](../src/lib/marketplace.ts)
+- [Marknadskomponenter](../src/components/marketplace), [typer och belopp](../src/lib/marketplace.ts)
   och [serverhandling](../src/app/marketplace-actions.ts) delar befintlig speluppdatering.
 - [Databastester](../supabase/tests/marketplace.test.sql),
   [webbläsartester](../tests/e2e/marketplace.spec.ts) och
@@ -141,9 +141,4 @@ Inga provitems, annonser eller köp har lagts till på vanliga spelarkonton.
 
 ## Beständiga återförsök
 
-Ekonomihandlingar sparar request-ID före anropet och kan återhämtas efter
-omladdning eller navigation. Pågående handlingar visar ingen återhämtningsruta.
-Först när anropet har avslutats utan säker bekräftelse visas **Unconfirmed action**
-med **Check saved action**. Detta gäller även mellan flikar och efter omladdning.
-Samma karaktär måste vara inloggad.
-Se [ekonomigranskningen](ECONOMY_AUDIT.md) för skydd, tester och avgränsning.
+Gemensam lagring, kontobindning och återhämtning mellan flikar beskrivs i [ekonomiintegritet](ECONOMY_AUDIT.md).

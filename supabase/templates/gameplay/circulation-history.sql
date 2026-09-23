@@ -2,7 +2,6 @@
 create or replace function private.get_item_circulation(target_item text,period text default 'all')
 returns jsonb language plpgsql stable security definer set search_path='' as $$
 declare
-  viewer_id uuid:=private.combat_captain();
   counter private.item_circulation%rowtype;
   observed timestamptz:=statement_timestamp();
   range_start timestamptz;
@@ -11,6 +10,7 @@ declare
   points jsonb;
   sampled boolean;
 begin
+  perform private.combat_captain();
   if period is null or period not in ('1m','3m','6m','1y','3y','all') then
     raise exception 'INVALID_PERIOD' using errcode='22023'; end if;
   select * into counter from private.item_circulation where item_id=target_item;

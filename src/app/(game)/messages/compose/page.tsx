@@ -1,4 +1,4 @@
-import { MailComposer } from "@/components/mail-composer";
+import { MailComposer } from "@/components/messages/mail-composer";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 import { isPlayerNumber } from "@/lib/player-identity";

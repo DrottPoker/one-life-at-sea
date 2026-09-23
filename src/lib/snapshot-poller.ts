@@ -8,11 +8,11 @@ type SnapshotPollerOptions<T> = {
 };
 
 export function createSnapshotPoller<T>({ load, onData, onError, nextDelay }: SnapshotPollerOptions<T>) {
-  const abort = new AbortController();
   let disposed = false;
   let fetching = false;
   let dirty = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let activeRequest: AbortController | undefined;
 
   function queue(delay: number) {
     clearTimeout(timer);
@@ -24,14 +24,23 @@ export function createSnapshotPoller<T>({ load, onData, onError, nextDelay }: Sn
     fetching = true;
     dirty = false;
     let delay = frontend.refresh.fallbackMs;
+    const controller = new AbortController();
+    activeRequest = controller;
+    const timeout = setTimeout(() => controller.abort(new Error("Snapshot request timed out.")), frontend.refresh.requestTimeoutMs);
+    const aborted = new Promise<never>((_resolve, reject) => {
+      controller.signal.addEventListener("abort", () => reject(controller.signal.reason), { once: true });
+    });
     try {
-      const data = await load(abort.signal);
+      // The race also releases the queue if a transport ignores its abort signal.
+      const data = await Promise.race([load(controller.signal), aborted]);
       if (disposed) return;
       onData(data);
       if (nextDelay) delay = nextDelay(data);
     } catch {
       if (!disposed) onError();
     } finally {
+      clearTimeout(timeout);
+      activeRequest = undefined;
       fetching = false;
       if (!disposed) queue(dirty ? frontend.refresh.realtimeDebounceMs : delay);
     }
@@ -45,7 +54,7 @@ export function createSnapshotPoller<T>({ load, onData, onError, nextDelay }: Sn
     },
     dispose() {
       disposed = true;
-      abort.abort();
+      activeRequest?.abort(new Error("Snapshot poller disposed."));
       clearTimeout(timer);
     },
   };

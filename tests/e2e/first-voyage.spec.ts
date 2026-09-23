@@ -1,3 +1,4 @@
+import { cleanupTestRegistrations } from "../support/accounts";
 import { isLocalTestApi, localAppUrl, localMailUrl } from "../support/local";
 import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
@@ -12,7 +13,16 @@ if (!isLocalTestApi(apiUrl)) {
 const suffix = () => [...randomBytes(10)].map(value => String.fromCharCode(97 + value % 26)).join("");
 const password = () => `Sailing-${randomBytes(18).toString("hex")}`;
 
+const createdEmails = new Set<string>();
+test.afterEach(async ({ context }) => {
+  await Promise.all(context.pages().map(page => page.close()));
+  const emails = [...createdEmails];
+  createdEmails.clear();
+  cleanupTestRegistrations(emails);
+});
+
 async function fillRegistration(page: Page, email: string, secret: string, name: string) {
+  createdEmails.add(email);
   await page.goto("/register");
   await page.getByLabel("Character name", { exact: true }).fill(name);
   await page.getByLabel("Email address", { exact: true }).fill(email);
@@ -134,7 +144,9 @@ test("the real Data API enforces owner isolation and one character per account",
   const second = client();
   const anonymous = client();
   for (const api of [first, second]) {
-    const { data, error } = await api.auth.signUp({ email: `api-${suffix()}@example.test`, password: password(), options: { data: { character_name: `Sailor${suffix()}` } } });
+    const email = `api-${suffix()}@example.test`;
+    createdEmails.add(email);
+    const { data, error } = await api.auth.signUp({ email, password: password(), options: { data: { character_name: `Sailor${suffix()}` } } });
     expect(error?.code).toBeUndefined();
     expect(!!data.session).toBe(true);
   }
@@ -159,6 +171,7 @@ test("simultaneous registrations cannot reserve one name twice or leave orphan a
   const client = () => createClient(apiUrl, apiKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const name = `Mariner${suffix()}`;
   const attempts = [0, 1].map(() => ({ api: client(), email: `race-${suffix()}@example.test`, secret: password() }));
+  for (const entry of attempts) createdEmails.add(entry.email);
   const results = await Promise.all(attempts.map((entry, index) => entry.api.auth.signUp({
     email: entry.email, password: entry.secret, options: { data: { character_name: index ? name.toUpperCase() : name } },
   })));
@@ -180,6 +193,7 @@ test("simultaneous registrations cannot reserve one name twice or leave orphan a
   const incomplete = client();
   const email = `missing-${suffix()}@example.test`;
   const secret = suffix().slice(0, 6);
+  createdEmails.add(email);
   expect(!!(await incomplete.auth.signUp({ email, password: secret })).error).toBe(true);
   expect((await incomplete.auth.signInWithPassword({ email, password: secret })).error?.code).toBe("invalid_credentials");
 });

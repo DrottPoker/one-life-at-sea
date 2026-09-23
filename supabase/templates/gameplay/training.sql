@@ -93,7 +93,7 @@ $$;
 -- This makes sequential jobs at the same tier independent of job size.
 create or replace function private.training_gain(stat_value numeric, efficiency numeric, energy_amount integer)
 returns numeric language plpgsql immutable strict security invoker set search_path='' as $$
-declare current_value numeric:=stat_value; unit_gain numeric; total_gain numeric:=0; i integer;
+declare current_value numeric:=stat_value; unit_gain numeric; total_gain numeric:=0;
 begin
   if not (stat_value between 1 and 9007199254740991)
     or not (efficiency between 0.000001 and 1000)

@@ -31,7 +31,7 @@
 {{include.presence}}
 {{include.profile}}
 {{include.notifications}}
-{{include.messages}}
+{{include.legacy-mail}}
 {{include.mail-schema}}
 {{include.mail-send}}
 {{include.mail-read}}

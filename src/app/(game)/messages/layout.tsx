@@ -1,6 +1,6 @@
 import { Mail } from "lucide-react";
-import { MailNav } from "@/components/mail-nav";
-import { MailSearch } from "@/components/mail-search";
+import { MailNav } from "@/components/messages/mail-nav";
+import { MailSearch } from "@/components/messages/mail-search";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 

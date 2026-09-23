@@ -57,7 +57,7 @@ create or replace function private.craft_item(recipe_id text,expected_version te
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare
   viewer_id uuid:=private.combat_captain(); previous private.crafting_requests%rowtype;
-  recipe private.crafting_recipes%rowtype; ingredient record; consumed jsonb:='[]'; result jsonb; progression jsonb;
+  recipe private.crafting_recipes%rowtype; ingredient record; consumed jsonb:='[]'::jsonb; result jsonb; progression jsonb;
   output_name text; output_before bigint; item_ids text[];
 begin
   if request_id is null or recipe_id is null or recipe_id !~ '^[a-z][a-z0-9_]{0,47}$'

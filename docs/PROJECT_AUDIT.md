@@ -1,0 +1,105 @@
+# Projektgranskning 2026-09-23
+
+Granskningen omfattar appens källkod, systemgränser, SQL, behörigheter, konfiguration, tester, beroenden, filreferenser och dokumentation. Konkreta fel har rättats och städningen har genomförts i den befintliga arbetskatalogen.
+
+## Viktiga fynd och rättningar
+
+| Fynd | Konsekvens före rättningen | Genomförd ändring |
+| --- | --- | --- |
+| Adminformulär saknade kontobindning | En gammal flik kunde skicka en ändring med ett annat inloggat adminkonto | Server Action jämför aktuell användare med formulärets ägare före RPC |
+| Adminåtkomst kunde försvinna under återhämtning | Ett obekräftat kvitto kunde kastas när session eller medlemskap saknades | Begäran bevaras tills rätt konto har åtkomst igen |
+| Sparad adminjournal saknade strukturell validering | Felaktiga objekt kunde krascha rendering eller försvåra säker återhämtning | Gemensam validering av id, åtgärd, orsak, JSON och dubbletter; ogiltig lagring bevaras med synligt fel |
+| Snapshotläsning kunde hänga för alltid | Efterföljande uppdateringar blockerades permanent | Timeout per anrop, avbrott, återupptagen kö och skydd mot sena svar |
+| SQL-linten hittade felaktig volatilitet och oanvända deklarationer | Missvisande funktionskontrakt och onödig kod | Korrekt STABLE-kontrakt, explicita JSON-typer och borttagna deklarationer med bibehållen autentisering |
+| Två äldre skeppsarbetstester saknade material | Startknappen var korrekt spärrad men testerna väntade tills timeout | Gemensam materialfixtur för berörda scenarier |
+| Äldre tester lämnade konton/statistik eller loggade ut för tidigt | Lokal testdata samlades och bakgrundsläsningar kunde nå raderade konton | Delad kontohantering och städning av testets egna användare efter stängda webbläsarsidor |
+
+Adminfelen och det hängande snapshotanropet reproducerades med tester innan rättning.
+Nyckelfiler är [adminåtgärder](../src/app/admin-actions.ts), [journalvalidering](../src/lib/admin-journal.ts),
+[adminjournal](../src/components/admin/request-journal.tsx), [snapshotpoller](../src/lib/snapshot-poller.ts)
+och [testkonton](../tests/support/accounts.ts).
+
+Felmeddelanden använder nu konfigurerad lösenordsgräns och beskriver materialbrist utan hårdkodade materialnamn.
+
+## Beroenden
+
+- Next.js och eslint-config-next: 16.3.5 till 16.3.6. Den officiella [säkerhetsuppdateringen](https://github.com/vercel/next.js/releases/tag/v16.3.6) gäller Node-versionen av next/og ImageResponse. Projektet använder inte denna bildgenerering, så granskningen hittade ingen sådan exponerad kodväg. [Advisory](https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j).
+- Supabase JS: 2.116.0 till 2.117.1, med [rättning av konkurrerande sessionsförnyelse mellan flikar](https://github.com/supabase/supabase-js/releases/tag/v2.117.1).
+- Vitest: 5.0.0 till 5.0.1, med [rättningar i testinsamling, mockning och timers](https://github.com/vitest-dev/vitest/releases/tag/v5.0.1).
+
+Versionerna är fortsatt exakt låsta. npm audit rapporterade inga kända sårbarheter även före Next-uppdateringen; kontrollen kompletterades därför med leverantörens release- och säkerhetsinformation.
+Större TypeScript-/ESLint-versioner och rena ikon-/typuppdateringar ingår inte i detta versionsbyte. Nuvarande verktyg verifieras med projektets faktiska lint, typkontroll och tester.
+
+## Borttaget och organiserat
+
+24 komponenter har samlats i funktionsmappar för Combat, Training, Messages och Inventory.
+Den oanvända item-circulation-chart-wrappen är borttagen; det gemensamma ItemHistoryChart används direkt.
+Oanvända tränings- och brevradsregler i CSS och ett dubbelt routevillkor är borttagna.
+Dynamiskt skapade resursklasser har kontrollerats och behållits.
+
+Det ersatta konversationssystemets fyra publika och fyra privata RPC-funktioner är avvecklade.
+Den gamla SQL-modulen har ersatts av [legacy-mail](../supabase/templates/gameplay/legacy-mail.sql), som behåller de privata tabellerna för import.
+Befintliga brev, konversationer, kvitton och äldre utkast har inte raderats som en del av denna städning.
+Det aktiva get_message_summary ligger med brevpostens läsfunktioner.
+
+SQL-ändringarna har genererats och applicerats i en [ny lokal migration](../supabase/migrations/20260923130408_central_gameplay_config_56bd86ac7993.sql).
+Tidigare migrationer är oförändrade. Deras upprepade SQL är versionshistorik; underhållet sker i mallarna.
+Databasen har inte återställts.
+
+## Dokumentation
+
+[Dokumentindexet](README.md) skiljer funktionsregler från arkitektur, arbetsflöden, nuläge och framtida arbete.
+README, arkitektur, konfigurationsguide och kodunderhåll har kortats och fått separata ansvar.
+Den gemensamma förklaringen av ekonomins återförsök finns på ett ställe, med länkar från funktionsdokumenten.
+
+Sju äldre planer och den tidigare löpande statusens leveranshistorik finns i ett indexerat [arkiv](archive/README.md).
+Den ersatta konfigurationsplanen är borttagen. Träningsresearch ligger under research; bildreferenser och proveniens är bevarade.
+Aktuella dokument har rättats för bland annat materialkrav, lagringsgränser, brevskrivare, profilstatus och stridslås.
+[Roadmap](ROADMAP.md) bevarar kvarstående riktning utan att blanda den med levererad funktion.
+
+`npm run docs:check` kontrollerar dokumenttitlar och lokala filreferenser och ingår nu i `npm run check`.
+Arkivet kan fortfarande innehålla ersatta regler och gamla texthänvisningar, vilket markeras uttryckligen.
+
+## Kontrollomfattning
+
+- Importgraf och referenser för samtliga 214 TypeScript-/TSX-källfiler, inklusive ramverkets egna entrypoints. Inga ytterligare föräldralösa källmoduler hittades.
+- Funktionsindelning, återanvändning, formatering/validering, CSS-kandidater och filer som krävs av verktyg eller historisk import.
+- Sessioner, kontobyten, RLS, adminmedlemskap, privata projektioner, bildreferenser och offentliga läsgränser.
+- Låsordning, samtidighet, idempotens, ekonomiska kvitton, resurs-/jobbdeadlines och offlinebeteende.
+- 65 typade RPC-funktioners existens och parameterlistor mot den migrerade lokala databasen.
+- Verkliga webbflöden i Edge, även med smala viewportbredder, flera flikar, förlorade svar och nätavbrott.
+
+Liknande domänformulär och kort Realtime-uppkoppling har inte pressats in i en gemensam abstraktion när deras regler skiljer sig. Delade livscykler och representationer återanvänds redan; ekonomiska och administrativa rättigheter förblir domänspecifika.
+
+## Verifieringsresultat
+
+| Kontroll | Slutresultat |
+| --- | --- |
+| `npm run check` | Dokumentkontroll, lint utan varningar, typkontroll och produktionsbygge godkända |
+| Enhetstester | 425 godkända i 30 filer |
+| `npm run test:db` | 1 911 godkända påståenden i 40 filer |
+| `npm run test:config:db` | 116 godkända påståenden; alternativ konfiguration rullades tillbaka |
+| Hela webbläsarsviten, inklusive prestandaprov | 117 godkända, inga hoppade tester, Edge mot produktionsbygget |
+| Slutkontroll av admin, registrering och navigation | Ytterligare 13 godkända webbläsartester efter den sista förbättringen av teststädningen |
+| SQL-lint | Inga varningar eller fel |
+| Databasens säkerhets-/prestandarådgivare | Inga fynd på varnings- eller felnivå |
+| `npm audit` | 0 kända sårbarheter |
+| Ekonomins integritetskontroll efter alla tester | 0 avvikelser i samtliga 8 kontroller |
+| Typade RPC-avtal | Alla 65 funktioner finns med rätt parameterlistor |
+| Importgraf och aktiv dokumentation | Inga föräldralösa källmoduler eller återstående identiska längre dokumentstycken |
+
+Kontroll av konton före och efter hela webbläsarsviten bekräftade oförändrat antal och bevarade befintliga konto-id:n. Den sista riktade körningen verifierade dessutom att både konto- och statistikmängderna var identiska före och efter testerna.
+
+De 24 flyttade komponenterna jämfördes med ursprungsversionen efter normalisering av importvägar. Själva komponentinnehållet är oförändrat. Befintliga migreringar är också oförändrade.
+
+Körloggar och maskinläsbara kontrollresultat ligger under den Git-ignorerade lokala arbetskatalogen `.local/`, bland annat `audit-check-final.log`, `audit-db.log`, `e2e-verified.log`, `e2e-cleanup-verified.log` och `economy-audit-final.log`.
+
+Prestandaprovet är genomfört med det slutliga produktionsbygget. Mätvärden och metod finns i [Prestanda](PERFORMANCE.md).
+
+## Kvarstående begränsningar
+
+Next.js 16.3.6 skriver fortfarande `The destination stream closed early.` vid vissa avbrutna RSC-/navigationsanrop. Det överensstämmer med leverantörens [rapporterade streamfel](https://github.com/vercel/next.js/issues/96704). Även Gzip `MaxListenersExceededWarning` återkom i slutkontrollen; spårningen med `--trace-warnings` pekar på Next.js inbyggda compression-kod och app-page-turbo-runtime. Loggarna har inte filtrerats och installerade paket har inte modifierats för att dölja problemet.
+
+Databasrådgivarens informationsnivå visar privata tabeller med RLS utan policy. De saknar direkta klientgrants och är avsiktligt stängda; åtkomst sker genom kontrollerade funktioner. Varnings-/felnivå bedöms separat.
+
+Verifieringen gäller den lokala miljön och befintliga mekaniker. Den ersätter inte kvalificering av hosted drift, e-postleverans, backupåterställning, större samtidig last eller andra webbläsarmotorer. Framtida spelmekaniker är samlade i Roadmap.

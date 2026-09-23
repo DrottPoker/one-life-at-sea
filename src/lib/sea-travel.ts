@@ -29,8 +29,7 @@ export function isSeaAccessiblePath(pathname: string, state: SeaPhase) {
   if (pathname === "/sea" || (pathname === "/notifications" || isMessagesPath(pathname)) || (pathname.startsWith("/combatlog/") && isUuid(pathname.slice(11)))) return true;
   return state === "at_sea" && (pathname === "/inventory" ||
     pathname === "/players" || isPlayerProfilePath(pathname) ||
-    (pathname.startsWith("/attack/") && (isPlayerNumber(pathname.slice(8)) || isUuid(pathname.slice(8)))) ||
-    (pathname.startsWith("/combatlog/") && isUuid(pathname.slice(11))));
+    (pathname.startsWith("/attack/") && (isPlayerNumber(pathname.slice(8)) || isUuid(pathname.slice(8)))));
 }
 export function seaLocationLabel(sea: SeaState) {
   if (sea.state === "traveling") return sea.journey?.kind === "return" ? "Returning to The Harbor" : "Traveling";
