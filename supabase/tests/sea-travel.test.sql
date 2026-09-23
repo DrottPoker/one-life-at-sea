@@ -7,6 +7,9 @@ insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
 ('a8100000-0000-4000-8000-000000000001','sea-one@example.test',false,'{"character_name":"SeaTestOne"}'),
 ('a8100000-0000-4000-8000-000000000002','sea-two@example.test',false,'{"character_name":"SeaTestTwo"}'),
 ('a8100000-0000-4000-8000-000000000003','sea-anon@example.test',true,'{}');
+insert into private.item_stacks(character_id,item_id,quantity) select c.id,m.item_id,1000 from public.characters c
+cross join (values('oak_planks'),('iron_nails')) m(item_id) where c.user_id in ('a8100000-0000-4000-8000-000000000001'::uuid,'a8100000-0000-4000-8000-000000000002'::uuid,'a8100000-0000-4000-8000-000000000003'::uuid);
+
 create temp table sea_fixture as select
 (select id from public.characters where user_id='a8100000-0000-4000-8000-000000000001') a,
 (select id from public.characters where user_id='a8100000-0000-4000-8000-000000000002') b,
@@ -141,7 +144,7 @@ update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '10 m
  where character_id=(select a from sea_fixture) and applied_at is null;
 set local role authenticated;
 select lives_ok($$select public.depart_harbor((public.get_game_state()#>>'{sea,version}')::uuid,gen_random_uuid())$$,'Completed ship work allows departure');
-select is(public.get_game_state()->>'ship_attack','11.00623','Completed job is applied before departure');
+select is(public.get_game_state()->>'ship_attack','12.012938','Completed job is applied before departure');
 
 -- Administrative resource changes cannot leave the captain stranded.
 reset role;

@@ -229,6 +229,7 @@ test("departure stays locked until the thirty-second ship job completes", async 
   await expect(page.getByRole("button", { name: "Set sail", exact: true })).toBeDisabled();
   await expect(page.getByText("You need 5 Energy to leave.", { exact: true })).toBeVisible();
   testSql("update public.characters set energy=100,energy_updated_at=clock_timestamp()+interval '1 day' where id='" + own.id + "';");
+  testSql("insert into private.item_stacks(character_id,item_id,quantity) select '" + own.id + "',item_id,10 from (values('oak_planks'),('iron_nails')) m(item_id);");
   expect((await own.api.rpc("start_ship_upgrade", { stat: "attack", energy_amount: 5, expected_workshop_id: "ship_1", request_id: crypto.randomUUID() })).error).toBeNull();
   await page.reload();
   const before = await state(own);
@@ -239,7 +240,7 @@ test("departure stays locked until the thirty-second ship job completes", async 
   await expect(page.getByRole("button", { name: "Set sail", exact: true })).toBeEnabled({ timeout: 35_000 });
   const completed = await state(own);
   expect(completed.sea.state).toBe("in_harbor");
-  expect(completed.ship_attack).toBe(11.00623);
+  expect(completed.ship_attack).toBe(12.012938);
   expect(completed.training.ship_job).toBeNull();
   expect(completed.training.progress.ship.xp).toBe(5);
   expect(completed.energy).toBe(95);

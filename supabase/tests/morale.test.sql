@@ -27,6 +27,9 @@ select is(private.morale_multiplier(25,500),1.0125::numeric,'Modifier remains li
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
 ('a9700000-0000-4000-8000-000000000001','morale-one@example.test',false,'{"character_name":"MoraleCaptain"}'),
 ('a9700000-0000-4000-8000-000000000002','morale-two@example.test',false,'{"character_name":"MoraleDefender"}');
+insert into private.item_stacks(character_id,item_id,quantity) select c.id,m.item_id,1000 from public.characters c
+cross join (values('oak_planks'),('iron_nails')) m(item_id) where c.user_id in ('a9700000-0000-4000-8000-000000000001'::uuid,'a9700000-0000-4000-8000-000000000002'::uuid);
+
 create temporary table morale_fixture as select
 (select id from public.characters where user_id='a9700000-0000-4000-8000-000000000001') a,
 (select id from public.characters where user_id='a9700000-0000-4000-8000-000000000002') d,
@@ -58,7 +61,7 @@ select is((select public.train_crew('attack','crew_1',drill) from morale_fixture
 select is((public.get_game_state()->>'crew_morale')::numeric,-2.5::numeric,'Drill replay cannot charge morale twice');
 select public.start_ship_upgrade('attack',5,'ship_1',gen_random_uuid());
 select is((public.get_game_state()->>'crew_morale')::numeric,-2.5::numeric,'Ship work does not consume morale');
-select is((public.get_game_state()#>>'{training,ship_job,stat_gain}')::numeric,1.00623::numeric,'Ship gain ignores morale');
+select is((public.get_game_state()#>>'{training,ship_job,stat_gain}')::numeric,2.012938::numeric,'Ship gain ignores morale');
 select throws_ok($$select public.buy_tavern_meal(1,25,gen_random_uuid())$$,'P0001','STALE_OFFER','Client cannot choose a lower meal price');
 select throws_ok($$select public.buy_tavern_meal(1000,100,gen_random_uuid())$$,'P0001','STALE_OFFER','Client cannot choose a larger meal');
 select throws_ok($$select public.buy_tavern_meal(1000,25.01,gen_random_uuid())$$,'22023','INVALID_REQUEST','Meal gain precision is validated');

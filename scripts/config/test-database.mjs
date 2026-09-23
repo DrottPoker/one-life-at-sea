@@ -23,6 +23,9 @@ config.gameplay.training.xpPerEnergy = 2;
 config.gameplay.training.shipTiers[0].name = "Captain\'s $catalog$ Workshop";
 config.gameplay.training.shipSecondsPerEnergy *= 2;
 config.gameplay.training.energyPerUnit = 7;
+config.gameplay.training.shipGainMultiplier = 4;
+config.gameplay.training.shipMaterialEnergy = 3;
+config.gameplay.training.shipMaterials.forEach(item => { item.quantity = 2; });
 config.gameplay.training.shipMinEnergy = 7;
 for (const group of Object.values(config.gameplay.startingStats)) for (const stat of Object.keys(group)) group[stat] = 12;
 Object.assign(config.gameplay.combat, { energyCost: 13, maxRounds: 7, startingAmmo: 6, ammoPerShot: 2,
@@ -62,7 +65,7 @@ const checks = [
 "select is((select extract(epoch from(hospital_until-hospital_started_at))::int from public.characters where user_id=(select id from hospital_config_fixture)),19,'Hospital duration is configurable');",
 
 "select is((select energy from private.energy_snapshot(50,\'2026-01-01Z\',\'2026-01-01 00:02Z\')),56,\'Alternative recovery amount applies to every interval\');",
-"select is((select stat_gain from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),10.089358::numeric,'Old job keeps its original gain after config change');",
+"select is((select stat_gain from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),20.237736::numeric,'Old job keeps its original gain after config change');",
 "select is((select xp_gain from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),50::bigint,'Old job keeps its original XP');",
 "select is((select energy_cost from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),50,'Old job keeps its original Energy cost');",
 "select is((select extract(epoch from(finishes_at-started_at))::int from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null)," + (50 * originalShipSecondsPerEnergy) + ",'Old job keeps its original duration');",
@@ -90,8 +93,11 @@ const checks = [
 "select public.train_crew('attack','crew_1',gen_random_uuid());",
 "select is((select crew_attack from public.characters where id=(select a from config_captains)),15.009951::numeric,'Training applies configured gain');",
 "select is(public.get_game_state()#>>'{training,progress,crew,xp}','14','Crew XP uses the configured rate');",
+"insert into private.item_stacks(character_id,item_id,quantity) select a,item_id,10 from config_captains cross join (values('oak_planks'),('iron_nails')) m(item_id);",
 "select public.start_ship_upgrade('speed',7,'ship_1',gen_random_uuid());",
-"select is(public.get_game_state()#>>'{training,ship_job,stat_gain}','3.009951','New ship gain uses the configured per-Energy rate');",
+"select is((public.get_game_state()#>>'{training,ship_job,stat_gain}')::numeric,private.training_gain(12,12,7),'New ship gain uses configured multiplier');",
+"select is(public.get_game_state()#>>'{training,ship_job,materials,0,quantity}','6','New job uses configured material rate and batch size');",
+"select is((select materials#>>'{0,quantity}' from private.ship_upgrade_jobs where character_id=(select captain from old_training_fixture) and applied_at is null),'10','Old job keeps original materials after config change');",
 "select is(public.get_game_state()#>>'{training,ship_job,xp_gain}','14','New ship XP uses changed rate');",
 "select is(public.get_game_state()#>>'{training,ship_job,workshop_name}','Captain''s $catalog$ Workshop','Catalog strings safely escape quotes and dollar delimiters');",
 "select is((select extract(epoch from(finishes_at-started_at))::int from private.ship_upgrade_jobs where character_id=(select a from config_captains) and applied_at is null)," + (7 * config.gameplay.training.shipSecondsPerEnergy) + ",'New ship duration uses changed config');",
@@ -213,6 +219,7 @@ const sql = "begin;\ncreate extension if not exists pgtap with schema extensions
   "insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||\'@example.test\',false,jsonb_build_object(\'character_name\','OldConfig'||translate(id::text,'0123456789','ghijklmnop')) from old_training_user;\n" +
   "create temporary table old_training_fixture as select c.id captain from public.characters c join old_training_user u on c.user_id=u.id;\n" +
   "update public.characters set bank_gold_coins=123 where id=(select captain from old_training_fixture);\n" +
+  "insert into private.item_stacks(character_id,item_id,quantity) select captain,item_id,10 from old_training_fixture cross join (values('oak_planks'),('iron_nails')) m(item_id);\n" +
   "select set_config(\'request.jwt.claims\',jsonb_build_object(\'sub\',id,\'role\',\'authenticated\')::text,true) from old_training_user;\n" +
   "select public.start_ship_upgrade(\'attack\',50,\'ship_1\',gen_random_uuid());\n" +
   "create temporary table old_crew_request as select gen_random_uuid() request;\ncreate temporary table old_crew_receipt as select public.train_crew('speed','crew_1',request) value from old_crew_request;\n" +

@@ -205,6 +205,18 @@
               "type": "number",
               "minimum": 0.01,
               "maximum": 0.99
+            },
+            "shipGainMultiplier": { "type": "number", "minimum": 1, "maximum": 100 },
+            "shipMaterialEnergy": { "type": "number", "integer": true, "minimum": 1, "maximum": 10000 },
+            "shipMaterials": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "itemId": { "type": "string" },
+                  "quantity": { "type": "number", "integer": true, "minimum": 1, "maximum": 9007199254740991 }
+                }
+              }
             }
           }
         },

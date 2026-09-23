@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatStat, formatStatGain } from "../../src/lib/format";
-import { parseShipEnergy, trainingStatGain } from "../../src/lib/training";
+import { parseShipEnergy, trainingStatGain, shipTrainingStatGain, shipMaterialCosts } from "../../src/lib/training";
 
 describe("variable ship work", () => {
   it.each(["", "0", "1", "4", "-5", "5.5", "1e1", "1001", "9007199254740991", null, 5])("rejects invalid Energy %s", value => {
@@ -46,5 +46,21 @@ describe("stat-dependent training", () => {
   });
   it.each([[1, "1"], [1.00623, "1.01"], [1.2, "1.2"], [10000.123456, "10,000.12"], [10000.999, "10,001"]])("keeps at most two decimals on gains, even above 10000 (%s)", (value, expected) => {
     expect(formatStatGain(value)).toBe(expected);
+  });
+});
+
+
+describe("ship-specific rewards and materials", () => {
+  it.each([[5, 2.012938], [6, 2.415814], [13, 5.238642], [50, 20.237736]])("matches multiplied server gain at %s Energy", (energy, expected) => {
+    expect(shipTrainingStatGain(10, 1, energy)).toBe(expected);
+  });
+  it("preserves gain when the same Energy is split across jobs", () => {
+    let gained = 0;
+    for (const energy of [5, 6, 7, 32, 50]) gained = Math.round((gained + shipTrainingStatGain(10 + gained, 1, energy)) * 1e6) / 1e6;
+    expect(gained).toBe(shipTrainingStatGain(10, 1, 100));
+  });
+  it.each([[5, 1], [6, 2], [10, 2], [11, 3], [1000, 200]])("rounds material costs up at %s Energy", (energy, quantity) => {
+    const costs = shipMaterialCosts(energy, [{ item_id: "oak_planks", name: "Oak Planks", quantity: 1, owned: 3, available: true }]);
+    expect(costs[0]).toMatchObject({ quantity, owned: 3 });
   });
 });

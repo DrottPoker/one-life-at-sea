@@ -2,16 +2,20 @@ import { gameplay } from "@/config/public";
 import { applyTrainingMorale } from "@/lib/morale";
 import type { Stat, TrainingGroup } from "@/lib/game";
 
+export type ShipMaterialCost = { item_id: string; name: string; quantity: number };
+export type ShipMaterialStock = ShipMaterialCost & { owned: number; available: boolean };
+
 type TrainingProgress = { xp: number; tier_id: string };
 export type ShipJob = {
   id: string; stat: Stat; size_id: string | null; workshop_id: string; workshop_name: string;
   energy_cost: number; stat_gain: number; xp_gain: number;
-  started_at: string; finishes_at: string; applied_at: string | null;
+  started_at: string; finishes_at: string; applied_at: string | null; materials: ShipMaterialCost[];
 };
 export type TrainingState = {
   progress: Record<TrainingGroup, TrainingProgress>;
   ship_job: ShipJob | null;
   last_ship_job: ShipJob | null;
+  ship_materials: ShipMaterialStock[];
 };
 export type TrainingReceipt =
   | { kind: "crew"; stat: Stat; stat_gain: number; xp_gain: number; energy_cost: number; perfect: boolean; tier_id: string; morale_before?: number; morale_after?: number; morale_multiplier?: number; base_gain?: number; normal_gain?: number; stat_before?: number }
@@ -29,6 +33,14 @@ export function trainingTier(group: TrainingGroup, id: string) {
 
 export function crewTrainingStatGain(stat: number, efficiency: number, energy: number, morale: number) {
   return applyTrainingMorale(trainingStatGain(stat, efficiency, energy), morale);
+}
+
+export function shipTrainingStatGain(stat: number, efficiency: number, energy: number) {
+  return trainingStatGain(stat, efficiency * gameplay.training.shipGainMultiplier, energy);
+}
+
+export function shipMaterialCosts(energy: number, stock: ShipMaterialStock[]) {
+  return stock.map(item => ({ ...item, quantity: item.quantity * Math.ceil(energy / gameplay.training.shipMaterialEnergy) }));
 }
 
 export function parseShipEnergy(value: unknown): number | null {

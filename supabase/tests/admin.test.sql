@@ -106,6 +106,9 @@ select is(public.admin_read('combat_engagements','',0,jsonb_build_object('charac
 select is(public.admin_read('combats','',0,jsonb_build_object('attacker_id',current_setting('test.owner')))#>>'{rows,0,values,status}','completed','Admin interruption completes combat');
 select is(public.admin_read('characters','',0,jsonb_build_object('id',current_setting('test.owner')))#>>'{rows,0,values,ship_health}','100','Admin interruption causes no damage');
 select ok(public.admin_read('combat_rounds','admin_end')->>'total' <> '0','Admin interruption is identified in combat history');
+reset role;
+insert into private.item_stacks(character_id,item_id,quantity) select current_setting('test.owner')::uuid,m.item_id,10 from (values('oak_planks'),('iron_nails')) m(item_id) on conflict(character_id,item_id) do update set quantity=item_stacks.quantity+excluded.quantity;
+set local role authenticated;
 select lives_ok($$select public.start_ship_upgrade('attack',5,'ship_1',gen_random_uuid())$$,'Create ship job for cancellation');
 select set_config('test.job',(public.admin_read('ship_upgrade_jobs','',0,jsonb_build_object('character_id',current_setting('test.owner'),'applied_at',null))->'rows'->0)::text,true);
 select is(current_setting('test.job')::jsonb#>>'{values,applied_at}',null,'NULL filter identifies pending jobs');

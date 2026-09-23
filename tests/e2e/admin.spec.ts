@@ -150,6 +150,7 @@ test("admin remains accessible in hospital and combat, and revocation is immedia
     const log = await admin.api.rpc("get_combat_log", { battle_id: combatId });
     expect(log.error).toBeNull();
     expect(log.data?.events.some(event => event.kind === "admin_end")).toBe(true);
+    sql("insert into private.item_stacks(character_id,item_id,quantity) select '" + admin.id + "',item_id,10 from (values('oak_planks'),('iron_nails')) m(item_id) on conflict(character_id,item_id) do update set quantity=item_stacks.quantity+excluded.quantity;");
     const job = await admin.api.rpc("start_ship_upgrade", { stat: "attack", energy_amount: 5, expected_workshop_id: "ship_1", request_id: randomUUID() });
     expect(job.error).toBeNull();
     await page.reload();

@@ -103,11 +103,19 @@ export function validateConfig(config) {
       check(Math.abs(tier.efficiency * 1_000_000 - Math.round(tier.efficiency * 1_000_000)) < 0.000001, "Tier efficiency supports at most six decimals.");
     }
   }
+  check(g.training.shipMaterials.length <= 16, "At most 16 ship materials are supported.");
+  check(new Set(g.training.shipMaterials.map(item => item.itemId)).size === g.training.shipMaterials.length, "Ship materials must be unique.");
+  for (const material of g.training.shipMaterials) {
+    const item = inventory.items.find(item => item.id === material.itemId);
+    check(item && item.kind !== "equipment" && item.categoryId === "materials" && item.active, "Ship materials require active stackable materials.");
+    check(Number.isSafeInteger(Math.ceil(g.resources.energyStorageMax / g.training.shipMaterialEnergy) * material.quantity), "Ship material cost exceeds the safe integer limit.");
+  }
+  check(g.training.shipTiers.every(tier => tier.efficiency * g.training.shipGainMultiplier <= 1000), "Multiplied ship efficiency exceeds the supported limit.");
   check(g.training.shipMinEnergy <= g.resources.energyMax, "Minimum ship work exceeds maximum Energy.");
   check(Number.isSafeInteger(g.resources.energyStorageMax * g.training.shipSecondsPerEnergy), "Ship duration exceeds the safe integer limit.");
   check(Number.isSafeInteger(g.resources.energyStorageMax * g.training.xpPerEnergy), "Ship XP exceeds the safe integer limit.");
   check(g.resources.energyStorageMax <= 10_000, "Training supports at most 10000 Energy per action.");
-  for (const tier of [...g.training.crewTiers, ...g.training.shipTiers]) {
+  for (const tier of [...g.training.crewTiers, ...g.training.shipTiers.map(tier => ({ ...tier, efficiency: tier.efficiency * g.training.shipGainMultiplier }))]) {
     const rate = tier.efficiency / g.training.energyPerUnit;
     check(Math.round(rate * 1_000_000) > 0, "Training gain must survive six-decimal rounding.");
     const maximumGain = rate * (1 + Number.MAX_SAFE_INTEGER / g.training.statScale) ** g.training.statExponent * g.resources.energyStorageMax * g.training.perfectMultiplier;
@@ -170,6 +178,8 @@ export function gameplaySql(config) {
     .replace("{{crafting.catalogSql}}", () => craftingCatalogSql(config))
     .replace("{{skills.catalogSql}}", () => skillCatalogSql(config))
     .replace("{{training.catalogSql}}", () => trainingCatalogSql(config))
+    .replaceAll("{{training.materialsSql}}", () => config.gameplay.training.shipMaterials.map(item =>
+      "('" + item.itemId.replaceAll("'", "''") + "'," + item.quantity + "::bigint)").join(","))
     .replace("{{inventory.catalogSql}}", () => inventoryCatalogSql(config))
     .replace("{{seaTravel.catalogSql}}", () => seaTravelCatalogSql(config)), config);
 }

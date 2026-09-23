@@ -50,6 +50,17 @@ Båda använder samma diagram med sex perioder.
 Utrustningsbonusar och faktiska consumable-effekter ingår inte ännu. Nuvarande stridsnamn Cutlasses och Basic cannons är fortfarande
 stridsvyns grundetiketter och representerar inte utrustade inventoryexemplar.
 
+## Material för skeppsarbete
+
+Oak Planks och Iron Nails används av [Ship Upgrades](TRAINING_FOUNDATION.md).
+Ett jobb förbrukar 1 av varje per påbörjade 5 Energy. Båda är stackbara, handelsbara
+material. Endast innehavet i inventory kan användas; marknadslistade items räknas inte.
+Avdrag, Energy, jobb och kvitto sparas atomiskt. Cirkulationen minskar när material
+förbrukas, och ett återförsök förbrukar inget extra.
+
+Iron Nails har lagts till i katalogen med placeholderbild. Något nytt recept eller
+lootflöde för spikarna ingår inte. Oak Planks tillverkas fortsatt av 5 Oak Logs.
+
 ## Datamodell och behörigheter
 
 Fem nya tabeller ligger i private och har RLS aktiverat:

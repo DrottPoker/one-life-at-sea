@@ -165,6 +165,9 @@
     ],
     "shipMinEnergy": 5,
     "shipSecondsPerEnergy": 6,
+    "shipGainMultiplier": 2,
+    "shipMaterialEnergy": 5,
+    "shipMaterials": [{ "itemId": "oak_planks", "quantity": 1 }, { "itemId": "iron_nails", "quantity": 1 }],
     "energyPerUnit": 5,
     "statScale": 1000,
     "statExponent": 0.6
@@ -327,6 +330,18 @@
         "imagePath": "/images/items/timber.png",
         "description": "Seasoned oak boards bound with hemp rope. Their close grain and solid weight make them prized by shipwrights.",
         "effectDescription": "Shipbuilding material. No active effect.",
+        "active": true,
+        "tradable": true
+      },
+      {
+        "id": "iron_nails",
+        "name": "Iron Nails",
+        "categoryId": "materials",
+        "kind": "passive",
+        "slot": "none",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "Forged iron nails used to secure planks, fittings and reinforcements aboard a ship.",
+        "effectDescription": "Consumed with Oak Planks when starting ship upgrades.",
         "active": true,
         "tradable": true
       },

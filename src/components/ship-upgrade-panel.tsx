@@ -9,7 +9,7 @@ import { useServerCountdown } from "@/hooks/use-server-countdown";
 import { formatCountdown } from "@/lib/time";
 import { formatStat, formatStatGain } from "@/lib/format";
 import { STATS, STAT_LABELS, type Stat } from "@/lib/game";
-import { trainingTier, trainingStatGain, type ShipJob } from "@/lib/training";
+import { trainingTier, shipTrainingStatGain, shipMaterialCosts, type ShipJob } from "@/lib/training";
 
 function ShipCountdown({ job, observedAt }: { job: ShipJob; observedAt: string }) {
   const seconds = useServerCountdown(job.finishes_at, observedAt);
@@ -23,19 +23,22 @@ export function ShipUpgradePanel() {
   const available = Math.max(0, Math.floor(state.energy)), maximum = Math.max(minimum, available);
   const cost = Math.max(minimum, Math.min(selectedEnergy, maximum));
   if (selectedEnergy !== cost) setSelectedEnergy(cost);
-  const gain = trainingStatGain(state[`ship_${stat}`], tier.efficiency, cost), duration = cost * gameplay.training.shipSecondsPerEnergy;
+  const gain = shipTrainingStatGain(state[`ship_${stat}`], tier.efficiency, cost), duration = cost * gameplay.training.shipSecondsPerEnergy;
   const job = state.training.ship_job, completed = state.training.last_ship_job;
+  const materials = shipMaterialCosts(cost, state.training.ship_materials);
+  const enoughMaterials = materials.length > 0 && materials.every(item => item.available && item.owned >= item.quantity);
   return <>
     <TrainingTierProgress group="ship" />
     <div className="o-training-intro">
       <p className="o-training-heading">Leave the work to your shipwrights.</p>
-      <p className="o-copy">One job at a time. Energy is paid at the start; stats arrive when the work is complete, even while you are away.</p>
+      <p className="o-copy">One job at a time. Energy and materials are paid at the start; stats arrive when the work is complete, even while you are away.</p>
     </div>
     <div className="o-ship-stats">{STATS.map(key => <div key={key}><span>{STAT_LABELS[key]}</span><output aria-label={STAT_LABELS[key] + " stat"}>{formatStat(state[`ship_${key}`])}</output></div>)}</div>
     {job ? <section className="o-ship-job" aria-label="Ship work in progress">
       <div className="o-tier-heading"><h2>{STAT_LABELS[job.stat]} upgrade</h2><ShipCountdown job={job} observedAt={state.observed_at} /></div>
       <p className="o-copy">{job.workshop_name} · +{formatStatGain(job.stat_gain)} {STAT_LABELS[job.stat]}</p>
-      <p className="o-form-hint">{job.energy_cost} Energy paid. You can keep playing while the work continues.</p>
+      <p className="o-form-hint">{job.energy_cost} Energy paid. Your ship stays in harbor until the work is complete.</p>
+      {job.materials.length > 0 && <p className="o-form-hint">Materials used: {job.materials.map(item => `${item.quantity.toLocaleString()} ${item.name}`).join(", ")}.</p>}
     </section> : <TrainingActionForm label="Start ship work" fields={{ action: "ship", tier_id: tier.id }}>
       {blocked => <fieldset className="o-ship-order" disabled={blocked || !!state.active_combat_id || !!state.hospital_until}>
         <legend>New ship work</legend>
@@ -52,7 +55,14 @@ export function ShipUpgradePanel() {
           </div>
         </div>
         <p className="o-work-preview"><strong>+{formatStatGain(gain)} {STAT_LABELS[stat]}</strong><span>{cost} Energy · {durationLabel(duration)}</span></p>
-        <button className="o-training-button" type="submit" disabled={state.energy < cost}>Start work</button>
+        <div className="o-ship-materials" aria-label="Required materials"><strong>Materials required</strong>
+          <ul>{materials.map(item => <li key={item.item_id} data-missing={!item.available || item.owned < item.quantity}>
+            <span>{item.name}</span><span>{item.quantity.toLocaleString()} required · {item.owned.toLocaleString()} owned{!item.available && " · Unavailable"}</span>
+          </li>)}</ul>
+          <small>Material costs round up per {gameplay.training.shipMaterialEnergy} Energy.</small>
+        </div>
+        <button className="o-training-button" type="submit" disabled={state.energy < cost || !enoughMaterials}>Start work</button>
+        {!enoughMaterials && <p className="o-form-hint">You need the required materials in your inventory.</p>}
         {state.energy < cost && <p className="o-form-hint">Not enough Energy for this job.</p>}
       </fieldset>}
     </TrainingActionForm>}

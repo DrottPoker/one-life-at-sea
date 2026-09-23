@@ -1,7 +1,7 @@
 # Träning och progression
 
 Uppdaterat och implementerat lokalt 2026-09-23. Balansen kommer från [gameplayconfig](../config/gameplay.json).
-[Implementationsplanen](TRAINING_PROGRESSION_PLAN.md) är designunderlaget; items är uppskjutna.
+[Implementationsplanen](TRAINING_PROGRESSION_PLAN.md) är designunderlaget. Skeppsarbete förbrukar nu material.
 
 ## Spelregler
 
@@ -15,11 +15,14 @@ Till havs gäller fasta tiominutersticks. Energy lagras alltid som heltal. Se [E
 - Skepp: välj stat och Energy med en slider från 5 till aktuell Energy, i heltalssteg.
   Varje Energy tar sex sekunder, alltså 30 sekunder per 5 Energy. Betala vid start och få stats/XP vid sluttiden.
   Ett pågående arbete åt gången, utan kö eller automatisk upprepning.
+  Materialkostnaden är 1 Oak Plank och 1 Iron Nail per påbörjade 5 Energy.
+  Exempel: 5 Energy kostar 1 av varje, 6 kostar 2 och 50 kostar 10.
 - Slidern följer saldot när det ändras och låses tillsammans med startknappen under 5 Energy.
   Kostnad, tid och statökning visas direkt. Servern kontrollerar det återhämtade saldot vid start.
-- Crew och Ship använder samma grundkurva per Energy: permanent stat, betald Energy
-  och köpt nivå. Crew får dessutom -5 % till +5 % från aktuell Crew Morale och
-  förbrukar 0,5 moral per Energy. Ship påverkas inte av moral. Båda sparar decimaler.
+- Crew och Ship använder samma statberoende kurva, men Ship har 2x grundökning
+  per Energy vid samma stat och workshop-effektivitet. Crew får dessutom -5 % till +5 %
+  från aktuell Crew Morale och förbrukar 0,5 moral per Energy. Ship påverkas inte av
+  moral eller Perfect Drill. Båda sparar decimaler.
 - Varje Energy räknas separat med virtuell statökning under jobbet. Ett arbete för
   100 Energy ger exakt samma normala belöning som tio sekventiella arbeten för 10 Energy
   på samma stat och nivå, utan andra stat- eller balansändringar mellan jobben.
@@ -32,8 +35,9 @@ Till havs gäller fasta tiominutersticks. Energy lagras alltid som heltal. Se [E
   Försvarare kan läsa träningssidorna medan formulären är låsta, även över flera flikar.
   Redan startat arbete fortsätter under strid, sjukhusvistelse och offline.
 
-Items, material, consumables, intjäning och utrustningsbonusar ingår inte.
-Första träningen är gratis utöver Energy, och nya karaktärer börjar med 0 Gold Coins.
+Oak Planks och Iron Nails tas från spelarens inventory när skeppsarbetet startas.
+Crew Training kostar fortfarande endast Energy. Consumables och utrustningsbonusar
+ingår inte i träningen. Nya karaktärer börjar med 0 Gold Coins.
 Ingen publik funktion för att skapa testpengar har införts.
 
 ## Progressionsvisning
@@ -71,13 +75,19 @@ under 0,01 ger Perfect Drill och exakt dubbla normalökningen; annars vanlig ök
 Bonussen läggs på hela passet en gång. Den ger varken extra XP eller en ny intern
 omräkning under samma pass. Efterföljande pass räknas från den nya permanenta staten.
 
-För Ship är E vald heltalsmängd mellan 5 och tillgänglig Energy, högst 100 i dagens config.
-Ingen Perfect Drill gäller Ship. Jobbets belöning och XP sparas vid start, liksom sluttiden
-E * 6 sekunder senare. Varken nivåköp eller balansändring räknar om detta jobb.
+För Ship är E vald heltalsmängd mellan 5 och tillgänglig Energy, högst lagringstaket
+1 000; normal återhämtning stannar vid 100. I algoritmen ersätts M med
+`M * shipGainMultiplier`, där multiplikatorn är 2. Den läggs alltså på varje Energy,
+så ett stort jobb och flera mindre jobb behåller samma totala statökning. På grund
+av den virtuella statökningen blir ett helt jobb något mer än exakt två gånger
+ett omultiplicerat jobb. Ingen moraleffekt eller Perfect Drill gäller Ship.
+Jobbets belöning, XP, förbrukade material och sluttiden E * 6 sekunder senare sparas
+vid start. Nivåköp eller balansändringar räknar inte om redan startade jobb.
 
 Formeln `M * (1 + S / 1000)^0.6` är en nära uppskattning för fem Energy.
 Den exakta algoritmen ovan inkluderar även den lilla ökningen mellan Energy-enheterna.
-Exempel på fem-Energy-pass vid neutral moral, utan Perfect Drill:
+Exempel på Crew-pass för fem Energy vid neutral moral, utan Perfect Drill
+(Ship använder två gånger tabellens M i den exakta algoritmen):
 
 | Stat före passet | Nivå 1, M = 1 | Nivå 10, M = 3 |
 | ---: | ---: | ---: |
@@ -89,7 +99,9 @@ Exempel på fem-Energy-pass vid neutral moral, utan Perfect Drill:
 | 1 000 000 | 63,134540 | 189,409355 |
 
 Ett första Crew-pass på Attack 10 ger alltså 11,00623, eller 12,01246 vid Perfect Drill.
-Ett Ship-jobb på Attack 10 för 6 Energy ger +1,207548 efter 36 sekunder.
+Ett Ship-jobb på Attack 10 i första workshopen för 5 Energy ger +2,012938 efter
+30 sekunder och kostar 1 av varje material. För 6 Energy blir ökningen +2,415814
+efter 36 sekunder, med 2 av varje material. XP är fortsatt 1 per Energy.
 Ökningen i absoluta tal växer med staten, medan ökningen i procent av staten avtar.
 
 Utrustningsvärden och tillfälliga stridsbonusar ingår inte i S. Crew Training
@@ -100,7 +112,8 @@ femminutersticks och kan höjas i tavernan. Se [Crew Morale](CREW_MORALE.md).
 
 Båda spåren använder följande trappa, men har egna namn, köpta nivåer och XP.
 Effektivitet ersätter den gamla fasta belöningen, som tidigare gick från 1 till 1 500.
-XP-krav och priser är bevarade. Tabellen visar priset för just det köpet, inte totalsumman.
+XP-krav och priser är bevarade. Ship multiplicerar tabellens M med 2 vid beräkning
+av statökning. Tabellen visar priset för just det köpet, inte totalsumman.
 
 | Nivå | Effektivitet M | Kumulativt XP-krav | Gold Coins |
 | --- | ---: | ---: | ---: |
@@ -145,6 +158,20 @@ Endast nästa nivå kan köpas, efter upplåsning och med tillräckligt med burn
 Den högsta köpta nivån används automatiskt. Designskissens extra val och mängdreglage
 inför inte nya spelregler. Befintliga strids-, sjukhus- och reselås samt återförsök behålls.
 
+## Material i Ship Upgrades
+
+För vald arbetsstorlek visas nödvändigt antal och aktuellt innehav av varje material.
+Startknappen låses när Energy eller material saknas. Innehavet uppdateras via samma
+ägarskyddade signaler som övrig spelstatus, även över flera flikar. Under pågående
+arbete visas de faktiskt förbrukade materialen från jobbets sparade snapshot.
+
+Både Energy och samtliga material valideras innan något dras, i samma transaktion
+som jobbet och kvittot skapas. Stackar som töms tas bort och cirkulationen minskas.
+Återförsök använder originalkvittot utan nya avdrag, även om inventory är tomt.
+Gamla jobb från före materialkravet behåller sin belöning och tom materiallista;
+material dras aldrig retroaktivt. Iron Nails är ett aktivt, handelsbart material
+med katalogens placeholderbild. Något recept eller lootflöde för spikar är ännu inte infört.
+
 ## Stridsbalans vid höga stats
 
 HP och skadeformeln har inte ändrats. Med samma Attack och Defense ger den befintliga
@@ -186,11 +213,12 @@ Publika RPC:
 
 Alla mutatorer autentiserar kontot, använder stridens ordnade deltagarlås och debiterar atomiskt.
 Klienten väljer en heltalsmängd Energy men kan inte välja ägare, prisregel, tid, XP,
-statökning eller slumpresultat. Ogiltig mängd och otillräckligt saldo avvisas utan debitering.
+statökning, materialpris eller slumpresultat. Ogiltig mängd, otillräckligt saldo
+och saknade/inaktiva material avvisas utan debitering.
 Ett återförsök returnerar originalkvittot. Återanvänd request_id med annat innehåll avvisas.
 Den tidigare train_stat-funktionen är borttagen i både public och private.
 
-Skeppsjobbet lagrar sluttid och belöningssnapshot. En partiell unik nyckel på karaktären
+Skeppsjobbet lagrar sluttid, belöningssnapshot och förbrukade material. En partiell unik nyckel på karaktären
 där applied_at är null håller platsen upptagen tills jobbet tillgodoräknats.
 Servern färdigställer förfallna arbeten vid läsning av spelstatus, nya träningshandlingar
 och köp samt före både stridsförhandsvisning och faktisk stridsstart.
@@ -208,6 +236,9 @@ Sidan visar senaste färdiga arbetet även efter återinloggning.
 är beständiga; befintliga nivåer får inte tas bort eller flyttas av en configmigration.
 Balansändringar gäller nya handlingar. Sparade skeppsarbeten behåller alla sina värden.
 Nya träningskvitton sparar dessutom stat_before, normal_gain, efficiency och config_revision.
+Skeppskvitton sparar även materials och gain_multiplier. `shipGainMultiplier`,
+`shipMaterialEnergy` och `shipMaterials` styr multiplikator, Energy per materialomgång
+och materiallista. Antalen beräknas som `ceil(E / shipMaterialEnergy) * quantity`.
 Gamla kvitton returneras oförändrade och slumpas eller räknas aldrig om vid återförsök.
 Kvitton behålls för stabila återförsök; ingen rensningspolicy har införts.
 

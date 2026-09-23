@@ -35,6 +35,10 @@ Se [Crew Morale](../docs/CREW_MORALE.md).
 Exempel: `training.energyCost` styr crew-träningens kostnad och knapptext.
 `training.shipMinEnergy` styr sliderns minimum (5), `shipSecondsPerEnergy` arbetstiden per Energy (6, alltså 30 sekunder per 5 Energy)
 och `training.energyPerUnit` referensenheten (5) för både Crew och Ship.
+`training.shipGainMultiplier` (2) multiplicerar skeppets grundökning för varje Energy.
+`shipMaterialEnergy` (5) och `shipMaterials` anger material per påbörjad Energy-omgång:
+standard är 1 Oak Plank och 1 Iron Nail per påbörjade 5 Energy. Servern tar material
+och Energy atomiskt vid start. Gamla jobb och kvitton behåller sina sparade värden.
 Varje nivå har `efficiency`. `statScale` (1000) och `statExponent` (0,6) styr
 statberoendet. Varje Energy avrundas till sex decimaler och ökar den virtuella staten
 före nästa enhet. Se [exakta träningsregler](../docs/TRAINING_FOUNDATION.md).

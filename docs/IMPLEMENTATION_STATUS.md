@@ -1,3 +1,53 @@
+# Ship upgrade multiplier reduced to 2x, 2026-09-23
+
+- Reduced `training.shipGainMultiplier` from 3 to 2 at the owner's request.
+  New jobs and the UI preview use 2x the base per-Energy rate. Material costs,
+  Energy costs, duration and XP are unchanged. Previously started jobs retain
+  their stored rewards, including jobs started under the former 3x setting.
+- Applied local migration
+  `20260923111042_central_gameplay_config_83e29ab2672c.sql` after a rollback preview
+  verified the new rate and preservation of existing job snapshots. Updated gain
+  reference vectors and the current training/configuration documentation.
+- Verified lint, typecheck, 413 unit tests, production build, all 1,905 database
+  assertions and 116 alternative-configuration assertions. Security advisors
+  found no issues. The ship slider browser scenario passed, including the 2x
+  preview, stored reward, completion and responsive layout. Diff checks passed.
+
+# Ship upgrade gains and material costs, 2026-09-23
+
+- Ship training now uses 3x the base per-Energy gain rate, preserving the existing
+  stat curve and partition-independent rewards. Crew morale and Perfect Drill do
+  not affect ship work. Energy selection, six seconds per Energy, XP and sailing
+  locks are unchanged.
+- Each job costs 1 Oak Plank and 1 Iron Nail per started 5 Energy, rounded up.
+  Added active, tradable, stackable Iron Nails with the standard placeholder image.
+  The ship panel shows required and owned materials and disables unfunded orders.
+- Material and Energy charges, circulation updates, job creation and the durable
+  receipt commit atomically. Ordered locks protect concurrent actions; retries
+  return the original receipt without consuming more materials. Jobs keep their
+  material snapshots, and preexisting jobs receive an empty materials list without
+  changing their stored reward, duration or Energy cost.
+- Applied local migration
+  `20260923105346_central_gameplay_config_5a9e2c33baf1.sql`. Configuration validates
+  material identity, availability, quantities and multiplied efficiency. Updated
+  training, inventory and configuration documentation.
+- Granted Ludorex an additional 100 Iron Nails and 100 Oak Planks through audited,
+  idempotent admin grants in the local database. Resulting inventory: 100 nails
+  and 125 planks. No nail recipe or loot source was added.
+
+Verified locally: lint, typecheck, 413 unit tests and production build passed.
+The database suite passed 1,905 assertions across 40 files, including 30 new
+material checks; alternate configuration passed 116 assertions and rolled back.
+Security advisors found no issues before and after the migration. All nine
+selected browser scenarios passed after updating old gain expectations: all five
+training scenarios, ship departure locking, concurrent departures, admin access
+and concurrent grants. Coverage includes material shortages, live stock updates,
+rounded quantities, concurrent job starts, durable retries, actual gains and
+responsive widths down to 320px. Desktop/mobile screenshots were reviewed.
+Config synchronization and diff checks passed, and localhost:3000 returned HTTP
+200. The previously observed Next.js aborted-stream diagnostic appeared during
+some browser navigations; the final targeted slider rerun completed without it.
+
 # Compact Crew Training cards and matching corners, 2026-09-23
 
 - Reduced card padding, artwork size and excess spacing. Energy now follows the

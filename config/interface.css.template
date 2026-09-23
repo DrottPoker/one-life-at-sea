@@ -1425,3 +1425,10 @@ dialog button.o-dialog-close svg { width:18px; height:18px; }
   .o-crew-guide ul { grid-template-columns:minmax(0,1fr); }
   .o-crew-guide li:nth-child(odd) { border-right:0; }
 }
+
+.o-ship-materials { margin:12px 0; padding:12px; border:1px solid var(--o-line); border-radius:3px; background:var(--o-inset); font-size:12px; }
+.o-ship-materials > strong { color:var(--o-gold); }
+.o-ship-materials ul { display:flex; flex-direction:column; gap:7px; list-style:none; padding:0; margin:10px 0; }
+.o-ship-materials li { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; }
+.o-ship-materials li[data-missing="true"] { color:var(--o-palette-ffcfb7); }
+.o-ship-materials small { color:var(--o-muted); }

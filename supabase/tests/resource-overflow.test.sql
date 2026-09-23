@@ -17,6 +17,9 @@ select is((select stamina from private.stamina_snapshot(49,'2026-01-01 00:12Z','
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
 ('a9910000-0000-4000-8000-000000000001','overflow-player@example.test',false,'{"character_name":"OverflowCaptain"}'),
 ('a9910000-0000-4000-8000-000000000002','overflow-admin@example.test',false,'{"character_name":"OverflowAdmin"}');
+insert into private.item_stacks(character_id,item_id,quantity) select c.id,m.item_id,1000 from public.characters c
+cross join (values('oak_planks'),('iron_nails')) m(item_id) where c.user_id in ('a9910000-0000-4000-8000-000000000001'::uuid,'a9910000-0000-4000-8000-000000000002'::uuid);
+
 create temporary table overflow_fixture as select id from public.characters where user_id='a9910000-0000-4000-8000-000000000001';
 grant select on overflow_fixture to authenticated;
 insert into private.admin_members(user_id) values('a9910000-0000-4000-8000-000000000002');

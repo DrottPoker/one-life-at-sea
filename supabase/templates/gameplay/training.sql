@@ -64,9 +64,23 @@ begin
 end;
 $$;
 
+alter table private.ship_upgrade_jobs add column if not exists materials jsonb not null default '[]'::jsonb;
+
+create or replace function private.ship_material_costs(captain_id uuid,energy_amount integer)
+returns jsonb language sql stable security invoker set search_path='' as $$
+  select coalesce(jsonb_agg(jsonb_build_object('item_id',m.item_id,'name',coalesce(d.name,m.item_id),
+    'quantity',m.quantity*ceil(energy_amount::numeric/{{gameplay.training.shipMaterialEnergy}})::bigint,
+    'owned',coalesce(s.quantity,0),'available',coalesce(d.active and d.stackable and d.category_id='materials',false)) order by m.item_id),'[]'::jsonb)
+  from (values {{training.materialsSql}}) m(item_id,quantity)
+  left join private.item_definitions d on d.id=m.item_id
+  left join private.item_stacks s on s.item_id=m.item_id and s.character_id=captain_id;
+$$;
+revoke all on function private.ship_material_costs(uuid,integer) from public,anon,authenticated;
+
 create or replace function private.training_state(captain_id uuid)
 returns jsonb language sql stable security invoker set search_path='' as $$
   select jsonb_build_object(
+    'ship_materials',private.ship_material_costs(captain_id,{{gameplay.training.shipMaterialEnergy}}),
     'progress',(select jsonb_object_agg(training_group,jsonb_build_object('xp',xp,'tier_id',tier_id))
       from private.character_training where character_id=captain_id),
     'ship_job',(select to_jsonb(j)-'character_id'-'config_revision' from private.ship_upgrade_jobs j
@@ -98,6 +112,13 @@ begin
 end;
 $$;
 
+-- Multiply the per-Energy rate so partitioning a job cannot change its gain.
+create or replace function private.ship_training_gain(stat_value numeric,efficiency numeric,energy_amount integer)
+returns numeric language sql immutable strict security invoker set search_path='' as $$
+  select private.training_gain(stat_value,efficiency*{{gameplay.training.shipGainMultiplier}},energy_amount);
+$$;
+revoke all on function private.ship_training_gain(numeric,numeric,integer) from public,anon,authenticated;
+
 -- Deterministic resolver is internal only; callers cannot choose the random roll.
 create or replace function private.crew_training_gain(base_gain numeric, roll double precision)
 returns numeric language plpgsql immutable strict security invoker set search_path='' as $$
@@ -118,6 +139,7 @@ declare
   current_tier private.training_tiers%rowtype;
   previous private.training_requests%rowtype;
   job private.ship_upgrade_jobs%rowtype;
+  material record; material_ids text[]; materials jsonb:='[]'::jsonb;
   recovered record; morale_state record; morale_before numeric; morale_after numeric; morale_factor numeric; base_gain numeric;
   group_name text:=case when action='crew' then 'crew' when action='ship' then 'ship' else payload->>'group' end;
   stat text:=payload->>'stat';
@@ -162,7 +184,8 @@ begin
       then raise exception 'INVALID_ENERGY' using errcode='22023'; end if;
       energy_cost:=(payload->>'energy_amount')::integer;
     end if;
-    base_gain:=private.training_gain(stat_before,current_tier.efficiency,energy_cost);
+    base_gain:=case when action='ship' then private.ship_training_gain(stat_before,current_tier.efficiency,energy_cost)
+      else private.training_gain(stat_before,current_tier.efficiency,energy_cost) end;
     normal_gain:=base_gain;
     if action='crew' then
       select * into morale_state from private.morale_snapshot(captain.crew_morale,captain.morale_updated_at,observed_at);
@@ -177,6 +200,23 @@ begin
       or progress.xp>9007199254740991-xp_gain then raise exception 'PROGRESSION_LIMIT'; end if;
     select * into recovered from private.character_energy_snapshot(captain,observed_at);
     if recovered.energy<energy_cost then raise exception 'NOT_ENOUGH_ENERGY'; end if;
+    if action='ship' then
+      select array_agg(m.item_id order by m.item_id) into material_ids from (values {{training.materialsSql}}) m(item_id,quantity);
+      perform 1 from private.item_definitions d where d.id=any(material_ids) order by d.id for share;
+      perform 1 from private.item_stacks s where s.character_id=viewer_id and s.item_id=any(material_ids) order by s.item_id for update;
+      materials:=private.ship_material_costs(viewer_id,energy_cost);
+      for material in select * from jsonb_to_recordset(materials) as m(item_id text,name text,quantity bigint,owned bigint,available boolean) loop
+        if not material.available then raise exception 'MATERIAL_UNAVAILABLE'; end if;
+        if material.owned<material.quantity then raise exception 'INSUFFICIENT_MATERIALS'; end if;
+      end loop;
+      -- Circulation counters use the same ordered lock as crafting and trading.
+      perform 1 from private.item_circulation c where c.item_id=any(material_ids) order by c.item_id for update;
+      for material in select * from jsonb_to_recordset(materials) as m(item_id text,quantity bigint) loop
+        delete from private.item_stacks s where s.character_id=viewer_id and s.item_id=material.item_id and s.quantity=material.quantity;
+        update private.item_stacks s set quantity=s.quantity-material.quantity where s.character_id=viewer_id and s.item_id=material.item_id;
+      end loop;
+      select jsonb_agg(value-'owned'-'available') into materials from jsonb_array_elements(materials);
+    end if;
     update public.characters set energy=recovered.energy-energy_cost,energy_updated_at=recovered.energy_updated_at where id=viewer_id;
     if action='crew' then
       update public.characters set crew_morale=morale_after,morale_updated_at=morale_state.morale_updated_at where id=viewer_id;
@@ -186,11 +226,11 @@ begin
         'perfect',gain>normal_gain,'tier_id',current_tier.id,'morale_before',morale_before,'morale_after',morale_after,
         'morale_multiplier',morale_factor,'base_gain',base_gain);
     else
-      insert into private.ship_upgrade_jobs(character_id,stat,workshop_id,workshop_name,energy_cost,stat_gain,xp_gain,config_revision,started_at,finishes_at)
-        values(viewer_id,stat,current_tier.id,current_tier.name,energy_cost,gain,xp_gain,public.get_gameplay_revision(),
+      insert into private.ship_upgrade_jobs(character_id,stat,workshop_id,workshop_name,energy_cost,stat_gain,xp_gain,materials,config_revision,started_at,finishes_at)
+        values(viewer_id,stat,current_tier.id,current_tier.name,energy_cost,gain,xp_gain,materials,public.get_gameplay_revision(),
           observed_at,observed_at+make_interval(secs=>energy_cost::double precision*{{gameplay.training.shipSecondsPerEnergy}})) returning * into job;
       result:=jsonb_build_object('kind','ship','job_id',job.id,'stat',stat,'stat_gain',gain,'xp_gain',xp_gain,
-        'energy_cost',energy_cost,'finishes_at',job.finishes_at);
+        'energy_cost',energy_cost,'finishes_at',job.finishes_at,'materials',materials,'gain_multiplier',{{gameplay.training.shipGainMultiplier}});
     end if;
   end if;
   if action in ('crew','ship') then
