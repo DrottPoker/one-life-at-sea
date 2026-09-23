@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { gameplay } from "../../src/config/public";
-import { isMessageId, isMessagesPath, messageDraftKey, normalizeMessage, parsePendingMessage, validMessage, parsePendingMail, mailDraftKey, validRecipients, validSubject, replySubject } from "../../src/lib/messages";
+import { isMessageId, isMessagesPath, messageDraftKey, normalizeMessage, parsePendingMessage, validMessage, parsePendingMail, mailDraftKey, validRecipients, validSubject, replySubject, mailDetailUrl, parseMailView } from "../../src/lib/messages";
 import { isHospitalAccessiblePath } from "../../src/lib/hospital";
 import { isSeaAccessiblePath } from "../../src/lib/sea-travel";
 import { navigationRedirect } from "../../src/lib/game-navigation";
@@ -13,6 +13,13 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 import { sendMail, updateMail, setMailIgnored } from "../../src/app/message-actions";
 
 describe("private messages", () => {
+  it("retains the folder, encoded search and page when opening a letter", () => {
+    const url = new URL(mailDetailUrl("9223372036854775807", "saved", "ocean & harbor?", 3, true), "https://example.test");
+    expect(url.pathname).toBe("/messages/mail/9223372036854775807");
+    expect(Object.fromEntries(url.searchParams)).toEqual({ folder: "saved", q: "ocean & harbor?", page: "3", history: "1" });
+    expect(parseMailView({ folder: ["saved"], q: ["private"], page: "-1" })).toEqual({ folder: "inbox", query: "", page: 0 });
+    expect(parseMailView({ folder: "outbox", q: "x".repeat(250), page: "10000000" })).toEqual({ folder: "outbox", query: "x".repeat(200), page: 0 });
+  });
   it("preserves multiline text and literal markup", () => {
     expect(normalizeMessage("  Hello\r\n<script>text</script> ")).toBe("Hello\n<script>text</script>");
     expect(validMessage("<script>text</script>")).toBe(true);

@@ -17,7 +17,7 @@ export type TrainingReceipt =
   | { kind: "crew"; stat: Stat; stat_gain: number; xp_gain: number; energy_cost: number; perfect: boolean; tier_id: string; morale_before?: number; morale_after?: number; morale_multiplier?: number; base_gain?: number; normal_gain?: number; stat_before?: number }
   | { kind: "ship"; job_id: string; stat: Stat; stat_gain: number; xp_gain: number; energy_cost: number; finishes_at: string }
   | { kind: "purchase"; group: TrainingGroup; tier_id: string; tier_name: string; gold_cost: number };
-export type TrainingResult = { message?: string; error?: boolean; retry?: boolean };
+export type TrainingResult = { message?: string; error?: boolean; retry?: boolean; receipt?: TrainingReceipt };
 export function trainingTiers(group: TrainingGroup) {
   return group === "crew" ? gameplay.training.crewTiers : gameplay.training.shipTiers;
 }

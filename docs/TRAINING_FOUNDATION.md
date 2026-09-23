@@ -1,6 +1,6 @@
 # Träning och progression
 
-Uppdaterat och implementerat lokalt 2026-09-21. Balansen kommer från [gameplayconfig](../config/gameplay.json).
+Uppdaterat och implementerat lokalt 2026-09-23. Balansen kommer från [gameplayconfig](../config/gameplay.json).
 [Implementationsplanen](TRAINING_PROGRESSION_PLAN.md) är designunderlaget; items är uppskjutna.
 
 ## Spelregler
@@ -119,14 +119,31 @@ Första nivåköpet kan låsas upp med startens 100 Energy, alltså 20 Crew-pass
 Alla nivåköp kostar tillsammans 7 220 250 Gold Coins per spår. Priserna behöver
 kalibreras mot den framtida guldintjäningen; de är inte en färdig ekonomimodell.
 
-Gränssnittet visar beräknad normalökning för varje Crew-stat och vald Ship-stat/arbetsstorlek,
-aktuellt statvärde och nivåns effektivitet. Stats under 10 000 visas med högst två
+Crew visar faktisk ökning först efter träning. Ship visar beräknad normalökning för vald
+stat/arbetsstorlek. Båda visar aktuellt statvärde och nivåns effektivitet. Stats under 10 000 visas med högst två
 decimaler; från 10 000 visas avrundade heltal. Alla träningsökningar visas med högst
 två decimaler även när ökningen överstiger 10 000. Onödiga slutnollor visas inte.
-Detta gäller bara presentationen: intern precision, sparade stats och kvitton är oförändrade. På mobil ligger Crew-knappen på en egen rad
-så att decimalvärdet får plats. Förhandsvisningen använder JavaScript-tal;
+Detta gäller bara presentationen: intern precision, sparade stats och kvitton är oförändrade.
+Crew-korten staplas på små skärmar och värden kan radbrytas. Ships förhandsvisning använder JavaScript-tal;
 databasens numeric-beräkning och sparade kvitto avgör alltid utfallet. Vid mycket stora
 stats nära den tekniska gränsen kan förhandsvisningen ha lägre decimalprecision.
+
+## Crew Training-gränssnitt
+
+Sidan använder spelarens bildheader och fyra guldfärgade statsymboler. Översikten visar
+aktiv övning, köpt nivå, effektivitet, Perfect Drill-chans, moraleffekt och tillgänglig Energy.
+**Energikostnaden är gemensam för alla fyra stats: 5 Energy per pass.** Samma konfigurerade
+kostnad visas diskret inne i varje kort. Korten visar aktuellt statvärde och en Train-knapp
+utan symbol. Ingen gain visas i förväg. Efter träning visas den faktiska ökningen från
+serverkvittot ovanför knappen i det tränade kortet, inklusive Perfect Drill vid sådant utfall.
+Varje kort behåller sitt senaste resultat tills nästa pass där eller sidbyte. Pågående pass,
+fel och säkra återförsök visas också i kortet; ingen gemensam träningsresultatruta skapas.
+Det finns inga separata energival eller mängdreglage för respektive stat.
+
+Drill Schools visar de tio befintliga nivåerna, aktiv/ägd/låst status och framsteg i procent.
+Endast nästa nivå kan köpas, efter upplåsning och med tillräckligt med burna Gold Coins.
+Den högsta köpta nivån används automatiskt. Designskissens extra val och mängdreglage
+inför inte nya spelregler. Befintliga strids-, sjukhus- och reselås samt återförsök behålls.
 
 ## Stridsbalans vid höga stats
 

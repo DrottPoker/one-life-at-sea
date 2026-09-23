@@ -25,8 +25,6 @@ vi.mock("@/components/game-state", () => ({
 vi.mock("@/components/economy-requests", () => ({ useEconomyRequests: () => ({ unconfirmed: false, training: async () => ({}) }) }));
 
 import { ResourceBars } from "../../src/components/resource-bars";
-import { trainingStatGain } from "../../src/lib/training";
-import { formatStatGain } from "../../src/lib/format";
 import { CrewTrainingPanel } from "../../src/components/crew-training-panel";
 import { CombatantPanel } from "../../src/components/combatant-panel";
 
@@ -43,25 +41,28 @@ describe("configured interface", () => {
     expect(html).toContain('every 15 seconds outside combat.');
     expect(html).toContain('every 5 seconds outside combat.');
   });
-  it("uses the configured training cost and gain in buttons and explanatory copy", () => {
+  it("uses the same configured cost in each card without gain previews", () => {
     const html = renderToStaticMarkup(createElement(CrewTrainingPanel));
-    expect(html).toContain('aria-label="Train Attack for 9 Energy"');
-    expect(html).toContain('9 Energy');
-    expect(html).toContain('4x training efficiency');
-    expect(html).toContain('Train +'+formatStatGain(trainingStatGain(10,4,9)));
-    expect(html).toContain('Gains grow with the permanent stat you train.');
+    for (const stat of ["Attack", "Defense", "Speed", "Accuracy"]) {
+      expect(html).toContain('aria-label="Train ' + stat + ' for 9 Energy"');
+    }
+    expect(html.match(/9 Energy per drill/g)).toHaveLength(4);
+    expect(html).toContain('Training efficiency</span></dt><dd>4x</dd>');
+    expect(html).not.toContain("Expected Attack gain");
+    expect(html).not.toContain("Gain per drill");
+    expect(html).not.toContain("Attack gained");
+    expect(html).toContain('Gains grow with that stat and your training efficiency.');
     expect(html).not.toContain("5 Energy");
     expect(html).not.toMatch(/\bXP\b|earned|more XP required/);
     expect(html).toContain('aria-label="Crew progress" max="100" value="0"');
   });
-  it("separates owned-stat formatting from large training gains", () => {
+  it("formats owned stats without predicting training gains", () => {
     const html = renderToStaticMarkup(createElement(CrewTrainingPanel));
     expect(html).toContain('aria-label="Defense stat">9,999.99</output>');
     expect(html).toContain('aria-label="Speed stat">10,001</output>');
     expect(html).toContain('aria-label="Accuracy stat">10,000,000,001</output>');
-    const gain = trainingStatGain(10000000000.625, 4, 9);
-    expect(gain).toBeGreaterThan(10000);
-    expect(html).toContain("Train +" + formatStatGain(gain));
+    expect(html).not.toContain('Expected Accuracy gain');
+    expect(html).not.toContain('Accuracy gained');
   });
   it("uses the health cap in combat panels as well as the sidebar", () => {
     const html = renderToStaticMarkup(createElement(CombatantPanel, {

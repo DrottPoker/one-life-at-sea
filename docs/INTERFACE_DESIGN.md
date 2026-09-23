@@ -137,3 +137,27 @@ row; mobile places the action below the details. Result text stays inline with r
 Normal activity requests use the existing journal without flashing the recovery banner.
 
 Admin now has task-oriented navigation, overview shortcuts, an item catalog and dedicated item/loot/activity forms. Loot preview shows percentages per successful catch. Responsive cards, readable field labels and grouped database resources replace the database-first starting point. Review screens show human-readable values with technical JSON collapsed. In-flight admin saves do not show the recovery banner.
+
+
+## Crew Training, September 23
+
+The owner's night training-deck banner and four transparent gold icons are optimized
+WebP assets in `public/images/training/`. The original supplied artwork is unchanged.
+A panoramic header leads into the live six-part overview and four colored stat cards.
+The same configured Energy cost appears discreetly inside each card. Cards show current
+stats and text-only Train buttons, without gain previews. Each card has an inline live
+result above its button, reserved to avoid layout movement. Confirmed server receipts
+supply actual gains and Perfect Drill outcomes. Pending/error/retry feedback stays in the
+same card, with no shared training result panel. No Energy selector or batch quantity is
+introduced. The economy journal continues to lock all drills during an unresolved request.
+Compact card spacing puts Energy directly below the description with a 5px gap. Stat
+art is 98px; confirmed gains use prominent 20px semibold green text. The result slot
+keeps the buttons aligned without adding blank space before the Energy cost. Matching
+18px corner accents frame all four corners.
+
+Drill Schools displays all ten configured tiers with active, owned and locked states,
+percentage progress and the next available purchase. The highest purchased tier remains
+automatically active. The adjacent guide uses the real Energy, morale and Perfect Drill
+settings. Stable training forms retain pending locks, purchase results and retry recovery.
+Container breakpoints change four cards to two, then one, and collapse the overview and
+schools without horizontal scrolling. Ship Upgrades keeps its existing interface.

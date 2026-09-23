@@ -66,9 +66,16 @@ See [server performance](PERFORMANCE.md) for the broader audit and repeatable me
 
 ## Player messages
 
-`/messages` and `/messages/<player-number>` are available in Hospital, at sea and
-while traveling. The existing active-attacker navigation lock still applies. The
-sidebar highlights Messages throughout its conversation routes. Profile entry and
-inbox conversation links avoid prefetch; fetching a message page never marks it read.
-Only the mounted, visible conversation sends a bounded read acknowledgment.
-See [Messages](MESSAGES.md) for the private inbox and retry behavior.
+`/messages` and its compose, mail and ignore routes are available in Hospital, at sea
+and while traveling. The existing active-attacker navigation lock still applies. The
+masthead provides Messages and Notifications links with unread badges; neither appears
+in the location sidebar. Old player-number mail links redirect to Compose.
+
+Mail detail links retain the selected folder, search and page. The shared mail workspace
+loads the folder and the requested letter concurrently through owner-scoped RPCs. Reading
+an outbox deep link without its folder redirects to its canonical outbox URL. Desktop
+keeps the list beside the letter; narrow layouts switch between the list and letter.
+Mail-row navigation uses Next links with an inline pending indicator, retaining the
+current desk until navigation commits and holding background refreshes during the change.
+No mail body is fetched by link prefetch or marked read by a server read. Only the mounted,
+visible letter acknowledges reading. See [Messages](MESSAGES.md) for mail behavior.

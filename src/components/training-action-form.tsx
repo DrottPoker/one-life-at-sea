@@ -5,8 +5,11 @@ import { useEconomyRequests } from "@/components/economy-requests";
 import { useGameState } from "@/components/game-state";
 import type { TrainingResult } from "@/lib/training";
 
-export function TrainingActionForm({ label, fields, children }: {
-  label: string; fields: Record<string, string>; children: (blocked: boolean) => ReactNode;
+type TrainingFeedback = { result: TrainingResult; pending: boolean; retryButton: ReactNode };
+
+export function TrainingActionForm({ label, fields, children, className, customFeedback = false }: {
+  label: string; fields: Record<string, string>; className?: string; customFeedback?: boolean;
+  children: (blocked: boolean, feedback: TrainingFeedback) => ReactNode;
 }) {
   const state = useGameState(), journal = useEconomyRequests();
   const locked = !!state.active_combat_id || !!state.hospital_until || state.sea.state !== "in_harbor";
@@ -22,12 +25,15 @@ export function TrainingActionForm({ label, fields, children }: {
     if (!response.retry) request.current = null;
     return response;
   }, {});
-  return <form action={action} aria-label={label} aria-busy={pending}>
+  const retryButton = result.retry ? <button className="o-training-button" type="submit" disabled={locked || pending}>Retry action</button> : null;
+  return <form action={action} aria-label={label} aria-busy={pending} className={className}>
     {Object.entries(fields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
-    {children(locked || pending || !!result.retry || journal.unconfirmed)}
-    {result.retry && <div className="o-training-feedback"><button className="o-training-button" type="submit" disabled={locked || pending}>Retry action</button></div>}
-    <div className="o-training-feedback" role="status" aria-atomic="true">
-      {pending ? <p>Saving your progress...</p> : result.message && <p className={result.error ? "o-field-error" : ""}>{result.message}</p>}
-    </div>
+    {children(locked || pending || !!result.retry || journal.unconfirmed, { result, pending, retryButton })}
+    {!customFeedback && <>
+      {retryButton && <div className="o-training-feedback">{retryButton}</div>}
+      <div className="o-training-feedback" role="status" aria-atomic="true">
+        {pending ? <p>Saving your progress...</p> : result.message && <p className={result.error ? "o-field-error" : ""}>{result.message}</p>}
+      </div>
+    </>}
   </form>;
 }

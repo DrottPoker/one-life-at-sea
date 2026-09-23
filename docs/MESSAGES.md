@@ -7,15 +7,35 @@ to the composer. Own profiles have no Send message button.
 
 ## Player experience
 
+- Compose uses the same parchment as the reader, with ink-colored recipient chips,
+  subject and message fields, and a gold Send button below the paper. The textarea
+  grows with long drafts in browsers supporting field-sizing and remains manually
+  resizable otherwise.
 - Compose a subject and a plain-text body, then select up to 10 recipients by name
   or public player number. Every recipient gets a private inbox copy. The sender
   gets one outbox entry with the complete recipient list. Recipients see **To: You**.
 - A reply is a new mail addressed only to the original sender. Its subject defaults
   to `Re: <subject>`. Replies never broadcast to the other recipients. History follows
   earlier mails in that reply chain, limited to copies the viewer can still access.
-- Inbox, Outbox and Saved show compact sender/recipient, subject and date rows.
-  Unread incoming subjects are highlighted. Empty subjects display **No subject**.
-  Numbered pages contain 20 rows; out-of-range pages clamp to the last available page.
+- Inbox, Outbox and Saved use a two-pane mail desk: compact envelope rows on the left
+  and the selected letter on parchment on the right. Search sits in the page header.
+  Unread mail and the selected row have separate visual states. Empty subjects display
+  **No subject**. Numbered pages contain 10 compact rows and clamp to the last available page.
+  Opening mail retains its folder, search and page in the URL. Folder entry does not
+  auto-open a letter or mark the first mail read.
+- At narrow content widths the list and opened letter are separate views, with a
+  **Back to inbox/outbox/saved mail** link retaining context. Long letters grow naturally;
+  paragraphs and unbroken strings wrap without a fixed reader height or clipped text.
+  The 5,000-character mail limit remains configurable. The bottom illustration keeps
+  its aspect ratio and never stretches with the length of the letter.
+- Delete, Ignore, Save and Mark unread sit below the letter. **Reply** opens and focuses
+  the reply editor; closing it preserves the draft while that letter remains mounted.
+  History also preserves the current reply draft. Mark unread returns to the list and
+  suppresses automatic read acknowledgment so the mail stays unread until reopened.
+  Unsaving an opened letter in Saved returns to that folder. Checkboxes reveal bulk
+  actions. Ten rows, each about 46px tall, fit on a desktop page without an internal
+  list scrollbar. Longer subjects are truncated only in the list and remain available
+  in the title tooltip and opened letter; compact dates retain a full timestamp tooltip.
 - Search matches words in the subject, body and sender name within the selected folder.
   It never searches or exposes another recipient's name. Empty search resets the filter.
 - Save, unsave or delete individual mails; check several rows or all rows on the current
@@ -101,7 +121,7 @@ recipient's pending send. Enter in recipient search never submits the composer.
 ## Configuration and verification
 
 `gameplay.messages` configures `maxRecipients` (10), `subjectMaxLength` (120 Unicode
-characters), `maxLength` (5,000), `pageSize` (20), `conversationPageSize` (50 earlier mails
+characters), `maxLength` (5,000), `pageSize` (10), `conversationPageSize` (50 earlier mails
 in reply history, retaining the existing configuration key) and `perMinute` (30 recipient
 deliveries per sender). Bulk recipients each count towards that delivery quota; replays do
 not. Body/subject controls, empty bodies, invalid arrays and excessive lengths are rejected
@@ -134,3 +154,23 @@ the send limit. Parsing and request validation allow historical recipient counts
 the existing supported configuration ceiling (50); the database still rejects every new
 send above the active 10-recipient limit. Uncommitted older drafts can be edited down to
 the new limit after that rejection.
+
+## Mail desk artwork
+
+The decorative background is `public/images/mail-parchment.webp`, generated with the
+built-in image generation tool and encoded as WebP for the site. The paper artwork is
+non-interactive; all subjects, sender names, dates and message content remain real HTML.
+The user-provided mail design was the layout reference. The final generation prompt was:
+
+> Use case: stylized-concept. Asset type: background texture for a readable letter in a
+> nautical browser game's mail interface. Generate a single flat front-facing warm cream
+> and pale tan antique parchment sheet that fills the complete image, rectangular 5:4
+> landscape composition. Subtle natural paper fibers and gently worn darker edges,
+> restrained texture so black UI text remains very readable. In the bottom quarter only,
+> a faded antique sepia copperplate engraving of a sailing ship at lower left and a tiny
+> distant island harbor at lower right with delicate waves connecting them. A very faint
+> compass rose in the upper right corner. The center and the upper left 75 percent must
+> be spacious blank paper, no writing, lettering, labels, words, interface controls,
+> envelopes, folds or objects on top. Soft even lighting, no perspective, no drop shadow
+> outside the paper. This is a production background asset, NOT a screenshot or UI
+> mockup. No text, no watermark.

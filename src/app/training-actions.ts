@@ -59,6 +59,6 @@ export async function trainingAction(form: FormData, characterId: string): Promi
   if (data.kind === "purchase") return { message: data.tier_name + " purchased for " + formatGold(data.gold_cost) + " Gold Coins." };
   if (data.kind === "ship") return { message: "Work started. Ship " + STAT_LABELS[data.stat] + " +" + formatStatGain(data.stat_gain) +
     " when complete." };
-  return { message: (data.perfect ? "Perfect Drill! " : "") + "Crew " + STAT_LABELS[data.stat] + " +" + formatStatGain(data.stat_gain) +
+  return { receipt: data, message: (data.perfect ? "Perfect Drill! " : "") + "Crew " + STAT_LABELS[data.stat] + " +" + formatStatGain(data.stat_gain) +
     ". Spent " + data.energy_cost + " Energy." };
 }

@@ -1,7 +1,7 @@
 # Player notifications
 
 Players have a persistent private inbox at `/notifications`. The masthead bell shows
-an unread badge and the sidebar provides a Notifications link. The inbox uses compact
+an unread badge and links to the inbox. Notifications does not appear in the location sidebar. The inbox uses compact
 rows with linked names, an event description, `[view]`, a UTC timestamp and read state.
 It is available in Hospital and at sea, including during travel. Combat reports are
 also readable in Hospital and during travel. An active attacker retains the existing

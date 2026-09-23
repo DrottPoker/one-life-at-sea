@@ -1,3 +1,105 @@
+# Compact Crew Training cards and matching corners, 2026-09-23
+
+- Reduced card padding, artwork size and excess spacing. Energy now follows the
+  description directly, while the result area keeps Train buttons aligned.
+- Actual gains use 20px semibold green text. All four corners share matching 18px
+  horizontal and vertical brass accents. Training behavior and costs are unchanged.
+- Production build and the existing crew training browser scenario passed, including
+  responsive checks at 1280, 768, 375 and 320px. Desktop/mobile screenshots were reviewed.
+  Generated config and diff checks passed. The existing Next.js aborted-stream
+  diagnostic appeared during browser navigation.
+
+# Crew Training results inside stat cards, 2026-09-23
+
+- Removed predicted gains from Crew Training. The server action now returns the
+  confirmed training receipt so each card displays its actual stat gain and any
+  Perfect Drill result above the Train button. Other cards retain their last result.
+- Each card has an independent result form using the existing shared economy journal.
+  Pending, error and retry feedback remains inside that card. No shared drill result
+  panel is rendered; purchase feedback and Ship Upgrades keep their existing behavior.
+- Train buttons contain text only. The same configured 5 Energy cost appears discreetly
+  inside each card; the cost panel above the cards is removed. No balance changes.
+- Updated training and interface documentation and existing tests. Morale-test cleanup
+  now closes its pages before deleting fixture accounts to stop stale resource reads.
+
+Verification: `npm run check` passed with lint, typecheck, 398 unit tests and production
+build. All seven selected browser scenarios passed, covering actual server gains in
+all four cards, equal Energy costs, two tabs, purchases, morale, action locks, ship jobs
+and a lost crew response without double charging. Desktop/mobile captures were reviewed;
+layout checks passed at 1280, 768, 375 and 320px. Config synchronization and diff checks
+passed. The existing Next.js aborted-stream diagnostic occurred during navigation.
+
+# Crew Training artwork and shared Energy cost, 2026-09-23
+
+- Rebuilt Crew Training around the owner's supplied banner and four gold stat icons,
+  optimized to WebP. A live overview shows exercise, tier, efficiency, Perfect Drill,
+  morale effect and available Energy. Colored stat cards show current stats and normal
+  gains, with one immediate drill per click.
+- One shared configured Energy cost appears above all four cards. Attack, Defense,
+  Speed and Accuracy each cost 5 Energy; no separate Energy or quantity controls.
+- Drill Schools shows all ten real tiers, percentage progress, ownership/lock status
+  and the next purchase. The highest purchased tier is automatically active. Existing
+  action forms retain combat/travel/hospital locks, receipts and safe retries.
+- Updated training and interface documentation. No training balance, RPC or database
+  migration changes were required for this interface update.
+
+Verified locally:
+
+- `npm run check` passed: lint, typecheck, all 398 unit tests and production build.
+- All 12 selected Playwright tests passed: four training scenarios, four morale
+  scenarios, three economy-feedback cases and the multi-attacker action lock.
+  Coverage includes equal Energy charges across stats, live updates in two tabs,
+  carried-gold purchases, concurrent actions and a lost response without a second charge.
+- Layout checks passed at 1280, 768, 375 and 320px. Desktop and mobile screenshots
+  were visually reviewed. The existing Next.js aborted-stream diagnostic appeared
+  during test navigation; no browser test failed.
+
+# Compact mail pages and parchment composer, 2026-09-23
+
+- Reduced mailbox pages to 10 letters through the shared gameplay configuration and
+  local migration 20260923011540_central_gameplay_config_d96c5c49816a.sql. Mail rows
+  are 46px tall, with smaller envelopes and compact timestamps retaining full tooltips.
+  Ten rows fit without an internal list scrollbar; full subjects remain in the reader.
+- Updated Compose and inline replies to the parchment design: ink-colored fields,
+  recipient chips, quill heading and a gold Send button beneath the paper. Native
+  field sizing grows the textarea with long drafts; manual resizing remains available
+  as a fallback. Pending send recovery and private multi-recipient sending are retained.
+- Previewed the generated migration in rollback with 89 passing mail assertions;
+  database advisors found no issues before applying it locally. The full database
+  suite then passed 1,875 assertions across 39 files.
+- Lint, typecheck, 398 unit tests and production build passed. All eight mail browser
+  scenarios passed, six in the initial run and two after updating test selectors/waits
+  for the additional parchment element and streamed composer. Tests verify 10/10/2
+  pagination, row height, no internal list scroll and 5,000-character draft growth and
+  delivery at widths 1280/768/375/320. Unrelated browser scenarios were not rerun.
+- Visually reviewed the ten-letter desktop list and parchment composer screenshots.
+  Existing Next.js aborted-stream diagnostics remain visible during some navigation tests.
+
+# Parchment mail desk, 2026-09-23
+
+- Rebuilt mail around the supplied design: header search, folder tabs, a selectable
+  envelope list and an adjacent parchment reader. Compact widths switch between the
+  list and letter with a context-preserving back link. Masthead mail access remains.
+- Added the generated, optimized WebP parchment artwork (about 182 KiB). Its bottom
+  illustration retains its proportions while long letters grow and wrap naturally.
+  All mail text and controls remain accessible HTML, independent of the artwork.
+- Opening, history and return links retain folder/search/page. Folder entry never
+  opens or reads a letter automatically. Existing owner-scoped RPCs load only the
+  current page and selected letter; database schema and recipient limits are unchanged.
+- Added Mark unread with automatic-read suppression and return to the list. Reply
+  opens and focuses the editor, preserves its draft when closed or viewing history,
+  and retains the existing idempotent sending behavior. Bulk actions remain available
+  from the list checkboxes.
+- Lint, typecheck, 398 unit tests and the production build passed. All seven mail
+  browser scenarios passed: six in the initial run, and the new long-letter scenario
+  after correcting its wait for an asynchronous search result. That scenario verifies
+  5,000 characters, an unbroken URL, a long subject, widths 1440/768/375/320, history
+  draft preservation, explicit unread state and filtered deletion. No database changes
+  were required. The full unrelated browser suite was not rerun.
+- Visually reviewed desktop and narrow letter screenshots, including both ends of the
+  7,407px-tall mobile letter. Existing Next.js aborted-stream diagnostics appeared in
+  the initial browser run; the final focused scenario completed without diagnostics.
+
 # Ordinary mail limits and future faction policy, 2026-09-22
 
 - Reduced new ordinary mail to 10 recipients in the composer and authoritative

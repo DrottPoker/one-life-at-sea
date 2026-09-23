@@ -30,6 +30,7 @@ test("profile compose delivers private bulk mail live, with replies and saved co
     await page.getByLabel("Subject", { exact: true }).fill("Sailing together");
     const body = "Hello captain!\n<script>window.messageInjected = true</script>";
     await page.getByLabel("Message", { exact: true }).fill(body);
+    await page.screenshot({ path: ".local/mail-compose-desktop.png", fullPage: true });
     const compose = page.getByRole("form", { name: "Compose mail", exact: true });
     await compose.evaluate(form => form.addEventListener("submit", () => form.setAttribute("data-submitted", "true")));
     await page.getByLabel("Find player by name or ID").fill("No matching recipient");
@@ -51,6 +52,7 @@ test("profile compose delivers private bulk mail live, with replies and saved co
     await expect(receiving.locator(".o-mail-reader")).not.toContainText(second.name);
     await receiving.getByRole("button", { name: "Save", exact: true }).click();
     await expect(receiving.getByRole("link", { name: "Saved (1)", exact: true })).toBeVisible();
+    await receiving.getByRole("button", { name: "Reply", exact: true }).click();
     await receiving.getByLabel("Message", { exact: true }).fill("Welcome aboard!");
     await receiving.getByRole("button", { name: "Send mail", exact: true }).click();
     await expect(receiving.getByText("Mail sent to 1 recipient.", { exact: true })).toBeVisible();
@@ -77,7 +79,8 @@ test("profile compose delivers private bulk mail live, with replies and saved co
       expect(await receiving.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
     await receiving.screenshot({ path: ".local/mail-mobile.png", fullPage: true });
-    await receiving.getByRole("button", { name: "Delete Sailing together", exact: true }).click();
+    await receiving.getByRole("checkbox", { name: "Select Sailing together", exact: true }).check();
+    await receiving.getByRole("button", { name: "Delete selected", exact: true }).click();
     await expect(receiving.getByText("No mail in this folder.", { exact: false })).toBeVisible();
     expect((await second.api.rpc("get_mail", { mail_id: originalId })).data?.subject).toBe("Sailing together");
     const longSubject = "x".repeat(120), longId = await deliver(sender, [recipient], longSubject, "Long subject history");
@@ -136,17 +139,25 @@ test("mail search, numbered pages and bulk actions work in Hospital and during t
     update public.characters set crew_health=0 where id='${recipient.id}';`);
     await loginTestAccount(page, recipient, true);
     await page.getByRole("link", { name: "Messages, 22 unread", exact: true }).click();
-    await expect(page.locator(".o-mail-subject")).toHaveCount(20);
+    await expect(page.locator(".o-mail-subject")).toHaveCount(10);
+    expect(await page.locator(".o-mail-letters").evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
+    const heights = await page.locator(".o-mail-letter").evaluateAll(rows => rows.map(row => row.getBoundingClientRect().height));
+    expect(heights.every(height => height <= 46)).toBe(true);
     await page.screenshot({ path: ".local/mail-paged-inbox.png", fullPage: true });
     await page.getByRole("link", { name: "Page 2", exact: true }).first().click();
+    await expect(page.locator(".o-mail-subject")).toHaveCount(10);
+    await expect(page.locator(".o-mail-list-foot")).toContainText("11-20 of 22");
+    await page.getByRole("link", { name: "Page 3", exact: true }).click();
     await expect(page.locator(".o-mail-subject")).toHaveCount(2);
+    await expect(page.locator(".o-mail-list-foot")).toContainText("21-22 of 22");
     await page.getByLabel("Search mail", { exact: true }).fill("First mail");
-    await page.getByRole("button", { name: "Go", exact: true }).click();
+    await page.getByRole("button", { name: "Search", exact: true }).click();
     await expect(page.locator(".o-mail-subject")).toHaveText(["First mail"]);
     await page.getByRole("button", { name: "Check all", exact: true }).click();
     await page.getByRole("button", { name: "Save selected", exact: true }).click();
     await page.getByRole("link", { name: "Saved (1)", exact: true }).click();
     await page.locator(".o-mail-subject").click();
+    await page.getByRole("button", { name: "Reply", exact: true }).click();
     await page.getByLabel("Message", { exact: true }).fill("Reply from Hospital");
     await page.getByRole("button", { name: "Send mail", exact: true }).click();
     await expect(page.getByText("Mail sent to 1 recipient.", { exact: true })).toBeVisible();
@@ -160,7 +171,7 @@ test("mail search, numbered pages and bulk actions work in Hospital and during t
     await page.goto("/messages");
     await page.getByRole("button", { name: "Check all", exact: true }).click();
     await page.getByRole("button", { name: "Mark read", exact: true }).click();
-    await expect(page.locator('.o-mail-table tr[data-unread="true"]')).toHaveCount(0);
+    await expect(page.locator('.o-mail-letter[data-unread="true"]')).toHaveCount(0);
   } finally { await context.close(); await page.close(); await cleanupTestAccounts([sender,recipient]); }
 });
 
@@ -172,6 +183,7 @@ test("hidden mail stays unread until visible", async ({ page }) => {
     await page.addInitScript(() => Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" }));
     await page.goto("/messages/mail/" + id);
     await expect(page.locator(".o-mail-reader .o-message-body")).toHaveText("Read when you return");
+    await page.getByRole("button", { name: "Reply", exact: true }).click();
     await page.getByLabel("Message", { exact: true }).fill("A draft");
     expect((await recipient.api.rpc("get_message_summary")).data?.unread_count).toBe(1);
     await page.evaluate(() => { Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" }); document.dispatchEvent(new Event("visibilitychange")); });
@@ -231,4 +243,87 @@ test("legacy profile links recover old pending sends without duplicate mail", as
     expect((await recipient.api.rpc("get_mail_summary")).data?.inbox).toBe(1);
     expect((await other.api.rpc("get_mail_summary")).data?.inbox).toBe(0);
   } finally { await page.close(); await cleanupTestAccounts([sender,recipient,other]); }
+});
+
+
+test("mail desk preserves folder context and unread state while long letters reflow", async ({ page }) => {
+  const sender = await createTestAccount("mail-long"), recipient = await createTestAccount("mail-long-reader");
+  try {
+    const longSubject = "Captain's journal " + "x".repeat(100);
+    const body = ("Dear captain,\n\n" + "A long letter with room for every voyage.\n\n".repeat(90) + "https://example.test/" + "x".repeat(1600)).slice(0, 4988) + "\nEnd of mail";
+    expect(body.length).toBe(5000);
+    const longId = await deliver(sender, [recipient], longSubject, body);
+    await deliver(sender, [recipient], "A short letter", "Meet me in the harbor at dawn.");
+    await loginTestAccount(page, recipient);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/messages");
+    await expect(page.getByText("Select a mail to read it here.", { exact: true })).toBeVisible();
+    expect((await recipient.api.rpc("get_message_summary")).data?.unread_count).toBe(2);
+    await page.locator(".o-mail-subject").filter({ hasText: "A short letter" }).click();
+    await expect(page.locator('.o-mail-letter[data-opened="true"]')).toContainText("A short letter");
+    await expect(page.locator(".o-mail-reader .o-message-body")).toHaveText("Meet me in the harbor at dawn.");
+    const list = await page.locator(".o-mail-list").boundingBox(), paper = await page.locator(".o-mail-reader .o-mail-paper").boundingBox();
+    expect(list!.x + list!.width).toBeLessThan(paper!.x);
+    await page.screenshot({ path: ".local/mail-desk-desktop.png", fullPage: true });
+    await page.locator(".o-mail-subject").filter({ hasText: longSubject }).click();
+    await expect(page).toHaveURL(new RegExp("/messages/mail/" + longId));
+    await expect(page.locator(".o-mail-reader .o-message-body")).toHaveText(body);
+    for (const width of [1440, 768, 375, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      expect(await page.locator(".o-mail-reader .o-message-body").evaluate(element => {
+        const rect = element.getBoundingClientRect(), paper = element.closest(".o-mail-paper")!.getBoundingClientRect();
+        return element.scrollWidth <= element.clientWidth + 1 && element.scrollHeight <= element.clientHeight + 1 && paper.bottom >= rect.bottom + 100;
+      })).toBe(true);
+    }
+    await page.locator(".o-mail-reader").screenshot({ path: ".local/mail-desk-long-mobile.png" });
+    await page.getByRole("button", { name: "Reply", exact: true }).click();
+    await page.getByLabel("Message", { exact: true }).fill("Keep this draft while reviewing history.");
+    await page.getByRole("link", { name: "History", exact: true }).click();
+    await expect(page.getByLabel("Message", { exact: true })).toHaveValue("Keep this draft while reviewing history.");
+    await page.getByRole("button", { name: "Mark unread", exact: true }).click();
+    await expect(page).toHaveURL(/\/messages$/);
+    await expect(page.locator('.o-mail-letter[data-unread="true"]')).toContainText([longSubject]);
+    expect((await recipient.api.rpc("get_mail", { mail_id: longId })).data?.read_at).toBeNull();
+    await page.getByLabel("Search mail", { exact: true }).fill("Captain's journal");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(page.locator(".o-mail-subject")).toHaveText([longSubject]);
+    await page.locator(".o-mail-subject").click();
+    await expect(page.getByLabel("Search mail", { exact: true })).toHaveValue("Captain's journal");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await expect(page).toHaveURL(/q=Captain/);
+    await expect(page.getByText("No mail matches your search.", { exact: true })).toBeVisible();
+    expect((await recipient.api.rpc("get_mail", { mail_id: longId })).error?.message).toBe("MAIL_NOT_FOUND");
+  } finally { await page.close(); await cleanupTestAccounts([sender,recipient]); }
+});
+
+
+test("parchment compose grows for long drafts and sends from a narrow screen", async ({ page }) => {
+  const sender = await createTestAccount("compose-paper"), recipient = await createTestAccount("compose-paper-reader");
+  try {
+    await loginTestAccount(page, sender);
+    await page.goto("/messages/compose?to=" + recipient.playerNumber);
+    const editor = page.getByLabel("Message", { exact: true });
+    await expect(editor).toBeVisible();
+    const initialHeight = (await editor.boundingBox())!.height;
+    const body = ("A captain's letter can tell the story of many voyages.\n\n").repeat(120).slice(0, 4999) + "!";
+    await page.getByLabel("Subject", { exact: true }).fill("A long voyage");
+    await editor.fill(body);
+    await expect(page.getByText("5000 / 5000 characters", { exact: true })).toBeVisible();
+    expect((await editor.boundingBox())!.height).toBeGreaterThan(initialHeight);
+    for (const width of [1280, 768, 375, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      expect(await editor.evaluate(element => element.scrollHeight <= element.clientHeight + 1)).toBe(true);
+      await expect(editor).toHaveValue(body);
+    }
+    await editor.fill("A letter from the harbor.\n\nUntil our next voyage!");
+    await page.locator(".o-mail-compose").screenshot({ path: ".local/mail-compose-mobile.png" });
+    await editor.fill(body);
+    await page.getByRole("button", { name: "Send mail", exact: true }).click();
+    await expect(page.getByText("Mail sent to 1 recipient.", { exact: true })).toBeVisible();
+    const id = new URL(page.url()).pathname.split("/").at(-1)!;
+    expect((await recipient.api.rpc("get_mail", { mail_id: id })).data?.body).toBe(body);
+  } finally { await page.close(); await cleanupTestAccounts([sender,recipient]); }
 });

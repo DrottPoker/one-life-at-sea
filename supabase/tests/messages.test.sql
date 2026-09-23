@@ -131,9 +131,11 @@ with mails as (
 ) insert into private.mail_boxes(mail_id,character_id,direction) select id,(select id from mail_fixture where display_name='MailFour'),'inbox' from mails;
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"afff0000-0000-4000-8000-000000000004","role":"authenticated"}',true);
-select is(jsonb_array_length(public.get_mailbox()->'items'),20,'Pages are bounded to 20 rows');
-select is(jsonb_array_length(public.get_mailbox('inbox','',1)->'items'),1,'Second page returns remaining mail');
-select is(public.get_mailbox('inbox','',999)->>'page','1','Out of range pages clamp to the last page');
+select is(public.get_mailbox()->>'page_size','10','Mailbox advertises ten letters per page');
+select is(jsonb_array_length(public.get_mailbox()->'items'),10,'Pages are bounded to ten rows');
+select is(jsonb_array_length(public.get_mailbox('inbox','',1)->'items'),10,'Second page contains ten more letters');
+select is(jsonb_array_length(public.get_mailbox('inbox','',2)->'items'),1,'Third page returns remaining mail');
+select is(public.get_mailbox('inbox','',999)->>'page','2','Out of range pages clamp to the last page');
 select is(public.get_message_summary()->>'unread_count','21','Unread count includes all inbox pages');
 select public.update_mail(array[(public.get_mailbox()#>>'{items,0,id}')::bigint],'read');
 select is(public.get_message_summary()->>'unread_count','20','Read acknowledgment never consumes unseen mail');

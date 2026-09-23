@@ -12,7 +12,10 @@ async function captain() {
   testSql("update public.characters set gold_coins=10000,morale_updated_at=clock_timestamp()+interval '1 day' where id='" + own.id + "';");
   return own;
 }
-test.afterEach(async () => { await cleanupTestAccounts(accounts.splice(0)); });
+test.afterEach(async ({ context }) => {
+  await Promise.all(context.pages().map(page => page.close()));
+  await cleanupTestAccounts(accounts.splice(0));
+});
 
 test("morale starts in the middle, fills in both directions and updates across tabs", async ({ page, context }) => {
   const own = await captain(), errors: string[] = [];
@@ -34,8 +37,10 @@ test("morale starts in the middle, fills in both directions and updates across t
   expect(await fill.evaluate(node => ({ left: (node as HTMLElement).style.left, width: (node as HTMLElement).style.width }))).toEqual({ left: "50%", width: "12.5%" });
   await expect(page.getByText("Crew meal served. Morale +25.0. Spent 1,000 Gold Coins.", { exact: true })).toBeVisible();
   const train = other.getByRole("button", { name: "Train Attack for 5 Energy", exact: true });
-  await expect(train).toHaveText("Train +" + formatStatGain(crewTrainingStatGain(10, 1, 5, 25)));
+  await expect(other.getByLabel("Attack gained", { exact: true })).toHaveCount(0);
   await train.click();
+  await expect.poll(async () => [1, 2].map(multiplier => "+" + formatStatGain(crewTrainingStatGain(10, 1, 5, 25) * multiplier) + " Attack")
+    .includes(await other.getByLabel("Attack gained", { exact: true }).innerText())).toBe(true);
   await expect(meter).toHaveAttribute("aria-valuenow", "22.5");
   testSql("update public.characters set crew_morale=-50 where id='" + own.id + "'; select private.notify_training('" + own.id + "');");
   await expect(meter).toHaveAttribute("aria-valuenow", "-50");

@@ -74,3 +74,18 @@ export function mailUrl(folder: MailFolder = "inbox", query = "", page = 0) {
 export function replySubject(subject: string) {
   return Array.from(/^re:/i.test(subject) ? subject : "Re: " + (subject || "No subject")).slice(0, gameplay.messages.subjectMaxLength).join("");
 }
+
+export type MailViewParams = { folder?: string | string[] | null; q?: string | string[] | null; page?: string | string[] | null; history?: string | string[]; sent?: string | string[] };
+export function parseMailView(params: MailViewParams) {
+  const folder: MailFolder = params.folder === "outbox" || params.folder === "saved" ? params.folder : "inbox";
+  const query = typeof params.q === "string" ? params.q.slice(0, 200) : "";
+  const page = typeof params.page === "string" && /^\d{1,7}$/.test(params.page) ? Number(params.page) : 0;
+  return { folder, query, page };
+}
+export function mailDetailUrl(id: string, folder: MailFolder, query = "", page = 0, history = false, sent = false) {
+  const params = new URLSearchParams(mailUrl(folder, query, page).split("?")[1]);
+  params.set("folder", folder);
+  if (history) params.set("history", "1");
+  if (sent) params.set("sent", "1");
+  return "/messages/mail/" + id + "?" + params.toString();
+}

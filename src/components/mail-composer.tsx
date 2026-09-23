@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState, useSyncExternalStore, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Send } from "lucide-react";
+import { Feather, Send } from "lucide-react";
 import { GameLink as Link } from "@/components/game-navigation";
 import { useGameRefresh, useNavigationActivity } from "@/components/game-refresh";
 import { MailRecipientPicker } from "@/components/mail-recipient-picker";
@@ -69,20 +69,28 @@ export function MailComposer({ characterId, playerNumber, initialRecipients = []
     });
   }
   if (otherReply) return <div className="o-panel-body o-copy">A previous mail is awaiting confirmation. <Link href="/messages/compose">Open Compose to retry it</Link> before sending a reply.</div>;
-  return <form className="o-panel-body o-mail-compose" aria-label={replyTo ? "Reply" : "Compose mail"} aria-busy={sending} onSubmit={send}>
-    <h3>{replyTo ? "Reply" : "Compose mail"}</h3>
-    <div className="o-message-toolbar"><strong>To</strong><small>{replyTo ? "Reply to sender" : saved && displayedRecipients.length > gameplay.messages.maxRecipients ? `Previously submitted to ${displayedRecipients.length} recipients` : `${displayedRecipients.length} / ${gameplay.messages.maxRecipients} recipients`}</small></div>
-    <MailRecipientPicker recipients={displayedRecipients} onChange={setRecipients} playerNumber={playerNumber} limit={replyTo ? 1 : gameplay.messages.maxRecipients} disabled={locked || !!replyTo} />
-    {!replyTo && <small className="o-copy">Each recipient receives a private copy. Replies go only to the sender.</small>}
-    <label htmlFor={id + "-subject"}>Subject</label>
-    <input id={id + "-subject"} name="subject" maxLength={gameplay.messages.subjectMaxLength * 2} value={displayedSubject} readOnly={locked} onChange={event => setSubject(event.target.value)} placeholder="No subject" />
-    <label htmlFor={id + "-body"}>Message</label>
-    <textarea id={id + "-body"} name="body" rows={8} maxLength={gameplay.messages.maxLength * 2} value={displayedBody} readOnly={locked} onChange={event => setBody(event.target.value)} required aria-describedby={id + "-limit"} />
-    <div className="o-message-toolbar"><small id={id + "-limit"}>{Array.from(displayedBody).length} / {gameplay.messages.maxLength} characters</small>
-      <button className="o-training-button" type="submit" disabled={sending || unreadable || !validRecipients(displayedRecipients, saved ? MAX_MAIL_REQUEST_RECIPIENTS : gameplay.messages.maxRecipients) || !validSubject(displayedSubject) || !validMessage(normalizeMessage(displayedBody))}>
-        <Send size={14} aria-hidden="true" />{sending ? "Sending..." : saved ? "Retry mail" : "Send mail"}
-      </button>
+  return <form className="o-mail-compose" data-reply={!!replyTo} aria-label={replyTo ? "Reply" : "Compose mail"} aria-busy={sending} onSubmit={send}>
+    <div className="o-mail-paper o-mail-compose-paper">
+      <header><div className="o-mail-paper-title"><Feather size={32} strokeWidth={1.4} aria-hidden="true" /><h2>{replyTo ? "Reply" : "Compose mail"}</h2></div>
+        <p className="o-mail-compose-hint">{replyTo ? "Your reply goes only to the sender." : "Choose your recipients and write your letter."}</p>
+      </header>
+      <div className="o-mail-compose-address">
+        <div className="o-message-toolbar"><strong>To</strong><small>{replyTo ? "Reply to sender" : saved && displayedRecipients.length > gameplay.messages.maxRecipients ? `Previously submitted to ${displayedRecipients.length} recipients` : `${displayedRecipients.length} / ${gameplay.messages.maxRecipients} recipients`}</small></div>
+        <MailRecipientPicker recipients={displayedRecipients} onChange={setRecipients} playerNumber={playerNumber} limit={replyTo ? 1 : gameplay.messages.maxRecipients} disabled={locked || !!replyTo} />
+        {!replyTo && <small className="o-mail-compose-hint">Each recipient receives a private copy. Replies go only to the sender.</small>}
+      </div>
+      <div className="o-mail-compose-field"><label htmlFor={id + "-subject"}>Subject</label>
+        <input id={id + "-subject"} name="subject" maxLength={gameplay.messages.subjectMaxLength * 2} value={displayedSubject} readOnly={locked} onChange={event => setSubject(event.target.value)} placeholder="No subject" />
+      </div>
+      <div className="o-mail-compose-field"><label htmlFor={id + "-body"}>Message</label>
+        <textarea id={id + "-body"} name="body" rows={8} maxLength={gameplay.messages.maxLength * 2} value={displayedBody} readOnly={locked} onChange={event => setBody(event.target.value)} required aria-describedby={id + "-limit"} placeholder="Write your letter here..." />
+      </div>
     </div>
+    <footer className="o-mail-compose-footer"><small id={id + "-limit"}>{Array.from(displayedBody).length} / {gameplay.messages.maxLength} characters</small>
+      <button className="o-training-button o-mail-send" type="submit" disabled={sending || unreadable || !validRecipients(displayedRecipients, saved ? MAX_MAIL_REQUEST_RECIPIENTS : gameplay.messages.maxRecipients) || !validSubject(displayedSubject) || !validMessage(normalizeMessage(displayedBody))}>
+        <Send size={16} aria-hidden="true" />{sending ? "Sending..." : saved ? "Retry mail" : "Send mail"}
+      </button>
+    </footer>
     {saved && !sending && <p className="o-copy">This mail has not been confirmed. Retry to check whether it was sent.</p>}
     {unreadable && <p role="alert">The saved mail is unavailable. Allow browser storage and reload this page.</p>}
     {error && <p role="alert">{error}</p>}

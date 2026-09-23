@@ -40,6 +40,23 @@ test("crew XP, carried-gold purchases, two tabs, login and responsive layout", a
   fixture(own.id, "update public.characters set bank_gold_coins=1000 where id=:captain;");
   await login(page, own);
   await page.goto("/harbor/crew-training");
+  await expect(page.getByText("5 Energy per drill", { exact: true })).toHaveCount(4);
+  await expect(page.getByRole("region", { name: "Crew progression", exact: true }).getByRole("listitem")).toHaveCount(10);
+  await expect(page.getByRole("spinbutton")).toHaveCount(0);
+  for (const stat of ["Attack", "Defense", "Speed", "Accuracy"]) {
+    const card = page.getByRole("region", { name: stat + " training", exact: true });
+    const train = card.getByRole("button", { name: "Train " + stat + " for 5 Energy", exact: true });
+    await expect(train).toBeEnabled();
+    await expect(train).toHaveText("Train " + stat);
+    await expect(train.locator("img, svg")).toHaveCount(0);
+    await expect(card.getByRole("status", { name: stat + " training result", exact: true })).toBeEmpty();
+    await expect(card.getByText("5 Energy per drill", { exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole("main")).not.toContainText("Gain per drill");
+  await expect.poll(() => page.locator(".o-crew-page img").evaluateAll(images =>
+    images.every(image => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0))).toBe(true);
+  await page.setViewportSize({ width: 1440, height: 1050 });
+  await page.screenshot({ path: ".local/crew-training-ready-desktop.png", fullPage: true });
   const other = await context.newPage();
   await other.goto("/harbor/crew-training");
   for (const [index, stat] of ["Attack", "Defense", "Speed", "Accuracy"].entries()) {
@@ -48,7 +65,14 @@ test("crew XP, carried-gold purchases, two tabs, login and responsive layout", a
     const values = [formatStat(10 + normal), formatStat(10 + normal * 2)].map(value => value.replaceAll(".", "\\."));
     await expect(page.getByLabel(stat + " stat", { exact: true })).toHaveText(new RegExp("^(?:" + values.join("|") + ")$"));
     await expect(page.getByRole("progressbar", { name: "Energy", exact: true })).toHaveAttribute("aria-valuenow", String(95 - index * 5));
+    const confirmed = (await own.api.rpc("get_game_state")).data;
+    const gained = Math.round((confirmed[("crew_" + stat.toLowerCase()) as "crew_attack"] - 10) * 1e6) / 1e6;
+    const card = page.getByRole("region", { name: stat + " training", exact: true });
+    await expect(card.getByLabel(stat + " gained", { exact: true })).toHaveText("+" + formatStatGain(gained) + " " + stat);
+    await expect(card.locator(".o-training-feedback")).toHaveCount(0);
+    await expect(other.getByLabel(stat + " gained", { exact: true })).toHaveCount(0);
   }
+  await page.screenshot({ path: ".local/crew-training-results-desktop.png", fullPage: true });
   await expect(page.getByRole("progressbar", { name: "Crew progress", exact: true })).toHaveAttribute("value", "20");
   await expect(other.getByRole("progressbar", { name: "Crew progress", exact: true })).toHaveAttribute("value", "20");
   const results = await Promise.all(Array.from({ length: 16 }, () => own.api.rpc("train_crew", {
@@ -64,8 +88,8 @@ test("crew XP, carried-gold purchases, two tabs, login and responsive layout", a
   await expect(buy).toBeEnabled();
   await buy.click();
   await expect(page.getByText("Harbor Exercises purchased for 250 Gold Coins.", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Harbor Exercises", exact: true })).toBeVisible();
-  await expect(other.getByRole("heading", { name: "Harbor Exercises", exact: true })).toBeVisible();
+  await expect(page.getByRole("listitem", { name: "Harbor Exercises, active", exact: true })).toBeVisible();
+  await expect(other.getByRole("listitem", { name: "Harbor Exercises, active", exact: true })).toBeVisible();
   await expect(page.getByLabel("Gold Coins on character", { exact: true })).toHaveText("0");
   expect((await own.api.rpc("get_game_state")).data.bank_gold_coins).toBe(750);
   for (const width of [1280, 768, 375, 320]) {
@@ -81,7 +105,7 @@ test("crew XP, carried-gold purchases, two tabs, login and responsive layout", a
   await expect(page).toHaveURL(/\/login$/);
   await login(page, own);
   await page.goto("/harbor/crew-training");
-  await expect(page.getByRole("heading", { name: "Harbor Exercises", exact: true })).toBeVisible();
+  await expect(page.getByRole("listitem", { name: "Harbor Exercises, active", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Train Attack for 5 Energy", exact: true })).toBeDisabled();
   fixture(own.id, "update public.characters set energy=4,energy_updated_at=date_bin(interval '5 minutes',clock_timestamp(),'1970-01-01Z')-interval '1 second' where id=:captain;");
   await page.reload();
@@ -208,12 +232,16 @@ test("a lost crew response retries the original drill without a second charge or
     } else await route.continue();
   });
   await page.getByRole("button", { name: "Train Attack for 5 Energy", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Retry action", exact: true })).toBeVisible();
+  const card = page.getByRole("region", { name: "Attack training", exact: true });
+  await expect(card.getByRole("button", { name: "Retry action", exact: true })).toBeVisible();
+  await expect(card.getByRole("status", { name: "Attack training result", exact: true })).toContainText("could not be confirmed");
+  await expect(card.getByLabel("Attack gained", { exact: true })).toHaveCount(0);
   const before = (await own.api.rpc("get_game_state")).data;
   expect(before.energy).toBe(95);
   expect(before.training.progress.crew.xp).toBe(5);
   await page.getByRole("button", { name: "Retry action", exact: true }).click();
-  await expect(page.getByText("Crew Attack +" + formatStatGain(Math.round((before.crew_attack - 10) * 1e6) / 1e6) + ". Spent 5 Energy.")).toBeVisible();
+  await expect(card.getByLabel("Attack gained", { exact: true })).toHaveText("+" + formatStatGain(Math.round((before.crew_attack - 10) * 1e6) / 1e6) + " Attack");
+  await expect(card.getByRole("button", { name: "Retry action", exact: true })).toHaveCount(0);
   const after = (await own.api.rpc("get_game_state")).data;
   expect(after.energy).toBe(95);
   expect(after.crew_attack).toBe(before.crew_attack);

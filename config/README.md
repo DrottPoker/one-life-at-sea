@@ -103,3 +103,7 @@ Nya notistyper ansluts via den gemensamma databasfunktionen och en typrenderare,
 per-sender send rate. Defaults are 20 conversations, 50 messages, 5,000 characters
 and 30 new messages per minute. Confirmed retries do not consume the rate limit.
 See [Messages](../docs/MESSAGES.md) for delivery, privacy and configuration behavior.
+
+`messages.pageSize` is 10 letters per mailbox page. Inbox, Outbox and Saved use the same
+server-enforced pagination. Compact rows fit ten letters without an internal list scrollbar.
+See [Player mail](../docs/MESSAGES.md) for the parchment reader and composer.

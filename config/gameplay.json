@@ -1,5 +1,5 @@
 {
-  "messages": { "maxRecipients": 10, "subjectMaxLength": 120, "pageSize": 20, "conversationPageSize": 50, "maxLength": 5000, "perMinute": 30 },
+  "messages": { "maxRecipients": 10, "subjectMaxLength": 120, "pageSize": 10, "conversationPageSize": 50, "maxLength": 5000, "perMinute": 30 },
   "notifications": { "pageSize": 20 },
   "presence": { "idleSeconds": 300, "unfocusedSeconds": 120, "leaseSeconds": 90 },
   "resources": {
