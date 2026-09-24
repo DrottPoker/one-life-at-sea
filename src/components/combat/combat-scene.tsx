@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type CSSProperties, type ReactNode } from "react";
+import Link from "next/link";
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Anchor, Swords } from "lucide-react";
 import type { CombatEvent } from "@/lib/combat";
 import { SCENE_SIZE, type ScenePoint } from "@/lib/combat-scene-anchors";
@@ -12,6 +13,9 @@ const art = {
   boarding: { src: "/images/combat-boarding-duel.webp", alt: "Two pirate captains cross cutlasses on a plank between their ships.", tagline: "Steel. Blood. Plunder.", Icon: Swords },
 };
 const sizes = "(max-width: 800px) 100vw, (max-width: 1400px) 45vw, 600px";
+// The pause after the final round's effects fade before the result of the fight appears.
+export const FINALE_DELAY = 500;
+export type SceneFinale = { title: string; text: string; href: string };
 // Effects are drawn in the artwork's pixels. Particles stay a few art pixels wide to match its detail, while
 // distances are scaled up because the scene is shown at well under half the artwork's width.
 const SPREAD = 2.5;
@@ -175,18 +179,40 @@ function SceneOverlay({ strikes, animate, sequence }: { strikes: SceneStrike[]; 
   </div>;
 }
 
+// The result of a finished fight, centred on the darkened artwork. Leave is the only way on to the combat log.
+function Finale({ finale }: { finale: SceneFinale }) {
+  const id = useId(), leave = useRef<HTMLAnchorElement>(null);
+  useEffect(() => { leave.current?.focus(); }, []);
+  return <div className="o-scene-finale">
+    <section className="o-scene-finale-box" aria-labelledby={id + "-title"}>
+      <h2 id={id + "-title"}>{finale.title}</h2>
+      <p id={id + "-text"}>{finale.text}</p>
+      <Link ref={leave} href={finale.href} replace className="o-scene-leave" aria-describedby={id + "-title " + id + "-text"}>Leave</Link>
+    </section>
+  </div>;
+}
+
 // The VS artwork doubles as the hit display: the latest own round plays on it, then its marks stay until the next round.
-export function CombatScene({ phase, events = [], attackerId, defenderName }: {
-  phase: "sea" | "boarding"; events?: CombatEvent[]; attackerId: string; defenderName: string;
+export function CombatScene({ phase, events = [], attackerId, defenderName, finale }: {
+  phase: "sea" | "boarding"; events?: CombatEvent[]; attackerId: string; defenderName: string; finale?: SceneFinale;
 }) {
   const round = latestOwnRound(events, attackerId);
   const [initial] = useState(round?.sequence ?? 0);
+  const [finaleShown, setFinaleShown] = useState(false);
   const fresh = !!round && round.sequence > initial, strikes = round ? roundStrikes(round) : [];
   // A round that changed phase finishes on its own artwork before the new phase shows.
   const leaving = fresh && round.phase !== phase;
+  // A finished fight shows its result once its final round has played out; a round seen earlier does not delay it.
+  const finaleDelay = finale ? FINALE_DELAY + (fresh ? sceneDuration(strikes) : 0) : null;
+  useEffect(() => {
+    if (finaleDelay === null) return;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = setTimeout(() => setFinaleShown(true), still ? FINALE_DELAY : finaleDelay);
+    return () => clearTimeout(timer);
+  }, [finaleDelay]);
   const { Icon, tagline } = art[phase];
   return <figure className="o-combat-scene" data-phase={phase}>
-    <div className="o-combat-scene-art">
+    <div className="o-combat-scene-art" data-finale={(finale && finaleShown) || undefined}>
       <Image src={art[phase].src} alt={art[phase].alt} width={SCENE_SIZE.width} height={SCENE_SIZE.height} sizes={sizes} loading="eager" />
       {round && round.phase === phase && <SceneOverlay key={round.sequence} strikes={strikes} animate={fresh} sequence={round.sequence} />}
       {leaving && <div key={"leaving" + round.sequence} className="o-scene-leaving" style={{ "--hold": ms(sceneDuration(strikes)) } as Vars}>
@@ -194,6 +220,7 @@ export function CombatScene({ phase, events = [], attackerId, defenderName }: {
         <SceneOverlay strikes={strikes} animate sequence={round.sequence} />
       </div>}
       <span className="o-combat-versus" aria-hidden="true">VS</span>
+      {finale && finaleShown && <Finale finale={finale} />}
     </div>
     <figcaption aria-live="polite">{round ? <span className="o-scene-summary">{roundSummary(round, defenderName)}</span>
       : <><Icon aria-hidden="true" /><span>{tagline}</span></>}</figcaption>

@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CombatScene } from "../../src/components/combat/combat-scene";
 import { gameplay } from "../../src/config/public";
-import { FINALE_WINDOW_MS, recentlyFinished, type CombatEvent } from "../../src/lib/combat";
+import type { CombatEvent } from "../../src/lib/combat";
 import { sceneAnchors, SCENE_SIZE } from "../../src/lib/combat-scene-anchors";
 import { latestOwnRound, roundStrikes, roundSummary, sceneDuration, strikeLabel, strikePopup } from "../../src/lib/combat-scene";
 
@@ -24,12 +24,6 @@ describe("combat scene", () => {
       expect(point.x).toBeGreaterThan(0); expect(point.x).toBeLessThan(SCENE_SIZE.width);
       expect(point.y).toBeGreaterThan(0); expect(point.y).toBeLessThan(SCENE_SIZE.height);
     }
-  });
-  it("keeps a just-finished fight available for its final round only briefly", () => {
-    const observed = "2026-09-24T12:00:30.000Z", at = (ms: number) => new Date(Date.parse(observed) - ms).toISOString();
-    expect(recentlyFinished({ status: "completed", finished_at: at(FINALE_WINDOW_MS), observed_at: observed })).toBe(true);
-    expect(recentlyFinished({ status: "completed", finished_at: at(FINALE_WINDOW_MS + 1), observed_at: observed })).toBe(false);
-    expect(recentlyFinished({ status: "active", finished_at: null, observed_at: observed })).toBe(false);
   });
   it("follows the viewer's latest round and ignores other attackers and notices", () => {
     const events = [round({ sequence: 1 }), round({ sequence: 2, actor_id: "b" }), { ...round({ sequence: 3 }), kind: "joined" as const }];
@@ -90,6 +84,11 @@ describe("combat scene", () => {
     expect(html).toContain(">Hull · 14<");
     expect(html).toContain(">Miss<");
     expect(html).toContain("Round 3: You hit their hull for 14. Bo missed.");
+    // The result of a finished fight waits for its final round to play out, so the first render never shows Leave.
+    const finale = { title: "Victory", text: "The defending ship was sunk.", href: "/combatlog/test" };
+    const finished = renderToStaticMarkup(createElement(CombatScene, { phase: "sea", events, attackerId: "a", defenderName: "Bo", finale }));
+    expect(finished).not.toContain("o-scene-finale");
+    expect(finished).not.toContain(">Leave<");
     const idle = renderToStaticMarkup(createElement(CombatScene, { phase: "boarding", attackerId: "a", defenderName: "Bo" }));
     expect(idle).toContain("Steel. Blood. Plunder.");
     expect(idle).not.toContain("o-scene-overlay");

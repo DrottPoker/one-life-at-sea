@@ -66,6 +66,7 @@ test("paid scouting persists, finds later arrivals only on a new search, and ope
   await expect(page.getByRole("button", { name: /^Fire cannons 1 salvo/ })).toBeVisible();
   expect((await state(own)).energy).toBe(75);
   await page.getByRole("button", { name: /^Retreat Take/ }).click();
+  await page.getByRole("link", { name: "Leave", exact: true }).click();
   await expect(page).toHaveURL(/\/combatlog\/[0-9a-f-]+$/);
   await page.goto("/sea");
   await expect(scouting.getByRole("link", { name: target.name, exact: true })).toBeVisible();

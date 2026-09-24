@@ -122,6 +122,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
       if (width === 375) await page.screenshot({ path: ".local/attack-mobile.jpg", type: "jpeg", quality: 75, fullPage: true });
     }
     await main.getByRole("button", { name: /^Retreat Take/ }).click();
+    await main.getByRole("link", { name: "Leave", exact: true }).click();
     await expect(page).toHaveURL(new RegExp("/combatlog/" + battleId + "$"));
     expect((await a.api.rpc("get_attack_lock")).data).toBeNull();
     const anonymous = await browser.newContext();
@@ -251,6 +252,7 @@ test("joined attackers and an online defender receive shared HP live; the defend
     await expect(page).toHaveURL(/\/harbor$/);
     expect((await b.api.rpc("get_attack_lock")).data?.battle_id).toBe(id);
     await pageB.getByRole("button", { name: /^Retreat Take/ }).click();
+    await pageB.getByRole("link", { name: "Leave", exact: true }).click();
     await expect(pageB).toHaveURL(new RegExp("/combatlog/" + id + "$"));
   } finally {
     await contextB.close();
@@ -287,7 +289,13 @@ test("a shared victory opens the same report for both attackers and the target l
       if (current.status === "completed") break;
       await expect(pageB.getByText("Round " + current.round + " / 25", { exact: true })).toBeVisible();
     }
+    // Both attackers keep the result on their scene; the assisting attacker's view waits for no new round of its own.
+    await expect(pageB.getByRole("heading", { name: "Victory", exact: true })).toBeVisible();
+    await pageB.getByRole("link", { name: "Leave", exact: true }).click();
     await expect(pageB).toHaveURL(new RegExp("/combatlog/" + id + "$"));
+    await expect(page.getByRole("heading", { name: "Victory", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(sharedUrl);
+    await page.getByRole("link", { name: "Leave", exact: true }).click();
     await expect(page).toHaveURL(pageB.url());
     const people = page.getByRole("region", { name: "People (3)", exact: true });
     await expect(people.locator('[data-result="victory"]').getByRole("link", { name: b.name, exact: true })).toBeVisible();
@@ -333,6 +341,7 @@ test("extreme stats distinguish guaranteed misses from blocked hits in sea and c
       await expect(page.getByRole("progressbar", { name: resource, exact: true })).toHaveAttribute("aria-valuenow", "100");
     }
     await page.getByRole("button", { name: /^Retreat Take/ }).click();
+    await page.getByRole("link", { name: "Leave", exact: true }).click();
     await expect(page).toHaveURL(new RegExp("/combatlog/" + id + "$"));
     await expect(log.getByText("Missed", { exact: true })).toHaveCount(2);
     await expect(log.getByText(/ · Blocked · 0 damage$/)).toHaveCount(3);
@@ -416,6 +425,7 @@ test("equipped firearms, melee weapons and armor drive boarding orders and the c
     await expect(scene.locator('.o-scene-mark[data-target="defender"]')).toHaveCount(1);
     await sceneFrames(page, "melee");
     await main.getByRole("button", { name: /^Retreat Take/ }).click();
+    await main.getByRole("link", { name: "Leave", exact: true }).click();
     await expect(page).toHaveURL(new RegExp("/combatlog/" + id + "$"));
   } finally { await cleanup([a, d]); }
 });
@@ -469,14 +479,28 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await page.setViewportSize({ width: 375, height: 1000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: ".local/attack-ammo-mobile.jpg", type: "jpeg", quality: 80, fullPage: true });
-    // The round that ends the encounter plays out with the result before the combat log opens.
+    // The round that ends the encounter plays out first; then the darkened scene offers Leave, and only Leave opens the log.
+    await page.setViewportSize({ width: 1280, height: 1000 });
     await main.getByRole("button", { name: /^Retreat Take/ }).click();
-    await expect(main.getByRole("link", { name: "View combat log", exact: true })).toBeVisible();
-    await expect(main.getByRole("heading", { name: "You withdrew", exact: true })).toBeVisible();
-    await expect(page.locator(".o-combat-title")).toContainText("Battle over");
     await expect(scene.locator('.o-scene-overlay[data-animate="true"]')).toHaveCount(1);
     const endedAt = Date.now();
+    await expect(page.locator(".o-combat-title")).toContainText("Battle over");
+    await expect(main.getByRole("button", { name: /^Retreat Take/ })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /^Back to / })).toHaveCount(0);
+    const leave = scene.getByRole("link", { name: "Leave", exact: true });
+    await expect(leave).toBeFocused();
+    expect(Date.now() - endedAt).toBeGreaterThanOrEqual(1000);
+    await expect(scene.getByRole("heading", { name: "You withdrew", exact: true })).toBeVisible();
+    await expect(scene.getByText("The attackers withdrew.", { exact: true })).toBeVisible();
+    await expect(scene.locator(".o-combat-versus")).toHaveCSS("opacity", "0");
+    await page.waitForTimeout(1500);
+    await expect(page).toHaveURL(new RegExp("/attack/" + d.playerNumber + "$"));
+    await scene.locator(".o-combat-scene-art").screenshot({ path: ".local/attack-finale-desktop.png", animations: "disabled" });
+    await page.screenshot({ path: ".local/attack-finale-page.jpg", type: "jpeg", quality: 75, fullPage: true, animations: "disabled" });
+    await page.setViewportSize({ width: 375, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await scene.locator(".o-combat-scene-art").screenshot({ path: ".local/attack-finale-mobile.png", animations: "disabled" });
+    await leave.click();
     await expect(page).toHaveURL(/\/combatlog\//);
-    expect(Date.now() - endedAt).toBeGreaterThanOrEqual(400);
   } finally { await cleanup([a, d]); }
 });

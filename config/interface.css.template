@@ -330,6 +330,17 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-scene-pop[data-tone="critical"] { color:var(--o-gold); font-size:clamp(17px,5.8cqi,32px); }
 .o-scene-pop[data-tone="miss"],.o-scene-pop[data-tone="blocked"] { color:var(--o-muted); }
 .o-scene-overlay[data-animate="true"] .o-scene-mark,.o-scene-overlay[data-animate="true"] .o-scene-chip { opacity:0; animation:o-scene-in .25s ease-out var(--t) forwards; }
+/* A finished fight: the artwork darkens and the result with Leave sits in its middle. */
+.o-scene-finale { position:absolute; inset:0; display:grid; place-items:center; padding:8px; background:color-mix(in srgb,var(--o-bg) 55%,transparent); animation:o-scene-finale .35s ease-out both; }
+.o-scene-finale-box { display:grid; justify-items:center; gap:4px; width:min(100%,280px); padding:14px 18px 16px; border:1px solid var(--o-brass); border-radius:4px; background:linear-gradient(var(--o-surface),var(--o-inset)); box-shadow:0 6px 24px var(--o-palette-0006),inset 0 1px var(--o-palette-ffffff13); text-align:center; animation:o-scene-finale-box .35s ease-out both; }
+.o-scene-finale-box h2 { margin:0; color:var(--o-gold); font:400 clamp(19px,5cqi,26px)/1.2 var(--o-display-font); letter-spacing:.06em; }
+.o-scene-finale-box p { margin:0 0 8px; color:var(--o-muted); font-size:12px; line-height:1.4; }
+.o-scene-leave { display:inline-flex; align-items:center; justify-content:center; min-width:128px; min-height:36px; padding:6px 22px; border:1px solid var(--o-gold); border-radius:4px; background:linear-gradient(125deg,var(--o-combat-gold),var(--o-inset)); box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--o-gold) 10%,transparent); color:var(--o-text); font:600 14px/1.2 var(--o-display-font); letter-spacing:.07em; text-decoration:none; text-transform:uppercase; transition:background .15s; }
+.o-scene-leave:hover { background:linear-gradient(125deg,color-mix(in srgb,var(--o-gold) 28%,var(--o-combat-gold)),var(--o-combat-gold)); color:var(--o-text); }
+.o-scene-leave:focus-visible { outline:2px solid var(--o-gold); outline-offset:2px; }
+.o-combat-scene-art[data-finale] .o-combat-versus { opacity:0; transition:opacity .3s; }
+@container (max-width:380px) { .o-scene-finale-box { gap:2px; padding:10px 14px 12px; } .o-scene-finale-box p { margin-bottom:6px; } }
+@media(pointer:coarse) { .o-scene-leave { min-height:var(--o-touch-height); } }
 .o-fx-bit { opacity:0; animation:o-fx-bit var(--d) cubic-bezier(.25,.6,.4,1) var(--t) forwards; }
 .o-fx-flash,.o-fx-puff,.o-fx-spin { transform-box:fill-box; transform-origin:center; }
 .o-fx-flash { opacity:0; fill:var(--o-fx-water); animation:o-fx-flash var(--d) ease-out var(--t) forwards; }
@@ -345,6 +356,8 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-fx-slash-edge { stroke:var(--o-bg); stroke-width:20px; stroke-opacity:.5; }
 .o-fx-tracer { stroke:var(--o-fx-flash); stroke-width:5px; }
 @keyframes o-scene-leave { to { opacity:0; visibility:hidden; } }
+@keyframes o-scene-finale { from { opacity:0; } }
+@keyframes o-scene-finale-box { from { opacity:0; transform:translateY(6px) scale(.97); } }
 @keyframes o-scene-in { to { opacity:1; } }
 /* The number appears just after the impact and above it, so the blast stays visible. */
 @keyframes o-scene-pop { 0% { opacity:0; transform:translate(-50%,-120%) scale(.7); } 12% { opacity:1; transform:translate(-50%,-175%) scale(1.12); } 25% { transform:translate(-50%,-185%) scale(1); } 75% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-280%); } }
@@ -357,6 +370,7 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 @keyframes o-fx-draw { 0% { opacity:1; stroke-dashoffset:100; } 45% { opacity:1; stroke-dashoffset:0; } 100% { opacity:0; stroke-dashoffset:0; } }
 @media(prefers-reduced-motion:reduce) {
  .o-scene-live,.o-scene-pop,.o-scene-leaving { display:none; }
+ .o-scene-finale,.o-scene-finale-box { animation:none; }
  .o-scene-overlay[data-animate="true"] .o-scene-mark,.o-scene-overlay[data-animate="true"] .o-scene-chip { animation:none; opacity:1; }
 }
 .o-combat-start { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:6px 12px 12px; }

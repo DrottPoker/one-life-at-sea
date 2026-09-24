@@ -63,6 +63,9 @@ export function CombatArena({ battle }: { battle: Battle }) {
   // A special shot that runs out falls back to round shot instead of leaving Fire unusable.
   const ammo: Ammo = ammoChoice !== "round" && stock[ammoChoice] < 1 ? "round" : ammoChoice;
   const orders = phaseOrders[battle.phase], options = orderOptions(battle, ammo);
+  // A finished fight hands its result to the scene, whose Leave button opens the combat log.
+  const finale = battle.status === "completed" ? { title: finishedTitles[battle.participant_status] ?? "Battle over", text: outcomeLabel(battle.outcome),
+    href: "/combatlog/" + battle.id } : undefined;
   const orderFor = (button: OrderButton): CombatOrder => button === "fire" && ammo !== "round" ? ammo === "chain" ? "fire_chain" : "fire_grape" : button;
 
   function giveOrder(order: CombatOrder) {
@@ -85,7 +88,7 @@ export function CombatArena({ battle }: { battle: Battle }) {
   }
 
   return <>
-    <CombatStage attacker={battle.attacker} defender={battle.defender} phase={battle.phase} events={battle.events} />
+    <CombatStage attacker={battle.attacker} defender={battle.defender} phase={battle.phase} events={battle.events} finale={finale} />
     {active ? <section className="o-combat-orders" aria-labelledby="orders-heading">
       <div className="o-section-bar"><h2 id="orders-heading"><Anchor aria-hidden="true" />Your next order</h2><span>Both sides act together</span></div>
       {battle.phase === "sea" && <fieldset className="o-ammo-select" disabled={pending}>
@@ -110,11 +113,7 @@ export function CombatArena({ battle }: { battle: Battle }) {
         </button>;
       })}</div>
       <p className="o-combat-rule">All attackers share the opposing health. The final blow ends the encounter. Retreat is your way out; inactivity triggers an automatic retreat with a counterattack.</p>
-    </section> : battle.status === "completed" ? <section className="o-combat-result" aria-live="polite">
-      <h2>{finishedTitles[battle.participant_status] ?? "Battle over"}</h2>
-      <p>{outcomeLabel(battle.outcome)} Opening the combat log...</p>
-      <Link href={"/combatlog/" + battle.id} className="o-training-button">View combat log</Link>
-    </section> : <section className="o-combat-result">
+    </section> : battle.status === "active" && <section className="o-combat-result">
       <h2>{battle.participant_status === "retreated" ? "You withdrew" : battle.participant_status === "draw" ? "Round limit reached" : "Defeat"}</h2>
       <p>The other attackers are still fighting. The public combat log becomes available when the encounter ends.</p>
       <Link href="/harbor" className="o-training-button">Back to The Harbor</Link>

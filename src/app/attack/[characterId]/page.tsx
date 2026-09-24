@@ -2,7 +2,7 @@ import { notFound, redirect, permanentRedirect } from "next/navigation";
 import { requireCharacter, gameStateForPlayer } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
-import { attackUrl, recentlyFinished, type Battle, type CombatPreview } from "@/lib/combat";
+import { attackUrl, type Battle, type CombatPreview } from "@/lib/combat";
 import { findPlayerProfile } from "@/lib/player-profile";
 import { AttackSession } from "@/components/combat/attack-session";
 import { GameStateProvider } from "@/components/game-state";
@@ -31,9 +31,10 @@ export default async function AttackPage({ params }: { params: Promise<{ charact
     if (error) throw new Error("The fight could not be loaded.");
     if (data?.defender.id === characterId) battle = data;
   }
-  // A defeated attacker is already in hospital; only the fight that just ended may still play its final round here.
+  // A defeated attacker is already in hospital. Only the finished fight with this target may render here: the tab that
+  // watched it keeps its result until Leave, and any other visit is sent on to hospital by the client.
   const hospital = !!state.hospital_until;
-  if (hospital && !(battle && recentlyFinished(battle))) redirect("/harbor/hospital");
+  if (hospital && battle?.status !== "completed") redirect("/harbor/hospital");
   let preview: CombatPreview | null = null;
   if (battle?.status !== "active" && !hospital) {
     const { data, error } = await withDatabaseRetry(() => client.rpc("get_combat_preview", { target_id: characterId }));

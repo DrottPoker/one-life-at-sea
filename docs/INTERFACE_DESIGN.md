@@ -116,9 +116,12 @@ game navigation during combat.
 - Effects use small pixels (about 10-14 artwork pixels, 3-4 on screen) so they match the
   artwork's detail; blasts are dense clouds that are hottest in the middle. Damage numbers
   rise just after and above the impact so the blast stays visible.
-- The round that ends the encounter plays out in full. The order panel is replaced by the
-  outcome (Victory, Defeat, You withdrew or Draw) with a View combat log link, and the log
-  opens 0.5 seconds after the animation (`AttackSession`, `REPORT_DELAY`).
+- The round that ends the encounter plays out in full. 0.5 seconds after its effects fade
+  (`FINALE_DELAY` in `combat-scene.tsx`) the artwork darkens, the VS badge fades out and a
+  centered box shows the outcome (Victory, Defeat, You withdrew or Draw) with a Leave button
+  that takes focus. The combat log opens only when the player chooses Leave; the order panel
+  and the heading's back link are gone meanwhile. When the final round is not new to this
+  view, such as another attacker's final blow, the box follows after the same short pause.
 - The caption under the artwork states the round in words, for example "Round 3: You hit
   their sails and rigging for 12 and slowed their ship. Bo missed.", and is announced
   politely to screen readers. With reduced motion, marks and labels appear without effects.

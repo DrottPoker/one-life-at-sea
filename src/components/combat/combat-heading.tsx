@@ -36,7 +36,7 @@ export function CombatHeading({ battle, energy, backUrl, backLabel, canLeave, fi
     <div className="o-combat-header-resources">
       <div className="o-combat-header-resource"><Zap aria-hidden="true" /><span>Energy<strong>{energy} / {gameplay.resources.energyMax}</strong></span></div>
       {active && <FightClock deadline={encounter.deadline} observedAt={encounter.observed_at} key={encounter.observed_at} />}
-      {canLeave && <Link href={backUrl}>Back to {backLabel}</Link>}
+      {canLeave && !finished && <Link href={backUrl}>Back to {backLabel}</Link>}
     </div>
   </header>;
 }
