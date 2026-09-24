@@ -86,6 +86,11 @@ const ERROR_MESSAGES: Record<string, string> = {
 export function combatError(code: string) {
   return ERROR_MESSAGES[code] ?? "The action could not be saved. Reload the fight to check its latest state.";
 }
+// How long after a fight ends its attack page may still show the final round, even from hospital.
+export const FINALE_WINDOW_MS = 30_000;
+export function recentlyFinished(battle: Pick<Battle, "status" | "finished_at" | "observed_at">) {
+  return battle.status === "completed" && !!battle.finished_at && Date.parse(battle.observed_at) - Date.parse(battle.finished_at) <= FINALE_WINDOW_MS;
+}
 export function attackUrl(targetId: string | number) {
   return "/attack/" + targetId;
 }

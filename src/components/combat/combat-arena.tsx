@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { Anchor, Bomb, ChevronRight, Crosshair, Grape, Link2, Ship, Swords, Target, Undo2 } from "lucide-react";
 import { submitOrder } from "@/app/combat-actions";
 import { CombatStage } from "@/components/combat/combat-stage";
-import { CombatEvents, CombatPeople } from "@/components/combat/combat-log";
+import { CombatEvents, CombatPeople, outcomeLabel } from "@/components/combat/combat-log";
 import { type Battle, type CombatOrder, ORDER_LABELS } from "@/lib/combat";
 import { fallbackWeapons, SHOT_NAMES, temporaryEffect, type ShotKind } from "@/lib/equipment";
 
@@ -29,6 +29,7 @@ const ammoOptions: { kind: Ammo; name: string; Icon: typeof Crosshair; effect: s
   { kind: "grape", name: SHOT_NAMES.grape, Icon: Grape, effect: "Wounds the enemy crew." },
 ];
 const plural = (count: number, word: string) => count + " " + word + (count === 1 ? "" : "s");
+const finishedTitles: Partial<Record<Battle["participant_status"], string>> = { victory: "Victory", assist: "Victory", defeated: "Defeat", retreated: "You withdrew", draw: "Draw" };
 
 // Every order stays visible; unavailable ones are disabled with the reason as their description.
 function orderOptions(battle: Battle, ammo: Ammo): Record<OrderButton, { detail: string; available: boolean }> {
@@ -109,6 +110,10 @@ export function CombatArena({ battle }: { battle: Battle }) {
         </button>;
       })}</div>
       <p className="o-combat-rule">All attackers share the opposing health. The final blow ends the encounter. Retreat is your way out; inactivity triggers an automatic retreat with a counterattack.</p>
+    </section> : battle.status === "completed" ? <section className="o-combat-result" aria-live="polite">
+      <h2>{finishedTitles[battle.participant_status] ?? "Battle over"}</h2>
+      <p>{outcomeLabel(battle.outcome)} Opening the combat log...</p>
+      <Link href={"/combatlog/" + battle.id} className="o-training-button">View combat log</Link>
     </section> : <section className="o-combat-result">
       <h2>{battle.participant_status === "retreated" ? "You withdrew" : battle.participant_status === "draw" ? "Round limit reached" : "Defeat"}</h2>
       <p>The other attackers are still fighting. The public combat log becomes available when the encounter ends.</p>

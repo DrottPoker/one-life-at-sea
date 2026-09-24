@@ -6,7 +6,8 @@ export type NavigationLock = { attack: AttackLock | null; hospital_until: string
 
 export function navigationRedirect(pathname: string, lock: NavigationLock | null) {
   if (!lock || pathname === "/reset-password" || pathname.startsWith("/auth/")) return null;
-  if (lock.hospital_until) return isHospitalAccessiblePath(pathname) ? null : "/harbor/hospital";
+  // The attack page admits a hospitalized attacker only to watch the round that just ended their fight; it redirects everything else.
+  if (lock.hospital_until) return isHospitalAccessiblePath(pathname) || pathname.startsWith("/attack/") ? null : "/harbor/hospital";
   if (lock.attack) {
     const destination = attackUrl(lock.attack.target_player_number);
     return pathname === destination || pathname === attackUrl(lock.attack.target_id) ? null : destination;

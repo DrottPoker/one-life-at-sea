@@ -15,7 +15,7 @@ Vapen, rustning, träffzoner och Quality beskrivs i [utrustning](EQUIPMENT.md).
 - Adressen ändras inte vid start eller join. Varje besökare ser sin egen förberedelse eller pågående attack.
 - En delad länk ger Join battle när målet redan angrips. Att bara öppna länken kostar ingen Energy och ansluter inte automatiskt.
 - Aktuellt möte hämtas från spelarens serverdata. Strids-ID finns endast i rapportadressen, /combatlog/<battle-id>.
-- När mötet avslutas skickas överlevande deltagare i attackvyn till rapporten. Besegrade deltagare skickas till Hospital. Ett nytt besök på målets attacklänk visar åter förberedelsen.
+- När mötet avslutas under besöket spelar attackvyn klart den sista rundan i stridsbilden och visar utfallet (Victory, Defeat, You withdrew eller Draw). En halv sekund efter animationen öppnas rapporten; länken View combat log finns under tiden. Det gäller även en besegrad angripare, som då redan är inlagd på Hospital men får se den sista rundan och rapporten innan sjukhuslåset gäller övriga sidor. Ett nytt besök på målets attacklänk visar åter förberedelsen, eller Hospital för en inlagd spelare.
 - Attackvyn använder hela spelutrymmet utan hamnens sidopanel, masthead eller footer. Energy och båda hälsomätarna finns i vyn.
 - Före start kan spelaren gå tillbaka fritt.
 - En aktiv angripare skickas tillbaka till sitt sparade möte vid andra sidbesök, reload, ny flik och bakåtnavigering. Proxy kontrollerar serverns lås; rotlayouten fångar även klientens cachade navigation.

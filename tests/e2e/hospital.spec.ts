@@ -75,7 +75,7 @@ test("hospital locks gameplay routes, updates other players and discharges onlin
   }
 });
 
-test("PvP sinking sends an online defender and a defeated attacker directly to hospital", async ({ page, browser }) => {
+test("PvP sinking sends an online defender to hospital and shows a defeated attacker the final round before the log", async ({ page, browser }) => {
   const a = await captain(), d = await captain(), killer = await captain();
   const defenderContext = await browser.newContext(), defender = await defenderContext.newPage();
   try {
@@ -86,6 +86,8 @@ test("PvP sinking sends an online defender and a defeated attacker directly to h
     await page.goto("/attack/" + d.id);
     await page.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
     await page.getByRole("button", { name: /^Fire cannons 1 salvo/ }).click();
+    await expect(page.getByRole("heading", { name: "Victory", exact: true })).toBeVisible();
+    await expect(page.getByText("The defending ship was sunk. Opening the combat log...", { exact: true })).toBeVisible();
     await expect(page).toHaveURL(/\/combatlog\/[0-9a-f-]+$/);
     await expect(defender).toHaveURL(/\/harbor\/hospital$/, { timeout: 20000 });
     expect((await d.api.rpc("get_game_state")).data).toMatchObject({ ship_health: 0, crew_health: 0 });
@@ -94,9 +96,16 @@ test("PvP sinking sends an online defender and a defeated attacker directly to h
     await page.goto("/attack/" + killer.id);
     await page.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
     await page.getByRole("button", { name: /^Fire cannons 1 salvo/ }).click();
-    await expect(page).toHaveURL(/\/harbor\/hospital$/, { timeout: 20000 });
-    await expect(page.getByRole("heading", { name: "You are in hospital", exact: true })).toBeVisible();
+    // The defeated attacker sees the sinking round play out, then the log, while the hospital lock holds everywhere else.
+    await expect(page.getByRole("heading", { name: "Defeat", exact: true })).toBeVisible();
+    await expect(page.locator(".o-combat-scene figcaption")).toContainText("hit your");
+    await expect(page).toHaveURL(/\/combatlog\/[0-9a-f-]+$/, { timeout: 20000 });
     expect((await a.api.rpc("get_game_state")).data).toMatchObject({ ship_health: 0, crew_health: 0, active_attack: null });
+    await page.goto("/attack/" + killer.id);
+    await expect(page).toHaveURL(/\/harbor\/hospital$/);
+    await expect(page.getByRole("heading", { name: "You are in hospital", exact: true })).toBeVisible();
+    await page.goto("/harbor");
+    await expect(page).toHaveURL(/\/harbor\/hospital$/);
   } finally {
     await defenderContext.close();
     await cleanup([a, d, killer]);

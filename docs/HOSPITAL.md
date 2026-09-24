@@ -52,6 +52,9 @@ utslagning hamnar båda på sjukhus även om angriparen får final blow.
 ## Åtkomst och patientlista
 
 Proxy använder get_navigation_lock och prioriterar Hospital framför ett stridslås.
+Attacksidan släpps igenom av proxyn men skickar själv en inlagd spelare till Hospital, utom för den strid
+som spelaren nyss förlorade (högst 30 sekunder efter avslutet, `FINALE_WINDOW_MS`) och bara i den flik där
+striden pågick. Där spelas den sista rundan klart innan rapporten öppnas. Databasen nekar ändå nya attacker.
 Profiler är tillåtna läsvyer under sjukhusvistelse; övriga sidlås och databasens handlingsspärrar kvarstår.
 Servervyer, rotlayout, liveuppdateringar och inaktiva knappar stöder samma regel även
 för direkta länkar, gamla flikar, omladdning och återinloggning. Databasen spärrar

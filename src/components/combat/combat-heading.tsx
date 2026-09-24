@@ -15,20 +15,22 @@ function FightClock({ deadline, observedAt }: { deadline: string; observedAt: st
   </div>;
 }
 
-export function CombatHeading({ battle, energy, backUrl, backLabel, canLeave }: {
+export function CombatHeading({ battle, energy, backUrl, backLabel, canLeave, finished = false }: {
   battle: Battle | null;
   energy: number;
   backUrl: string;
   backLabel: string;
   canLeave: boolean;
+  finished?: boolean;
 }) {
-  const encounter = battle?.status === "active" ? battle : null;
-  const active = encounter?.participant_status === "active";
+  // A fight that just ended keeps its heading while the final round plays out.
+  const encounter = battle?.status === "active" || finished ? battle : null;
+  const active = !finished && encounter?.participant_status === "active";
   return <header className="o-combat-heading">
     <div className="o-combat-title">
       <Swords aria-hidden="true" />
       <div><span className="o-attack-brand">{frontend.site.name}</span><h1>Attacking</h1>
-        <p>{encounter ? <>{active ? encounter.phase === "sea" ? "Cannon combat" : "Boarding combat" : "You have left this encounter"}<span className="o-combat-round">Round {encounter.round} / {MAX_ROUNDS}</span></> : "Prepare your ship and crew"}</p>
+        <p>{encounter ? <>{finished ? "Battle over" : active ? encounter.phase === "sea" ? "Cannon combat" : "Boarding combat" : "You have left this encounter"}<span className="o-combat-round">Round {encounter.round} / {MAX_ROUNDS}</span></> : "Prepare your ship and crew"}</p>
       </div>
     </div>
     <div className="o-combat-header-resources">

@@ -25,4 +25,8 @@ describe("sea navigation locks", () => {
     expect(navigationRedirect("/inventory", { ...base, hospital_until: "2026-12-01Z" })).toBeNull();
     expect(navigationRedirect("/harbor/bank", base)).toBeNull();
   });
+  it("leaves the attack page to decide whether a hospitalized attacker may watch the final round", () => {
+    expect(navigationRedirect("/attack/100001", { ...base, hospital_until: "2026-12-01Z" })).toBeNull();
+    expect(navigationRedirect("/attack", { ...base, hospital_until: "2026-12-01Z" })).toBe("/harbor/hospital");
+  });
 });

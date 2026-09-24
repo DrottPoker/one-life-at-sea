@@ -2,9 +2,8 @@ import { notFound, redirect, permanentRedirect } from "next/navigation";
 import { requireCharacter, gameStateForPlayer } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
-import { attackUrl, type Battle, type CombatPreview } from "@/lib/combat";
+import { attackUrl, recentlyFinished, type Battle, type CombatPreview } from "@/lib/combat";
 import { findPlayerProfile } from "@/lib/player-profile";
-import { CombatHeading } from "@/components/combat/combat-heading";
 import { AttackSession } from "@/components/combat/attack-session";
 import { GameStateProvider } from "@/components/game-state";
 
@@ -12,7 +11,7 @@ export const metadata = { title: "Attacking" };
 
 export default async function AttackPage({ params }: { params: Promise<{ characterId: string }> }) {
   const { characterId: identifier } = await params;
-  const character = await requireCharacter({ allowSea: true });
+  const character = await requireCharacter({ allowSea: true, allowHospital: true });
   const state = await gameStateForPlayer();
   const profile = await findPlayerProfile(identifier);
   if (!profile) notFound();
@@ -32,15 +31,18 @@ export default async function AttackPage({ params }: { params: Promise<{ charact
     if (error) throw new Error("The fight could not be loaded.");
     if (data?.defender.id === characterId) battle = data;
   }
+  // A defeated attacker is already in hospital; only the fight that just ended may still play its final round here.
+  const hospital = !!state.hospital_until;
+  if (hospital && !(battle && recentlyFinished(battle))) redirect("/harbor/hospital");
   let preview: CombatPreview | null = null;
-  if (battle?.status !== "active") {
+  if (battle?.status !== "active" && !hospital) {
     const { data, error } = await withDatabaseRetry(() => client.rpc("get_combat_preview", { target_id: characterId }));
     if (error) throw new Error("This encounter could not be loaded.");
     if (!data || "error" in data) notFound();
     preview = data;
   }
   return <GameStateProvider state={state}><main id="main" className="o-attack-main">
-    <CombatHeading battle={battle} energy={state.energy} backUrl={backUrl} backLabel={backLabel} canLeave={!state.active_attack} />
-    <AttackSession battle={battle} preview={preview} key={characterId} />
+    <AttackSession battle={battle} preview={preview} key={characterId} hospital={hospital}
+      heading={{ energy: state.energy, backUrl, backLabel, canLeave: !state.active_attack && !hospital }} />
   </main></GameStateProvider>;
 }

@@ -113,6 +113,12 @@ game navigation during combat.
 - Only rounds that arrive while the page is open animate; a reload shows the marks and
   labels still. A round that changes phase finishes on its own artwork before the new phase
   fades in. Other attackers' rounds stay in the log.
+- Effects use small pixels (about 10-14 artwork pixels, 3-4 on screen) so they match the
+  artwork's detail; blasts are dense clouds that are hottest in the middle. Damage numbers
+  rise just after and above the impact so the blast stays visible.
+- The round that ends the encounter plays out in full. The order panel is replaced by the
+  outcome (Victory, Defeat, You withdrew or Draw) with a View combat log link, and the log
+  opens 0.5 seconds after the animation (`AttackSession`, `REPORT_DELAY`).
 - The caption under the artwork states the round in words, for example "Round 3: You hit
   their sails and rigging for 12 and slowed their ship. Bo missed.", and is announced
   politely to screen readers. With reduced motion, marks and labels appear without effects.

@@ -12,13 +12,16 @@ const art = {
   boarding: { src: "/images/combat-boarding-duel.webp", alt: "Two pirate captains cross cutlasses on a plank between their ships.", tagline: "Steel. Blood. Plunder.", Icon: Swords },
 };
 const sizes = "(max-width: 800px) 100vw, (max-width: 1400px) 45vw, 600px";
-// Effect sizes below are written for the scene's display width, which is roughly 2.5 times smaller than the artwork.
-const FX = 2.5;
+// Effects are drawn in the artwork's pixels. Particles stay a few art pixels wide to match its detail, while
+// distances are scaled up because the scene is shown at well under half the artwork's width.
+const SPREAD = 2.5;
 type Vars = CSSProperties & Record<`--${string}`, string>;
 const unit = (value: number) => Math.round(value) + "px";
 const ms = (value: number) => Math.round(value) + "ms";
-const fire = ["--o-fx-flash", "--o-fx-fire", "--o-fx-ember"], wood = ["--o-fx-wood", "--o-fx-wood-light"], water = ["--o-fx-water", "--o-fx-water-deep"];
-const smoke = ["--o-fx-smoke", "--o-fx-smoke-dark"], blood = ["--o-fx-hit", "--o-fx-flash"], sparks = ["--o-fx-flash", "--o-gold"];
+const white = "--o-fx-water", fire = ["--o-fx-flash", "--o-fx-fire", "--o-fx-ember"], wood = ["--o-fx-wood", "--o-fx-wood-light"];
+const water = ["--o-fx-water", "--o-fx-water-deep"], smoke = ["--o-fx-smoke", "--o-fx-smoke-dark"], blood = ["--o-fx-hit", "--o-fx-ember"], sparks = ["--o-fx-flash", "--o-gold"];
+// Blast palettes run from the hot centre to the edge.
+const blasts = { fire: [white, "--o-fx-flash", "--o-fx-fire", "--o-fx-ember"], gold: [white, "--o-fx-flash", "--o-gold", "--o-gold"], light: [white, white, "--o-fx-flash", "--o-fx-smoke"] };
 
 // Deterministic randomness per round, so a re-render never reshuffles an effect.
 function seeded(seed: number) {
@@ -31,43 +34,52 @@ function seeded(seed: number) {
   };
 }
 
-// Square pixels thrown out from a point, rising by `lift` and settling by `fall`.
-function bits(random: () => number, at: ScenePoint, count: number, colors: string[], size: number, spread: number, lift: number, fall: number, time: number, duration: number) {
+function square(key: string, className: string, x: number, y: number, side: number, style: Vars) {
+  return <rect key={key} className={className} x={x - side / 2} y={y - side / 2} width={side} height={side} style={style} />;
+}
+
+// Small pixels thrown out from a point: they rise by `lift` on the way out and settle by `fall`.
+function bits(random: () => number, at: ScenePoint, count: number, colors: string[], size: number, spread: number, lift: number, fall: number, time: number, duration: number, key = "bit") {
   return Array.from({ length: count }, (_, index) => {
-    const angle = random() * Math.PI * 2, distance = spread * FX * (0.35 + random() * 0.65), side = size * FX * (0.6 + random() * 0.8);
-    const dx = Math.cos(angle) * distance, dy = Math.sin(angle) * distance * 0.75;
-    const style: Vars = { fill: "var(" + colors[index % colors.length] + ")", "--mx": unit(dx * 0.6), "--my": unit(dy * 0.6 - lift * FX), "--px": unit(dx),
-      "--py": unit(dy + fall * FX), "--t": ms(time + random() * 70), "--d": ms(duration * (0.7 + random() * 0.5)) };
-    return <rect key={"bit" + index} className="o-fx-bit" x={at.x - side / 2} y={at.y - side / 2} width={side} height={side} style={style} />;
+    const angle = random() * Math.PI * 2, distance = spread * SPREAD * (0.3 + random() * 0.7);
+    const dx = Math.cos(angle) * distance, dy = Math.sin(angle) * distance * 0.7;
+    return square(key + index, "o-fx-bit", at.x, at.y, size * (0.6 + random() * 0.7), { fill: "var(" + colors[index % colors.length] + ")", "--mx": unit(dx * 0.6),
+      "--my": unit(dy * 0.6 - lift * SPREAD * (0.6 + random() * 0.4)), "--px": unit(dx), "--py": unit(dy + fall * SPREAD), "--t": ms(time + random() * 80),
+      "--d": ms(duration * (0.65 + random() * 0.5)) });
   });
 }
 
-// Smoke or cloud squares that swell while drifting.
-function puffs(random: () => number, at: ScenePoint, count: number, size: number, spread: number, rise: number, time: number, duration: number) {
+// A dense cloud of small pixels, hottest in the middle, that flashes and spreads a little: an explosion or a muzzle flash.
+function blast(random: () => number, at: ScenePoint, radius: number, count: number, palette: keyof typeof blasts, time: number, duration: number, key = "blast") {
+  const colors = blasts[palette], reach = radius * SPREAD;
   return Array.from({ length: count }, (_, index) => {
-    const side = size * FX * (0.7 + random() * 0.6), dx = (random() - 0.5) * spread * FX * 2, dy = ((random() - 0.5) * spread - rise) * FX;
-    const style: Vars = { fill: "var(" + smoke[index % smoke.length] + ")", "--px": unit(dx), "--py": unit(dy), "--t": ms(time + random() * 120), "--d": ms(duration * (0.8 + random() * 0.4)) };
-    return <rect key={"puff" + index} className="o-fx-puff" x={at.x + (random() - 0.5) * spread * FX * 0.6 - side / 2} y={at.y + (random() - 0.5) * spread * FX * 0.4 - side / 2}
-      width={side} height={side} style={style} />;
+    const angle = random() * Math.PI * 2, share = Math.sqrt(random()), dx = Math.cos(angle) * reach * share, dy = Math.sin(angle) * reach * share * 0.8;
+    const ring = Math.min(colors.length - 1, Math.floor(share * colors.length));
+    return square(key + index, "o-fx-bit", at.x + dx, at.y + dy, (13 - share * 5) * (0.75 + random() * 0.5), { fill: "var(" + colors[ring] + ")", "--mx": unit(dx * 0.25),
+      "--my": unit(dy * 0.25), "--px": unit(dx * 0.55), "--py": unit(dy * 0.5 + 4), "--t": ms(time + share * 50), "--d": ms(duration * (0.55 + random() * 0.6)) });
   });
 }
 
-// A pixel starburst: a plus of light around a bright core. Rings and ripples keep a plain outline.
-function flash(key: string, at: ScenePoint, base: number, time: number, duration: number, className = "o-fx-flash", tone = "light") {
-  const size = base * FX, bar = size / 3, style = { "--t": ms(time), "--d": ms(duration) } as Vars;
-  if (className !== "o-fx-flash") return <rect key={key} className={className} x={at.x - size / 2} y={at.y - size / 2} width={size} height={size} style={style} />;
-  return <g key={key} className="o-fx-flash" data-tone={tone} style={style}>
-    <rect x={at.x - size / 2} y={at.y - bar / 2} width={size} height={bar} /><rect x={at.x - bar / 2} y={at.y - size / 2} width={bar} height={size} />
-    <rect className="o-fx-core" x={at.x - bar * 0.8} y={at.y - bar * 0.8} width={bar * 1.6} height={bar * 1.6} />
-  </g>;
+// Drifting smoke built from small grey pixels that swell a little as they fade.
+function puffs(random: () => number, at: ScenePoint, count: number, size: number, spread: number, rise: number, time: number, duration: number, key = "puff") {
+  return Array.from({ length: count }, (_, index) => {
+    const dx = (random() - 0.5) * spread * SPREAD * 2, dy = ((random() - 0.5) * spread - rise * (0.5 + random() * 0.5)) * SPREAD;
+    return square(key + index, "o-fx-puff", at.x + (random() - 0.5) * spread * SPREAD * 0.5, at.y + (random() - 0.5) * spread * SPREAD * 0.35,
+      size * 0.75 * (0.7 + random() * 0.6), { fill: "var(" + smoke[index % smoke.length] + ")", "--px": unit(dx), "--py": unit(dy), "--t": ms(time + random() * 140),
+        "--d": ms(duration * (0.75 + random() * 0.45)) });
+  });
 }
+
+// The bright pop at the heart of a blast.
+const core = (key: string, at: ScenePoint, size: number, time: number, duration: number) =>
+  square(key, "o-fx-flash", at.x, at.y, size, { "--t": ms(time), "--d": ms(duration) });
 
 // A projectile follows a straight line while an inner group lifts it into an arc.
 function projectile(key: string, from: ScenePoint, to: ScenePoint, lift: number, time: number, duration: number, body: ReactNode, spin = false) {
   const timing = { "--t": ms(time), "--d": ms(duration) };
   return <g key={key} transform={"translate(" + from.x + " " + from.y + ")"}>
     <g className="o-fx-fly" style={{ ...timing, "--dx": unit(to.x - from.x), "--dy": unit(to.y - from.y) } as Vars}>
-      <g className="o-fx-arc" style={{ ...timing, "--arc": unit(-lift) } as Vars}><g className={spin ? "o-fx-spin" : undefined} style={timing as Vars}><g transform={"scale(" + FX + ")"}>{body}</g></g></g>
+      <g className="o-fx-arc" style={{ ...timing, "--arc": unit(-lift) } as Vars}><g className={spin ? "o-fx-spin" : undefined} style={timing as Vars}>{body}</g></g>
     </g>
   </g>;
 }
@@ -77,54 +89,58 @@ function stroke(key: string, path: string, time: number, duration: number, class
 }
 
 function impact(random: () => number, strike: SceneStrike): ReactNode[] {
-  const { point, impact: time, critical } = strike, out: ReactNode[] = [];
-  if (critical) out.push(flash("critical", point, 84, time, 440, undefined, "gold"), ...bits(random, point, 12, sparks, 8, 120, 40, 30, time, 600));
-  if (strike.kind === "grenade") return [...out, flash("boom", point, 80, time, 360, undefined, "fire"), ...bits(random, point, 22, fire, 12, 100, 50, 30, time, 660), ...puffs(random, point, 12, 24, 60, 70, time + 90, 1100)];
-  if (strike.kind === "smoke") return [...out, ...puffs(random, point, 26, 30, 80, 30, time, 1500)];
-  if (strike.target === "crew") return [...out, flash("hit", point, 34, time, 220), ...bits(random, point, strike.kind === "grape" ? 6 : 10, blood, 8, 46, 20, 30, time, 480)];
-  const splinters = bits(random, point, strike.zone === "rigging" ? 6 : 14, wood, 11, 90, 40, 70, time, 700);
-  if (strike.zone === "rigging") return [...out, flash("hit", point, 50, time, 300, undefined, "fire"), ...splinters, ...bits(random, point, 14, ["--o-fx-cloth"], 13, 70, -10, 110, time, 1000)];
-  if (strike.zone === "waterline") return [...out, flash("hit", point, 54, time, 300, undefined, "fire"), ...splinters, ...bits(random, point, 14, water, 10, 40, 90, 30, time + 40, 760)];
-  return [...out, flash("hit", point, 54, time, 300, undefined, "fire"), ...splinters, ...puffs(random, point, 5, 18, 30, 40, time + 60, 800)];
+  const { point, impact: time } = strike, out: ReactNode[] = [];
+  if (strike.critical) out.push(...blast(random, point, 32, 40, "gold", time, 540, "crit"), ...bits(random, point, 18, sparks, 9, 120, 40, 30, time, 660, "critspark"));
+  if (strike.kind === "grenade") return [...out, core("core", point, 34, time, 280), ...blast(random, point, 44, 80, "fire", time, 480),
+    ...bits(random, point, 28, fire, 10, 110, 40, 30, time, 720), ...puffs(random, point, 24, 18, 56, 70, time + 90, 1200)];
+  if (strike.kind === "smoke") return [...out, ...puffs(random, point, 54, 20, 76, 30, time, 1500)];
+  if (strike.target === "crew") return [...out, core("core", point, 18, time, 240), ...blast(random, point, 14, 24, "light", time, 300),
+    ...bits(random, point, strike.kind === "grape" ? 10 : 16, blood, 10, 42, 20, 30, time, 540)];
+  const splinters = bits(random, point, strike.zone === "rigging" ? 10 : 24, wood, 12, 90, 40, 80, time, 780, "splinter");
+  const burst = [core("core", point, 26, time, 280), ...blast(random, point, 32, 76, "fire", time, 420)];
+  if (strike.zone === "rigging") return [...out, ...burst, ...splinters, ...bits(random, point, 40, ["--o-fx-cloth"], 12, 80, -10, 130, time, 1200, "cloth")];
+  if (strike.zone === "waterline") return [...out, ...burst, ...splinters, ...bits(random, point, 56, water, 10, 34, 120, 40, time + 40, 880, "drop")];
+  return [...out, ...burst, ...splinters, ...puffs(random, point, 30, 16, 32, 44, time + 60, 1050)];
 }
 
 function miss(random: () => number, strike: SceneStrike): ReactNode[] {
   const { point, impact: time } = strike;
-  if (strike.kind === "melee") return [flash("parry", point, 30, time, 200), ...bits(random, point, 14, sparks, 7, 60, 20, 20, time, 420)];
-  if (strike.kind === "firearm") return bits(random, point, 8, wood, 8, 40, 10, 30, time, 460);
-  if (strike.kind === "grenade") return [flash("boom", point, 70, time, 340, undefined, "fire"), ...bits(random, point, 18, fire, 12, 90, 40, 20, time, 600), ...puffs(random, point, 10, 22, 50, 60, time + 80, 1000)];
-  if (strike.kind === "smoke") return puffs(random, point, 16, 26, 60, 40, time, 1300);
-  return [...bits(random, point, 26, water, 10, 34, 130, 20, time, 860), ...bits(random, point, 12, water, 12, 64, 18, 8, time, 600),
-    flash("ripple", { x: point.x, y: point.y + 8 }, 56, time, 560, "o-fx-ripple")];
+  if (strike.kind === "melee") return [core("core", point, 16, time, 220), ...bits(random, point, 26, sparks, 8, 60, 20, 20, time, 480)];
+  if (strike.kind === "firearm") return bits(random, point, 16, wood, 10, 34, 10, 30, time, 500);
+  if (strike.kind === "grenade") return [core("core", point, 28, time, 260), ...blast(random, point, 34, 60, "fire", time, 440),
+    ...bits(random, point, 22, fire, 10, 90, 40, 20, time, 640), ...puffs(random, point, 18, 18, 46, 60, time + 80, 1100)];
+  if (strike.kind === "smoke") return puffs(random, point, 32, 18, 56, 40, time, 1300);
+  // A narrow column of spray with a skirt of foam on the water.
+  return [...bits(random, point, 90, water, 10, 20, 170, 34, time, 980, "column"), ...bits(random, point, 40, water, 9, 54, 60, 14, time + 30, 700, "spray"),
+    ...bits(random, { x: point.x, y: point.y + 6 }, 36, water, 10, 72, 6, 4, time, 620, "foam")];
 }
 
 // The shot or swing itself, from its source to its landing point.
 function delivery(random: () => number, strike: SceneStrike): ReactNode[] {
   const { origin, point, start, impact: time, kind } = strike, facing = strike.side === "attacker" ? 1 : -1;
   if (kind === "melee") {
-    const hold = strike.hit ? point : { x: point.x, y: point.y + 10 };
-    const reach = 25 * FX * facing, drop = 23 * FX;
+    const hold = strike.hit ? point : { x: point.x, y: point.y + 10 }, reach = 25 * SPREAD * facing, drop = 23 * SPREAD;
     const path = "M" + (hold.x - reach) + " " + (hold.y - drop) + " Q" + (hold.x + reach / 4) + " " + (hold.y - drop / 4) + " " + (hold.x + reach) + " " + (hold.y + drop);
     return [stroke("edge", path, start, 300, "o-fx-slash-edge"), stroke("slash", path, start, 300, "o-fx-slash")];
   }
   if (!origin) return [];
-  if (kind === "firearm") return [flash("muzzle", origin, 30, start, 220, undefined, "fire"), ...puffs(random, origin, 5, 14, 20, 30, start + 40, 700),
-    stroke("tracer", "M" + origin.x + " " + origin.y + " L" + point.x + " " + point.y, start + 50, time - start, "o-fx-tracer")];
-  const out: ReactNode[] = [];
+  if (kind === "firearm") return [core("muzzle", origin, 16, start, 200), ...blast(random, origin, 10, 16, "fire", start, 240, "flash"),
+    ...puffs(random, origin, 10, 12, 10, 16, start + 40, 720), stroke("tracer", "M" + origin.x + " " + origin.y + " L" + point.x + " " + point.y, start + 50, time - start, "o-fx-tracer")];
   if (kind === "grenade" || kind === "smoke") {
-    const body = kind === "grenade" ? <><rect className="o-fx-iron" x={-8} y={-8} width={16} height={16} /><rect className="o-fx-fuse" x={4} y={-14} width={6} height={6} /></>
-      : <rect className="o-fx-jar" x={-7} y={-9} width={14} height={18} />;
+    const body = kind === "grenade" ? <><rect className="o-fx-iron" x={-9} y={-9} width={18} height={18} /><rect className="o-fx-fuse" x={5} y={-15} width={6} height={6} /></>
+      : <rect className="o-fx-jar" x={-8} y={-10} width={16} height={20} />;
     return [projectile("throw", origin, point, 150, start, time - start, body, true)];
   }
   const distance = Math.abs(point.x - origin.x), launch = start + 60;
-  out.push(flash("muzzle", origin, 44, start, 260, undefined, "fire"), ...bits(random, origin, 9, fire, 9, 40, 10, 0, start, 300), ...puffs(random, origin, 10, 18, 36, 50, start + 40, 1000));
+  const out = [core("muzzle", origin, 22, start, 220), ...blast(random, origin, 20, 48, "fire", start, 340, "flash"),
+    ...bits(random, origin, 14, fire, 9, 40, 10, 6, start, 360, "spark"), ...puffs(random, origin, 48, 18, 34, 48, start + 40, 1200)];
   if (kind === "chain") out.push(projectile("chain", origin, point, distance * 0.14, launch, time - launch,
-    <><rect className="o-fx-iron" x={-17} y={-5} width={10} height={10} /><rect className="o-fx-iron" x={7} y={-5} width={10} height={10} /><rect className="o-fx-iron" x={-7} y={-1} width={14} height={2} /></>, true));
-  else if (kind === "grape") for (let pellet = 0; pellet < 5; pellet++) {
-    const spread = { x: point.x + (random() - 0.5) * 100 * FX, y: point.y + (random() - 0.5) * 16 * FX };
-    out.push(projectile("pellet" + pellet, origin, spread, distance * 0.08, launch + pellet * 18, time - launch, <rect className="o-fx-iron" x={-4} y={-4} width={8} height={8} />));
+    <><rect className="o-fx-iron" x={-20} y={-6} width={12} height={12} /><rect className="o-fx-iron" x={8} y={-6} width={12} height={12} /><rect className="o-fx-iron" x={-8} y={-1} width={16} height={3} /></>, true));
+  else if (kind === "grape") for (let pellet = 0; pellet < 7; pellet++) {
+    const spread = { x: point.x + (random() - 0.5) * 100 * SPREAD, y: point.y + (random() - 0.5) * 16 * SPREAD };
+    out.push(projectile("pellet" + pellet, origin, spread, distance * 0.08, launch + pellet * 16, time - launch, <rect className="o-fx-iron" x={-4} y={-4} width={8} height={8} />));
   }
-  else out.push(projectile("ball", origin, point, distance * 0.16, launch, time - launch, <rect className="o-fx-iron" x={-7} y={-7} width={14} height={14} />));
+  else out.push(projectile("ball", origin, point, distance * 0.16, launch, time - launch, <rect className="o-fx-iron" x={-9} y={-9} width={18} height={18} />));
   return out;
 }
 
@@ -140,9 +156,9 @@ const struck = (strike: SceneStrike) => strike.side === "attacker" ? "defender" 
 function mark(strike: SceneStrike, index: number) {
   if (!strike.hit || strike.kind === "smoke") return null;
   return <g key={"mark" + index} className="o-scene-mark" data-tone={tone(strike)} data-zone={strike.zone ?? strike.target} data-target={struck(strike)}
-    transform={"translate(" + strike.point.x + " " + strike.point.y + ") scale(" + FX * 0.8 + ")"} style={{ "--t": ms(strike.impact + 140) } as Vars}>
-    <rect x={-30} y={-4} width={16} height={8} /><rect x={14} y={-4} width={16} height={8} /><rect x={-4} y={-30} width={8} height={16} />
-    <rect x={-4} y={14} width={8} height={16} /><rect x={-4} y={-4} width={8} height={8} />
+    transform={"translate(" + strike.point.x + " " + strike.point.y + ")"} style={{ "--t": ms(strike.impact + 140) } as Vars}>
+    <rect x={-62} y={-5} width={34} height={10} /><rect x={28} y={-5} width={34} height={10} /><rect x={-5} y={-62} width={10} height={34} />
+    <rect x={-5} y={28} width={10} height={34} /><rect x={-5} y={-5} width={10} height={10} />
   </g>;
 }
 

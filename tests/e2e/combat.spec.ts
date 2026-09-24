@@ -27,9 +27,10 @@ async function start(api: SupabaseClient<Database>, targetId: string, requestId:
   }
 }
 // Freezes the scene's round animation at fixed times and captures each frame for visual review.
+// SCENE_FRAME_STEP=80 captures 30 evenly spaced frames instead, for tuning effects.
 async function sceneFrames(page: Page, name: string) {
-  const art = page.locator(".o-combat-scene-art");
-  for (const time of [200, 600, 1000, 1500, 3000]) {
+  const art = page.locator(".o-combat-scene-art"), step = Number(process.env.SCENE_FRAME_STEP);
+  for (const time of step > 0 ? Array.from({ length: 30 }, (_, index) => index * step) : [200, 600, 1000, 1500, 3000]) {
     await art.evaluate((element, at) => { for (const animation of element.getAnimations({ subtree: true })) { animation.pause(); animation.currentTime = at; } }, time);
     await art.screenshot({ path: ".local/scene-" + name + "-" + time + ".png" });
   }
@@ -454,12 +455,13 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await expect(log.getByText("Fire cannons · Basic cannons · Grape Shot", { exact: true })).toBeVisible();
     await expect(log.getByText(/^(Head|Body|Legs|Feet) · \d+ crew damage/)).toBeVisible();
     await expect(main.getByRole("progressbar", { name: "Opponent Crew Health", exact: true })).not.toHaveAttribute("aria-valuenow", "100");
-    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^Crew · \d+$/);
-    await expect(scene.locator("figcaption")).toContainText(/You hit their crew for \d+\./);
+    // Grape shot picks a random crew zone, so a head hit is critical.
+    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical · )?Crew · \d+$/);
+    await expect(scene.locator("figcaption")).toContainText(/You hit their crew for \d+( \(critical\))?\./);
     await sceneFrames(page, "grape");
     await page.reload();
     await expect(scene.locator(".o-scene-overlay")).toHaveAttribute("data-animate", "false");
-    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^Crew · \d+$/);
+    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical · )?Crew · \d+$/);
     await expect(scene.locator(".o-scene-live")).toHaveCount(0);
     await expect(main.getByRole("list", { name: "Opponent active effects", exact: true })).toContainText("for 2 more rounds");
     expect(sql("select count(*) from private.item_stacks where character_id='" + a.id + "' and item_id in('chain_shot','grape_shot')").trim()).toBe("0");
@@ -467,8 +469,14 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await page.setViewportSize({ width: 375, height: 1000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: ".local/attack-ammo-mobile.jpg", type: "jpeg", quality: 80, fullPage: true });
-    // Wait for the saved retreat so account cleanup never races the order.
+    // The round that ends the encounter plays out with the result before the combat log opens.
     await main.getByRole("button", { name: /^Retreat Take/ }).click();
+    await expect(main.getByRole("link", { name: "View combat log", exact: true })).toBeVisible();
+    await expect(main.getByRole("heading", { name: "You withdrew", exact: true })).toBeVisible();
+    await expect(page.locator(".o-combat-title")).toContainText("Battle over");
+    await expect(scene.locator('.o-scene-overlay[data-animate="true"]')).toHaveCount(1);
+    const endedAt = Date.now();
     await expect(page).toHaveURL(/\/combatlog\//);
+    expect(Date.now() - endedAt).toBeGreaterThanOrEqual(400);
   } finally { await cleanup([a, d]); }
 });

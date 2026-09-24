@@ -320,24 +320,20 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-scene-overlay,.o-scene-leaving { position:absolute; inset:0; pointer-events:none; }
 .o-scene-overlay svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
 .o-scene-leaving { animation:o-scene-leave .35s ease-in var(--hold) forwards; }
-.o-scene-mark rect { fill:var(--o-fx-hit); stroke:var(--o-bg); stroke-width:3px; paint-order:stroke; }
+.o-scene-mark rect { fill:var(--o-fx-hit); stroke:var(--o-bg); stroke-width:5px; paint-order:stroke; }
 .o-scene-mark[data-tone="critical"] rect { fill:var(--o-gold); }
 .o-scene-mark[data-tone="blocked"] rect { fill:var(--o-muted); }
 .o-scene-chip { position:absolute; transform:translate(-50%,-50%); padding:2px 8px; border:1px solid var(--o-fx-hit); border-radius:2px; background:color-mix(in srgb,var(--o-bg) 84%,transparent); color:var(--o-combat-danger); font:600 clamp(9px,2.3cqi,12px)/1.45 var(--o-body-font); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
 .o-scene-chip[data-tone="critical"] { border-color:var(--o-gold); color:var(--o-gold); }
 .o-scene-chip[data-tone="miss"],.o-scene-chip[data-tone="blocked"] { border-color:var(--o-line); color:var(--o-muted); }
 .o-scene-chip[data-tone="effect"] { border-color:var(--o-fx-smoke-dark); color:var(--o-fx-smoke); }
-.o-scene-pop { position:absolute; opacity:0; color:var(--o-fx-flash); font:700 clamp(16px,5.4cqi,30px)/1 var(--o-display-font); white-space:nowrap; text-shadow:2px 0 var(--o-bg),-2px 0 var(--o-bg),0 2px var(--o-bg),0 -2px var(--o-bg),2px 2px var(--o-bg),-2px -2px var(--o-bg),2px -2px var(--o-bg),-2px 2px var(--o-bg); animation:o-scene-pop 1.25s ease-out var(--t) forwards; }
+.o-scene-pop { position:absolute; opacity:0; color:var(--o-fx-flash); font:700 clamp(16px,5.4cqi,30px)/1 var(--o-display-font); white-space:nowrap; text-shadow:2px 0 var(--o-bg),-2px 0 var(--o-bg),0 2px var(--o-bg),0 -2px var(--o-bg),2px 2px var(--o-bg),-2px -2px var(--o-bg),2px -2px var(--o-bg),-2px 2px var(--o-bg); animation:o-scene-pop 1.25s ease-out calc(var(--t) + 140ms) forwards; }
 .o-scene-pop[data-tone="critical"] { color:var(--o-gold); font-size:clamp(17px,5.8cqi,32px); }
 .o-scene-pop[data-tone="miss"],.o-scene-pop[data-tone="blocked"] { color:var(--o-muted); }
 .o-scene-overlay[data-animate="true"] .o-scene-mark,.o-scene-overlay[data-animate="true"] .o-scene-chip { opacity:0; animation:o-scene-in .25s ease-out var(--t) forwards; }
 .o-fx-bit { opacity:0; animation:o-fx-bit var(--d) cubic-bezier(.25,.6,.4,1) var(--t) forwards; }
-.o-fx-flash,.o-fx-ripple,.o-fx-puff,.o-fx-spin { transform-box:fill-box; transform-origin:center; }
-.o-fx-flash { opacity:0; fill:var(--o-fx-flash); animation:o-fx-flash var(--d) ease-out var(--t) forwards; }
-.o-fx-flash[data-tone="fire"] { fill:var(--o-fx-fire); }
-.o-fx-flash[data-tone="gold"] { fill:var(--o-gold); }
-.o-fx-flash .o-fx-core { fill:var(--o-fx-water); }
-.o-fx-ripple { opacity:0; fill:none; stroke:var(--o-fx-water); stroke-width:10px; animation:o-fx-ripple var(--d) ease-out var(--t) forwards; }
+.o-fx-flash,.o-fx-puff,.o-fx-spin { transform-box:fill-box; transform-origin:center; }
+.o-fx-flash { opacity:0; fill:var(--o-fx-water); animation:o-fx-flash var(--d) ease-out var(--t) forwards; }
 .o-fx-puff { opacity:0; animation:o-fx-puff var(--d) ease-out var(--t) forwards; }
 .o-fx-fly { opacity:0; animation:o-fx-fly var(--d) linear var(--t) forwards; }
 .o-fx-arc { animation:o-fx-arc var(--d) linear var(--t) both; }
@@ -346,16 +342,16 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-fx-fuse { fill:var(--o-fx-fire); }
 .o-fx-jar { fill:var(--o-fx-smoke-dark); stroke:var(--o-fx-smoke); stroke-width:2px; }
 .o-fx-draw { fill:none; opacity:0; stroke-dasharray:100; stroke-dashoffset:100; stroke-linecap:square; animation:o-fx-draw var(--d) linear var(--t) forwards; }
-.o-fx-slash { stroke:var(--o-fx-flash); stroke-width:20px; }
-.o-fx-slash-edge { stroke:var(--o-bg); stroke-width:34px; stroke-opacity:.55; }
-.o-fx-tracer { stroke:var(--o-fx-flash); stroke-width:9px; }
+.o-fx-slash { stroke:var(--o-fx-water); stroke-width:10px; }
+.o-fx-slash-edge { stroke:var(--o-bg); stroke-width:20px; stroke-opacity:.5; }
+.o-fx-tracer { stroke:var(--o-fx-flash); stroke-width:5px; }
 @keyframes o-scene-leave { to { opacity:0; visibility:hidden; } }
 @keyframes o-scene-in { to { opacity:1; } }
-@keyframes o-scene-pop { 0% { opacity:0; transform:translate(-50%,-30%) scale(.7); } 12% { opacity:1; transform:translate(-50%,-85%) scale(1.12); } 25% { transform:translate(-50%,-95%) scale(1); } 75% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-190%); } }
+/* The number appears just after the impact and above it, so the blast stays visible. */
+@keyframes o-scene-pop { 0% { opacity:0; transform:translate(-50%,-120%) scale(.7); } 12% { opacity:1; transform:translate(-50%,-175%) scale(1.12); } 25% { transform:translate(-50%,-185%) scale(1); } 75% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-280%); } }
 @keyframes o-fx-bit { 0% { opacity:1; transform:translate(0,0); } 45% { opacity:1; transform:translate(var(--mx),var(--my)); } 100% { opacity:0; transform:translate(var(--px),var(--py)); } }
 @keyframes o-fx-flash { 0% { opacity:1; transform:scale(.3); } 35% { opacity:1; transform:scale(1.1); } 100% { opacity:0; transform:scale(1.5); } }
-@keyframes o-fx-ripple { 0% { opacity:1; transform:scale(.3,.12); } 100% { opacity:0; transform:scale(2.2,.5); } }
-@keyframes o-fx-puff { 0% { opacity:.9; transform:translate(0,0) scale(.5); } 100% { opacity:0; transform:translate(var(--px),var(--py)) scale(1.5); } }
+@keyframes o-fx-puff { 0% { opacity:.85; transform:translate(0,0) scale(.6); } 100% { opacity:0; transform:translate(var(--px),var(--py)) scale(1.3); } }
 @keyframes o-fx-fly { 0% { opacity:1; transform:translate(0,0); } 98% { opacity:1; } 100% { opacity:0; transform:translate(var(--dx),var(--dy)); } }
 @keyframes o-fx-arc { 0% { transform:translateY(0); animation-timing-function:ease-out; } 50% { transform:translateY(var(--arc)); animation-timing-function:ease-in; } 100% { transform:translateY(0); } }
 @keyframes o-fx-spin { to { transform:rotate(360deg); } }
