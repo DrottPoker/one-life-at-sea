@@ -14,6 +14,7 @@ export function loadConfig() {
 export function validateConfig(config) {
   const schema = JSON.parse(read("config/schema.json"));
   function visit(value, rule, path) {
+    if (value === undefined && rule.optional) return;
     if (rule.type === "object") {
       if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(path + " must be an object.");
       for (const key of Object.keys(value)) if (!Object.hasOwn(rule.properties, key)) throw new Error("Unknown setting: " + path + "." + key);
@@ -70,13 +71,14 @@ export function validateConfig(config) {
   for (const category of inventory.categories) {
     check(/^[a-z][a-z0-9_]{0,47}$/.test(category.id) && category.id !== "all", "Invalid inventory category ID.");
     check(category.name.length <= 60, "Category name is too long.");
-    check(["swords","cannon","cross","flask","boxes","compass"].includes(category.icon), "Unknown inventory category icon.");
+    check(["swords","shield","cannon","sail","cross","flask","boxes","compass"].includes(category.icon), "Unknown inventory category icon.");
   }
   for (const item of inventory.items) {
     check(/^[a-z][a-z0-9_]{0,47}$/.test(item.id), "Item IDs must be stable lowercase identifiers.");
     check(inventory.categories.some(c => c.id === item.categoryId), "Unknown item category.");
     check(["equipment","consumable","passive"].includes(item.kind), "Unknown item kind.");
-    check(item.kind === "equipment" ? ["crew_weapon","cannons"].includes(item.slot) : item.slot === "none", "Item slot does not match its kind.");
+    check(item.kind === "equipment" ? Object.hasOwn(equipmentSlotStats, item.slot) : item.slot === "none", "Item slot does not match its kind.");
+    checkItemStats(item, g.equipment.limits, check);
     check(item.imagePath === '/images/items/placeholder.svg' || /^\/images\/items\/[a-z0-9-]+\.(png|webp)$/.test(item.imagePath), "Item images must be local inventory assets.");
     check(item.name.length <= 100 && item.description.length <= 2000 && item.effectDescription.length <= 1000, "Item text is too long.");
   }
@@ -138,8 +140,39 @@ export function validateConfig(config) {
   check(["127.0.0.1", "localhost", "::1"].includes(s.local.host), "Local tools must bind to a loopback host.");
   check(/^[a-z0-9_-]+$/.test(s.local.supabaseProjectId), "Supabase project ID must contain lowercase letters, digits, underscores or dashes.");
   check(g.combat.mitigation.equalStatsReduction > 0 && g.combat.mitigation.equalStatsReduction < 1, "Equal-stat reduction must be strictly between zero and one.");
+  const equipment = g.equipment;
+  for (const weapon of Object.values(equipment.fallbackWeapons)) {
+    check(weapon.name.length <= 100 && weapon.damage <= equipment.limits.maxDamage && hasTwoDecimals(weapon.damage) && hasTwoDecimals(weapon.precision), "Invalid fallback weapon.");
+  }
+  for (const [group, slots] of [["crew", ["head", "body", "legs", "feet"]], ["ship", ["hull", "sails"]]]) {
+    const zones = equipment.zones[group];
+    check(zones.length <= 20 && new Set(zones.map(zone => zone.id)).size === zones.length, "Hit zone IDs must be unique.");
+    for (const zone of zones) {
+      check(/^[a-z][a-z0-9_]{0,47}$/.test(zone.id) && zone.name.length <= 60, "Invalid hit zone.");
+      check(slots.includes(zone.armorSlot), "A " + group + " hit zone must use " + group + " armor.");
+      check(hasTwoDecimals(zone.multiplier), "Hit zone multipliers support at most two decimals.");
+    }
+  }
   check(f.dayNight.dayStartHour < f.dayNight.nightStartHour, "Day must start before night in UTC.");
   new Intl.DateTimeFormat(f.site.locale, { timeZone: f.site.logTimeZone });
+}
+// Each equipment slot requires exactly these stats; other stats must be absent.
+export const equipmentSlotStats = {
+  firearm: ["damage", "precision", "shots"], melee: ["damage", "precision"], cannons: ["damage", "precision"],
+  head: ["armor"], body: ["armor"], legs: ["armor"], feet: ["armor"], hull: ["armor", "health"], sails: ["armor", "speed"],
+};
+const statLimits = { damage: "maxDamage", armor: "maxArmor", health: "maxShipHealth", speed: "maxSpeed" };
+const hasTwoDecimals = value => Math.abs(value * 100 - Math.round(value * 100)) < 0.000001;
+function checkItemStats(item, limits, check) {
+  const required = item.kind === "equipment" ? equipmentSlotStats[item.slot] ?? [] : [];
+  const present = Object.keys(item.stats ?? {});
+  check(present.length === required.length && required.every(key => present.includes(key)), "Item " + item.id + " must define exactly the stats of its slot.");
+  for (const key of required) {
+    const value = item.stats[key];
+    if (key === "shots") { check(value <= limits.maxShots, "Item " + item.id + " has too many shots."); continue; }
+    check(value.min <= value.max && hasTwoDecimals(value.min) && hasTwoDecimals(value.max), "Item " + item.id + " has an invalid " + key + " range.");
+    if (statLimits[key]) check(value.max <= limits[statLimits[key]], "Item " + item.id + " exceeds the " + key + " limit.");
+  }
 }
 export function pathValue(object, path) {
   const value = path.split(".").reduce((current, key) => current?.[key], object);
@@ -181,6 +214,7 @@ export function gameplaySql(config) {
     .replaceAll("{{training.materialsSql}}", () => config.gameplay.training.shipMaterials.map(item =>
       "('" + item.itemId.replaceAll("'", "''") + "'," + item.quantity + "::bigint)").join(","))
     .replace("{{inventory.catalogSql}}", () => inventoryCatalogSql(config))
+    .replaceAll("{{equipment.zonesSql}}", () => equipmentZonesSql(config))
     .replace("{{seaTravel.catalogSql}}", () => seaTravelCatalogSql(config)), config);
 }
 export function revision(config) {
@@ -208,16 +242,25 @@ export function generatedFiles(config) {
   };
 }
 
+const equipmentStatColumns = "damage_min,damage_max,precision_min,precision_max,armor_min,armor_max,health_min,health_max,speed_min,speed_max,shots";
+export function equipmentZonesSql(config) {
+  const quote = value => "'" + value.replaceAll("'", "''") + "'";
+  return Object.entries(config.gameplay.equipment.zones).flatMap(([group, zones]) => zones.map((zone, i) =>
+    "(" + [quote(group), i, quote(zone.id), zone.weight, zone.multiplier + "::numeric", quote(zone.armorSlot), zone.critical].join(",") + ")")).join(",");
+}
 export function inventoryCatalogSql(config) {
   const quote = value => "'" + value.replaceAll("'", "''") + "'";
   const catalog = config.gameplay.inventory;
   const categories = catalog.categories.map((c, i) => "(" + [quote(c.id), quote(c.name), i].join(",") + ")").join(",\n");
+  const range = (stats, key) => stats?.[key] ? [stats[key].min + "::numeric", stats[key].max + "::numeric"] : ["null::numeric", "null::numeric"];
   const items = catalog.items.map(i => "(" + [quote(i.id),quote(i.categoryId),quote(i.name),quote(i.description),
     quote(i.effectDescription),quote(i.imagePath),quote(i.kind),i.kind !== "equipment",
-    i.slot === "none" ? "null::text" : quote(i.slot),i.active,i.tradable].join(",") + ")").join(",\n");
+    i.slot === "none" ? "null::text" : quote(i.slot),i.active,i.tradable,
+    ...["damage", "precision", "armor", "health", "speed"].flatMap(key => range(i.stats, key)),
+    i.stats?.shots ? i.stats.shots + "::integer" : "null::integer"].join(",") + ")").join(",\n");
   let delimiter = "$inventory$";
   while ((categories + items).includes(delimiter)) delimiter = delimiter.slice(0, -1) + "_$";
-  const columns = "id,category_id,name,description,effect_description,image_path,kind,stackable,slot,active,tradable";
+  const columns = "id,category_id,name,description,effect_description,image_path,kind,stackable,slot,active,tradable," + equipmentStatColumns;
   return "do " + delimiter + " begin " +
     "if exists(select 1 from private.item_categories old left join (values\n" + categories +
     "\n) incoming(id,name,position) using(id) where incoming.id is null) then raise exception 'Existing category IDs must be preserved'; end if; " +
@@ -228,7 +271,8 @@ export function inventoryCatalogSql(config) {
     "\non conflict(id) do update set name=excluded.name,position=excluded.position;\n" +
     "insert into private.item_definitions(" + columns + ") values\n" + items +
     "\non conflict(id) do update set category_id=excluded.category_id,name=excluded.name,description=excluded.description," +
-    "effect_description=excluded.effect_description,image_path=excluded.image_path,active=excluded.active,tradable=excluded.tradable where not item_definitions.managed_by_admin;\n";
+    "effect_description=excluded.effect_description,image_path=excluded.image_path,active=excluded.active,tradable=excluded.tradable," +
+    equipmentStatColumns.split(",").map(column => column + "=excluded." + column).join(",") + " where not item_definitions.managed_by_admin;\n";
 }
 
 export function seaTravelCatalogSql(config) {

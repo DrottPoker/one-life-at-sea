@@ -64,11 +64,11 @@ insert into curve_fixtures values('base','{
   "defender":{"id":"00000000-0000-4000-8000-000000000002","ship_health":100,"crew_health":100,"ammo":10,"defence_order":"cannon",
     "ship":{"attack":1,"defense":1,"accuracy":1,"speed":1},"crew":{"attack":1,"defense":1,"accuracy":1,"speed":1}}
 }');
-select is((select private.resolve_combat_round(value,'fire',array[0.499999,0.5,0.0])#>>'{event,attacker_hit}' from curve_fixtures where name='base'),'true','Roll below hit chance hits');
-select is((select private.resolve_combat_round(value,'fire',array[0.499999,0.5,0.0])#>>'{event,defender_hit}' from curve_fixtures where name='base'),'false','Roll at hit chance misses');
+select is((select private.resolve_combat_round(value,'fire',array[0.499999,0.5,0.0,0.3,0.3])#>>'{event,attacker_hit}' from curve_fixtures where name='base'),'true','Roll below hit chance hits');
+select is((select private.resolve_combat_round(value,'fire',array[0.499999,0.5,0.0,0.3,0.3])#>>'{event,defender_hit}' from curve_fixtures where name='base'),'false','Roll at hit chance misses');
 
 insert into curve_fixtures select 'miss',private.resolve_combat_round(
-  jsonb_set(jsonb_set(value,'{defender,ship,speed}','64'),'{attacker,ship,speed}','64'),'fire',array[0.0,0.0,0.0])
+  jsonb_set(jsonb_set(value,'{defender,ship,speed}','64'),'{attacker,ship,speed}','64'),'fire',array[0.0,0.0,0.0,0.3,0.3])
 from curve_fixtures where name='base';
 select is((select value#>>'{event,attacker_hit}' from curve_fixtures where name='miss'),'false','Attacker cannot hit extreme speed even with a zero roll');
 select is((select value#>>'{event,defender_hit}' from curve_fixtures where name='miss'),'false','The same evasion rule applies to counterattacks');
@@ -76,7 +76,7 @@ select is((select value#>>'{state,attacker,ship_health}' from curve_fixtures whe
 select is((select value#>>'{state,defender,ammo}' from curve_fixtures where name='miss'),'9','Guaranteed misses still spend ammunition');
 
 insert into curve_fixtures select 'blocked',private.resolve_combat_round(
-  jsonb_set(jsonb_set(value,'{defender,ship,defense}','25'),'{attacker,ship,defense}','25'),'fire',array[0.0,0.0,0.0])
+  jsonb_set(jsonb_set(value,'{defender,ship,defense}','25'),'{attacker,ship,defense}','25'),'fire',array[0.0,0.0,0.0,0.3,0.3])
 from curve_fixtures where name='base';
 select is((select value#>>'{event,attacker_hit}' from curve_fixtures where name='blocked'),'true','A blocked hit is still a hit');
 select is((select value#>>'{event,attacker_damage}' from curve_fixtures where name='blocked'),'0','Defense can completely stop attacker damage');
@@ -84,14 +84,14 @@ select is((select value#>>'{event,defender_damage}' from curve_fixtures where na
 select is((select value#>>'{state,status}' from curve_fixtures where name='blocked'),'active','Fully blocked hits do not end the encounter');
 
 insert into curve_fixtures select 'certain',private.resolve_combat_round(
-  jsonb_set(jsonb_set(value,'{attacker,ship,accuracy}','64'),'{defender,ship,accuracy}','64'),'fire',array[0.999999999,0.999999999,0.0])
+  jsonb_set(jsonb_set(value,'{attacker,ship,accuracy}','64'),'{defender,ship,accuracy}','64'),'fire',array[0.999999999,0.999999999,0.0,0.3,0.3])
 from curve_fixtures where name='base';
 select is((select value#>>'{event,attacker_hit}' from curve_fixtures where name='certain'),'true','Extreme accuracy removes the old miss floor');
 select is((select value#>>'{event,defender_hit}' from curve_fixtures where name='certain'),'true','Counterattacks can also guarantee a hit');
 
 insert into curve_fixtures select 'crew',private.resolve_combat_round(
   jsonb_set(jsonb_set(jsonb_set(value,'{phase}','"boarding"'),'{defender,crew,speed}','64'),'{attacker,crew,defense}','25'),
-  'crew_attack',array[0.0,0.0,0.0])
+  'crew_attack',array[0.0,0.0,0.0,0.3,0.3])
 from curve_fixtures where name='base';
 select is((select value#>>'{event,attacker_hit}' from curve_fixtures where name='crew'),'false','Boarding uses crew speed for guaranteed evasion');
 select is((select value#>>'{event,defender_damage}' from curve_fixtures where name='crew'),'0','Boarding uses crew defense for full mitigation');
@@ -99,16 +99,16 @@ select is((select value#>>'{state,attacker,ship_health}' from curve_fixtures whe
 select is((select value#>>'{state,attacker,ammo}' from curve_fixtures where name='crew'),'10','Crew attacks do not consume salvos');
 
 insert into curve_fixtures select 'overkill',private.resolve_combat_round(
-  jsonb_set(jsonb_set(value,'{attacker,ship,attack}','10000'),'{defender,ship_health}','3'),'fire',array[0.0,0.0,0.0])
+  jsonb_set(jsonb_set(value,'{attacker,ship,attack}','10000'),'{defender,ship_health}','3'),'fire',array[0.0,0.0,0.0,0.3,0.3])
 from curve_fixtures where name='base';
 select is((select value#>>'{event,attacker_damage}' from curve_fixtures where name='overkill'),'3','Recorded damage is capped to remaining HP');
 select is((select value#>>'{event,defender_damage}' from curve_fixtures where name='overkill'),'15','A defeated defender still executes its simultaneous counterattack');
 select is((select private.resolve_combat_round(
   jsonb_set(jsonb_set(jsonb_set(value,'{round}','24'),'{attacker,ship,speed}','64'),'{defender,ship,speed}','64'),
-  'fire',array[0.0,0.0,0.0])#>>'{state,outcome}' from curve_fixtures where name='base'),'draw','Mutual evasion respects the existing round limit');
+  'fire',array[0.0,0.0,0.0,0.3,0.3])#>>'{state,outcome}' from curve_fixtures where name='base'),'draw','Mutual evasion respects the existing round limit');
 select is((select private.resolve_combat_round(
   jsonb_set(jsonb_set(value,'{attacker,ship,defense}','25'),'{attacker,ship_health}','1'),
-  'retreat',array[0.0,0.0,0.0])#>>'{state,outcome}' from curve_fixtures where name='base'),'retreated','A blocked counterattack permits retreat with one HP');
+  'retreat',array[0.0,0.0,0.0,0.3,0.3])#>>'{state,outcome}' from curve_fixtures where name='base'),'retreated','A blocked counterattack permits retreat with one HP');
 
 set local role authenticated;
 select throws_ok('select private.combat_hit_chance(1,1)','42501',null,'Clients cannot invoke private hit calculations');

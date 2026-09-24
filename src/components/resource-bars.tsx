@@ -36,7 +36,7 @@ export function ResourceBars() {
     { key: "stamina", label: "Stamina", value: state.stamina, min: 0, max: MAX_STAMINA, Icon: Footprints,
       description: "Increases by " + gameplay.stamina.recoveryAmount + " every " + durationLabel(gameplay.stamina.recoverySeconds) + ". Used for skill activities." +
         (state.stamina >= MAX_STAMINA ? " Recovery paused at " + MAX_STAMINA + ". Storage limit: " + gameplay.stamina.storageMaximum + "." : "") },
-    { key: "ship", label: "Ship Health", value: state.ship_health, min: 0, max: MAX_HEALTH, Icon: Ship,
+    { key: "ship", label: "Ship Health", value: state.ship_health, min: 0, max: state.ship_health_max ?? MAX_HEALTH, Icon: Ship,
       description: healthHint(gameplay.resources.shipRecoverySeconds) },
     { key: "crew", label: "Crew Health", value: state.crew_health, min: 0, max: MAX_HEALTH, Icon: Users,
       description: healthHint(gameplay.resources.crewRecoverySeconds) +

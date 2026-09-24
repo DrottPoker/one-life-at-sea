@@ -36,7 +36,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await d.api.auth.signOut();
     const preview = await a.api.rpc("get_combat_preview", { target_id: d.id });
     expect(JSON.stringify(preview.data)).not.toContain("24681357");
-    expect(preview.data).toMatchObject({ can_start: true, attacker: { ship_health: 63, crew_health: 85 }, defender: { cannons: null, weapon: null, ship: null, crew: null, ammo: null } });
+    expect(preview.data).toMatchObject({ can_start: true, attacker: { ship_health: 63, crew_health: 85 }, defender: { loadout: null, ship: null, crew: null, ammo: null } });
     await page.setViewportSize({ width: 1280, height: 1050 });
     await login(page, a);
     await page.goto("/characters/" + d.id);
@@ -46,7 +46,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await expect(page.locator(".o-sidebar")).toHaveCount(0);
     await expect(page.locator(".o-masthead")).toHaveCount(0);
     const opponent = main.getByRole("region", { name: "Opponent ship and crew", exact: true });
-    await expect(opponent.getByText("Unknown", { exact: true })).toHaveCount(2);
+    await expect(opponent.getByText("Unknown", { exact: true })).toHaveCount(3);
     const scene = main.locator(".o-combat-scene img");
     await expect(scene).toHaveAttribute("alt", "Two sailing ships face each other on the open sea.");
     await expect.poll(() => scene.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
@@ -75,7 +75,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await extra.close();
     expect((await a.api.rpc("train_crew", { stat: "attack", expected_tier_id: "crew_1", request_id: randomUUID() })).error?.message).toBe("IN_COMBAT");
     await main.getByRole("button", { name: /^Board Give up/ }).click();
-    await expect(main.getByRole("button", { name: /^Crew attack Attack/ })).toBeVisible();
+    await expect(main.getByRole("button", { name: /^Melee attack Fists/ })).toBeVisible();
     await expect(main.locator(".o-combat-stage")).toHaveAttribute("data-phase", "boarding");
     await expect(scene).toHaveAttribute("alt", "Two pirate crews clash across the decks of their ships.");
     await expect.poll(() => scene.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
@@ -84,7 +84,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: ".local/attack-boarding-mobile.jpg", type: "jpeg", quality: 80, fullPage: true });
     await page.setViewportSize({ width: 1280, height: 1050 });
-    await main.getByRole("button", { name: /^Crew attack Attack/ }).click();
+    await main.getByRole("button", { name: /^Melee attack Fists/ }).click();
     await expect(main.getByText("Round 2 / 25", { exact: true })).toBeVisible();
     const persisted = await a.api.rpc("get_combat", { battle_id: battleId });
     expect(persisted.error).toBeNull();
@@ -205,7 +205,7 @@ test("joined attackers and an online defender receive shared HP live; the defend
     await pageB.goto(sharedUrl);
     const ownB = pageB.getByRole("region", { name: "Your ship and crew", exact: true });
     await expect(ownB.getByRole("link", { name: b.name, exact: true })).toBeVisible();
-    await expect(pageB.getByRole("region", { name: "Opponent ship and crew", exact: true }).getByText("Unknown", { exact: true })).toHaveCount(2);
+    await expect(pageB.getByRole("region", { name: "Opponent ship and crew", exact: true }).getByText("Unknown", { exact: true })).toHaveCount(3);
     expect((await b.api.rpc("get_game_state")).data?.energy).toBe(100);
     await expect(pageB.getByRole("button", { name: "Join battle 10 Energy", exact: true })).toBeEnabled();
     await pageB.getByRole("button", { name: "Join battle 10 Energy", exact: true }).click();
@@ -218,7 +218,7 @@ test("joined attackers and an online defender receive shared HP live; the defend
     await expect(page.getByRole("heading", { name: "People (3)", exact: true })).toBeVisible({ timeout: 10000 });
     sql("update private.combat_participants set phase='boarding' where combat_id='" + id + "' and character_id='" + a.id + "'");
     await page.reload();
-    await expect(page.getByRole("button", { name: /^Crew attack Attack/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Melee attack Fists/ })).toBeVisible();
     let current = (await b.api.rpc("get_combat", { battle_id: id })).data!;
     for (let i = 0; i < 10 && current.defender.ship_health === 100; i++) {
       await pageB.getByRole("button", { name: /^Fire cannons 1 salvo/ }).click();
@@ -284,7 +284,7 @@ test("a shared victory opens the same report for both attackers and the target l
     await expect(page.getByRole("button", { name: "Start battle 10 Energy", exact: true })).toBeVisible();
     await page.reload();
     await expect(page).toHaveURL(sharedUrl);
-    await expect(page.getByRole("region", { name: "Opponent ship and crew", exact: true }).getByText("Unknown", { exact: true })).toHaveCount(2);
+    await expect(page.getByRole("region", { name: "Opponent ship and crew", exact: true }).getByText("Unknown", { exact: true })).toHaveCount(3);
     await page.goto("/attack?target=" + d.id + "&battle=" + id);
     await expect(page).toHaveURL(sharedUrl);
     await expect(page.getByRole("button", { name: "Start battle 10 Energy", exact: true })).toBeVisible();
@@ -307,25 +307,75 @@ test("extreme stats distinguish guaranteed misses from blocked hits in sea and c
     const id = (await a.api.rpc("get_attack_lock")).data!.battle_id!;
     const log = page.getByRole("region", { name: "Combat log", exact: true });
     await expect(log.getByText("Missed", { exact: true })).toHaveCount(1);
-    await expect(log.getByText("Blocked · 0 damage", { exact: true })).toHaveCount(1);
+    await expect(log.getByText(/ · Blocked · 0 damage$/)).toHaveCount(1);
     expect((await a.api.rpc("get_combat", { battle_id: id })).data?.attacker.ammo).toBe(9);
 
     sql("update private.combat_participants set phase='boarding' where combat_id='" + id + "' and character_id='" + a.id + "'");
     await page.reload();
-    await page.getByRole("button", { name: /^Crew attack Attack/ }).click();
+    await page.getByRole("button", { name: /^Melee attack Fists/ }).click();
     await expect(page.getByText("Round 2 / 25", { exact: true })).toBeVisible();
     await expect(log.getByText("Missed", { exact: true })).toHaveCount(2);
-    await expect(log.getByText("Blocked · 0 damage", { exact: true })).toHaveCount(2);
+    await expect(log.getByText(/ · Blocked · 0 damage$/)).toHaveCount(2);
     for (const resource of ["Your Ship Health", "Your Crew Health"]) {
       await expect(page.getByRole("progressbar", { name: resource, exact: true })).toHaveAttribute("aria-valuenow", "100");
     }
     await page.getByRole("button", { name: /^Retreat Take/ }).click();
     await expect(page).toHaveURL(new RegExp("/combatlog/" + id + "$"));
     await expect(log.getByText("Missed", { exact: true })).toHaveCount(2);
-    await expect(log.getByText("Blocked · 0 damage", { exact: true })).toHaveCount(3);
+    await expect(log.getByText(/ · Blocked · 0 damage$/)).toHaveCount(3);
     const report = (await client().rpc("get_combat_log", { battle_id: id })).data!;
     expect(report.people.find(person => person.id === a.id)).toMatchObject({ hits: 0, ship_damage: 0, crew_damage: 0 });
     expect(report.people.find(person => person.id === d.id)).toMatchObject({ hits: 3, ship_damage: 0, crew_damage: 0 });
   } finally { await cleanup([a, d]); }
 });
 
+
+test("equipped firearms, melee weapons and armor drive boarding orders and the combat log", async ({ page }) => {
+  const a = await captain(), d = await captain();
+  try {
+    // Guaranteed hits for the attacker and misses for the defender; defense keeps two head shots below lethal.
+    sql("update public.characters set crew_accuracy=4096,crew_speed=64,ship_speed=64 where id='" + a.id + "'");
+    sql("update public.characters set crew_defense=4,defence_order='boarding' where id='" + d.id + "'");
+    sql("insert into private.item_instances(id,character_id,item_id,quality) values " +
+      "('e2e00000-0000-4000-8000-" + a.id.slice(-12) + "','" + a.id + "','flintlock_pistol',100)," +
+      "('e2e10000-0000-4000-8000-" + a.id.slice(-12) + "','" + a.id + "','cutlass',100)," +
+      "('e2e20000-0000-4000-8000-" + d.id.slice(-12) + "','" + d.id + "','buff_coat',100)");
+    for (const [owner, prefix] of [[a, "e2e0"], [a, "e2e1"], [d, "e2e2"]] as const) {
+      const equipped = await owner.api.rpc("equip_item", { entry_id: prefix + "0000-0000-4000-8000-" + owner.id.slice(-12), request_id: randomUUID() });
+      expect(equipped.error).toBeNull();
+    }
+    await login(page, a);
+    await page.goto("/attack/" + d.playerNumber);
+    const main = page.getByRole("main");
+    await main.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
+    await expect(main.getByRole("button", { name: /^Fire cannons 1 salvo with Basic cannons/ })).toBeVisible();
+    await main.getByRole("button", { name: /^Board Give up/ }).click();
+    const own = main.getByRole("region", { name: "Your ship and crew", exact: true });
+    const opponent = main.getByRole("region", { name: "Opponent ship and crew", exact: true });
+    await expect(own.locator('[data-slot="firearm"]')).toContainText("Flintlock Pistol");
+    await expect(own.locator('[data-slot="firearm"]')).toContainText("2 shots remaining");
+    await expect(own.locator('[data-slot="melee"]')).toContainText("Sailor's Cutlass");
+    await expect(opponent.locator('[data-slot="armor"]')).toContainText("Buff Coat");
+    await expect(opponent.locator('[data-slot="armor"] small')).toHaveText("");
+    await expect(main.getByRole("button", { name: /^Melee attack Sailor's Cutlass/ })).toBeVisible();
+    await main.getByRole("button", { name: "Fire firearm Flintlock Pistol. 2 shots left.", exact: true }).click();
+    await expect(main.getByText("Round 2 / 25", { exact: true })).toBeVisible();
+    await main.getByRole("button", { name: "Fire firearm Flintlock Pistol. 1 shot left.", exact: true }).click();
+    await expect(main.getByText("Round 3 / 25", { exact: true })).toBeVisible();
+    await expect(main.getByRole("button", { name: "Fire firearm Flintlock Pistol. 0 shots left.", exact: true })).toBeDisabled();
+    const id = (await a.api.rpc("get_attack_lock")).data!.battle_id!;
+    const shots = (await a.api.rpc("get_combat", { battle_id: id })).data!.events.filter(event => event.attacker_order === "crew_shoot");
+    expect(shots).toHaveLength(2);
+    for (const shot of shots) {
+      expect(shot).toMatchObject({ attacker_hit: true, attacker_weapon: "Flintlock Pistol", defender_hit: false });
+      expect(["head", "body", "legs", "feet"]).toContain(shot.attacker_zone);
+      expect(shot.attacker_damage).toBeGreaterThan(0);
+    }
+    const log = main.getByRole("region", { name: "Combat log", exact: true });
+    await expect(log.getByText("Fire firearm · Flintlock Pistol", { exact: true })).toHaveCount(2);
+    await expect(log.getByText(/^(Head|Body|Legs|Feet) · \d+ crew damage/)).toHaveCount(2);
+    await page.screenshot({ path: ".local/attack-equipment-desktop.jpg", type: "jpeg", quality: 80, fullPage: true });
+    await main.getByRole("button", { name: /^Retreat Take/ }).click();
+    await expect(page).toHaveURL(new RegExp("/combatlog/" + id + "$"));
+  } finally { await cleanup([a, d]); }
+});

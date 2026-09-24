@@ -19,6 +19,7 @@ Implementerat lokalt 2026-09-19. Detta ersätter idén om hardcore och permanent
 - Profilen visar Hospital, In hospital och en nedräkning för alla inloggade spelare.
   Statusen uppdateras vid intagning och försvinner efter utskrivning, även för offlinepatienter.
 - Efter sluttiden skrivs karaktären ut automatiskt med full Ship Health och Crew Health.
+  Full Ship Health följer aktuell utrustning, se [utrustning](EQUIPMENT.md#ship-health-från-hull).
   Den öppna sjukhusvyn återgår till Harbor. Tiden fortsätter även offline.
 - Karaktär, skepp, besättning, tränade stats, progression och båda guldsaldona behålls.
   Det finns ingen permanent död, omstart eller ersättningskaraktär.

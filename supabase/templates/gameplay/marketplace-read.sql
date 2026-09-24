@@ -23,8 +23,8 @@ declare held bigint;
 begin
   if listing.entry_type='instance' then
     if amount<>1 then raise exception 'INVALID_QUANTITY' using errcode='22023'; end if;
-    insert into private.item_instances(id,character_id,item_id,damage,accuracy,created_at)
-      values(listing.original_entry_id,recipient_id,listing.item_id,listing.damage,listing.accuracy,listing.item_created_at);
+    insert into private.item_instances(id,character_id,item_id,quality,created_at)
+      values(listing.original_entry_id,recipient_id,listing.item_id,listing.quality,listing.item_created_at);
   else
     select quantity into held from private.item_stacks where character_id=recipient_id and item_id=listing.item_id for update;
     if coalesce(held,0)>9007199254740991-amount then raise exception 'ITEM_QUANTITY_LIMIT'; end if;
@@ -79,7 +79,7 @@ begin
     select l.id,l.item_id,l.entry_type,l.quantity,l.unit_price,l.seller_id,p.display_name seller_name,p.player_number seller_player_number,
       l.seller_id=viewer is_own,d.name,d.image_path,d.kind,d.category_id,l.created_at,l.fee_bps,
       d.active and d.tradable tradable,
-      case when l.entry_type='instance' then jsonb_build_object('damage',l.damage,'accuracy',l.accuracy) end stats
+      case when l.entry_type='instance' then private.item_stats(d,l.quality) end stats
       from private.market_listings l join private.item_definitions d on d.id=l.item_id
       join public.character_profiles p on p.character_id=l.seller_id
       where l.quantity>0 and (not own_only or l.seller_id=viewer)
@@ -107,11 +107,14 @@ begin
   if requested_page is null or requested_page<0 or search_term is null or length(search_term)>100 then raise exception 'INVALID_FILTER' using errcode='22023'; end if;
   if category_id is not null and not exists(select 1 from private.item_categories c where c.id=category_id) then raise exception 'INVALID_CATEGORY' using errcode='22023'; end if;
   with owned as (
-    select s.id,'stack'::text entry_type,s.item_id,s.quantity,null::jsonb stats from private.item_stacks s where s.character_id=viewer
+    select s.id,'stack'::text entry_type,s.item_id,s.quantity,null::numeric quality from private.item_stacks s where s.character_id=viewer
     union all
-    select i.id,'instance',i.item_id,1::bigint,jsonb_build_object('damage',i.damage,'accuracy',i.accuracy) from private.item_instances i where i.character_id=viewer
+    -- Equipped instances stay out of the sell list until they are unequipped.
+    select i.id,'instance',i.item_id,1::bigint,i.quality from private.item_instances i where i.character_id=viewer
+      and not exists(select 1 from private.character_equipment e where e.instance_id=i.id)
   ), matching as (
-    select o.*,d.name,d.category_id,d.kind,d.description,d.effect_description,d.image_path,c.total::text circulation
+    select o.id,o.entry_type,o.item_id,o.quantity,case when o.quality is not null then private.item_stats(d,o.quality) end stats,
+      d.name,d.category_id,d.kind,d.description,d.effect_description,d.image_path,c.total::text circulation
       from owned o join private.item_definitions d on d.id=o.item_id join private.item_circulation c on c.item_id=o.item_id
       where d.active and d.tradable and (list_market_inventory.category_id is null or d.category_id=list_market_inventory.category_id)
         and strpos(lower(d.name),lower(btrim(search_term)))>0

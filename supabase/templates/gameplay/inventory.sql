@@ -1,5 +1,24 @@
 -- Definitions are durable. Removing a definition or changing its ownership shape is rejected.
 {{inventory.catalogSql}}
+-- Admin-authored weapons from before stat ranges fight like the fallback weapons until edited.
+update private.item_definitions set damage_min={{gameplay.equipment.fallbackWeapons.melee.damage}},damage_max={{gameplay.equipment.fallbackWeapons.melee.damage}},
+  precision_min={{gameplay.equipment.fallbackWeapons.melee.precision}},precision_max={{gameplay.equipment.fallbackWeapons.melee.precision}}
+  where slot in ('melee','cannons') and damage_min is null;
+alter table private.item_definitions drop constraint if exists item_definitions_equipment_stats_check,
+  add constraint item_definitions_equipment_stats_check check(
+    (damage_min is not null)=coalesce(slot in ('firearm','melee','cannons'),false) and (damage_max is not null)=(damage_min is not null)
+    and (precision_min is not null)=coalesce(slot in ('firearm','melee','cannons'),false) and (precision_max is not null)=(precision_min is not null)
+    and (armor_min is not null)=coalesce(slot in ('head','body','legs','feet','hull','sails'),false) and (armor_max is not null)=(armor_min is not null)
+    and (health_min is not null)=coalesce(slot='hull',false) and (health_max is not null)=(health_min is not null)
+    and (speed_min is not null)=coalesce(slot='sails',false) and (speed_max is not null)=(speed_min is not null)
+    and (shots is not null)=coalesce(slot='firearm',false)
+    and coalesce(damage_min>0 and damage_min<=damage_max and damage_max<={{gameplay.equipment.limits.maxDamage}},true)
+    and coalesce(precision_min>=0 and precision_min<=precision_max and precision_max<=100,true)
+    and coalesce(armor_min>=0 and armor_min<=armor_max and armor_max<={{gameplay.equipment.limits.maxArmor}},true)
+    and coalesce(health_min>=0 and health_min<=health_max and health_max<={{gameplay.equipment.limits.maxShipHealth}}
+      and health_min=trunc(health_min) and health_max=trunc(health_max),true)
+    and coalesce(speed_min>=0 and speed_min<=speed_max and speed_max<={{gameplay.equipment.limits.maxSpeed}},true)
+    and coalesce(shots between 1 and {{gameplay.equipment.limits.maxShots}},true));
 
 create or replace function private.list_inventory(category_id text default null,search_term text default '',requested_page integer default 0)
 returns jsonb language plpgsql stable security definer set search_path='' as $$
@@ -13,13 +32,15 @@ begin
   if category_id is not null and not exists(select 1 from private.item_categories c where c.id=category_id) then
     raise exception 'INVALID_CATEGORY' using errcode='22023'; end if;
   with owned as (
-    select s.id,'stack'::text entry_type,s.item_id,s.quantity,null::jsonb stats
+    select s.id,'stack'::text entry_type,s.item_id,s.quantity,null::numeric quality,null::text equipped_slot
       from private.item_stacks s where s.character_id=viewer_id
     union all
-    select i.id,'instance',i.item_id,1::bigint,jsonb_build_object('damage',i.damage,'accuracy',i.accuracy)
-      from private.item_instances i where i.character_id=viewer_id
+    select i.id,'instance',i.item_id,1::bigint,i.quality,e.slot
+      from private.item_instances i left join private.character_equipment e on e.instance_id=i.id where i.character_id=viewer_id
   ), matching as (
-    select o.*,d.name,d.category_id,d.kind,d.description,d.effect_description,d.image_path
+    select o.id,o.entry_type,o.item_id,o.quantity,o.equipped_slot,d.slot,
+      case when o.quality is not null then private.item_stats(d,o.quality) end stats,
+      d.name,d.category_id,d.kind,d.description,d.effect_description,d.image_path
       from owned o join private.item_definitions d on d.id=o.item_id
       where (list_inventory.category_id is null or d.category_id=list_inventory.category_id)
         and strpos(lower(d.name),lower(btrim(search_term)))>0
@@ -33,7 +54,8 @@ begin
   )
   select jsonb_build_object('items',coalesce((select jsonb_agg(to_jsonb(i)
       order by lower(i.name) collate "C",i.item_id,i.id,i.entry_type) from items i),'[]'::jsonb),
-    'total',b.total,'page',b.page,'page_size',page_size) into result from bounds b;
+    'total',b.total,'page',b.page,'page_size',page_size,'loadout',private.character_loadout(viewer_id),
+    'ship_health_max',private.ship_health_max(viewer_id)) into result from bounds b;
   return result;
 end;
 $$;
@@ -86,6 +108,8 @@ begin
   else
     select * into item from private.item_instances i where i.id=entry_id and i.character_id=viewer_id for update;
     if not found then raise exception 'ITEM_NOT_FOUND' using errcode='P0001'; end if;
+    if exists(select 1 from private.character_equipment e where e.instance_id=item.id) then
+      raise exception 'ITEM_EQUIPPED' using errcode='P0001'; end if;
     select name into item_name from private.item_definitions where id=item.item_id;
     remaining:=0;
     delete from private.item_instances where id=item.id;

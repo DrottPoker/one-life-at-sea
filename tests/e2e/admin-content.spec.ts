@@ -100,3 +100,39 @@ test("admin authors items and loot, uploads artwork, links fishing and receives 
     testSql("delete from private.loot_entries where loot_table_id='" + tableId + "'; delete from private.loot_tables where id='" + tableId + "'; delete from private.item_circulation_history where item_id='" + itemId + "'; delete from private.item_circulation where item_id='" + itemId + "'; delete from private.item_definitions where id='" + itemId + "';");
   }
 });
+
+test("admin creates equipment with the stat ranges its slot requires", async ({ page }) => {
+  const admin = await createTestAccount("content-admin");
+  testSql("insert into private.admin_members(user_id) values('" + admin.userId + "');");
+  const tag = randomUUID().replaceAll("-", ""), itemId = "test_hull_" + tag;
+  try {
+    await loginTestAccount(page, admin);
+    await page.goto("/admin/items/new");
+    await page.getByLabel("Item name", { exact: true }).fill("Test Hull " + tag);
+    await page.getByLabel("Description", { exact: true }).fill("Hull planking created through the administrator tools.");
+    await page.getByRole("combobox", { name: "Item type", exact: true }).selectOption("equipment");
+    await expect(page.getByLabel("Damage min", { exact: true })).toBeVisible();
+    await page.getByRole("combobox", { name: "Equipment slot", exact: true }).selectOption("hull");
+    await expect(page.getByLabel("Damage min", { exact: true })).toHaveCount(0);
+    await page.getByLabel("Armor min", { exact: true }).fill("4");
+    await page.getByLabel("Armor max", { exact: true }).fill("8.5");
+    await page.getByLabel("Ship Health min", { exact: true }).fill("5");
+    await page.getByLabel("Ship Health max", { exact: true }).fill("20");
+    await page.getByLabel("Reason for change", { exact: true }).fill("Create a test hull");
+    await page.getByRole("button", { name: "Review item", exact: true }).click();
+    await page.getByRole("button", { name: "Confirm change", exact: true }).click();
+    await expect(page.getByText("Item saved.", { exact: true }).first()).toBeVisible();
+    expect(testSql("select concat_ws(',',slot,armor_min,armor_max,health_min,health_max,coalesce(damage_min::text,'none')) from private.item_definitions where id='" + itemId + "'").trim())
+      .toBe("hull,4.00,8.50,5.00,20.00,none");
+    await page.goto("/admin/items/" + itemId);
+    await page.getByLabel("Armor max", { exact: true }).fill("99");
+    await page.getByLabel("Reason for change", { exact: true }).fill("Exceed the armor limit");
+    await page.getByRole("button", { name: "Review item", exact: true }).click();
+    await page.getByRole("button", { name: "Confirm change", exact: true }).click();
+    await expect(page.getByText(/Check the equipment stats/)).toBeVisible();
+    expect(testSql("select armor_max from private.item_definitions where id='" + itemId + "'").trim()).toBe("8.50");
+  } finally {
+    testSql("delete from private.item_circulation_history where item_id='" + itemId + "'; delete from private.item_circulation where item_id='" + itemId + "'; delete from private.item_definitions where id='" + itemId + "';");
+    await cleanupTestAccounts([admin]);
+  }
+});

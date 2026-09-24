@@ -46,7 +46,7 @@ export const adminErrors: Record<string, string> = {
   INVALID_KEY: "The selected record is invalid. Reload the page.",
   INVALID_QUANTITY: "Enter a whole quantity from 1 to 1,000,000.",
   EQUIPMENT_LIMIT: "Generate at most 100 equipment instances per request.",
-  INVALID_STATS: "Damage must be 0-1,000,000,000 and accuracy 0-100, with at most two decimal places.",
+  INVALID_STATS: "Check the equipment stats: each slot needs its own stat ranges within the configured limits, and Quality must be 0-100, with at most two decimal places.",
   INVALID_ITEM: "Select an active item definition.",
   REQUEST_CONFLICT: "This request has already been used with different values. Reload the page.",
   INVALID_ACTION: "This admin operation is not supported.",

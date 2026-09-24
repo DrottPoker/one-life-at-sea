@@ -7,9 +7,9 @@ insert into auth.users(id,email,is_anonymous,raw_user_meta_data) values
 ('1c000000-0000-4000-8000-000000000002','circulation-two@example.test',false,'{"character_name":"CirculationTwo"}'),
 ('1c000000-0000-4000-8000-000000000003','circulation-three@example.test',false,'{"character_name":"CirculationThree"}'),
 ('1c000000-0000-4000-8000-000000000004','circulation-anon@example.test',true,'{}');
-insert into private.item_definitions(id,category_id,name,description,effect_description,image_path,kind,stackable,slot)
-values ('circulation_material','materials','Circulation Material','Test material.','No effect.','/images/items/timber.png','passive',true,null),
-('circulation_weapon','crew_weapons','Circulation Weapon','Test weapon.','No effect.','/images/items/cutlass.png','equipment',false,'crew_weapon');
+insert into private.item_definitions(id,category_id,name,description,effect_description,image_path,kind,stackable,slot,damage_min,damage_max,precision_min,precision_max)
+values ('circulation_material','materials','Circulation Material','Test material.','No effect.','/images/items/timber.png','passive',true,null,null,null,null,null),
+('circulation_weapon','crew_weapons','Circulation Weapon','Test weapon.','No effect.','/images/items/cutlass.png','equipment',false,'melee',10,20,40,60);
 select is((select total from private.item_circulation where item_id='circulation_material'),0::numeric,'New definitions start at zero');
 select is((select count(*) from private.item_circulation_history where item_id='circulation_material'),1::bigint,'Tracking begins with an honest baseline');
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
@@ -52,12 +52,12 @@ update private.item_stacks set quantity=1 where id='1c200000-0000-4000-8000-0000
 rollback to savepoint circulation_rollback;
 select is((select total from private.item_circulation where item_id='circulation_material'),35::numeric,'Rollback restores the counter');
 select is((select total from private.item_circulation_history where item_id='circulation_material'),35::numeric,'Rollback restores the history');
-insert into private.item_instances(id,character_id,item_id,damage,accuracy)
-select ('1c100000-0000-4000-8000-00000000000'||n)::uuid,c.id,'circulation_weapon',n*10,50
+insert into private.item_instances(id,character_id,item_id,quality)
+select ('1c100000-0000-4000-8000-00000000000'||n)::uuid,c.id,'circulation_weapon',n*10
 from generate_series(1,2) n join public.characters c on c.user_id=('1c000000-0000-4000-8000-00000000000'||n)::uuid;
 select is((select total from private.item_circulation where item_id='circulation_weapon'),2::numeric,'Different stats are still the same circulated type');
 create temporary table unchanged_time as select updated_at from private.item_circulation where item_id='circulation_weapon';
-update private.item_instances set damage=75,character_id=(select id from public.characters where user_id='1c000000-0000-4000-8000-000000000003')
+update private.item_instances set quality=75,character_id=(select id from public.characters where user_id='1c000000-0000-4000-8000-000000000003')
 where id='1c100000-0000-4000-8000-000000000001';
 select is((select total from private.item_circulation where item_id='circulation_weapon'),2::numeric,'Equipment transfer does not create items');
 select is((select updated_at from private.item_circulation where item_id='circulation_weapon'),(select updated_at from unchanged_time),'Stat and owner changes add no circulation event');

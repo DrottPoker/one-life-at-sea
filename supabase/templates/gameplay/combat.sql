@@ -3,18 +3,25 @@ returns jsonb language sql stable security invoker set search_path = ''
 as $$
   select jsonb_build_object(
     'id', c.id, 'player_number', c.player_number, 'name', c.display_name, 'ammo', {{gameplay.combat.startingAmmo}}, 'defence_order', c.defence_order,
-    'ship_health', private.health_snapshot(c.ship_health, c.ship_recovery_at, observed_at, {{gameplay.resources.shipRecoverySeconds}}),
+    'shots', coalesce((l.loadout->'firearm'->>'shots')::integer, 0), 'loadout', l.loadout,
+    'ship_health', private.health_snapshot(c.ship_health, c.ship_recovery_at, observed_at, {{gameplay.resources.shipRecoverySeconds}}, l.ship_max),
+    'ship_health_max', l.ship_max,
     'crew_health', private.health_snapshot(c.crew_health, c.crew_recovery_at, observed_at, {{gameplay.resources.crewRecoverySeconds}}),
-    'ship', jsonb_build_object('attack',c.ship_attack,'defense',c.ship_defense,'speed',c.ship_speed,'accuracy',c.ship_accuracy),
+    'ship', jsonb_build_object('attack',c.ship_attack,'defense',c.ship_defense,
+      'speed',trim_scale(c.ship_speed*(1+coalesce((l.loadout->'sails'->>'speed')::numeric,0)/100)),'accuracy',c.ship_accuracy),
     'crew_morale',m.morale,'morale_multiplier',private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}}),
     'crew', jsonb_build_object(
       'attack',trim_scale(c.crew_attack*private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}})),
       'defense',trim_scale(c.crew_defense*private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}})),
       'speed',trim_scale(c.crew_speed*private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}})),
       'accuracy',trim_scale(c.crew_accuracy*private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}})))
-  ) from private.morale_snapshot(c.crew_morale,c.morale_updated_at,observed_at) m;
+  ) from private.morale_snapshot(c.crew_morale,c.morale_updated_at,observed_at) m
+  cross join lateral (select e.loadout,{{gameplay.resources.healthMax}}+coalesce((e.loadout->'hull'->>'health')::integer,0) ship_max
+    from (select coalesce(jsonb_object_agg(key,value-'entry_id'-'image_path'),'{}'::jsonb) loadout
+      from jsonb_each(private.character_loadout(c.id))) e) l;
 $$;
 
+-- Opponents see equipment names once the fight has started, never their stats.
 create or replace function private.visible_combatant(snapshot jsonb, own boolean, revealed boolean)
 returns jsonb language sql stable security invoker set search_path = ''
 as $$
@@ -23,13 +30,16 @@ as $$
     'player_number',coalesce(snapshot->'player_number',
       (select to_jsonb(player_number) from public.characters where id=(snapshot->>'id')::uuid)),
     'ship_health',snapshot->'ship_health','crew_health',snapshot->'crew_health',
+    'ship_health_max',coalesce(snapshot->'ship_health_max',to_jsonb({{gameplay.resources.healthMax}})),
     'ammo',case when own then snapshot->'ammo' end,
+    'shots',case when own then coalesce(snapshot->'shots','0'::jsonb) end,
     'ship',case when own then snapshot->'ship' end,
     'crew',case when own then snapshot->'crew' end,
     'crew_morale',case when own then snapshot->'crew_morale' end,
     'morale_multiplier',case when own then snapshot->'morale_multiplier' end,
-    'cannons',case when own or revealed then {{gameplay.combat.equipment.cannons}} end,
-    'weapon',case when own or revealed then {{gameplay.combat.equipment.crewWeapon}} end);
+    'loadout',case when own then coalesce(snapshot->'loadout','{}'::jsonb)
+      when revealed then (select coalesce(jsonb_object_agg(key,jsonb_build_object('name',value->'name')),'{}'::jsonb)
+        from jsonb_each(coalesce(snapshot->'loadout','{}'::jsonb))) end);
 $$;
 
 create or replace function private.combat_hit_chance(accuracy numeric, speed numeric)
@@ -64,7 +74,14 @@ begin
 end;
 $$;
 
-create or replace function private.combat_damage(attack numeric, defense numeric)
+-- Weapon Precision shifts the stat-based chance most at even odds and never at certainty.
+create or replace function private.combat_precision_chance(chance double precision, weapon_precision numeric)
+returns double precision language sql immutable strict security invoker set search_path='' as $$
+  select chance+(weapon_precision::double precision-50)/100*(1-abs(2*chance-1));
+$$;
+
+-- Weapon Damage over the weapon scale, the zone multiplier and armor scale the stat damage.
+create or replace function private.combat_damage(attack numeric, defense numeric, weapon_damage numeric, zone_multiplier numeric, armor numeric)
 returns integer language plpgsql immutable strict security invoker set search_path='' as $$
 declare reduction numeric; strength_log numeric;
 begin
@@ -73,9 +90,54 @@ begin
   strength_log:=log(greatest(1::numeric,attack/{{gameplay.combat.damage.statScale}}));
   return greatest({{gameplay.combat.damage.minimum}},round(
     ({{gameplay.combat.damage.quadratic}}*strength_log*strength_log+
-     {{gameplay.combat.damage.linear}}*strength_log+{{gameplay.combat.damage.constant}})*(1-reduction)))::integer;
+     {{gameplay.combat.damage.linear}}*strength_log+{{gameplay.combat.damage.constant}})*(1-reduction)
+    *weapon_damage/{{gameplay.equipment.weaponScale}}*zone_multiplier*(1-armor/100)))::integer;
 end;
 $$;
+
+create or replace function private.combat_damage(attack numeric, defense numeric)
+returns integer language sql immutable strict security invoker set search_path='' as $$
+  select private.combat_damage(attack,defense,{{gameplay.equipment.weaponScale}},1,0);
+$$;
+
+create or replace function private.combat_zone(zone_group text, roll double precision)
+returns table(zone text, multiplier numeric, armor_slot text, critical boolean)
+language sql immutable strict security invoker set search_path='' as $$
+  with zones(zone_group,position,zone,weight,multiplier,armor_slot,critical) as (values {{equipment.zonesSql}}),
+  bounds as (select z.*,sum(z.weight) over(order by z.position)::double precision/sum(z.weight) over() upper_bound
+    from zones z where z.zone_group=combat_zone.zone_group)
+  select b.zone,b.multiplier,b.armor_slot,b.critical from bounds b where roll<b.upper_bound order by b.position limit 1;
+$$;
+
+-- Empty melee and cannon slots fall back to neutral weapons; an empty firearm slot has no weapon.
+create or replace function private.combat_weapon(snapshot jsonb, weapon_slot text)
+returns jsonb language sql stable security invoker set search_path='' as $$
+  select coalesce(snapshot->'loadout'->weapon_slot,case weapon_slot
+    when 'melee' then jsonb_build_object('name',{{gameplay.equipment.fallbackWeapons.melee.name}},
+      'damage',{{gameplay.equipment.fallbackWeapons.melee.damage}},'precision',{{gameplay.equipment.fallbackWeapons.melee.precision}})
+    when 'cannons' then jsonb_build_object('name',{{gameplay.equipment.fallbackWeapons.cannons.name}},
+      'damage',{{gameplay.equipment.fallbackWeapons.cannons.damage}},'precision',{{gameplay.equipment.fallbackWeapons.cannons.precision}}) end);
+$$;
+
+-- One strike from one side: hit roll, zone roll and the target's armor for that zone.
+create or replace function private.combat_strike(striker jsonb, target jsonb, group_name text, weapon jsonb, hit_roll double precision, zone_roll double precision)
+returns jsonb language plpgsql stable security invoker set search_path='' as $$
+declare chance double precision; struck record; damage integer;
+begin
+  chance:=private.combat_precision_chance(private.combat_hit_chance((striker->group_name->>'accuracy')::numeric,(target->group_name->>'speed')::numeric),
+    (weapon->>'precision')::numeric);
+  if hit_roll>=chance then return jsonb_build_object('hit',false,'damage',0,'weapon',weapon->>'name'); end if;
+  select * into struck from private.combat_zone(group_name,zone_roll);
+  damage:=least((target->>(group_name||'_health'))::integer,private.combat_damage((striker->group_name->>'attack')::numeric,
+    (target->group_name->>'defense')::numeric,(weapon->>'damage')::numeric,struck.multiplier,
+    coalesce((target->'loadout'->struck.armor_slot->>'armor')::numeric,0)));
+  return jsonb_build_object('hit',true,'damage',damage,'weapon',weapon->>'name','zone',struck.zone,'critical',struck.critical);
+end;
+$$;
+
+revoke all on function private.combat_precision_chance(double precision,numeric),private.combat_damage(numeric,numeric,numeric,numeric,numeric),
+  private.combat_zone(text,double precision),private.combat_weapon(jsonb,text),
+  private.combat_strike(jsonb,jsonb,text,jsonb,double precision,double precision) from public,anon,authenticated;
 
 create or replace function private.resolve_combat_round(input_state jsonb, player_order text, rolls double precision[])
 returns jsonb language plpgsql stable security invoker set search_path = ''
@@ -89,8 +151,8 @@ declare
   defender_order text;
   next_phase text := phase;
   round_no integer := (input_state->>'round')::integer + 1;
-  a_damage integer := 0; d_damage integer := 0;
-  a_hit boolean := false; d_hit boolean := false;
+  a_strike jsonb := '{"hit":false,"damage":0}'::jsonb;
+  d_strike jsonb := '{"hit":false,"damage":0}'::jsonb;
   chance double precision;
   a_down boolean; d_down boolean;
   outcome text; winner text; transition text;
@@ -100,31 +162,32 @@ begin
   if input_state->>'status' <> 'active' or round_no > {{gameplay.combat.maxRounds}} then raise exception 'COMBAT_FINISHED'; end if;
   if player_order is null or
     (phase = 'sea' and player_order not in ('fire', 'board', 'retreat')) or
-    (phase = 'boarding' and player_order not in ('crew_attack', 'disengage', 'retreat')) then
+    (phase = 'boarding' and player_order not in ('crew_shoot', 'crew_attack', 'disengage', 'retreat')) then
     raise exception 'INVALID_ORDER' using errcode = '22023';
   end if;
-  if cardinality(rolls) <> 3 or exists(select 1 from unnest(rolls) r where r is null or r < 0 or r >= 1) then
+  -- Rolls: attacker hit, defender hit, boarding, attacker zone, defender zone.
+  if cardinality(rolls) <> 5 or exists(select 1 from unnest(rolls) r where r is null or r < 0 or r >= 1) then
     raise exception 'INVALID_ROLLS';
   end if;
-  defender_order := case when phase = 'boarding' then 'crew_attack'
+  defender_order := case when phase = 'boarding' then
+      case when d->'loadout'->'firearm' is not null and coalesce((d->>'shots')::integer, 0) >= 1 then 'crew_shoot' else 'crew_attack' end
     when d->>'defence_order' = 'cannon' and (d->>'ammo')::integer >= {{gameplay.combat.ammoPerShot}} then 'fire' else 'board' end;
   if player_order = 'fire' and (a->>'ammo')::integer < {{gameplay.combat.ammoPerShot}} then raise exception 'NO_AMMO'; end if;
-  if player_order in ('fire', 'crew_attack') then
-    chance := private.combat_hit_chance((a->group_name->>'accuracy')::numeric,(d->group_name->>'speed')::numeric);
-    a_hit := rolls[1] < chance;
-    if a_hit then a_damage := least((d->>health_key)::integer,
-      private.combat_damage((a->group_name->>'attack')::numeric,(d->group_name->>'defense')::numeric)); end if;
+  if player_order = 'crew_shoot' and (a->'loadout'->'firearm' is null or coalesce((a->>'shots')::integer, 0) < 1) then raise exception 'NO_SHOTS'; end if;
+  if player_order in ('fire', 'crew_shoot', 'crew_attack') then
+    a_strike := private.combat_strike(a, d, group_name, private.combat_weapon(a, case player_order when 'fire' then 'cannons'
+      when 'crew_shoot' then 'firearm' else 'melee' end), rolls[1], rolls[4]);
   end if;
-  if defender_order in ('fire', 'crew_attack') then
-    chance := private.combat_hit_chance((d->group_name->>'accuracy')::numeric,(a->group_name->>'speed')::numeric);
-    d_hit := rolls[2] < chance;
-    if d_hit then d_damage := least((a->>health_key)::integer,
-      private.combat_damage((d->group_name->>'attack')::numeric,(a->group_name->>'defense')::numeric)); end if;
+  if defender_order in ('fire', 'crew_shoot', 'crew_attack') then
+    d_strike := private.combat_strike(d, a, group_name, private.combat_weapon(d, case defender_order when 'fire' then 'cannons'
+      when 'crew_shoot' then 'firearm' else 'melee' end), rolls[2], rolls[5]);
   end if;
-  a := a || jsonb_build_object(health_key, (a->>health_key)::integer - d_damage,
-    'ammo', (a->>'ammo')::integer - case when player_order = 'fire' then {{gameplay.combat.ammoPerShot}} else 0 end);
-  d := d || jsonb_build_object(health_key, (d->>health_key)::integer - a_damage,
-    'ammo', (d->>'ammo')::integer - case when defender_order = 'fire' then {{gameplay.combat.ammoPerShot}} else 0 end);
+  a := a || jsonb_build_object(health_key, (a->>health_key)::integer - (d_strike->>'damage')::integer,
+    'ammo', (a->>'ammo')::integer - case when player_order = 'fire' then {{gameplay.combat.ammoPerShot}} else 0 end,
+    'shots', coalesce((a->>'shots')::integer, 0) - case when player_order = 'crew_shoot' then 1 else 0 end);
+  d := d || jsonb_build_object(health_key, (d->>health_key)::integer - (a_strike->>'damage')::integer,
+    'ammo', (d->>'ammo')::integer - case when defender_order = 'fire' then {{gameplay.combat.ammoPerShot}} else 0 end,
+    'shots', coalesce((d->>'shots')::integer, 0) - case when defender_order = 'crew_shoot' then 1 else 0 end);
   if (a->>'ship_health')::integer=0 then a:=a || jsonb_build_object('crew_health',0); end if;
   if (d->>'ship_health')::integer=0 then d:=d || jsonb_build_object('crew_health',0); end if;
   a_down := (a->>'ship_health')::integer = 0 or (a->>'crew_health')::integer = 0;
@@ -154,7 +217,11 @@ begin
     'outcome',outcome,'winner_id',winner);
   return jsonb_build_object('state',result_state,'event',jsonb_build_object(
     'round',round_no,'phase',phase,'attacker_order',player_order,'defender_order',defender_order,
-    'attacker_hit',a_hit,'defender_hit',d_hit,'attacker_damage',a_damage,'defender_damage',d_damage,
+    'attacker_hit',(a_strike->>'hit')::boolean,'defender_hit',(d_strike->>'hit')::boolean,
+    'attacker_damage',(a_strike->>'damage')::integer,'defender_damage',(d_strike->>'damage')::integer,
+    'attacker_weapon',a_strike->'weapon','defender_weapon',d_strike->'weapon',
+    'attacker_zone',a_strike->'zone','defender_zone',d_strike->'zone',
+    'attacker_critical',a_strike->'critical','defender_critical',d_strike->'critical',
     'transition',transition,'outcome',outcome));
 end;
 $$;
@@ -168,8 +235,8 @@ begin
   select * into p from private.combat_participants where combat_id=battle_id and character_id=actor;
   if b.status<>'active' or p.status<>'active' then return; end if;
   resolved:=private.resolve_combat_round(jsonb_build_object('status','active','phase',p.phase,'round',p.round,
-    'attacker',p.snapshot,'defender',b.state->'defender' || jsonb_build_object('ammo',p.defender_ammo)),
-    player_order,array[private.combat_roll(),private.combat_roll(),private.combat_roll()]);
+    'attacker',p.snapshot,'defender',b.state->'defender' || jsonb_build_object('ammo',p.defender_ammo,'shots',p.defender_shots)),
+    player_order,array[private.combat_roll(),private.combat_roll(),private.combat_roll(),private.combat_roll(),private.combat_roll()]);
   s:=resolved->'state'; a:=s->'attacker'; d:=s->'defender';
   personal_status:=case
     when (a->>'ship_health')::integer=0 or (a->>'crew_health')::integer=0 then 'defeated'
@@ -181,7 +248,7 @@ begin
     winner:=actor; personal_status:='victory';
   end if;
   update private.combat_participants set snapshot=a,phase=s->>'phase',round=(s->>'round')::integer,
-    status=personal_status,defender_ammo=(d->>'ammo')::integer,
+    status=personal_status,defender_ammo=(d->>'ammo')::integer,defender_shots=(d->>'shots')::integer,
     deadline=least(b.hard_deadline,occurred_at+make_interval(secs => {{gameplay.combat.idleSeconds}})),
     finished_at=case when personal_status<>'active' then occurred_at end,
     hits=hits+case when (resolved->'event'->>'attacker_hit')::boolean then 1 else 0 end,
@@ -299,8 +366,10 @@ begin
       crew_health=(initial_state->'defender'->>'crew_health')::integer,ship_recovery_at=observed_at,crew_recovery_at=observed_at where id=target_id;
   end if;
   select * into b from private.combats where id=battle_id for update;
-  insert into private.combat_participants(combat_id,character_id,start_request_id,snapshot,joined_at,deadline)
-    values(battle_id,viewer_id,request_id,snapshot,observed_at,least(b.hard_deadline,observed_at+make_interval(secs => {{gameplay.combat.idleSeconds}})));
+  -- Each attacker faces the defender's full firearm charge, like the separate salvo allowance.
+  insert into private.combat_participants(combat_id,character_id,start_request_id,snapshot,joined_at,deadline,defender_shots)
+    values(battle_id,viewer_id,request_id,snapshot,observed_at,least(b.hard_deadline,observed_at+make_interval(secs => {{gameplay.combat.idleSeconds}})),
+      coalesce((b.state->'defender'->'loadout'->'firearm'->>'shots')::integer,0));
   insert into private.combat_engagements(character_id,combat_id,role) values(viewer_id,battle_id,'attacker');
   update public.characters set energy=recovered.energy-{{gameplay.combat.energyCost}},energy_updated_at=recovered.energy_updated_at,protected_until=null,
     ship_health=(snapshot->>'ship_health')::integer,crew_health=(snapshot->>'crew_health')::integer,
@@ -334,8 +403,10 @@ begin
   if exists(select 1 from public.characters where id=viewer_id and location='traveling') then raise exception 'TRAVELING'; end if;
   if p.round<>expected_round then return jsonb_build_object('error','STALE_ROUND'); end if;
   if player_order is null or (p.phase='sea' and player_order not in ('fire','board','retreat'))
-    or (p.phase='boarding' and player_order not in ('crew_attack','disengage','retreat')) then return jsonb_build_object('error','INVALID_ORDER'); end if;
+    or (p.phase='boarding' and player_order not in ('crew_shoot','crew_attack','disengage','retreat')) then return jsonb_build_object('error','INVALID_ORDER'); end if;
   if player_order='fire' and (p.snapshot->>'ammo')::integer<{{gameplay.combat.ammoPerShot}} then return jsonb_build_object('error','NO_AMMO'); end if;
+  if player_order='crew_shoot' and (p.snapshot->'loadout'->'firearm' is null or coalesce((p.snapshot->>'shots')::integer,0)<1) then
+    return jsonb_build_object('error','NO_SHOTS'); end if;
   perform private.advance_shared_combat(battle_id,viewer_id,player_order,request_id,clock_timestamp(),false);
   perform private.record_character_action(viewer_id);
   return jsonb_build_object('battle',private.combat_view(battle_id,viewer_id));

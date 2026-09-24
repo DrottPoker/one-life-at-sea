@@ -440,20 +440,49 @@
                   "maximum": 1
                 }
               }
-            },
-            "equipment": {
-              "type": "object",
-              "properties": {
-                "cannons": {
-                  "type": "string"
-                },
-                "crewWeapon": {
-                  "type": "string"
-                }
-              }
             }
           }
         },
+        "equipment": { "type": "object", "properties": {
+          "weaponScale": { "type": "number", "integer": true, "minimum": 1, "maximum": 1000 },
+          "fallbackWeapons": { "type": "object", "properties": {
+            "melee": { "type": "object", "properties": {
+              "name": { "type": "string" },
+              "damage": { "type": "number", "integer": false, "minimum": 0.01, "maximum": 1000 },
+              "precision": { "type": "number", "integer": false, "minimum": 0, "maximum": 100 }
+            } },
+            "cannons": { "type": "object", "properties": {
+              "name": { "type": "string" },
+              "damage": { "type": "number", "integer": false, "minimum": 0.01, "maximum": 1000 },
+              "precision": { "type": "number", "integer": false, "minimum": 0, "maximum": 100 }
+            } }
+          } },
+          "limits": { "type": "object", "properties": {
+            "maxDamage": { "type": "number", "integer": true, "minimum": 1, "maximum": 1000 },
+            "maxArmor": { "type": "number", "integer": true, "minimum": 0, "maximum": 99 },
+            "maxShipHealth": { "type": "number", "integer": true, "minimum": 0, "maximum": 10000 },
+            "maxSpeed": { "type": "number", "integer": true, "minimum": 0, "maximum": 1000 },
+            "maxShots": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 }
+          } },
+          "zones": { "type": "object", "properties": {
+            "crew": { "type": "array", "items": { "type": "object", "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "weight": { "type": "number", "integer": true, "minimum": 1, "maximum": 1000 },
+              "multiplier": { "type": "number", "integer": false, "minimum": 0.01, "maximum": 10 },
+              "armorSlot": { "type": "string" },
+              "critical": { "type": "boolean" }
+            } } },
+            "ship": { "type": "array", "items": { "type": "object", "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "weight": { "type": "number", "integer": true, "minimum": 1, "maximum": 1000 },
+              "multiplier": { "type": "number", "integer": false, "minimum": 0.01, "maximum": 10 },
+              "armorSlot": { "type": "string" },
+              "critical": { "type": "boolean" }
+            } } }
+          } }
+        } },
         "harbor": {
           "type": "object",
           "properties": {
@@ -588,7 +617,30 @@
                   },
                   "tradable": {
                     "type": "boolean"
-                  }
+                  },
+                  "stats": { "type": "object", "optional": true, "properties": {
+                    "damage": { "type": "object", "optional": true, "properties": {
+                      "min": { "type": "number", "integer": false, "minimum": 0.01, "maximum": 1000 },
+                      "max": { "type": "number", "integer": false, "minimum": 0.01, "maximum": 1000 }
+                    } },
+                    "precision": { "type": "object", "optional": true, "properties": {
+                      "min": { "type": "number", "integer": false, "minimum": 0, "maximum": 100 },
+                      "max": { "type": "number", "integer": false, "minimum": 0, "maximum": 100 }
+                    } },
+                    "armor": { "type": "object", "optional": true, "properties": {
+                      "min": { "type": "number", "integer": false, "minimum": 0, "maximum": 99 },
+                      "max": { "type": "number", "integer": false, "minimum": 0, "maximum": 99 }
+                    } },
+                    "health": { "type": "object", "optional": true, "properties": {
+                      "min": { "type": "number", "integer": true, "minimum": 0, "maximum": 10000 },
+                      "max": { "type": "number", "integer": true, "minimum": 0, "maximum": 10000 }
+                    } },
+                    "speed": { "type": "object", "optional": true, "properties": {
+                      "min": { "type": "number", "integer": false, "minimum": 0, "maximum": 1000 },
+                      "max": { "type": "number", "integer": false, "minimum": 0, "maximum": 1000 }
+                    } },
+                    "shots": { "type": "number", "integer": true, "optional": true, "minimum": 1, "maximum": 100 }
+                  } }
                 }
               }
             }

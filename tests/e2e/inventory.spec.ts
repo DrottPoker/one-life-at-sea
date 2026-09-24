@@ -25,17 +25,19 @@ test("inventory rows, categories, details, item images and mobile layout", async
     await expect(page.getByRole("heading", { name: "Inventory", exact: true })).toBeVisible();
     const list = page.getByRole("list", { name: "Your items" });
     await expect(list.locator(":scope > li")).toHaveCount(7);
-    await expect(list.getByRole("button", { name: "Equip", exact: true })).toHaveCount(3);
+    await expect(list.getByRole("button", { name: /^Equip / })).toHaveCount(3);
+    for (const button of await list.getByRole("button", { name: /^Equip / }).all()) await expect(button).toBeEnabled();
     await expect(list.getByRole("button", { name: "Use", exact: true })).toHaveCount(2);
-    for (const button of await list.getByRole("button", { name: /^(Equip|Use)$/ }).all()) await expect(button).toBeDisabled();
+    for (const button of await list.getByRole("button", { name: "Use", exact: true }).all()) await expect(button).toBeDisabled();
     const inventory = (await own.api.rpc("list_inventory")).data!;
     const weapons = inventory.items.filter(i => i.item_id === "cutlass");
     expect(new Set(weapons.map(i => i.stats!.damage)).size).toBe(2);
+    expect(weapons.map(i => i.stats!.quality).sort()).toEqual([30, 80]);
     const first = page.locator('[data-item-id="' + weapons[0].id + '"]');
     await first.getByRole("button", { name: "Sailor's Cutlass details", exact: true }).focus();
     await page.keyboard.press("Enter");
     await expect(first.getByRole("region", { name: "Sailor's Cutlass details", exact: true })).toBeVisible();
-    await expect(first.getByText(weapons[0].stats!.damage.toFixed(2), { exact: true })).toHaveCount(2);
+    await expect(first.getByText(weapons[0].stats!.damage!.toFixed(2), { exact: true })).toHaveCount(2);
     await expect(first.getByRole("img", { name: "Sailor's Cutlass", exact: true })).toBeVisible();
     await expect.poll(() => first.getByRole("img", { name: "Sailor's Cutlass", exact: true }).evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     await page.getByRole("button", { name: "Deck Cannon details", exact: true }).click();
@@ -87,7 +89,7 @@ test("trash confirms exact quantities, preserves other equipment, and updates an
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
     await expect(page.getByRole("region", { name: "Sailor's Cutlass details", exact: true })).toHaveCount(0);
-    await expect(dialog).toContainText("Damage " + cutlass.stats!.damage.toFixed(2));
+    await expect(dialog).toContainText("Damage " + cutlass.stats!.damage!.toFixed(2));
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(row).toBeVisible();
     await row.getByRole("button", { name: "Trash Sailor's Cutlass", exact: true }).click();
@@ -123,6 +125,35 @@ test("trash confirms exact quantities, preserves other equipment, and updates an
     await page.goto("/inventory");
     await expect(page.getByRole("list", { name: "Your items" }).locator(":scope > li")).toHaveCount(5);
   } finally { await second.close(); await cleanup([own]); }
+});
+
+test("equipment moves between the bag and the loadout and cannot be destroyed or listed while equipped", async ({ page }) => {
+  const own = await account();
+  try {
+    await login(page, own);
+    await page.goto("/inventory");
+    const weapons = (await own.api.rpc("list_inventory", { category_id: "crew_weapons" })).data!.items;
+    const best = weapons.find(item => item.stats!.quality === 80)!;
+    const row = page.locator('[data-item-id="' + best.id + '"]');
+    const melee = page.getByRole("region", { name: "Equipment", exact: true }).locator('[data-slot="melee"]');
+    await expect(melee).toContainText("Fists");
+    await row.getByRole("button", { name: "Equip Sailor's Cutlass", exact: true }).click();
+    await expect(page.getByText("Equipped Sailor's Cutlass.", { exact: true })).toBeVisible();
+    await expect(row.getByText("Equipped", { exact: true })).toBeVisible();
+    await expect(melee).toContainText("Sailor's Cutlass");
+    await expect(melee).toContainText("Quality 80.00%");
+    await expect(row.getByRole("button", { name: "Trash Sailor's Cutlass", exact: true })).toBeDisabled();
+    expect((await own.api.rpc("create_market_listings", { entries: [{ entry_id: best.id, entry_type: "instance", quantity: 1, unit_price: 10 }],
+      request_id: randomUUID() })).error?.message).toBe("ITEM_EQUIPPED");
+    await page.reload();
+    await expect(melee).toContainText("Sailor's Cutlass");
+    await melee.getByRole("button", { name: "Unequip Sailor's Cutlass", exact: true }).click();
+    await expect(page.getByText("Unequipped Sailor's Cutlass.", { exact: true })).toBeVisible();
+    await expect(melee).toContainText("Fists");
+    await expect(row.getByRole("button", { name: "Trash Sailor's Cutlass", exact: true })).toBeEnabled();
+    await page.setViewportSize({ width: 375, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  } finally { await cleanup([own]); }
 });
 
 test("a lost trash response is safely retried even after the last item disappears", async ({ page }) => {
@@ -217,7 +248,7 @@ test("empty inventory, server pagination, combined filters and stale final pages
     await page.goto("/inventory");
     await expect(page.getByText("Your inventory is empty.", { exact: true })).toBeVisible();
     sql(inventoryFixtureSql(own.id));
-    sql("insert into private.item_instances(character_id,item_id,damage,accuracy) select '" + own.id + "','cutlass',n,40 from generate_series(1,20) n; select private.notify_training('" + own.id + "');");
+    sql("insert into private.item_instances(character_id,item_id,quality) select '" + own.id + "','cutlass',n from generate_series(1,20) n; select private.notify_training('" + own.id + "');");
     await page.reload();
     const listing = page.getByRole("list", { name: "Your items" });
     await expect(listing.locator(":scope > li")).toHaveCount(25);

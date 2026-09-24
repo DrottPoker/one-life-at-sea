@@ -3,20 +3,25 @@
 import { GameLink as Link } from "@/components/game-navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Boxes, CircleDot, ChevronDown, ChevronLeft, ChevronRight, Compass, Cross, Crosshair, FlaskConical, Package, Search, Swords, Trash2, Zap } from "lucide-react";
+import { Boxes, CircleDot, ChevronDown, ChevronLeft, ChevronRight, Compass, Cross, Crosshair, FlaskConical, Gauge, HeartPulse, Package, Sailboat, Search, Shield, Swords, Target, Trash2, Wind, Zap } from "lucide-react";
 import { DialogCloseButton } from "@/components/dialog-close-button";
 import { ItemImage } from "@/components/inventory/item-image";
 import { ItemDetails } from "@/components/inventory/item-details";
+import { LoadoutPanel } from "@/components/inventory/loadout-panel";
+import { equipItem, unequipItem } from "@/app/inventory-actions";
 import { useEconomyRequests } from "@/components/economy-requests";
 import { useGameState } from "@/components/game-state";
-import { formatItemCount, formatItemStat, inventoryCategories, inventoryCategoryName, inventoryEntryKey,
+import { formatItemCount, inventoryCategories, inventoryCategoryName, inventoryEntryKey,
   inventoryHref, parseItemQuantity, type InventoryEntry, type InventoryFilters, type InventoryPage, type TrashResult } from "@/lib/inventory";
+import { formatQuality, itemStatRows, itemStatSummary, SLOT_LABELS, type EquipmentSlot, type EquipResult } from "@/lib/equipment";
+import { MAX_HEALTH } from "@/lib/game";
 
 const categoryIcons: Record<string, typeof Package> = {
-  swords: Swords, cannon: CircleDot, cross: Cross, flask: FlaskConical, boxes: Boxes, compass: Compass,
+  swords: Swords, shield: Shield, cannon: CircleDot, sail: Sailboat, cross: Cross, flask: FlaskConical, boxes: Boxes, compass: Compass,
 };
+const statIcons = { damage: Zap, precision: Crosshair, shots: Target, armor: Shield, health: HeartPulse, speed: Wind };
 
-export function InventoryPanel({ inventory, filters }: { inventory: InventoryPage; filters: InventoryFilters }) {
+export function InventoryPanel({ inventory, filters, characterId }: { inventory: InventoryPage; filters: InventoryFilters; characterId: string }) {
   const router = useRouter();
   const state = useGameState(), journal = useEconomyRequests();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -26,9 +31,14 @@ export function InventoryPanel({ inventory, filters }: { inventory: InventoryPag
   const [result, setResult] = useState<TrashResult>({});
   const [pending, startTrash] = useTransition();
   const [filterPending, startFilter] = useTransition();
+  const [equipPending, startEquip] = useTransition();
+  const [equipResult, setEquipResult] = useState<EquipResult>({});
+  const [pendingEquip, setPendingEquip] = useState<string | null>(null);
+  const equipRequest = useRef<{ id: string; target: string } | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const request = useRef<{ id: string; entry: InventoryEntry; amount: string } | null>(null);
-  const blocked = (journal.unconfirmed && !result.retry && !pending) || !!state.hospital_until || !!state.active_combat_id || state.sea.state !== "in_harbor";
+  const equipBlocked = !!state.hospital_until || !!state.active_combat_id || state.sea.state !== "in_harbor";
+  const blocked = (journal.unconfirmed && !result.retry && !pending) || equipBlocked;
   const quantity = parseItemQuantity(amount);
   const available = selected ? inventory.items.find(item => inventoryEntryKey(item) === inventoryEntryKey(selected))?.quantity ?? 0 : 0;
   const pages = Math.max(1, Math.ceil(inventory.total / inventory.page_size));
@@ -78,6 +88,25 @@ export function InventoryPanel({ inventory, filters }: { inventory: InventoryPag
     });
   }
 
+  // A retried equipment change reuses its request ID so the server returns the same receipt.
+  function changeEquipment(target: string, run: (requestId: string) => Promise<EquipResult>) {
+    if (equipPending || equipBlocked) return;
+    if (equipRequest.current?.target !== target) equipRequest.current = { id: crypto.randomUUID(), target };
+    const attempt = equipRequest.current;
+    setPendingEquip(target);
+    setEquipResult({});
+    startEquip(async () => {
+      let response: EquipResult;
+      try { response = await run(attempt.id); }
+      catch { response = { error: true, retry: true, message: "The result could not be confirmed. Retry this action to check it safely." }; }
+      setEquipResult(response);
+      if (!response.retry) equipRequest.current = null;
+      setPendingEquip(null);
+    });
+  }
+  const equip = (item: InventoryEntry) => changeEquipment("equip:" + item.id, id => equipItem(item.id, id, characterId));
+  const unequip = (slot: EquipmentSlot) => changeEquipment("unequip:" + slot, id => unequipItem(slot, id, characterId));
+
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = String(new FormData(event.currentTarget).get("q") ?? "").trim().slice(0, 100);
@@ -107,7 +136,12 @@ export function InventoryPanel({ inventory, filters }: { inventory: InventoryPag
       {filters.query && <Link href={inventoryHref(filters.category)}>Clear search</Link>}
       {filterPending && <span role="status">Searching...</span>}
     </div>
-    <p className="o-inventory-note">Equipping and using items will be available later.</p>
+    <LoadoutPanel loadout={inventory.loadout ?? {}} shipHealthMax={inventory.ship_health_max ?? MAX_HEALTH} disabled={equipBlocked || equipPending}
+      pendingSlot={pendingEquip?.startsWith("unequip:") ? pendingEquip.slice(8) as EquipmentSlot : null} onUnequip={unequip} />
+    <div className="o-inventory-feedback" role="status" aria-live="polite">
+      {equipResult.message && <p className={equipResult.error ? "o-field-error" : ""}>{equipResult.message}</p>}
+    </div>
+    <p className="o-inventory-note">Using consumables will be available later.</p>
     {state.active_combat_id && <p className="o-inventory-notice">Your inventory is read-only during combat. You can inspect items, but cannot change them.</p>}
     {state.sea.state !== "in_harbor" && <p className="o-inventory-notice">Your inventory is read-only at sea. Return to The Harbor to use it.</p>}
     {state.hospital_until && <p className="o-inventory-notice">You can view your inventory while in hospital. Items cannot be destroyed during your stay.</p>}
@@ -120,21 +154,29 @@ export function InventoryPanel({ inventory, filters }: { inventory: InventoryPag
             <button type="button" className="o-item-disclosure" aria-label={item.name + " details"}
               id={"item-" + key} aria-expanded={open} aria-controls={open ? "details-" + key : undefined} onClick={() => setExpanded(open ? null : key)}>
               <ItemImage key={item.image_path} item={item} />
-              <span className="o-item-name">{item.name}{item.entry_type === "stack" && <strong> x{formatItemCount(item.quantity)}</strong>}</span>
+              <span className="o-item-name">{item.name}{item.entry_type === "stack" && <strong> x{formatItemCount(item.quantity)}</strong>}
+                {item.equipped_slot && <span className="o-item-equipped">Equipped</span>}</span>
               <span className="o-item-stats">
                 {item.stats && <>
-                  <span title="Damage" aria-label={"Damage " + formatItemStat(item.stats.damage)}><Zap aria-hidden="true" />{formatItemStat(item.stats.damage)}</span>
-                  <span title="Accuracy" aria-label={"Accuracy " + formatItemStat(item.stats.accuracy)}><Crosshair aria-hidden="true" />{formatItemStat(item.stats.accuracy)}</span>
+                  <span title="Quality" aria-label={"Quality " + formatQuality(item.stats.quality)}><Gauge aria-hidden="true" />{formatQuality(item.stats.quality)}</span>
+                  {itemStatRows(item.stats).slice(0, 2).map(row => {
+                    const Icon = statIcons[row.key];
+                    return <span key={row.key} title={row.label} aria-label={row.label + " " + row.text}><Icon aria-hidden="true" />{row.text}</span>;
+                  })}
                 </>}
                 <ChevronDown className="o-item-chevron" aria-hidden="true" />
               </span>
             </button>
             <div className="o-item-actions">
-              {item.kind !== "passive" && <button className="o-item-action" type="button" disabled
-                title={item.kind === "equipment" ? "Equipping will be available later" : "Item use will be available later"}>
-                {item.kind === "equipment" ? "Equip" : "Use"}</button>}
-              <button className="o-item-icon-button o-item-trash" type="button" title="Trash"
-                aria-label={"Trash " + item.name} disabled={blocked || pending || !!result.retry} onClick={() => chooseTrash(item)}>
+              {item.kind === "equipment" ? item.equipped_slot ?
+                <button className="o-item-action" type="button" disabled={equipBlocked || equipPending} aria-label={"Unequip " + item.name}
+                  onClick={() => unequip(item.equipped_slot!)}>{pendingEquip === "unequip:" + item.equipped_slot ? "Saving..." : "Unequip"}</button> :
+                <button className="o-item-action" type="button" disabled={equipBlocked || equipPending} aria-label={"Equip " + item.name}
+                  title={item.slot ? "Equip in the " + SLOT_LABELS[item.slot] + " slot" : undefined}
+                  onClick={() => equip(item)}>{pendingEquip === "equip:" + item.id ? "Saving..." : "Equip"}</button> :
+                item.kind === "consumable" && <button className="o-item-action" type="button" disabled title="Item use will be available later">Use</button>}
+              <button className="o-item-icon-button o-item-trash" type="button" title={item.equipped_slot ? "Unequip before destroying" : "Trash"}
+                aria-label={"Trash " + item.name} disabled={blocked || pending || !!result.retry || !!item.equipped_slot} onClick={() => chooseTrash(item)}>
                 <Trash2 aria-hidden="true" /></button>
             </div>
           </div>
@@ -169,7 +211,7 @@ export function InventoryPanel({ inventory, filters }: { inventory: InventoryPag
         <DialogCloseButton onClose={() => setDialogOpen(false)} disabled={pending} />
         <h2 id="trash-title" className="o-dialog-title">Destroy {selected.name}?</h2>
         <p id="trash-warning">These items will be permanently destroyed. You will not receive Gold Coins.</p>
-        {selected.stats && <p className="o-copy">Damage {formatItemStat(selected.stats.damage)} · Accuracy {formatItemStat(selected.stats.accuracy)}</p>}
+        {selected.stats && <p className="o-copy">{itemStatSummary(selected.stats)}</p>}
         {selected.entry_type === "stack" ? <div className="o-field">
           <label className="o-field-label" htmlFor="trash-quantity">Quantity to destroy</label>
           <input id="trash-quantity" type="text" inputMode="numeric" pattern="[0-9]+" maxLength={16} required

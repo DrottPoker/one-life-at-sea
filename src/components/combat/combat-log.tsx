@@ -2,14 +2,20 @@ import { gameplay, frontend } from "@/config/public";
 import Link from "next/link";
 import { ScrollText, Users } from "lucide-react";
 import { ORDER_LABELS, type CombatEvent, type CombatOrder, type CombatPerson } from "@/lib/combat";
+import { zoneName } from "@/lib/equipment";
 
 function CaptainName({ id, name, playerNumber }: { id: string; name: string; playerNumber?: number | null }) {
   return <Link href={playerNumber ? "/players/" + playerNumber : "/characters/" + id} prefetch={false}>{name}</Link>;
 }
 
-function EventAction({ id, name, playerNumber, order, hit, damage, phase }: { id: string; name: string; playerNumber?: number | null; order: CombatOrder; hit: boolean; damage: number; phase: string }) {
-  return <p><strong><CaptainName id={id} name={name} playerNumber={playerNumber} /></strong><span>{ORDER_LABELS[order]}</span>
-    {(order === "fire" || order === "crew_attack") && <span className={hit ? "o-damage" : "o-copy"}>{hit ? damage === 0 ? "Blocked · 0 damage" : damage + " " + (phase === "sea" ? "ship" : "crew") + " damage" : "Missed"}</span>}
+function EventAction({ id, name, playerNumber, order, hit, damage, phase, weapon, zone, critical }: {
+  id: string; name: string; playerNumber?: number | null; order: CombatOrder; hit: boolean; damage: number; phase: string;
+  weapon?: string | null; zone?: string | null; critical?: boolean | null;
+}) {
+  const place = hit ? zoneName(phase === "sea" ? "ship" : "crew", zone) : null;
+  return <p><strong><CaptainName id={id} name={name} playerNumber={playerNumber} /></strong><span>{ORDER_LABELS[order]}{weapon ? " · " + weapon : ""}</span>
+    {(order === "fire" || order === "crew_shoot" || order === "crew_attack") && <span className={hit ? "o-damage" : "o-copy"}>
+      {hit ? (place ? place + " · " : "") + (damage === 0 ? "Blocked · 0 damage" : damage + " " + (phase === "sea" ? "ship" : "crew") + " damage") + (critical && damage > 0 ? " · Critical" : "") : "Missed"}</span>}
   </p>;
 }
 
@@ -24,8 +30,10 @@ export function CombatEvents({ events, people, defenderId, defenderName, newestF
         {event.timed_out && <span>Automatic retreat</span>}
       </header>
       {event.kind === "round" ? <>
-        <EventAction id={event.actor_id} name={event.actor_name} playerNumber={numbers.get(event.actor_id)} order={event.attacker_order} hit={event.attacker_hit} damage={event.attacker_damage} phase={event.phase} />
-        <EventAction id={defenderId} name={defenderName} playerNumber={numbers.get(defenderId)} order={event.defender_order} hit={event.defender_hit} damage={event.defender_damage} phase={event.phase} />
+        <EventAction id={event.actor_id} name={event.actor_name} playerNumber={numbers.get(event.actor_id)} order={event.attacker_order} hit={event.attacker_hit} damage={event.attacker_damage} phase={event.phase}
+          weapon={event.attacker_weapon} zone={event.attacker_zone} critical={event.attacker_critical} />
+        <EventAction id={defenderId} name={defenderName} playerNumber={numbers.get(defenderId)} order={event.defender_order} hit={event.defender_hit} damage={event.defender_damage} phase={event.phase}
+          weapon={event.defender_weapon} zone={event.defender_zone} critical={event.defender_critical} />
         {event.transition && <p className="o-log-transition">
           {event.transition === "boarding_failed" ? "The boarding attempt failed." : <>
             <CaptainName id={event.actor_id} name={event.actor_name} playerNumber={numbers.get(event.actor_id)} />
@@ -61,7 +69,7 @@ export function CombatPeople({ people, winnerId }: { people: CombatPerson[]; win
     <ul>{people.map(person => <li key={person.id} data-result={person.status}>
       <div><strong><CaptainName id={person.id} name={person.name} playerNumber={person.player_number} /></strong>{person.player_number && <small className="o-player-number"> [{person.player_number}]</small>}<span className="o-person-result">{person.id === winnerId && person.role === "attacker" ? "Final blow" : person.status === "active" ? person.role === "defender" ? "Defending" : person.phase === "sea" ? "At sea" : "Boarding" : person.status}</span></div>
       <dl><div><dt>Hits</dt><dd>{person.hits}</dd></div><div><dt>Ship damage</dt><dd>{person.ship_damage}</dd></div><div><dt>Crew damage</dt><dd>{person.crew_damage}</dd></div></dl>
-      <div className="o-person-condition"><span>Ship {person.ship_health}/{gameplay.resources.healthMax}</span><span>Crew {person.crew_health}/{gameplay.resources.healthMax}</span></div>
+      <div className="o-person-condition"><span>Ship {person.ship_health}/{person.ship_health_max ?? gameplay.resources.healthMax}</span><span>Crew {person.crew_health}/{gameplay.resources.healthMax}</span></div>
     </li>)}</ul>
   </section>;
 }

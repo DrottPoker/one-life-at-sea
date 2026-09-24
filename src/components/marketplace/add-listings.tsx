@@ -6,8 +6,9 @@ import { ItemImage } from "@/components/inventory/item-image";
 import { MarketCategories, MarketPages, MarketSearch } from "@/components/marketplace/market-shell";
 import { MarketFeedback } from "@/components/marketplace/market-listings";
 import { useMarketMutation } from "@/components/marketplace/use-market-mutation";
-import { formatItemCount, formatItemStat, inventoryEntryKey, parseItemQuantity, type InventoryEntry, type InventoryFilters, type InventoryPage } from "@/lib/inventory";
+import { formatItemCount, inventoryEntryKey, parseItemQuantity, type InventoryEntry, type InventoryFilters, type InventoryPage } from "@/lib/inventory";
 import { marketCost, marketFee, type SaleEntry } from "@/lib/marketplace";
+import { itemStatSummary } from "@/lib/equipment";
 
 type Draft = { item: InventoryEntry; selected: boolean; quantity: string; price: string };
 const numbers = new Intl.NumberFormat(frontend.site.locale);
@@ -61,7 +62,7 @@ export function AddListings({ inventory, filters }: { inventory: InventoryPage; 
           return <div key={key} className="o-market-sale-row" role="listitem" data-entry-id={item.id} data-selected={draft.selected}>
             <ItemImage item={item} />
             <div className="o-market-sale-name"><strong>{item.name}{item.entry_type === "stack" && " x" + formatItemCount(item.quantity)}</strong>
-              {item.stats && <small>Damage {formatItemStat(item.stats.damage)} · Accuracy {formatItemStat(item.stats.accuracy)}</small>}
+              {item.stats && <small>{itemStatSummary(item.stats)}</small>}
             </div>
             <label className="o-market-select"><input type="checkbox" aria-label={"Select " + item.name} checked={draft.selected} disabled={locked}
               onChange={event => update(item, { selected: event.target.checked })} /><span className="sr-only">Select</span></label>

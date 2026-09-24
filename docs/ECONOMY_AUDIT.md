@@ -95,7 +95,8 @@ för underhåll och verifiering. Den ska inte köras vid varje sidvisning.
 Aktuella körresultat finns i [implementationsstatus](IMPLEMENTATION_STATUS.md).
 Verifiering kan inte bevisa frånvaro av alla framtida fel. Den här granskningen
 gäller nuvarande flöden och lokala tester, inte produktionslast, backupåterställning
-eller framtida itemfunktioner. Equip/Use är ännu inte implementerade.
+eller framtida itemfunktioner. Use är ännu inte implementerat. Utrustade exemplar kan varken
+raderas eller listas förrän de tagits av.
 
 Sparade klientbegäranden kräver localStorage och Web Locks på en säker origin
 (HTTPS eller localhost). Om lagringen är blockerad skickas ingen ny ändring.

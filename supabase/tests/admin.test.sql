@@ -69,14 +69,14 @@ select lives_ok($$select public.admin_mutate('grant_items',current_setting('test
 select is(public.admin_read('item_stacks','',0,jsonb_build_object('character_id',current_setting('test.captain')))#>>'{rows,0,values,quantity}','20','Retry does not duplicate items');
 select is((public.admin_read('item_circulation','',0,'{"item_id":"linen_bandages"}')#>>'{rows,0,values,total}')::numeric,
   current_setting('test.circulation')::numeric+20,'Grant updates circulation');
-select lives_ok($$select public.admin_mutate('grant_items',jsonb_build_object('character_id',current_setting('test.captain'),'item_id','cutlass','quantity','2','damage','32.15','accuracy','54.60'),gen_random_uuid(),'Grant equipment')$$,'Equipment grant works');
+select lives_ok($$select public.admin_mutate('grant_items',jsonb_build_object('character_id',current_setting('test.captain'),'item_id','cutlass','quantity','2','quality','32.15'),gen_random_uuid(),'Grant equipment')$$,'Equipment grant works');
 select is(public.admin_read('item_instances','',0,jsonb_build_object('character_id',current_setting('test.captain')))->>'total','2','Separate equipment instances created');
-select is(public.admin_read('item_instances','',0,jsonb_build_object('character_id',current_setting('test.captain')))#>>'{rows,0,values,damage}','32.15','Equipment stats retained');
+select is(public.admin_read('item_instances','',0,jsonb_build_object('character_id',current_setting('test.captain')))#>>'{rows,0,values,quality}','32.15','Chosen Quality retained');
 select throws_ok($$select public.admin_mutate('grant_items',current_setting('test.grant')::jsonb||'{"quantity":"NaN"}',gen_random_uuid(),'Bad amount')$$,'22023','INVALID_QUANTITY','NaN denied');
 select throws_ok($$select public.admin_mutate('grant_items',current_setting('test.grant')::jsonb||'{"quantity":"1.5"}',gen_random_uuid(),'Bad amount')$$,'22023','INVALID_QUANTITY','Fraction denied');
 select throws_ok($$select public.admin_mutate('grant_items',current_setting('test.grant')::jsonb||'{"quantity":"1000001"}',gen_random_uuid(),'Bad amount')$$,'22023','INVALID_QUANTITY','Huge batch denied');
 select throws_ok($$select public.admin_mutate('grant_items',current_setting('test.grant')::jsonb||'{"quantity":"101","item_id":"cutlass"}',gen_random_uuid(),'Bad equipment amount')$$,'22023','EQUIPMENT_LIMIT','Equipment batches bounded');
-select throws_ok($$select public.admin_mutate('grant_items',current_setting('test.grant')::jsonb||'{"quantity":"1","item_id":"cutlass","damage":"1","accuracy":"101"}',gen_random_uuid(),'Bad equipment stats')$$,'22023','INVALID_STATS','Stats bounded');
+select throws_ok($$select public.admin_mutate('grant_items',current_setting('test.grant')::jsonb||'{"quantity":"1","item_id":"cutlass","quality":"101"}',gen_random_uuid(),'Bad equipment Quality')$$,'22023','INVALID_STATS','Quality bounded');
 select throws_ok($$select public.admin_mutate('grant_items',current_setting('test.grant')::jsonb,gen_random_uuid(),' ')$$,'22023','INVALID_REQUEST','Meaningful reason required');
 select set_config('test.stack',(public.admin_read('item_stacks','',0,jsonb_build_object('character_id',current_setting('test.captain')))->'rows'->0)::text,true);
 select set_config('test.delete',jsonb_build_object('resource','item_stacks','key',jsonb_build_object('id',current_setting('test.stack')::jsonb#>>'{values,id}'),'version',current_setting('test.stack')::jsonb->>'version')::text,true);
@@ -124,7 +124,7 @@ select lives_ok($$select public.admin_mutate('update',jsonb_build_object('resour
   gen_random_uuid(),'Adjust training progress')$$,'Composite-key progression edit works');
 select is(public.admin_read('character_training','',0,jsonb_build_object('character_id',current_setting('test.captain'),'training_group','crew'))#>>'{rows,0,values,xp}','9007199254740991','Large XP values retain exact precision');
 select lives_ok($$select public.admin_mutate('grant_items',jsonb_build_object('character_id',current_setting('test.captain'),
-  'item_id','cutlass','quantity','60','damage','1.25','accuracy','0'),gen_random_uuid(),'Test equipment pagination')$$,'Large permitted grant works');
+  'item_id','cutlass','quantity','60'),gen_random_uuid(),'Test equipment pagination')$$,'Large permitted grant with rolled Quality works');
 select is(jsonb_array_length(public.admin_read('item_instances','',0,jsonb_build_object('character_id',current_setting('test.captain')))->'rows'),50,'Database page is bounded');
 select is(jsonb_array_length(public.admin_read('item_instances','',1,jsonb_build_object('character_id',current_setting('test.captain')))->'rows'),12,'Remaining records appear on next page');
 reset role;

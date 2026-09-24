@@ -3,6 +3,8 @@ insert into private.admin_resources(name,schema_name,table_name,editable,deletab
 ('loot_entries','private','loot_entries','{}',false,'Item chances managed in Loot tables.'),
 ('activity_loot','private','activity_loot','{}',false,'Loot and difficulty managed in Activities.') on conflict(name) do nothing;
 update private.admin_resources set note='Create and edit in Items. Ownership type is permanent.' where name='item_definitions';
+update private.admin_resources set editable=array['quality'],note='Individual equipment. Stats follow the definition and Quality. Use Generate items to create new instances.'
+  where name='item_instances';
 -- Keep resource timestamps authoritative for administrative edits.
 insert into private.admin_resources(name,schema_name,table_name,editable,deletable,note) values
 ('activity_requests','private','activity_requests','{}',false,'Durable activity receipts. Managed by the game.'),
@@ -24,7 +26,7 @@ declare
   spec private.admin_resources%rowtype; relation regclass; field text; columns_sql text;
   identity jsonb; patch jsonb; clause text:='true'; primary_fields text[];
   before_row jsonb; after_row jsonb; result jsonb; captain_id uuid;
-  definition private.item_definitions%rowtype; amount numeric; damage_value numeric; accuracy_value numeric;
+  definition private.item_definitions%rowtype; amount numeric; quality_value numeric;
   audit_id uuid:=gen_random_uuid(); content_result jsonb;
 begin
   if request_id is null or action is null or payload is null or jsonb_typeof(payload)<>'object'
@@ -101,11 +103,12 @@ begin
     if not found then raise exception 'INVALID_ITEM' using errcode='22023'; end if;
     if not definition.stackable then
       if amount>100 then raise exception 'EQUIPMENT_LIMIT' using errcode='22023'; end if;
-      damage_value:=(payload->>'damage')::numeric; accuracy_value:=(payload->>'accuracy')::numeric;
-      if damage_value is null or accuracy_value is null or damage_value::text in ('NaN','Infinity','-Infinity')
-        or accuracy_value::text in ('NaN','Infinity','-Infinity') or damage_value<0 or damage_value>1000000000
-        or accuracy_value<0 or accuracy_value>100 or trunc(damage_value,2)<>damage_value or trunc(accuracy_value,2)<>accuracy_value then
-        raise exception 'INVALID_STATS' using errcode='22023'; end if;
+      -- An omitted Quality is rolled per instance like loot.
+      if nullif(payload->>'quality','') is not null then
+        quality_value:=(payload->>'quality')::numeric;
+        if quality_value::text in ('NaN','Infinity','-Infinity') or quality_value<0 or quality_value>100 or trunc(quality_value,2)<>quality_value then
+          raise exception 'INVALID_STATS' using errcode='22023'; end if;
+      end if;
     end if;
     perform private.lock_combat_context(array[captain_id]);
     if captain_id is null or not exists(select 1 from public.characters where id=captain_id) then
@@ -116,8 +119,8 @@ begin
         on conflict(character_id,item_id) do update set quantity=item_stacks.quantity+excluded.quantity
         returning to_jsonb(item_stacks) into after_row;
     else
-      with inserted as (insert into private.item_instances(character_id,item_id,damage,accuracy)
-        select captain_id,definition.id,damage_value,accuracy_value from generate_series(1,amount::integer) returning *)
+      with inserted as (insert into private.item_instances(character_id,item_id,quality)
+        select captain_id,definition.id,coalesce(quality_value,private.roll_item_quality()) from generate_series(1,amount::integer) returning *)
       select jsonb_agg(to_jsonb(inserted)) into after_row from inserted;
     end if;
     perform private.notify_training(captain_id);

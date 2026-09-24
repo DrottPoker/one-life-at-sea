@@ -54,13 +54,13 @@ begin
     else
       select * into instance from private.item_instances i where i.id=entry.entry_id and i.character_id=viewer for update;
       if not found then raise exception 'ITEM_NOT_FOUND'; end if;
+      if exists(select 1 from private.character_equipment e where e.instance_id=instance.id) then raise exception 'ITEM_EQUIPPED'; end if;
       original_created:=instance.created_at;
       delete from private.item_instances where id=instance.id;
     end if;
-    insert into private.market_listings(seller_id,item_id,entry_type,original_entry_id,quantity,initial_quantity,unit_price,fee_bps,damage,accuracy,item_created_at)
+    insert into private.market_listings(seller_id,item_id,entry_type,original_entry_id,quantity,initial_quantity,unit_price,fee_bps,quality,item_created_at)
       values(viewer,entry.item_id,entry.entry_type,entry.entry_id,amount,amount,price,{{gameplay.marketplace.feeBps}},
-        case when entry.entry_type='instance' then instance.damage end,
-        case when entry.entry_type='instance' then instance.accuracy end,original_created)
+        case when entry.entry_type='instance' then instance.quality end,original_created)
       returning id into listing_id;
     created:=created||jsonb_build_array(jsonb_build_object('id',listing_id,'item_id',entry.item_id,'name',definition.name,'quantity',amount,'unit_price',price));
     perform private.notify_market(entry.item_id);

@@ -5,6 +5,7 @@
 {{include.resources}}
 {{include.sea-scouting}}
 {{include.sea-travel}}
+{{include.equipment}}
 {{include.combat}}
 {{include.game-state}}
 {{include.bank}}

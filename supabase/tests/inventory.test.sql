@@ -24,21 +24,26 @@ insert into private.item_stacks(id,character_id,item_id,quantity)
 select '1e200000-0000-4000-8000-000000000002',id,'oak_planks',20 from public.characters where user_id='1e000000-0000-4000-8000-000000000001';
 insert into private.item_stacks(id,character_id,item_id,quantity)
 select '1e200000-0000-4000-8000-000000000003',id,'linen_bandages',77 from public.characters where user_id='1e000000-0000-4000-8000-000000000002';
-insert into private.item_instances(id,character_id,item_id,damage,accuracy)
-select '1e100000-0000-4000-8000-000000000001',id,'cutlass',32.15,54.60 from public.characters where user_id='1e000000-0000-4000-8000-000000000001';
-insert into private.item_instances(id,character_id,item_id,damage,accuracy)
-select '1e100000-0000-4000-8000-000000000002',id,'cutlass',35.20,52.80 from public.characters where user_id='1e000000-0000-4000-8000-000000000001';
+insert into private.item_instances(id,character_id,item_id,quality)
+select '1e100000-0000-4000-8000-000000000001',id,'cutlass',25 from public.characters where user_id='1e000000-0000-4000-8000-000000000001';
+insert into private.item_instances(id,character_id,item_id,quality)
+select '1e100000-0000-4000-8000-000000000002',id,'cutlass',75 from public.characters where user_id='1e000000-0000-4000-8000-000000000001';
 select throws_ok($$insert into private.item_stacks(character_id,item_id,quantity) select id,'cutlass',1 from public.characters where user_id='1e000000-0000-4000-8000-000000000001'$$,'23503',null,'Equipment cannot be stacked');
 select throws_ok($$update private.item_stacks set quantity=0 where id='1e200000-0000-4000-8000-000000000001'$$,'23514',null,'Zero stacks cannot persist');
-select throws_ok($$update private.item_instances set accuracy=101 where id='1e100000-0000-4000-8000-000000000001'$$,'23514',null,'Invalid instance stats rejected');
+select throws_ok($$update private.item_instances set quality=101 where id='1e100000-0000-4000-8000-000000000001'$$,'23514',null,'Invalid instance Quality rejected');
+create temporary table rolled_instance as with inserted as (insert into private.item_instances(character_id,item_id)
+  select id,'cutlass' from public.characters where user_id='1e000000-0000-4000-8000-000000000002' returning quality) select quality from inserted;
+select ok((select quality between 0 and 100 from rolled_instance),'New instances roll their own Quality');
 set local role authenticated;
 select is(public.list_inventory()->>'total','4','Only own entries are returned');
 select is(public.list_inventory('medical')->>'total','1','Category filter applies');
 select is(public.list_inventory('medical')#>>'{items,0,quantity}','10','Consumable quantities persist');
 select is(public.list_inventory('medical')#>'{items,0,stats}','null'::jsonb,'Consumables have no fake zero stats');
 select is(public.list_inventory('crew_weapons')->>'total','2','Same-name weapons remain separate');
-select is(public.list_inventory('crew_weapons')#>>'{items,0,stats,damage}','32.15','First weapon retains damage');
-select is(public.list_inventory('crew_weapons')#>>'{items,1,stats,damage}','35.20','Second weapon retains its own damage');
+select is(public.list_inventory('crew_weapons')#>'{items,0,stats}','{"quality":25,"damage":12.75,"precision":50}'::jsonb,'Stats derive from the definition range and Quality');
+select is(public.list_inventory('crew_weapons')#>>'{items,1,stats,damage}','14.25','Each weapon keeps its own Quality');
+select is(public.list_inventory('crew_weapons')#>>'{items,0,slot}','melee','Entries expose their equipment slot');
+select is(public.list_inventory('crew_weapons')#>'{items,0,equipped_slot}','null'::jsonb,'Unequipped entries have no equipped slot');
 select is(public.list_inventory(null,'CUTLASS')->>'total','2','Search is case-insensitive');
 select is(public.list_inventory('medical','CUTLASS')->>'total','0','Search and category combine');
 select is(public.list_inventory(null,'%')->>'total','0','Search treats percent literally');
@@ -68,7 +73,7 @@ select is(public.get_game_state()->>'crew_attack','10','Trash changes no trained
 select is(public.get_game_state()->>'energy','100','Trash spends no Energy');
 select lives_ok($$select public.trash_inventory_item('1e100000-0000-4000-8000-000000000001','instance',1,gen_random_uuid())$$,'Individual equipment can be destroyed');
 select is(public.list_inventory('crew_weapons')->>'total','1','Only selected instance removed');
-select is(public.list_inventory('crew_weapons')#>>'{items,0,stats,damage}','35.20','Remaining instance retains its stats');
+select is(public.list_inventory('crew_weapons')#>>'{items,0,stats,damage}','14.25','Remaining instance retains its stats');
 select is(public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',7,'1e300000-0000-4000-8000-000000000002')->>'remaining','0','Full stack can be destroyed');
 select is(public.list_inventory('medical')->>'total','0','Empty stack row is removed');
 select is(public.trash_inventory_item('1e200000-0000-4000-8000-000000000001','stack',7,'1e300000-0000-4000-8000-000000000002')->>'remaining','0','Retry still works after deleting the row');

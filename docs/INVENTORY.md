@@ -1,38 +1,43 @@
 # Inventory
 
 Implementerat lokalt 2026-09-19 enligt första etappen i [inventoryplanen](archive/plans/INVENTORY_PLAN.md).
+Equip och Unequip tillkom 2026-09-24. Regler för platser, Quality och stridseffekter finns i [utrustning](EQUIPMENT.md).
 
 ## Spelarens vy
 
 Inventory finns som egen länk i sidopanelens Harbor-meny på /inventory.
 Länken är tillgänglig även under sjukhusvistelse.
 
-- Kategoriikoner högst upp: All items, Crew Weapons, Cannons, Medical, Boosters,
+- Kategoriikoner högst upp: All items, Crew Weapons, Crew Armor, Cannons, Ship Parts, Medical, Boosters,
   Materials och Miscellaneous. Aktiv kategori har en tydlig markering.
+- Utrustningspanelen visar besättningens och skeppets platser med utrustat exemplar,
+  Quality och stats, eller Fists, Basic cannons respektive Empty. Skeppsgruppen visar
+  maximal Ship Health. Unequip finns på varje utrustad plats.
 - Namnsökning fungerar tillsammans med kategorin. Sökning är skiftlägesokänslig
   och behandlar exempelvis procenttecken som vanlig text.
-- Rader visar miniatyr, namn, stackantal och eventuella individuella stats.
+- Rader visar miniatyr, namn, stackantal, Equipped-märke och för utrustning Quality samt två huvudstats.
   Panelen fyller innehållsytans bredd. Radernas grundhöjd är 36 px på dator
   och 45 px på mobil, med utrymme att växa vid radbrutna namn. En tunn, indragen
   avskiljare skiljer miniatyren från namnet. Detaljbildens
   yta är högst 280 px bred och 190 px hög (180 px hög på mobil).
 - Klick på en rad öppnar beskrivning, effektbeskrivning, stor bild och detaljer under
   raden. Egenskaperna visas i två kolumner med en tunn avskiljare: Category/Quantity
-  och Damage/Accuracy. På mobil ligger kolumnerna under bilden.
+  samt Slot, Quality och exemplarets stats. På mobil ligger kolumnerna under bilden.
   En rad är öppen åt gången. Handlingsknappar öppnar inte detaljpanelen.
-- Vapen och kanoner har egna sparade Damage- och Accuracy-värden per exemplar.
+- Varje utrustningsexemplar har en egen Quality. Stats räknas fram från definitionens intervall.
   Förbrukningsvaror och material samlas i stackar.
-- Equip och Use är synliga för rätt itemtyp men inaktiva i denna etapp.
+- Equip och Unequip fungerar i The Harbor utanför strid och Hospital. Equip ersätter
+  föregående exemplar i samma plats. Use är synlig för consumables men inaktiv.
   Passiva items har ingen sådan knapp.
-- Trash fungerar direkt. Bekräftelsen visar itemnamn, eventuella individuella stats
-  och valt antal. Radering ger inga Gold Coins.
+- Trash fungerar direkt för allt som inte är utrustat. Bekräftelsen visar itemnamn,
+  eventuell Quality och stats samt valt antal. Radering ger inga Gold Coins.
 - Listan har 25 rader per sida. Kategorier, sökning och sidnummer finns i adressen.
   Om den sista sidan töms visas den sista kvarvarande sidan.
 - Inventory kan läsas i Hospital. Trash är spärrat där. Medicinsk Use är ett
   planerat undantag när faktiska Use-effekter införs.
 - Aktiva angripare har kvar sitt navigations- och handlingslås till striden.
   Försvarare kan läsa, söka, filtrera och inspektera items men inte ändra dem.
-  Trash och öppna bekräftelser/återförsök låses vid attackstart. Framtida Equip och Use
+  Trash, Equip, Unequip och öppna bekräftelser/återförsök låses vid attackstart. Framtida Use
   omfattas också av stridens handlingslås.
 
 [Cirkulation och historik](ITEM_CIRCULATION.md) visar världens antal per itemtyp med
@@ -40,15 +45,15 @@ utfällbart diagram, sex perioder och datum/antal vid pekaren.
 
 Handel sker genom [Marketplace](MARKETPLACE.md). Listade items tas ur inventory och
 återkommer vid avbruten listing; köpta items hamnar i köparens inventory.
-Utrustning behåller sitt exemplar-ID och sina stats. Cirkulationen är oförändrad.
+Utrustning behåller sitt exemplar-ID och sin Quality. Utrustade exemplar måste tas av
+innan de kan listas. Cirkulationen är oförändrad.
 
 [Value och historik](ITEM_MARKET_VALUE.md) visar det antalsviktade snittpriset från
 genomförda köp under 12 timmar, i hela Gold Coins, till vänster om Circ.
 Saknas köp i fönstret behålls senaste Value; bara aldrig sålda items visar N/A.
 Båda använder samma diagram med sex perioder.
 
-Utrustningsbonusar och faktiska consumable-effekter ingår inte ännu. Nuvarande stridsnamn Cutlasses och Basic cannons är fortfarande
-stridsvyns grundetiketter och representerar inte utrustade inventoryexemplar.
+Faktiska consumable-effekter ingår inte ännu.
 
 ## Material för skeppsarbete
 
@@ -63,15 +68,16 @@ lootflöde för spikarna ingår inte. Oak Planks tillverkas fortsatt av 5 Oak Lo
 
 ## Datamodell och behörigheter
 
-Fem nya tabeller ligger i private och har RLS aktiverat:
+Tabellerna ligger i private och har RLS aktiverat:
 
 | Tabell | Ansvar |
 | --- | --- |
 | item_categories | Kategori-ID, namn och ordning. |
-| item_definitions | Stabil itemdefinition, kategori, text, bild, typ, stackbarhet, framtida utrustningsplats, aktivflagga och handelsbarhet. |
+| item_definitions | Stabil itemdefinition, kategori, text, bild, typ, stackbarhet, utrustningsplats, statintervall, aktivflagga och handelsbarhet. |
 | item_stacks | Ett positivt heltalsantal per karaktär och stackbar definition. |
-| item_instances | Separat ID och sparade Damage/Accuracy-värden för varje utrustningsexemplar. |
-| inventory_requests | Privata kvitton som hindrar upprepad radering vid återförsök. |
+| item_instances | Separat ID och Quality för varje utrustningsexemplar. |
+| character_equipment | Ett utrustat exemplar per kapten och plats. |
+| inventory_requests | Privata kvitton som hindrar upprepad radering, Equip och Unequip vid återförsök. |
 
 Klienten har ingen direkt läs- eller skrivrätt till dessa tabeller.
 Registrerade spelare använder publika security-invoker-funktioner som anropar
@@ -80,7 +86,11 @@ privata funktioner med uttrycklig ägarkontroll.
 list_inventory tar kategori, söktext och sida. Ägaren bestäms av den autentiserade
 spelaren, aldrig av ett inskickat karaktärs-ID. Alla filter gäller hela det egna
 innehavet, och svaren är begränsade till sidstorleken. Sorteringen är stabil på
-namn, definition, exemplar-ID och posttyp.
+namn, definition, exemplar-ID och posttyp. Svaret innehåller också loadout och maximal Ship Health.
+
+equip_item tar exemplar-ID och request_id, unequip_item tar plats och request_id.
+Båda följer samma låsordning och kvittomodell som Trash. Ett utrustat exemplar kan
+inte raderas eller marknadslistas (ITEM_EQUIPPED).
 
 trash_inventory_item tar post-ID, posttyp, antal och request_id. Funktionen tar
 befintliga ordnade karaktärs-/stridslås före innehavslåset, avslutar förfallna
@@ -104,14 +114,14 @@ Retry; dialogen kan stängas och öppnas igen utan att skapa en ny radering.
 
 Den ursprungliga katalogen, kategorier och sidstorlek finns under inventory i
 [gameplay.json](../config/gameplay.json). Schema och semantisk validering
-kontrollerar unika ID:n, kategorireferenser, typer, utrustningsplatser och lokala bildvägar.
+kontrollerar unika ID:n, kategorireferenser, typer, utrustningsplatser, statintervall per plats och lokala bildvägar.
 
 Adminpanelen kan skapa och redigera föremål. De raderna får managed_by_admin=true och
 bevaras vid senare configsynk. Ursprungliga, oredigerade definitioner uppdateras fortsatt
 från config. ID, typ och utrustningsplats är beständiga. Se [Admin](ADMIN_PANEL.md).
 För att sluta erbjuda en definition sätts active till false; ägda exemplar förblir
-läsbara. Text och kategoritillhörighet kan ändras utan att skriva över individuella
-stats, mängder eller ägare. Flaggan tradable styr marknadens säljbarhet och
+läsbara. Text, kategoritillhörighet och statintervall kan ändras utan att skriva över
+individuell Quality, mängder eller ägare. Flaggan tradable styr marknadens säljbarhet och
 ändrar inte möjligheten att läsa redan ägda items.
 
 - Migrationen `inventory_foundation` skapade tabeller, index och begränsningar.

@@ -21,6 +21,7 @@ export type GameState = Record<`${TrainingGroup}_${Stat}`, number> & {
   observed_at: string;
   revision?: number;
   ship_health: number;
+  ship_health_max?: number;
   crew_health: number;
   health_next_at: string | null;
   active_combat_id: string | null;

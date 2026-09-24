@@ -12,7 +12,8 @@ and Miscellaneous organize items without influencing their chance.
 3. Roll catch success. A miss gives no item but still grants the usual XP.
 4. For a successful catch, fixed entries reserve their exact percentages first.
 5. The weighted entries share the remaining percentage. Select exactly one entry and
-   grant its configured quantity. Equipment receives the entry's stored stats.
+   grant its configured quantity. Each equipment piece rolls its own Quality from 0 to 100%
+   (see [Equipment](EQUIPMENT.md)); entries no longer store fixed stats.
 6. Inventory, circulation, XP, Stamina and the durable request receipt commit together.
 
 The public RPC accepts neither random numbers nor reward items. Repeated requests use

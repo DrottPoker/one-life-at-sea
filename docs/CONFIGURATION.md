@@ -55,7 +55,8 @@ Träningsnivåer behåller installerade ID:n och ordning. XP-krav och effektivit
 
 Skill-ID:n får inte tas bort. Nya skills initialiseras och påverkar Character Level enligt [Skills](SKILLS.md).
 Aktivitets-ID och koppling till skill är stabila; avaktivera i stället för att radera.
-Item-ID, ägartyp och utrustningsplats består; ägda antal och individuella stats skrivs inte över.
+Item-ID, ägartyp och utrustningsplats består; ägda antal och individuell Quality skrivs inte över.
+Ändrade statintervall gäller alla exemplar, eftersom stats räknas fram från Quality.
 Gamla platstyper kan avaktiveras medan sparade destinationer består.
 
 Adminskapade eller adminredigerade items har `managed_by_admin=true` och skrivs inte över av configsync.
@@ -72,6 +73,7 @@ Ekonomiövervakningens namngivna cronjobb uppdateras utan att observationshistor
 | --- | --- |
 | `resources`, `stamina`, `morale`, `hospital` | [Energy](ENERGY_RECOVERY.md), [Stamina](STAMINA.md), [Morale](CREW_MORALE.md), [Hospital](HOSPITAL.md) |
 | `training`, `startingStats`, `combat` | [Träning](TRAINING_FOUNDATION.md), [Combat](COMBAT_SYSTEM.md) |
+| `equipment`, `inventory.items[].stats` | [Utrustning](EQUIPMENT.md) |
 | `skills`, `activities`, `crafting` | [Skills](SKILLS.md), [Activities](ACTIVITIES.md), [Crafting](CRAFTING.md) |
 | `inventory`, `marketplace`, `economy` | [Inventory](INVENTORY.md), [Marketplace](MARKETPLACE.md), [värde](ITEM_MARKET_VALUE.md), [cirkulation](ITEM_CIRCULATION.md), [Bank](GOLD_COINS_AND_BANK.md) |
 | `seaTravel`, scouting | [Resor](SEA_TRAVEL.md), [Scouting](SEA_SCOUTING.md) |

@@ -3,7 +3,7 @@ import { MAX_SKILL_LEVEL } from "@/lib/skills";
 export const DEFAULT_ITEM_IMAGE = "/images/items/placeholder.svg";
 export type LootEntry = {
   item_id: string; mode: "fixed" | "weighted"; fixed_chance: number; weight_start: number; weight_end: number;
-  quantity: number; damage: number; accuracy: number;
+  quantity: number;
 };
 export type LootTable = { id: string; name: string; description: string; active: boolean; version: string; entries: LootEntry[] };
 export type ActivityLoot = {
@@ -28,9 +28,8 @@ export function lootValidation(entries: LootEntry[]): string | null {
   if (new Set(entries.map(entry => entry.item_id)).size !== entries.length) return "Each item can appear only once.";
   for (const entry of entries) {
     if (!entry.item_id) return "Choose an item for every row.";
-    if (![entry.fixed_chance, entry.weight_start, entry.weight_end, entry.quantity, entry.damage, entry.accuracy].every(Number.isFinite)) return "Enter valid numbers in every row.";
+    if (![entry.fixed_chance, entry.weight_start, entry.weight_end, entry.quantity].every(Number.isFinite)) return "Enter valid numbers in every row.";
     if (!Number.isInteger(entry.quantity) || entry.quantity < 1 || entry.quantity > 100) return "Quantity must be a whole number from 1 to 100.";
-    if (entry.damage < 0 || entry.damage > 1000000000 || entry.accuracy < 0 || entry.accuracy > 100) return "Check the equipment stats.";
     if (entry.mode === "fixed" && (entry.fixed_chance <= 0 || entry.fixed_chance > 100)) return "Fixed chances must be greater than 0 and at most 100%.";
     if (entry.mode === "weighted" && (entry.weight_start < 0 || entry.weight_end < 0 || entry.weight_start > 1000000 || entry.weight_end > 1000000 || entry.weight_start + entry.weight_end === 0)) return "Weights must be 0–1,000,000, with at least one positive value per item.";
   }

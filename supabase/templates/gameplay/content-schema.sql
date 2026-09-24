@@ -23,13 +23,13 @@ create table if not exists private.loot_entries (
   weight_start numeric not null default 0 check(weight_start between 0 and 1000000 and weight_start=trunc(weight_start,4)),
   weight_end numeric not null default 0 check(weight_end between 0 and 1000000 and weight_end=trunc(weight_end,4)),
   quantity integer not null default 1 check(quantity between 1 and 100),
-  damage numeric not null default 0 check(damage between 0 and 1000000000 and damage=trunc(damage,2)),
-  accuracy numeric not null default 0 check(accuracy between 0 and 100 and accuracy=trunc(accuracy,2)),
   primary key(loot_table_id,item_id),
   check((mode='fixed' and fixed_chance>0 and weight_start=0 and weight_end=0)
     or (mode='weighted' and fixed_chance=0 and (weight_start>0 or weight_end>0)))
 );
 create index if not exists loot_entries_item_idx on private.loot_entries(item_id);
+-- Equipment from loot rolls its own Quality, so entries no longer carry fixed stats.
+alter table private.loot_entries drop column if exists damage,drop column if exists accuracy;
 alter table private.loot_tables enable row level security;
 alter table private.loot_entries enable row level security;
 revoke all on private.loot_tables,private.loot_entries from public,anon,authenticated;

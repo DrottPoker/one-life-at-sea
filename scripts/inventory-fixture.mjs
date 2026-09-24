@@ -10,8 +10,8 @@ export function inventoryFixtureSql(characterId) {
     "select 1 from private.item_circulation where item_id in('linen_bandages','drill_tonic','oak_planks','brass_compass','cutlass','deck_cannon') order by item_id for update;\n" +
     "insert into private.item_stacks(id,character_id,item_id,quantity) select md5(" + id + "::text||':inventory-fixture:'||item_id)::uuid," + id +
     ",item_id,quantity from (values('linen_bandages',10),('drill_tonic',3),('oak_planks',20),('brass_compass',1)) v(item_id,quantity) on conflict(character_id,item_id) do nothing;\n" +
-    "insert into private.item_instances(id,character_id,item_id,damage,accuracy) select md5(" + id + "::text||':inventory-fixture:'||tag)::uuid," + id +
-    ",item_id,damage,accuracy from (values('cutlass-one','cutlass',32.15,54.60),('cutlass-two','cutlass',35.20,52.80),('cannon-one','deck_cannon',48.70,61.00)) v(tag,item_id,damage,accuracy) " +
+    "insert into private.item_instances(id,character_id,item_id,quality) select md5(" + id + "::text||':inventory-fixture:'||tag)::uuid," + id +
+    ",item_id,quality from (values('cutlass-one','cutlass',30.00),('cutlass-two','cutlass',80.00),('cannon-one','deck_cannon',60.00)) v(tag,item_id,quality) " +
     "where not exists(select 1 from private.market_listings l where l.original_entry_id=md5(" + id +
     "::text||':inventory-fixture:'||tag)::uuid and l.entry_type='instance' and l.quantity>0) on conflict(id) do nothing;\n" +
     "select private.notify_training(" + id + ");\ncommit;\n";

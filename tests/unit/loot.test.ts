@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { catchChance, itemIdentifier, lootChances, lootValidation, type LootEntry } from "../../src/lib/loot";
 import { activityMessage, type ActivityReceipt } from "../../src/lib/activities";
 
-const entry = (item_id: string, patch: Partial<LootEntry>): LootEntry => ({ item_id, mode: "weighted", fixed_chance: 0, weight_start: 10, weight_end: 10, quantity: 1, damage: 0, accuracy: 0, ...patch });
+const entry = (item_id: string, patch: Partial<LootEntry>): LootEntry => ({ item_id, mode: "weighted", fixed_chance: 0, weight_start: 10, weight_end: 10, quantity: 1, ...patch });
 const entries = [entry("ring", { mode: "fixed", fixed_chance: 1, weight_start: 0, weight_end: 0 }), entry("small_fish", { weight_start: 90, weight_end: 10 }), entry("big_fish", { weight_start: 10, weight_end: 90 })];
 describe("loot probabilities", () => {
   it("generates usable identifiers for numeric names and reserved page names", () => {

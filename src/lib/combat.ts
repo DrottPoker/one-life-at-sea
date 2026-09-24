@@ -1,17 +1,18 @@
 import { gameplay } from "@/config/public";
 import type { Stat } from "@/lib/game";
+import type { CombatLoadout } from "@/lib/equipment";
 
 export const COMBAT_COST = gameplay.combat.energyCost;
 export const MAX_ROUNDS = gameplay.combat.maxRounds;
-export const ORDERS = ["fire", "board", "crew_attack", "disengage", "retreat"] as const;
+export const ORDERS = ["fire", "board", "crew_shoot", "crew_attack", "disengage", "retreat"] as const;
 export type CombatOrder = typeof ORDERS[number];
 export type DefenceOrder = "cannon" | "boarding";
 export type CombatStats = Record<Stat, number>;
 export type Combatant = {
   id: string; player_number: number; name: string; ship_health: number; crew_health: number;
   crew_morale?: number | null; morale_multiplier?: number | null;
-  ammo: number | null; ship: CombatStats | null; crew: CombatStats | null;
-  cannons: string | null; weapon: string | null;
+  ship_health_max?: number; ammo: number | null; shots?: number | null; ship: CombatStats | null; crew: CombatStats | null;
+  loadout: CombatLoadout | null;
 };
 export type AttackLock = { battle_id: string; target_id: string; target_player_number: number };
 export type ParticipantStatus = "active" | "victory" | "assist" | "defeated" | "retreated" | "draw";
@@ -20,12 +21,14 @@ export type CombatEvent = {
   kind: "started" | "joined" | "round" | "hospital" | "admin_end"; sequence: number; actor_id: string; actor_name: string;
   round: number; phase: "sea" | "boarding"; attacker_order: CombatOrder; defender_order: CombatOrder;
   attacker_hit: boolean; defender_hit: boolean; attacker_damage: number; defender_damage: number;
+  attacker_weapon?: string | null; defender_weapon?: string | null; attacker_zone?: string | null; defender_zone?: string | null;
+  attacker_critical?: boolean | null; defender_critical?: boolean | null;
   transition: "boarded" | "boarding_failed" | "disengaged" | null;
   outcome: CombatOutcome | null; at: string; timed_out: boolean; participant_result: ParticipantStatus;
 };
 export type CombatPerson = {
   id: string; player_number: number | null; name: string; role: "attacker" | "defender"; status: ParticipantStatus | "survived";
-  hits: number; damage: number; ship_damage: number; crew_damage: number; ship_health: number; crew_health: number; phase: "sea" | "boarding" | null;
+  hits: number; damage: number; ship_damage: number; crew_damage: number; ship_health: number; ship_health_max?: number; crew_health: number; phase: "sea" | "boarding" | null;
 };
 export type Battle = {
   id: string; status: "active" | "completed"; phase: "sea" | "boarding"; round: number;
@@ -46,7 +49,7 @@ export type CombatError = { error: string };
 export type CombatResponse = { battle: Battle } | CombatError;
 export type CombatActionResult = { message?: string; battleId?: string };
 export const ORDER_LABELS: Record<CombatOrder, string> = {
-  fire: "Fire cannons", board: "Board", crew_attack: "Crew attack",
+  fire: "Fire cannons", board: "Board", crew_shoot: "Fire firearm", crew_attack: "Melee attack",
   disengage: "Disengage", retreat: "Retreat",
 };
 const ERROR_MESSAGES: Record<string, string> = {
@@ -68,6 +71,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   CHARACTER_NOT_FOUND: "This captain could not be found.",
   COMBAT_NOT_FOUND: "This fight is not available to you.",
   NO_AMMO: "No salvos left. You can board or retreat.",
+  NO_SHOTS: "No firearm shots left. Use melee, disengage or retreat.",
   STALE_ROUND: "The fight has moved on. The latest round has been loaded.",
   INVALID_ORDER: "Choose an order available in the current phase.",
   REQUEST_CONFLICT: "This order was already submitted. Reload the fight before continuing.",

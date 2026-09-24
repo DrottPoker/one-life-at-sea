@@ -8,7 +8,8 @@ import { useGameState } from "@/components/game-state";
 import { useMarketMutation } from "@/components/marketplace/use-market-mutation";
 import { createClient } from "@/lib/supabase/browser";
 import { formatGold } from "@/lib/bank";
-import { formatItemCount, formatItemStat, parseItemQuantity } from "@/lib/inventory";
+import { formatItemCount, parseItemQuantity } from "@/lib/inventory";
+import { itemStatSummary } from "@/lib/equipment";
 import { affordableQuantity, marketCost, type MarketListing, type MarketPage } from "@/lib/marketplace";
 
 export type MarketMutation = ReturnType<typeof useMarketMutation>;
@@ -36,7 +37,7 @@ function BuyRow({ listing, mutation, stale }: { listing: MarketListing; mutation
   return <tr data-listing-id={listing.id}>
     <td className="o-market-listing-art"><ItemImage item={listing} /></td>
     <td className="o-market-seller"><Link href={"/players/" + listing.seller_player_number} title={listing.seller_name} prefetch={false}>{listing.seller_name}</Link><small className="o-player-number"> [{listing.seller_player_number}]</small>
-      {listing.stats && <small>Damage {formatItemStat(listing.stats.damage)} · Accuracy {formatItemStat(listing.stats.accuracy)}</small>}
+      {listing.stats && <small>{itemStatSummary(listing.stats)}</small>}
     </td>
     <td className="o-market-price" title="Gold Coins each">{formatGold(listing.unit_price)}<span className="sr-only"> Gold Coins each</span></td>
     <td className="o-market-stock">{formatItemCount(listing.quantity)} available
@@ -104,7 +105,7 @@ export function OwnMarketListings({ listings }: { listings: MarketPage<MarketLis
       {listings.items.map(listing => <div key={listing.id} className="o-market-own-row" role="listitem" data-listing-id={listing.id}>
         <ItemImage item={listing} />
         <div className="o-market-own-name"><strong>{listing.name}</strong>
-          {listing.stats && <small>Damage {formatItemStat(listing.stats.damage)} · Accuracy {formatItemStat(listing.stats.accuracy)}</small>}
+          {listing.stats && <small>{itemStatSummary(listing.stats)}</small>}
           {!listing.tradable && <small>Trading is unavailable. You can still cancel this listing.</small>}
         </div>
         <div>{formatItemCount(listing.quantity)} available<small>{formatGold(listing.unit_price)} Gold Coins each</small></div>

@@ -21,7 +21,7 @@ och egna itembilder.
   varsitt diagram. [Value](ITEM_MARKET_VALUE.md) är antalsviktat genomsnitt från
   genomförda köp under 12 timmar, före avgift och avrundat nedåt i Gold Coins.
   Senaste Value ligger kvar när fönstret blir tomt; bara aldrig sålda items visar N/A.
-  Varukorgen öppnar listings med säljarlänk, individuella stats, styckpris,
+  Varukorgen öppnar listings med säljarlänk, Quality och stats, styckpris,
   kvarvarande antal, Quantity, Fill Max och Buy i kompakta rader. Priset är stigande.
   Först visas högst 20 listings. **Show more listings** lägger till upp till 20 åt gången
   och syns bara när fler finns. Redan visade rader ligger kvar medan fler hämtas.
@@ -31,7 +31,8 @@ och egna itembilder.
   Panelen har en stabil identitet när dess rad flyttas, så valt diagram, period
   och expanderade listings bevaras vid skärmbyte och uppdaterad sortering.
 - **Add Listings** visar aktiva, säljbara items i eget inventory. Välj flera items,
-  antal och styckpris. Utrustning väljs per exemplar med dess egna stats.
+  antal och styckpris. Utrustning väljs per exemplar med dess egen Quality och stats.
+  Utrustade exemplar visas inte här förrän de tagits av.
   Urvalet bevaras vid kategori-, sök- och sidbyten.
 - Sammanställningen visar antal, sammanlagt försäljningsvärde och beräknad avgift.
   Clear all tar bort urvalet. Hela batchen lyckas eller återställs tillsammans.
@@ -55,7 +56,7 @@ om nästa köp ger ytterligare 1 Gold Coin blir avgiften för det köpet 1. Tota
 för att lägga upp eller avbryta en listing.
 
 Listade items hålls i separat lager och kan inte användas eller förstöras från
-inventory. Utrustning behåller ursprungligt exemplar-ID, stats och skapelsetid vid
+inventory. Utrustning behåller ursprungligt exemplar-ID, Quality och skapelsetid vid
 köp eller återtagning. Stackar slås ihop med mottagarens befintliga innehav.
 Världens cirkulation ändras inte när items flyttas till eller från marknaden.
 

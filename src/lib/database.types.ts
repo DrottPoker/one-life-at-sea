@@ -4,6 +4,7 @@ import type { MarketItem, MarketListing, MarketPage, MarketReceipt, SaleEntry } 
 import type { AdminResource, AdminPage, AdminPayload, AdminReceipt } from "@/lib/admin";
 import type { CirculationHistory, CirculationPeriod } from "@/lib/circulation";
 import type { InventoryEntryType, InventoryPage, TrashReceipt } from "@/lib/inventory";
+import type { EquipmentSlot, EquipReceipt } from "@/lib/equipment";
 import type { TavernReceipt } from "@/lib/morale";
 import type { TrainingReceipt } from "@/lib/training";
 import type { HospitalPatient, HospitalRoster, HospitalStatus } from "@/lib/hospital";
@@ -120,6 +121,8 @@ export type Database = {
       get_item_circulation: { Args: { target_item: string; period?: CirculationPeriod }; Returns: CirculationHistory };
       list_inventory: { Args: { category_id?: string; search_term?: string; requested_page?: number }; Returns: InventoryPage };
       trash_inventory_item: { Args: { entry_id: string; entry_type: InventoryEntryType; quantity: number; request_id: string }; Returns: TrashReceipt };
+      equip_item: { Args: { entry_id: string; request_id: string }; Returns: EquipReceipt };
+      unequip_item: { Args: { equipment_slot: EquipmentSlot; request_id: string }; Returns: EquipReceipt };
       get_gameplay_revision: { Args: Record<string, never>; Returns: string };
       list_harbor_players: { Args: { requested_page?: number }; Returns: HarborRoster };
       is_character_name_available: { Args: { candidate: string }; Returns: boolean };

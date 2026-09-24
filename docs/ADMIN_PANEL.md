@@ -9,10 +9,12 @@ is the first authorized local administrator.
 
 1. **Items**: search/filter the catalog, create an item or edit its name, category,
    description, effect text, active/tradable flags and image. Item IDs, ownership types
-   and equipment slots are permanent after creation. Effects are descriptive text;
+   and equipment slots are permanent after creation. Equipment also has the stat ranges
+   its slot requires (see [Equipment](EQUIPMENT.md)); editing them changes every owned piece,
+   because stats derive from each piece's Quality. Other effects are descriptive text;
    creating a consumable does not add a new gameplay operation.
 2. **Loot tables**: create a named collection, add items, choose fixed percentages or
-   weights at level 1/mastery, and set quantity. Equipment also records damage/accuracy.
+   weights at level 1/mastery, and set quantity. Equipment rolls its Quality when granted.
    A level slider previews percentages of successful catches, with mastery at 100.
 3. **Activities**: select a table, starting/mastery catch chances and mastery level for
    each existing activity. Select No loot to retain XP-only behavior. Changes apply to
@@ -53,10 +55,11 @@ directory includes registration/last-activity timestamps, activity filters and s
   reset the corresponding recovery timestamp to the time of the correction.
 - Edit training XP and purchased tier using the database's composite key.
 - Generate active catalog items for any selected captain. Stacks add to existing
-  holdings; equipment creates individual instances with chosen damage/accuracy.
-  Limits: 1,000,000 stack items or 100 equipment instances per request. Equipment
-  damage accepts 0-1,000,000,000 and accuracy 0-100, with two decimal places.
-- Correct stack quantities and equipment stats, or delete an entire inventory row.
+  holdings; equipment creates individual instances with a chosen Quality (0-100, two
+  decimal places) or, when Quality is left empty, a Quality rolled for each piece.
+  Limits: 1,000,000 stack items or 100 equipment instances per request.
+- Correct stack quantities and equipment Quality, or delete an entire inventory row.
+  Deleting an equipped piece also removes it from the captain's loadout.
 - Release a hospital patient with full health.
 - End an entire combat as a draw without another damage round. Health, previous
   events and snapshot stats remain intact. Active participants become draws,

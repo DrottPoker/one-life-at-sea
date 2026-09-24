@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
 import { isUuid } from "@/lib/validation";
 import { formatItemCount, isInventoryEntryType, parseItemQuantity, type TrashResult } from "@/lib/inventory";
+import { isEquipmentSlot, type EquipReceipt, type EquipResult } from "@/lib/equipment";
 
 const errors: Record<string, string> = {
   INVALID_REQUEST: "Please reload your inventory and try again.",
@@ -19,6 +20,14 @@ const errors: Record<string, string> = {
   NOT_IN_HARBOR: "Return to The Harbor to destroy items.",
   IN_COMBAT: "Finish your current fight before destroying items.",
   NOT_AUTHORIZED: "Please sign in again to use your inventory.",
+  ITEM_EQUIPPED: "Unequip this item first.",
+  NOT_EQUIPPED: "That slot is already empty.",
+  INVALID_SLOT: "Choose a valid equipment slot.",
+};
+const equipBlocked: Record<string, string> = {
+  IN_HOSPITAL: "You cannot change equipment while in hospital.",
+  NOT_IN_HARBOR: "Return to The Harbor to change equipment.",
+  IN_COMBAT: "Finish your current fight before changing equipment.",
 };
 
 export async function trashInventoryItem(form: FormData, characterId: string): Promise<TrashResult> {
@@ -43,4 +52,33 @@ export async function trashInventoryItem(form: FormData, characterId: string): P
       "The result could not be confirmed. Retry this action to check it safely." };
   }
   return { message: "Destroyed " + formatItemCount(data.quantity) + " × " + data.name + ".", receipt: data };
+}
+
+function equipmentOutcome({ data, error }: { data: EquipReceipt | null; error: { message: string } | null }): EquipResult {
+  if (error || !data) {
+    const message = equipBlocked[error?.message ?? ""] ?? errors[error?.message ?? ""];
+    return { error: true, retry: !message, message: message ?? "The result could not be confirmed. Retry this action to check it safely." };
+  }
+  return { message: (data.action === "equip" ? "Equipped " : "Unequipped ") + data.name + ".", receipt: data };
+}
+const changedCharacter: EquipResult = { error: true, retry: true, message: "Your signed-in character changed. Sign back in to check this saved action." };
+
+export async function equipItem(entryId: string, requestId: string, characterId: string): Promise<EquipResult> {
+  const character = await requireCharacter({ allowHospital: true, allowSea: true });
+  if (character.id !== characterId) return changedCharacter;
+  if (!isUuid(entryId) || !isUuid(requestId)) return { error: true, message: "Select an item to equip." };
+  const client = await createClient();
+  const response = await withDatabaseRetry(() => client.rpc("equip_item", { entry_id: entryId, request_id: requestId }));
+  revalidatePath("/(game)", "layout");
+  return equipmentOutcome(response);
+}
+
+export async function unequipItem(slot: string, requestId: string, characterId: string): Promise<EquipResult> {
+  const character = await requireCharacter({ allowHospital: true, allowSea: true });
+  if (character.id !== characterId) return changedCharacter;
+  if (!isEquipmentSlot(slot) || !isUuid(requestId)) return { error: true, message: "Choose a valid equipment slot." };
+  const client = await createClient();
+  const response = await withDatabaseRetry(() => client.rpc("unequip_item", { equipment_slot: slot, request_id: requestId }));
+  revalidatePath("/(game)", "layout");
+  return equipmentOutcome(response);
 }

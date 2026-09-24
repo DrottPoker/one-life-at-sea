@@ -49,15 +49,14 @@ test("admin edits players, grants equipment, recovers a lost grant and browses a
     const grant = page.locator(".admin-card").filter({ has: page.getByRole("heading", { name: "Generate items", exact: true }) });
     await grant.getByRole("combobox", { name: "Item", exact: true }).selectOption("cutlass", { timeout: 10000 });
     await grant.getByLabel("Quantity", { exact: true }).fill("2");
-    await grant.getByLabel("Damage", { exact: true }).fill("42.15");
-    await grant.getByLabel("Accuracy", { exact: true }).fill("65.25");
+    await grant.getByLabel("Quality (%)", { exact: true }).fill("42.15");
     await grant.getByLabel("Reason for change").fill("Verify equipment grant");
     await grant.getByRole("button", { name: "Review item grant" }).click();
     await grant.getByRole("button", { name: "Confirm change" }).click();
     await expect(grant.getByRole("status")).toContainText("2 x Sailor's Cutlass generated.");
     const equipment = (await player.api.rpc("list_inventory", { category_id: "crew_weapons" })).data!;
     expect(equipment.total).toBe(2);
-    expect(equipment.items[0].stats?.damage).toBe(42.15);
+    expect(equipment.items.map(item => item.stats?.quality)).toEqual([42.15, 42.15]);
     await grant.getByRole("button", { name: "Done", exact: true }).click();
     await grant.getByRole("combobox", { name: "Item", exact: true }).selectOption("linen_bandages");
     await grant.getByLabel("Quantity", { exact: true }).fill("25");

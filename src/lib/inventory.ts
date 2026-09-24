@@ -1,23 +1,22 @@
 import { frontend, gameplay } from "@/config/public";
+import type { EquipmentSlot, ItemStats, Loadout } from "@/lib/equipment";
 
 export type InventoryEntryType = "stack" | "instance";
 export type InventoryEntry = {
   id: string; entry_type: InventoryEntryType; item_id: string; quantity: number;
   name: string; category_id: string; kind: "equipment" | "consumable" | "passive";
   description: string; effect_description: string; image_path: string;
-  stats: { damage: number; accuracy: number } | null;
+  stats: ItemStats | null; slot?: EquipmentSlot | null; equipped_slot?: EquipmentSlot | null;
   circulation: string; market_value: string | null;
 };
-export type InventoryPage = { items: InventoryEntry[]; total: number; page: number; page_size: number };
+export type InventoryPage = { items: InventoryEntry[]; total: number; page: number; page_size: number; loadout?: Loadout; ship_health_max?: number };
 export type InventoryFilters = { category: string | null; query: string; page: number };
 export type TrashReceipt = { entry_id: string; entry_type: InventoryEntryType; name: string; quantity: number; remaining: number };
 export type TrashResult = { message?: string; error?: boolean; retry?: boolean; receipt?: TrashReceipt };
 
 export const inventoryCategories = gameplay.inventory.categories;
 const numbers = new Intl.NumberFormat(frontend.site.locale);
-const stats = new Intl.NumberFormat(frontend.site.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const formatItemCount = (value: number) => numbers.format(value);
-export const formatItemStat = (value: number) => stats.format(value);
 export const inventoryEntryKey = (entry: InventoryEntry) => entry.entry_type + "-" + entry.id;
 export const inventoryCategoryName = (id: string | null) => inventoryCategories.find(c => c.id === id)?.name ?? "All items";
 

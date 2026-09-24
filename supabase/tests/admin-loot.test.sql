@@ -41,7 +41,7 @@ select ok((select managed_by_admin from private.item_definitions where id='test_
 select is((select total from private.item_circulation where item_id='test_pearl'),0::numeric,'New item initializes circulation');
 insert into loot_saved select 'item_edit',(select value from loot_saved where key='item_payload')||jsonb_build_object('version',md5(to_jsonb(i)::text)) from private.item_definitions i where id='test_pearl';
 set local role authenticated;
-select throws_ok($$select public.admin_mutate('save_item',value||'{"kind":"equipment","slot":"crew_weapon"}',gen_random_uuid(),'Change item shape') from loot_saved where key='item_edit'$$,'22023','ITEM_SHAPE_LOCKED','Existing item ownership shape is permanent');
+select throws_ok($$select public.admin_mutate('save_item',value||'{"kind":"equipment","slot":"melee"}',gen_random_uuid(),'Change item shape') from loot_saved where key='item_edit'$$,'22023','ITEM_SHAPE_LOCKED','Existing item ownership shape is permanent');
 select throws_ok($$select public.admin_mutate('save_item',value||'{"image_path":"https://example.com/tracker.png"}',gen_random_uuid(),'External image') from loot_saved where key='item_edit'$$,'23514',null,'Arbitrary external image paths are rejected');
 select throws_ok($$select public.admin_mutate('save_item',value||'{"image_path":"/api/item-images/ae110000-0000-4000-8000-000000000001/ae110000-0000-4000-8000-000000000002.png"}',gen_random_uuid(),'Missing upload') from loot_saved where key='item_edit'$$,'22023','INVALID_IMAGE','Uploaded images must exist');
 select public.admin_mutate('save_item',value||'{"name":"Polished Pearl"}',gen_random_uuid(),'Rename pearl') from loot_saved where key='item_edit';

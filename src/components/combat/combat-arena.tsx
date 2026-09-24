@@ -7,20 +7,23 @@ import { gameplay } from "@/config/public";
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Anchor, ChevronRight, Crosshair, Ship, Swords, Undo2 } from "lucide-react";
+import { Anchor, ChevronRight, Crosshair, Ship, Swords, Target, Undo2 } from "lucide-react";
 import { submitOrder } from "@/app/combat-actions";
 import { CombatStage } from "@/components/combat/combat-stage";
 import { CombatEvents, CombatPeople } from "@/components/combat/combat-log";
 import { type Battle, type CombatOrder, ORDER_LABELS } from "@/lib/combat";
+import { fallbackWeapons } from "@/lib/equipment";
 
+const salvos = `${gameplay.combat.ammoPerShot} salvo${gameplay.combat.ammoPerShot === 1 ? "" : "s"}`;
 const orderDetails: Record<CombatOrder, string> = {
-  fire: `${gameplay.combat.ammoPerShot} salvo${gameplay.combat.ammoPerShot === 1 ? "" : "s"}. Damage the opposing hull.`,
+  fire: salvos + ". Damage the opposing hull.",
   board: "Give up your shot to attempt boarding.",
+  crew_shoot: "One shot at the opposing crew.",
   crew_attack: "Attack the opposing crew.",
   disengage: "Take a counterattack, then return to sea.",
   retreat: "Take a counterattack, then leave the fight.",
 };
-const orderIcons = { fire: Crosshair, board: Anchor, crew_attack: Swords, disengage: Undo2, retreat: Ship };
+const orderIcons = { fire: Crosshair, board: Anchor, crew_shoot: Target, crew_attack: Swords, disengage: Undo2, retreat: Ship };
 
 export function CombatArena({ battle }: { battle: Battle }) {
   const router = useRouter();
@@ -31,7 +34,13 @@ export function CombatArena({ battle }: { battle: Battle }) {
   const inFlight = useRef(false);
   const request = useRef<{ round: number; order: CombatOrder; id: string } | null>(null);
   const active = battle.status === "active" && battle.participant_status === "active";
-  const orders: CombatOrder[] = battle.phase === "sea" ? ["fire", "board", "retreat"] : ["crew_attack", "disengage", "retreat"];
+  const own = battle.attacker, firearm = own.loadout?.firearm;
+  const orders: CombatOrder[] = battle.phase === "sea" ? ["fire", "board", "retreat"] : [...(firearm ? ["crew_shoot" as const] : []), "crew_attack", "disengage", "retreat"];
+  const shots = own.shots ?? 0;
+  const details: Record<CombatOrder, string> = { ...orderDetails,
+    fire: salvos + " with " + (own.loadout?.cannons?.name ?? fallbackWeapons.cannons.name) + ". Damage the opposing hull.",
+    crew_shoot: (firearm?.name ?? "Firearm") + ". " + shots + (shots === 1 ? " shot" : " shots") + " left.",
+    crew_attack: (own.loadout?.melee?.name ?? fallbackWeapons.melee.name) + ". " + orderDetails.crew_attack };
 
   function giveOrder(order: CombatOrder) {
     if (inFlight.current || !active) return;
@@ -58,9 +67,10 @@ export function CombatArena({ battle }: { battle: Battle }) {
       <div className="o-section-bar"><h2 id="orders-heading"><Anchor aria-hidden="true" />Your next order</h2><span>Both sides act together</span></div>
       <div className="o-order-buttons">{orders.map(order => {
         const Icon = orderIcons[order];
-        return <button key={order} data-tone={order === "retreat" ? "danger" : order === "fire" || order === "crew_attack" ? "primary" : "secondary"} onClick={() => giveOrder(order)} disabled={pending || (order === "fire" && (battle.attacker.ammo ?? 0) < gameplay.combat.ammoPerShot)}>
+        return <button key={order} data-tone={order === "retreat" ? "danger" : order === "fire" || order === "crew_shoot" || order === "crew_attack" ? "primary" : "secondary"} onClick={() => giveOrder(order)}
+          disabled={pending || (order === "fire" && (battle.attacker.ammo ?? 0) < gameplay.combat.ammoPerShot) || (order === "crew_shoot" && shots < 1)}>
           <span className="o-order-icon" aria-hidden="true">{pending && selected === order ? <span className="o-spinner" /> : <Icon />}</span>
-          <span className="o-order-copy"><strong>{ORDER_LABELS[order]}</strong><small>{orderDetails[order]}</small></span>
+          <span className="o-order-copy"><strong>{ORDER_LABELS[order]}</strong><small>{details[order]}</small></span>
           <ChevronRight className="o-order-chevron" aria-hidden="true" />
         </button>;
       })}</div>

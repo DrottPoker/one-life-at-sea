@@ -32,7 +32,7 @@ export function LootEditor({ table, items }: { table?: LootTable; items: AdminRo
       <p>One item is selected per successful catch. Fixed chances are checked first; weighted items share the remaining chance.</p>
       <div className="admin-search"><label>Item to add<select value={selectedId} onChange={event => setSelected(event.target.value)}>
         {!available.length && <option value="">No more available items</option>}{available.map(item => <option key={item.values.id} value={item.values.id!}>{item.values.name}</option>)}
-      </select></label><button type="button" disabled={!selectedId || entries.length >= 50} onClick={() => setEntries(previous => [...previous, { item_id: selectedId, mode: "weighted", fixed_chance: 0, weight_start: 10, weight_end: 10, quantity: 1, damage: 0, accuracy: 0 }])}><Plus size={16} aria-hidden="true" /> Add item</button></div>
+      </select></label><button type="button" disabled={!selectedId || entries.length >= 50} onClick={() => setEntries(previous => [...previous, { item_id: selectedId, mode: "weighted", fixed_chance: 0, weight_start: 10, weight_end: 10, quantity: 1 }])}><Plus size={16} aria-hidden="true" /> Add item</button></div>
       {!items.length && <Link href="/admin/items/new">Create an item first</Link>}
       <div className="admin-loot-entries">{entries.map((entry, i) => {
         const item = items.find(item => item.values.id === entry.item_id)?.values;
@@ -47,8 +47,7 @@ export function LootEditor({ table, items }: { table?: LootTable; items: AdminRo
             {entry.mode === "fixed" ? <label>Fixed chance (%)<input aria-label={title + " fixed chance"} type="number" required min={0.0001} max={100} step={0.0001} value={entry.fixed_chance} onChange={event => update(i, { fixed_chance: Number(event.target.value) })} /></label> : <>
               <label>Weight at level 1<input aria-label={title + " starting weight"} type="number" required min={0} max={1000000} step={0.0001} value={entry.weight_start} onChange={event => update(i, { weight_start: Number(event.target.value) })} /></label>
               <label>Weight at mastery<input aria-label={title + " mastery weight"} type="number" required min={0} max={1000000} step={0.0001} value={entry.weight_end} onChange={event => update(i, { weight_end: Number(event.target.value) })} /></label></>}
-            {item?.kind === "equipment" && <><label>Damage<input aria-label={title + " damage"} type="number" min={0} max={1000000000} step={0.01} required value={entry.damage} onChange={event => update(i, { damage: Number(event.target.value) })} /></label>
-              <label>Accuracy<input aria-label={title + " accuracy"} type="number" min={0} max={100} step={0.01} required value={entry.accuracy} onChange={event => update(i, { accuracy: Number(event.target.value) })} /></label></>}
+            {item?.kind === "equipment" && <p className="admin-muted">Each piece rolls its own Quality.</p>}
           </div></fieldset>;
       })}</div>
       {issue && <p className="admin-help" role="status">{issue}</p>}

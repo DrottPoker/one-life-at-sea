@@ -2,7 +2,8 @@
 
 # PvP och gemensamma attacker
 
-Uppdaterat 2026-09-21. Detta dokument beskriver den implementerade versionen.
+Uppdaterat 2026-09-24. Detta dokument beskriver den implementerade versionen.
+Vapen, rustning, träffzoner och Quality beskrivs i [utrustning](EQUIPMENT.md).
 [FIRST_COMBAT_PLAN.md](archive/plans/FIRST_COMBAT_PLAN.md) är den historiska planen för version 1.
 
 ## Flöde och sidlås
@@ -99,7 +100,8 @@ Karaktär, skepp, besättning, tränade stats och pengar behålls.
 
 - Ship Health: +1 per 30 sekunder efter deltagarens avslut.
 - Crew Health: +1 per 10 sekunder efter deltagarens avslut.
-- Överlevande återhämtar båda parallellt, även offline, högst 100. Sjukhuspatienter får full hälsa vid utskrivning.
+- Överlevande återhämtar båda parallellt, även offline, högst 100. Utrustad Hull höjer maximal Ship Health.
+  Sjukhuspatienter får full hälsa enligt aktuell utrustning vid utskrivning.
 - Hälsa återhämtas inte för aktiva deltagare. En tillbakadragen angripare kan börja återhämta sig medan mötet fortsätter.
 - Energy: +5 vid fasta femminutersticks i hamnen och Hospital, samt vid fasta
   tiominutersticks till havs och under resor. Högst 100, alltid heltal. Se [Energy](ENERGY_RECOVERY.md).
@@ -110,9 +112,10 @@ Karaktär, skepp, besättning, tränade stats och pengar behålls.
 
 | Fas | Order | Regel |
 | --- | --- | --- |
-| Sea | Fire cannons | En salva även vid miss. Träff skadar Ship Health. |
+| Sea | Fire cannons | En salva även vid miss. Träff skadar Ship Health. Utrustade kanoner eller Basic cannons. |
 | Sea | Board | Ingen egen salva. Bordningsförsök efter motståndarens handling. |
-| Boarding | Crew attack | Träff skadar Crew Health. |
+| Boarding | Fire firearm | Kräver skjutvapen och kvarvarande skott. Ett skott per order. Träff skadar Crew Health. |
+| Boarding | Melee attack | Närstridsvapen eller Fists. Träff skadar Crew Health. |
 | Boarding | Disengage | Ta motattacken och återgå till Sea om besättningen överlever. |
 | Båda | Retreat | Ta motattacken och lämna mötet om kaptenen överlever. |
 
@@ -120,9 +123,10 @@ Nederlag avgörs före reträtt och fasbyte. Lyckad boarding börjar crew-strid 
 Båda som väljer Board lyckas utan slump. Skador följer med mellan faserna.
 
 Cannon focus skjuter så länge ammunition finns och boardar därefter. Boarding focus boardar direkt.
-I boarding används alltid Crew attack. Grundutrustningen är Basic cannons och Cutlasses.
+I boarding skjuter försvararen med sitt skjutvapen så länge skott finns och använder därefter närstrid.
 
 Varje angripare får tio utvecklingssalvor. Försvararen har tio salvor per angriparpar.
+Skjutvapnets skott laddas på samma sätt, för angriparen vid start och för försvararen per angriparpar.
 Detta är en tillfällig tilldelning utan inventarium eller ammunitionsekonomi.
 
 Bordningschans: clamp(0.70 + 0.30 * (ship_speed - enemy_ship_speed) / (ship_speed + enemy_ship_speed), 0.20, 0.90).
@@ -150,6 +154,7 @@ Sätt r = egen Accuracy / motståndarens Speed. Funktionen returnerar en sannoli
 - r >= 64: 1.
 
 Lika stats ger 50 % träffchans. Dubbelt så hög Accuracy ger cirka 66,74 %.
+Vapnets Precision justerar därefter chansen enligt [utrustningsreglerna](EQUIPMENT.md#skada).
 64 gånger så hög Speed som inkommande Accuracy ger garanterade missar.
 64 gånger så hög Accuracy som målets Speed ger garanterade träffar.
 Servern träffar när slumpvärdet i [0, 1) är strikt lägre än sannolikheten.
@@ -186,19 +191,20 @@ och 100 HP. Detta ger 32 skada vid en träff mellan två nya kaptener. Befintlig
 stats och tidigare träning behålls. Första crew-övningen kostar 5 Energy för +1 stat; köpta nivåer och Perfect Drill kan öka utfallet.
 
 - Vid full blockering (q >= 25): 0 skada.
-- Annars: max(1, round(grundskada * (1 - m))).
+- Annars: max(1, round(grundskada * (1 - m) * Damage / 10 * zon * (1 - Armor / 100))).
+  Fists och Basic cannons har Damage 10 och ger därför grundskadan i en ×1-zon utan rustning.
 - Den faktiskt sparade skadan begränsas till målets återstående hälsa.
 - Golvet på 1 före full blockering hindrar heltalsavrundning från att ge noll för tidigt.
 - Det tidigare taket på 40 skada är borttaget.
-- En blockerad träff räknas fortfarande som en träff och visas som Blocked · 0 damage.
+- En blockerad träff räknas fortfarande som en träff och visas med zon, till exempel Hull · Blocked · 0 damage.
   En miss visas som Missed. Kanonsalvor förbrukas i båda fallen.
 
 Absolut Attack påverkar alltså grundskadan, medan kvoterna avgör träffchans och minskning.
-Vid lika Attack och Defense blir skadan per träff 15 vid stats 1, 32 vid 10,
-56 vid 100 och 87 vid 1 000. Skadad hälsa sänker inte dessa stats.
+Vid lika Attack och Defense, neutralt vapen och en ×1-zon utan rustning blir skadan per träff
+15 vid stats 1, 32 vid 10, 56 vid 100 och 87 vid 1 000. Skadad hälsa sänker inte dessa stats.
 
-Utrustningsmodifierare, kritiska träffar, kroppsdelar, slumpvariation i skadebeloppet och
-gruppbonusar ingår inte. Rundor, försvarsorder, bordningschans och återhämtning är oförändrade.
+Varje träff slumpar en träffzon. Zonerna, rustningen och kritiska träffar beskrivs i
+[utrustning](EQUIPMENT.md#träffzoner). Slumpvariation i skadebeloppet och gruppbonusar ingår inte.
 
 ### Referenser och avgränsning
 
@@ -216,7 +222,8 @@ anpassningar för statskalan och full blockering vid 25 gånger Defense.
 - Utgångna deltagare avslutas vid nästa relevanta serverläsning eller handling.
 - Återhämtning räknas från deadline, inte från återbesöket.
 - Offentlig rapport skapas när hela mötet är avslutat. Den visar starter, anslutningar, order,
-  skador, fasbyten, servertid (UTC), final blow, assists och deltagarnas träffar.
+  vapen, träffzoner, kritiska träffar, skador, fasbyten, servertid (UTC), final blow, assists och deltagarnas träffar.
+  Äldre händelser utan vapen och zon visas som tidigare.
 - Loggen visar inga lokala rundnummer eller summerat antal rundor. Det egna rundtaket visas fortfarande i attackvyn.
 - Deltagarlistan visar Ship damage och Crew damage separat för både angripare och försvarare.
   Summorna räknas från sparade händelsers fas, vilket även fungerar för äldre strider.
@@ -229,7 +236,7 @@ anpassningar för statskalan och full blockering vid 25 gånger Defense.
 ## Lagring och behörighet
 
 - private.combats: gemensamt möte, försvararens ögonblicksbild, delad hälsa, resultat och yttersta deadline.
-- private.combat_participants: angriparnas egna faser, rundor, snapshots, resultat och bidrag.
+- private.combat_participants: angriparnas egna faser, rundor, snapshots, resultat och bidrag, samt försvararens salvor och skott mot angriparen.
 - private.combat_engagements: reservation och roll per aktiv kapten.
 - private.combat_rounds: globalt ordnad händelselogg med aktör och lokalt rundnummer.
 - public.player_game_events: endast ägarens ändringssignal, skyddad av RLS.
@@ -239,7 +246,7 @@ get_combat och preview kräver registrerad spelare och filtrerar bort privata mo
 get_attack_lock returnerar endast den egna aktiva attacken.
 get_combat_log är ett separat offentligt läsanrop med explicit fältlista och endast avslutade möten.
 
-Stats och försvarsförval snapshots vid start. Serverns privata round resolver och pgcrypto äger alla utfall.
+Stats, utrustning och försvarsförval snapshots vid start. Motståndaren ser utrustningens namn men inte dess stats. Serverns privata round resolver och pgcrypto äger alla utfall.
 Ordnade deltagarlås, idempotenta begärans-ID:n och förväntade lokala rundnummer skyddar mot dubbeldebitering,
 samtidiga sluthits och gamla tabbar. Hälsa, logg, resultat och notifieringar sparas i samma transaktion.
 Oberoende möten har separata lås. Förändrad deltagargrupp utlöser transaktionsåterförsök.

@@ -34,10 +34,13 @@ config.gameplay.combat.hitChance.extremeRatio = 100;
 config.gameplay.notifications.pageSize = 2;
 config.gameplay.combat.mitigation.fullReductionDefenseRatio = 50;
 Object.assign(config.gameplay.combat.damage, { quadratic: 0, linear: 0, constant: 40 });
-config.gameplay.combat.equipment.cannons = "Captain's test cannons";
+config.gameplay.equipment.fallbackWeapons.cannons.name = "Captain's test cannons";
+Object.assign(config.gameplay.equipment, { weaponScale: 20 });
+Object.assign(config.gameplay.equipment.limits, { maxShipHealth: 60 });
+config.gameplay.equipment.zones.crew[0].weight = 100;
 config.gameplay.harbor.pageSize = 3;
 config.gameplay.inventory.pageSize = 2;
-Object.assign(config.gameplay.inventory.items[0], { name: "Captain\'s $inventory$ Cutlass", active: false });
+Object.assign(config.gameplay.inventory.items[0], { name: "Captain\'s $inventory$ Cutlass", active: false, stats: { damage: { min: 20, max: 30 }, precision: { min: 40, max: 60 } } });
 Object.assign(config.gameplay.seaTravel, { scoutEnergyCost: 9, scoutPageSize: 2, departureEnergyCost: 8, outwardDurationSeconds: 7, returnSecondsPerStep: 11,
   locationTypes: [{ id: "test_cove", name: "Captain's $sea$ Cove", active: true }, { id: "test_depths", name: "Test depths", active: true }] });
 Object.assign(config.gameplay.marketplace, { feeBps: 1000, popularityHours: 6, valueWindowHours: 2, pageSize: 2, listingsPageSize: 1, maxBatchSize: 2 });
@@ -57,7 +60,12 @@ const checks = [
 "select is(public.list_inventory('crew_weapons')#>>'{items,0,name}', $$Captain's $inventory$ Cutlass$$,'Inventory prose escapes quotes and delimiters');",
 "select is(public.list_inventory('crew_weapons','',1)->>'page','1','Inventory supports multiple pages');",
 "select is(jsonb_array_length(public.list_inventory('crew_weapons','',1)->'items'),1,'Final inventory page is bounded');",
-"select is((select sum(damage) from private.item_instances where character_id=(select captain from old_training_fixture)),116.05::numeric,'Catalog changes preserve individual stats');",
+"select is((select sum(quality) from private.item_instances where character_id=(select captain from old_training_fixture)),61.50::numeric,'Catalog changes preserve individual Quality');",
+"select is(private.item_stats(d,10.25)->>'damage','21.03','Stat ranges follow the configured definition') from private.item_definitions d where id='cutlass';",
+"select is(private.combat_damage(12,12,40,1,0),40,'Weapon scale is configurable');",
+"select is((select zone from private.combat_zone('crew',0.4)),'head','Hit zone weights are configurable');",
+"select lives_ok($$update public.characters set ship_health=210 where id=(select captain from old_training_fixture)$$,'Ship Health may reach the configured equipment maximum');",
+"select throws_ok($$update public.characters set ship_health=211 where id=(select captain from old_training_fixture)$$,'23514',null,'Ship Health cannot exceed the configured equipment maximum');",
 "select is(public.list_inventory('medical')#>>'{items,0,quantity}','7','Catalog changes preserve stack quantities');",
 "create temporary table hospital_config_fixture as select gen_random_uuid() id;",
 "insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','HospitalConfig'||translate(id::text,'0123456789','ghijklmnop')) from hospital_config_fixture;",
@@ -107,13 +115,13 @@ const checks = [
 "update public.characters set ship_health=120,ship_recovery_at=clock_timestamp() where id=(select a from config_captains);",
 "create temporary table config_battle as select public.start_combat(d,gen_random_uuid()) value from config_captains;",
 "select is((select value#>>'{battle,attacker,ammo}' from config_battle),'6','Attack starts with configured ammunition');",
-"select is((select value#>>'{battle,attacker,cannons}' from config_battle),$$Captain's test cannons$$,'Equipment text is safely escaped');",
 "select is((select energy from public.characters where id=(select a from config_captains)),73,'Combat applies configured energy cost');",
 "select is((select extract(epoch from (deadline-started_at))::int from private.combats where id=(select (value#>>'{battle,id}')::uuid from config_battle)),90,'Idle deadline is configurable');",
 "select is((select extract(epoch from (hard_deadline-started_at))::int from private.combats where id=(select (value#>>'{battle,id}')::uuid from config_battle)),360,'Encounter deadline is configurable');",
-"create temporary table config_round as select private.resolve_combat_round(state||jsonb_build_object('phase','sea','round',0),'fire',array[0.99,0.99,0.0]) value from private.combats where id=(select (value#>>'{battle,id}')::uuid from config_battle);",
+"create temporary table config_round as select private.resolve_combat_round(state||jsonb_build_object('phase','sea','round',0),'fire',array[0.99,0.99,0.0,0.3,0.3]) value from private.combats where id=(select (value#>>'{battle,id}')::uuid from config_battle);",
+"select is((select value#>>'{event,attacker_weapon}' from config_round),$$Captain's test cannons$$,'Fallback weapon names are safely escaped');",
 "select is((select value#>>'{state,attacker,ammo}' from config_round),'4','A shot consumes configured ammunition');",
-"select is((select private.resolve_combat_round(state||jsonb_build_object('phase','sea','round',6),'fire',array[0.99,0.99,0.0])#>>'{state,outcome}' from private.combats where id=(select (value#>>'{battle,id}')::uuid from config_battle)),'draw','Alternative round limit is enforced');",
+"select is((select private.resolve_combat_round(state||jsonb_build_object('phase','sea','round',6),'fire',array[0.99,0.99,0.0,0.3,0.3])#>>'{state,outcome}' from private.combats where id=(select (value#>>'{battle,id}')::uuid from config_battle)),'draw','Alternative round limit is enforced');",
 "select public.submit_combat_order((value#>>'{battle,id}')::uuid,0,'retreat',gen_random_uuid()) from config_battle;",
 "select is((select extract(epoch from(protected_until-ship_recovery_at))::int from public.characters where id=(select a from config_captains)),45,'Protection duration is configurable');",
 "select ok(jsonb_array_length(public.list_harbor_players()->'players')<=3,'Harbor page size is configurable');",
@@ -145,7 +153,7 @@ checks.push(
 "create temporary table market_config_captains as select (select id from public.characters where user_id=seller) seller,(select id from public.characters where user_id=buyer) buyer from market_config_users;",
 "update public.characters set gold_coins=1000 where id=(select buyer from market_config_captains);",
 "insert into private.item_stacks(character_id,item_id,quantity) select seller,i,10 from market_config_captains cross join(values('linen_bandages'),('oak_planks'),('brass_compass')) v(i);",
-"insert into private.item_instances(character_id,item_id,damage,accuracy) select seller,'cutlass',35,50 from market_config_captains;",
+"insert into private.item_instances(character_id,item_id,quality) select seller,'cutlass',50 from market_config_captains;",
 "select set_config('request.jwt.claims',jsonb_build_object('sub',seller,'role','authenticated')::text,true) from market_config_users;",
 "select is(public.list_market_inventory()->>'total','2','Sale inventory excludes inactive and nontradable items before pagination');",
 "select is(jsonb_array_length(public.list_market_items()->'items'),2,'Market catalog page size follows configuration');",
@@ -224,7 +232,7 @@ const sql = "begin;\ncreate extension if not exists pgtap with schema extensions
   "select public.start_ship_upgrade(\'attack\',50,\'ship_1\',gen_random_uuid());\n" +
   "create temporary table old_crew_request as select gen_random_uuid() request;\ncreate temporary table old_crew_receipt as select public.train_crew('speed','crew_1',request) value from old_crew_request;\n" +
   "insert into private.item_stacks(character_id,item_id,quantity) select captain,'linen_bandages',7 from old_training_fixture;\n" +
-  "insert into private.item_instances(character_id,item_id,damage,accuracy) select captain,'cutlass',d,50 from old_training_fixture cross join(values(32.15),(35.20),(48.70)) v(d);\n" +
+  "insert into private.item_instances(character_id,item_id,quality) select captain,'cutlass',q from old_training_fixture cross join(values(10.25),(20.50),(30.75)) v(q);\n" +
   "create temp table old_sea_user as select gen_random_uuid() id;\ninsert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','SeaConfig'||translate(id::text,'0123456789','ghijklmnop')) from old_sea_user;\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_sea_user;\nselect public.depart_harbor((public.get_game_state()#>>'{sea,version}')::uuid,gen_random_uuid());\ncreate temp table old_sea_fixture as select c.id,c.travel_arrives_at,(select jsonb_agg(to_jsonb(o) order by o.position) from private.sea_route_options o where o.character_id=c.id) options from public.characters c where user_id=(select id from old_sea_user);\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_training_user;\n" +
   "create temporary table old_market_user as select gen_random_uuid() id;\ninsert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','OldMarket'||translate(id::text,'0123456789','ghijklmnop')) from old_market_user;\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_market_user;\ninsert into private.item_stacks(character_id,item_id,quantity) select id,'linen_bandages',1 from public.characters where user_id=(select id from old_market_user);\ncreate temporary table old_market_fixture as select public.create_market_listings(jsonb_build_array(jsonb_build_object('entry_id',s.id,'entry_type','stack','quantity',1,'unit_price',100)),gen_random_uuid()) value from private.item_stacks s join public.characters c on c.id=s.character_id where c.user_id=(select id from old_market_user);\nselect set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_training_user;\n" +
   "insert into private.item_definitions(id,category_id,name,description,effect_description,image_path,kind,stackable,active,tradable,managed_by_admin) values('config_admin_item','materials','Admin item','Admin-owned item','No effect','/images/items/placeholder.svg','passive',true,true,true,true);\n" +

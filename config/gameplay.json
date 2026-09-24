@@ -217,10 +217,33 @@
       "speedInfluence": 0.3,
       "minimumChance": 0.2,
       "maximumChance": 0.9
+    }
+  },
+  "equipment": {
+    "weaponScale": 10,
+    "fallbackWeapons": {
+      "melee": { "name": "Fists", "damage": 10, "precision": 50 },
+      "cannons": { "name": "Basic cannons", "damage": 10, "precision": 50 }
     },
-    "equipment": {
-      "cannons": "Basic cannons",
-      "crewWeapon": "Cutlasses"
+    "limits": {
+      "maxDamage": 100,
+      "maxArmor": 75,
+      "maxShipHealth": 100,
+      "maxSpeed": 50,
+      "maxShots": 10
+    },
+    "zones": {
+      "crew": [
+        { "id": "head", "name": "Head", "weight": 10, "multiplier": 2.5, "armorSlot": "head", "critical": true },
+        { "id": "body", "name": "Body", "weight": 50, "multiplier": 1, "armorSlot": "body", "critical": false },
+        { "id": "legs", "name": "Legs", "weight": 30, "multiplier": 0.7, "armorSlot": "legs", "critical": false },
+        { "id": "feet", "name": "Feet", "weight": 10, "multiplier": 0.4, "armorSlot": "feet", "critical": false }
+      ],
+      "ship": [
+        { "id": "waterline", "name": "Waterline", "weight": 10, "multiplier": 2.5, "armorSlot": "hull", "critical": true },
+        { "id": "hull", "name": "Hull", "weight": 60, "multiplier": 1, "armorSlot": "hull", "critical": false },
+        { "id": "rigging", "name": "Sails and rigging", "weight": 30, "multiplier": 0.5, "armorSlot": "sails", "critical": false }
+      ]
     }
   },
   "harbor": {
@@ -247,9 +270,19 @@
         "icon": "swords"
       },
       {
+        "id": "crew_armor",
+        "name": "Crew Armor",
+        "icon": "shield"
+      },
+      {
         "id": "cannons",
         "name": "Cannons",
         "icon": "cannon"
+      },
+      {
+        "id": "ship_parts",
+        "name": "Ship Parts",
+        "icon": "sail"
       },
       {
         "id": "medical",
@@ -278,12 +311,78 @@
         "name": "Sailor's Cutlass",
         "categoryId": "crew_weapons",
         "kind": "equipment",
-        "slot": "crew_weapon",
+        "slot": "melee",
         "imagePath": "/images/items/cutlass.png",
         "description": "A broad, curved blade with a brass guard and a salt-worn leather grip. A dependable companion in the close quarters of a boarding action.",
-        "effectDescription": "Crew weapon. Its individual Damage and Accuracy are shown below.",
+        "effectDescription": "Melee weapon. Damage and Precision scale with Quality.",
         "active": true,
-        "tradable": true
+        "tradable": true,
+        "stats": { "damage": { "min": 12, "max": 15 }, "precision": { "min": 48, "max": 56 } }
+      },
+      {
+        "id": "flintlock_pistol",
+        "name": "Flintlock Pistol",
+        "categoryId": "crew_weapons",
+        "kind": "equipment",
+        "slot": "firearm",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A single-barrelled pistol with a walnut stock and a brass butt cap. Loaded before a boarding and fired at close range.",
+        "effectDescription": "Firearm. Two shots per fight. Damage and Precision scale with Quality.",
+        "active": true,
+        "tradable": true,
+        "stats": { "damage": { "min": 18, "max": 22 }, "precision": { "min": 46, "max": 54 }, "shots": 2 }
+      },
+      {
+        "id": "leather_tricorn",
+        "name": "Leather Tricorn",
+        "categoryId": "crew_armor",
+        "kind": "equipment",
+        "slot": "head",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A stiffened leather tricorn with a waxed brim. It turns a glancing blow better than felt.",
+        "effectDescription": "Head armor. Armor scales with Quality.",
+        "active": true,
+        "tradable": true,
+        "stats": { "armor": { "min": 3, "max": 6 } }
+      },
+      {
+        "id": "buff_coat",
+        "name": "Buff Coat",
+        "categoryId": "crew_armor",
+        "kind": "equipment",
+        "slot": "body",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A heavy coat of oil-tanned hide, thick enough to catch a slash across the chest and arms.",
+        "effectDescription": "Body armor. Armor scales with Quality.",
+        "active": true,
+        "tradable": true,
+        "stats": { "armor": { "min": 8, "max": 12 } }
+      },
+      {
+        "id": "leather_breeches",
+        "name": "Leather Breeches",
+        "categoryId": "crew_armor",
+        "kind": "equipment",
+        "slot": "legs",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "Thick breeches reinforced at the knee. They keep splinters and blades away from the legs.",
+        "effectDescription": "Leg armor. Armor scales with Quality.",
+        "active": true,
+        "tradable": true,
+        "stats": { "armor": { "min": 4, "max": 7 } }
+      },
+      {
+        "id": "sea_boots",
+        "name": "Sea Boots",
+        "categoryId": "crew_armor",
+        "kind": "equipment",
+        "slot": "feet",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "Tall boots of tarred leather with a firm sole for a wet deck.",
+        "effectDescription": "Foot armor. Armor scales with Quality.",
+        "active": true,
+        "tradable": true,
+        "stats": { "armor": { "min": 3, "max": 6 } }
       },
       {
         "id": "deck_cannon",
@@ -293,9 +392,36 @@
         "slot": "cannons",
         "imagePath": "/images/items/cannon.png",
         "description": "A compact iron cannon mounted on a sturdy oak carriage. Built to bring a broadside to bear without crowding the deck.",
-        "effectDescription": "Ship armament. Its individual Damage and Accuracy are shown below.",
+        "effectDescription": "Ship armament. Damage and Precision scale with Quality.",
         "active": true,
-        "tradable": true
+        "tradable": true,
+        "stats": { "damage": { "min": 12, "max": 15 }, "precision": { "min": 50, "max": 58 } }
+      },
+      {
+        "id": "oak_sheathing",
+        "name": "Oak Hull Sheathing",
+        "categoryId": "ship_parts",
+        "kind": "equipment",
+        "slot": "hull",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A second skin of seasoned oak fastened over the hull below the waterline.",
+        "effectDescription": "Hull. Adds Armor and maximum Ship Health that scale with Quality.",
+        "active": true,
+        "tradable": true,
+        "stats": { "armor": { "min": 5, "max": 10 }, "health": { "min": 10, "max": 25 } }
+      },
+      {
+        "id": "canvas_sails",
+        "name": "Heavy Canvas Sails",
+        "categoryId": "ship_parts",
+        "kind": "equipment",
+        "slot": "sails",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A suit of close-woven canvas that holds its shape in a strong wind and shrugs off stray shot.",
+        "effectDescription": "Sails. Add Armor and Ship Speed in combat that scale with Quality.",
+        "active": true,
+        "tradable": true,
+        "stats": { "armor": { "min": 3, "max": 6 }, "speed": { "min": 2, "max": 6 } }
       },
       {
         "id": "linen_bandages",

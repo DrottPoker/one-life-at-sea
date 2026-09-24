@@ -33,7 +33,7 @@ alter table public.characters
   drop constraint characters_energy_check,
   add constraint characters_energy_check check(energy between 0 and {{gameplay.resources.energyStorageMax}}),
   drop constraint characters_ship_health_check,
-  add constraint characters_ship_health_check check(ship_health between 0 and {{gameplay.resources.healthMax}}),
+  add constraint characters_ship_health_check check(ship_health between 0 and {{gameplay.resources.healthMax}}+{{gameplay.equipment.limits.maxShipHealth}}),
   drop constraint characters_crew_health_check,
   add constraint characters_crew_health_check check(crew_health between 0 and {{gameplay.resources.healthMax}});
 alter table public.characters alter column ship_attack set default {{gameplay.startingStats.ship.attack}};
@@ -69,10 +69,17 @@ language sql immutable strict security invoker set search_path='' as $$
   select * from private.energy_tick_snapshot(stored_energy,anchor,observed_at,{{gameplay.resources.energyRecoverySeconds}});
 $$;
 
+-- Ship Health can exceed the base maximum through equipment; crew health uses the base maximum.
+create or replace function private.health_snapshot(value integer, anchor timestamptz, observed_at timestamptz, seconds integer, maximum integer)
+returns integer language sql immutable strict security invoker set search_path = ''
+as $$
+  select least(maximum, value + least(maximum, greatest(0, floor(extract(epoch from (observed_at - anchor)) / seconds)))::integer);
+$$;
+revoke all on function private.health_snapshot(integer,timestamptz,timestamptz,integer,integer) from public,anon,authenticated;
 create or replace function private.health_snapshot(value integer, anchor timestamptz, observed_at timestamptz, seconds integer)
 returns integer language sql immutable strict security invoker set search_path = ''
 as $$
-  select least({{gameplay.resources.healthMax}}, value + least({{gameplay.resources.healthMax}}, greatest(0, floor(extract(epoch from (observed_at - anchor)) / seconds)))::integer);
+  select private.health_snapshot(value, anchor, observed_at, seconds, {{gameplay.resources.healthMax}});
 $$;
 
 -- An overdue return changes the rate at arrival, including a tick exactly at arrival.

@@ -57,8 +57,8 @@ begin
     insert into private.item_stacks(character_id,item_id,quantity) values(target_id,selected_id,entry.quantity)
       on conflict(character_id,item_id) do update set quantity=item_stacks.quantity+excluded.quantity;
   else
-    insert into private.item_instances(character_id,item_id,damage,accuracy)
-      select target_id,selected_id,entry.damage,entry.accuracy from generate_series(1,entry.quantity);
+    insert into private.item_instances(character_id,item_id,quality)
+      select target_id,selected_id,private.roll_item_quality() from generate_series(1,entry.quantity);
   end if;
   return jsonb_build_object('caught',true,'table_id',loot.id,'table_version',loot.version,'skill_level',skill_level,
     'success_chance',success_chance,'item_id',item.id,'name',item.name,'image_path',item.image_path,'quantity',entry.quantity);
@@ -79,6 +79,13 @@ begin
   if old_row is not null and (old_row->>'kind' is distinct from payload->>'kind'
     or old_row->>'slot' is distinct from nullif(payload->>'slot','none')) then
     raise exception 'ITEM_SHAPE_LOCKED' using errcode='22023'; end if;
+  if coalesce(jsonb_typeof(payload->'stats'),'null')<>'null' and (jsonb_typeof(payload->'stats')<>'object' or exists(
+    select 1 from jsonb_each(payload->'stats') stat where stat.key not in ('damage','precision','armor','health','speed','shots')
+      or (stat.key='shots' and (jsonb_typeof(stat.value)<>'number' or (stat.value#>>'{}')::numeric<>trunc((stat.value#>>'{}')::numeric)))
+      or (stat.key<>'shots' and (jsonb_typeof(stat.value)<>'object' or jsonb_typeof(stat.value->'min')<>'number'
+        or jsonb_typeof(stat.value->'max')<>'number' or trunc((stat.value->>'min')::numeric,2)<>(stat.value->>'min')::numeric
+        or trunc((stat.value->>'max')::numeric,2)<>(stat.value->>'max')::numeric)))) then
+    raise exception 'INVALID_STATS' using errcode='22023'; end if;
   if not (payload->>'active')::boolean and exists(select 1 from private.loot_entries e
     join private.loot_tables t on t.id=e.loot_table_id where e.item_id=identifier and t.active) then
     raise exception 'ITEM_IN_LOOT' using errcode='22023'; end if;
@@ -86,13 +93,28 @@ begin
   if image like '/api/item-images/%' and not exists(select 1 from storage.objects
     where bucket_id='item-images' and name=substr(image,length('/api/item-images/')+1)) then
     raise exception 'INVALID_IMAGE' using errcode='22023'; end if;
-  insert into private.item_definitions(id,category_id,name,description,effect_description,image_path,kind,stackable,slot,active,tradable,managed_by_admin)
-  values(identifier,payload->>'category_id',btrim(payload->>'name'),btrim(payload->>'description'),
-    coalesce(nullif(btrim(payload->>'effect_description'),''),'No active effect.'),image,payload->>'kind',
-    payload->>'kind'<>'equipment',nullif(payload->>'slot','none'),(payload->>'active')::boolean,(payload->>'tradable')::boolean,true)
-  on conflict(id) do update set category_id=excluded.category_id,name=excluded.name,description=excluded.description,
-    effect_description=excluded.effect_description,image_path=excluded.image_path,active=excluded.active,tradable=excluded.tradable,managed_by_admin=true
-  returning to_jsonb(item_definitions) into new_row;
+  begin
+    insert into private.item_definitions(id,category_id,name,description,effect_description,image_path,kind,stackable,slot,active,tradable,managed_by_admin,
+      damage_min,damage_max,precision_min,precision_max,armor_min,armor_max,health_min,health_max,speed_min,speed_max,shots)
+    values(identifier,payload->>'category_id',btrim(payload->>'name'),btrim(payload->>'description'),
+      coalesce(nullif(btrim(payload->>'effect_description'),''),'No active effect.'),image,payload->>'kind',
+      payload->>'kind'<>'equipment',nullif(payload->>'slot','none'),(payload->>'active')::boolean,(payload->>'tradable')::boolean,true,
+      (payload#>>'{stats,damage,min}')::numeric,(payload#>>'{stats,damage,max}')::numeric,
+      (payload#>>'{stats,precision,min}')::numeric,(payload#>>'{stats,precision,max}')::numeric,
+      (payload#>>'{stats,armor,min}')::numeric,(payload#>>'{stats,armor,max}')::numeric,
+      (payload#>>'{stats,health,min}')::numeric,(payload#>>'{stats,health,max}')::numeric,
+      (payload#>>'{stats,speed,min}')::numeric,(payload#>>'{stats,speed,max}')::numeric,(payload#>>'{stats,shots}')::integer)
+    on conflict(id) do update set category_id=excluded.category_id,name=excluded.name,description=excluded.description,
+      effect_description=excluded.effect_description,image_path=excluded.image_path,active=excluded.active,tradable=excluded.tradable,managed_by_admin=true,
+      damage_min=excluded.damage_min,damage_max=excluded.damage_max,precision_min=excluded.precision_min,precision_max=excluded.precision_max,
+      armor_min=excluded.armor_min,armor_max=excluded.armor_max,health_min=excluded.health_min,health_max=excluded.health_max,
+      speed_min=excluded.speed_min,speed_max=excluded.speed_max,shots=excluded.shots
+    returning to_jsonb(item_definitions) into new_row;
+  exception when check_violation or numeric_value_out_of_range then
+    if sqlerrm like '%item_definitions_equipment_stats_check%' or sqlerrm like '%numeric field overflow%' then
+      raise exception 'INVALID_STATS' using errcode='22023'; end if;
+    raise;
+  end;
   return jsonb_build_object('before',old_row,'after',new_row,'message','Item saved.','id',identifier);
 end;
 $$;
@@ -122,13 +144,9 @@ begin
   for entry in select value from jsonb_array_elements(entries) loop
     if not exists(select 1 from private.item_definitions where id=entry->>'item_id' and (active or not (payload->>'active')::boolean)) then
       raise exception 'INVALID_ITEM' using errcode='22023'; end if;
-    insert into private.loot_entries(loot_table_id,item_id,mode,fixed_chance,weight_start,weight_end,quantity,damage,accuracy)
+    insert into private.loot_entries(loot_table_id,item_id,mode,fixed_chance,weight_start,weight_end,quantity)
     values(identifier,entry->>'item_id',entry->>'mode',(entry->>'fixed_chance')::numeric,
-      (entry->>'weight_start')::numeric,(entry->>'weight_end')::numeric,(entry->>'quantity')::integer,
-      (entry->>'damage')::numeric,(entry->>'accuracy')::numeric);
-    if exists(select 1 from private.item_definitions where id=entry->>'item_id' and stackable)
-      and ((entry->>'damage')::numeric<>0 or (entry->>'accuracy')::numeric<>0) then
-      raise exception 'INVALID_STATS' using errcode='22023'; end if;
+      (entry->>'weight_start')::numeric,(entry->>'weight_end')::numeric,(entry->>'quantity')::integer);
   end loop;
   select sum(fixed_chance),sum(weight_start),sum(weight_end) into fixed_total,start_total,end_total
     from private.loot_entries where loot_table_id=identifier;

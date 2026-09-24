@@ -43,7 +43,7 @@ for each row execute function private.sync_hospital_patient();
 create or replace function private.settle_hospital(captain_id uuid,observed_at timestamptz)
 returns void language plpgsql volatile security invoker set search_path='' as $$
 begin
-  update public.characters set ship_health={{gameplay.resources.healthMax}},crew_health={{gameplay.resources.healthMax}},
+  update public.characters set ship_health=private.ship_health_max(captain_id),crew_health={{gameplay.resources.healthMax}},
     ship_recovery_at=hospital_until,crew_recovery_at=hospital_until,hospital_started_at=null,hospital_until=null
     where id=captain_id and hospital_until<=observed_at;
 end;

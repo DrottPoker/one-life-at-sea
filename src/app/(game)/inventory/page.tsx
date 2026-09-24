@@ -12,7 +12,7 @@ export const metadata = { title: "Inventory" };
 export default async function InventoryRoute({ searchParams }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireCharacter({ allowHospital: true, allowSea: true });
+  const character = await requireCharacter({ allowHospital: true, allowSea: true });
   const filters = inventoryFilters(await searchParams);
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("list_inventory", {
@@ -22,7 +22,7 @@ export default async function InventoryRoute({ searchParams }: {
   return <>
     <PageHero title="Inventory" lead="Everything your captain carries." image={PLACEHOLDER_HERO} icon={Package} />
     <Panel>
-      <InventoryPanel inventory={data} filters={filters} />
+      <InventoryPanel inventory={data} filters={filters} characterId={character.id} />
     </Panel>
   </>;
 }

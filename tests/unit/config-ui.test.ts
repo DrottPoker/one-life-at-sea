@@ -68,7 +68,7 @@ describe("configured interface", () => {
     const html = renderToStaticMarkup(createElement(CombatantPanel, {
       own: true, phase: "sea",
       captain: { id: "test", player_number: 100001, name: "Config Captain", ship_health: 50, crew_health: 125, ammo: 10,
-        ship: null, crew: null, cannons: null, weapon: null },
+        ship: null, crew: null, loadout: {} },
     }));
     expect(html).toContain('aria-valuemax="250"');
     expect(html).toContain('width:20%');

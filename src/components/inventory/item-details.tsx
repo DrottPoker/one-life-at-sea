@@ -6,7 +6,8 @@ import { ItemImage } from "@/components/inventory/item-image";
 import { ItemHistoryChart } from "@/components/item-history-chart";
 import { gameplay } from "@/config/public";
 import { formatCirculation } from "@/lib/circulation";
-import { inventoryEntryKey, inventoryCategoryName, formatItemCount, formatItemStat, type InventoryEntry } from "@/lib/inventory";
+import { inventoryEntryKey, inventoryCategoryName, formatItemCount, type InventoryEntry } from "@/lib/inventory";
+import { formatQuality, itemStatRows, SLOT_LABELS } from "@/lib/equipment";
 
 export function ItemDetails({ item, onClose, quantityLabel = "Quantity", quantityDisplay }: { item: InventoryEntry; onClose: () => void; quantityLabel?: string; quantityDisplay?: string }) {
   const [chart, setChart] = useState<"circulation" | "value" | null>(null);
@@ -22,9 +23,10 @@ export function ItemDetails({ item, onClose, quantityLabel = "Quantity", quantit
       <dl className="o-item-properties">
         <div><dt>Category</dt><dd>{inventoryCategoryName(item.category_id)}</dd></div>
         <div><dt>{quantityLabel}</dt><dd>{quantityDisplay ?? formatItemCount(item.quantity)}</dd></div>
+        {item.slot && <div><dt>Slot</dt><dd>{SLOT_LABELS[item.slot]}{item.equipped_slot ? " (equipped)" : ""}</dd></div>}
         {item.stats && <>
-          <div><dt>Damage</dt><dd>{formatItemStat(item.stats.damage)}</dd></div>
-          <div><dt>Accuracy</dt><dd>{formatItemStat(item.stats.accuracy)}</dd></div>
+          <div><dt>Quality</dt><dd>{formatQuality(item.stats.quality)}</dd></div>
+          {itemStatRows(item.stats).map(row => <div key={row.key}><dt>{row.label}</dt><dd>{row.text}</dd></div>)}
         </>}
         <div><dt title={"Average price per item, weighted by units sold in the last " + gameplay.marketplace.valueWindowHours + " hours"}>Value</dt><dd className="o-item-history-value">
           <span title={item.market_value === null ? "No completed market sales yet" : "Gold Coins"} className="o-item-market-value">

@@ -13,9 +13,12 @@ select ok(not has_function_privilege('authenticated','private.receive_market_ite
 insert into private.item_categories(id,name,position)
  select 'market_test_'||id,'Market Fixture '||name,position from private.item_categories
  where id in('medical','materials','crew_weapons');
-insert into private.item_definitions(id,category_id,name,description,effect_description,image_path,kind,stackable,slot,active,tradable)
- select 'market_test_'||id,'market_test_'||category_id,'Market Fixture '||name,description,effect_description,image_path,kind,stackable,slot,true,true
+insert into private.item_definitions(id,category_id,name,description,effect_description,image_path,kind,stackable,slot,active,tradable,
+  damage_min,damage_max,precision_min,precision_max)
+ select 'market_test_'||id,'market_test_'||category_id,'Market Fixture '||name,description,effect_description,image_path,kind,stackable,slot,true,true,
+  damage_min,damage_max,precision_min,precision_max
  from private.item_definitions where id in('linen_bandages','oak_planks','cutlass');
+update private.item_definitions set damage_min=12,damage_max=15,precision_min=48,precision_max=56 where id='market_test_cutlass';
 
 insert into auth.users(id,email,is_anonymous,raw_user_meta_data)
 select ('a8600000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'market-'||n||'@example.test',false,
@@ -27,8 +30,8 @@ grant all on f,results to authenticated;
 update public.characters set gold_coins=1000,bank_gold_coins=500,energy_updated_at=clock_timestamp()+interval '1 day' where id in(select id from f where n>1);
 insert into private.item_stacks(character_id,item_id,quantity)
  select id,item_id,qty from f cross join(values('market_test_linen_bandages',40),('market_test_oak_planks',20)) v(item_id,qty) where n=1;
-insert into private.item_instances(id,character_id,item_id,damage,accuracy)
- select 'a8600000-0000-4000-8000-000000000100',id,'market_test_cutlass',12.34,56.78 from f where n=1;
+insert into private.item_instances(id,character_id,item_id,quality)
+ select 'a8600000-0000-4000-8000-000000000100',id,'market_test_cutlass',44.5 from f where n=1;
 create temp table owned as select id,entry_type,item_id from (
  select id,'stack'::text entry_type,item_id from private.item_stacks where character_id=(select id from f where n=1)
  union all select id,'instance',item_id from private.item_instances where character_id=(select id from f where n=1)) o;
@@ -95,7 +98,7 @@ select is(public.list_market_listings('market_test_linen_bandages')->>'total','0
 select set_config('request.jwt.claims','{"sub":"a8600000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 select throws_ok($$select public.buy_market_listing((select id from listings where item_id='market_test_linen_bandages'),1,1,gen_random_uuid())$$,'P0001','LISTING_UNAVAILABLE','Cancelled offer cannot be bought');
 select public.buy_market_listing((select id from listings where item_id='market_test_cutlass'),1,101,gen_random_uuid());
-select is((select i->'stats' from jsonb_array_elements(public.list_inventory()->'items') i where i->>'item_id'='market_test_cutlass'),'{"damage":12.34,"accuracy":56.78}'::jsonb,'Equipment stats survive trade');
+select is((select i->'stats' from jsonb_array_elements(public.list_inventory()->'items') i where i->>'item_id'='market_test_cutlass'),'{"quality":44.5,"damage":13.34,"precision":51.56}'::jsonb,'Equipment Quality and stats survive trade');
 select is((select i->>'id' from jsonb_array_elements(public.list_inventory()->'items') i where i->>'item_id'='market_test_cutlass'),'a8600000-0000-4000-8000-000000000100','Equipment keeps its original identity');
 select throws_ok($$select public.buy_market_listing((select id from listings where item_id='market_test_cutlass'),1,101,gen_random_uuid())$$,'P0001','LISTING_UNAVAILABLE','Unique equipment cannot sell twice');
 select public.buy_market_listing((select id from listings where item_id='market_test_oak_planks'),5,2,gen_random_uuid());
