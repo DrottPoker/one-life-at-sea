@@ -84,7 +84,7 @@ export function CombatArena({ battle }: { battle: Battle }) {
   }
 
   return <>
-    <CombatStage attacker={battle.attacker} defender={battle.defender} phase={battle.phase} />
+    <CombatStage attacker={battle.attacker} defender={battle.defender} phase={battle.phase} events={battle.events} />
     {active ? <section className="o-combat-orders" aria-labelledby="orders-heading">
       <div className="o-section-bar"><h2 id="orders-heading"><Anchor aria-hidden="true" />Your next order</h2><span>Both sides act together</span></div>
       {battle.phase === "sea" && <fieldset className="o-ammo-select" disabled={pending}>

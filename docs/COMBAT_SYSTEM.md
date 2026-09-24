@@ -227,6 +227,8 @@ anpassningar för statskalan och full blockering vid 25 gånger Defense.
 - Offentlig rapport skapas när hela mötet är avslutat. Den visar starter, anslutningar, order,
   vapen, träffzoner, kritiska träffar, skador, fasbyten, servertid (UTC), final blow, assists och deltagarnas träffar.
   Äldre händelser utan vapen och zon visas som tidigare.
+- Attackvyn spelar också upp den egna senaste rundan i stridsbilden, med träffzon, skada och miss
+  för båda sidor. Se [gränssnittsdesignen](INTERFACE_DESIGN.md#combat-presentation).
 - Loggen visar inga lokala rundnummer eller summerat antal rundor. Det egna rundtaket visas fortfarande i attackvyn.
 - Deltagarlistan visar Ship damage och Crew damage separat för både angripare och försvarare.
   Summorna räknas från vilken hälsa varje träff skadade; äldre händelser använder sin fas.

@@ -99,9 +99,29 @@ game navigation during combat.
 - `CombatStage` is shared by preparation and active combat. Own and opposing
   captain panels flank the artwork on desktop. The artwork moves above the two
   panels below the combat breakpoint; mobile order buttons stack vertically.
-- `public/images/combat-sea.webp` and `combat-boarding.webp` are optimized copies
-  of the owner's `skepvs.png` and `voardingvs.png`. Both retain their 1774 x 887
-  dimensions and full composition. The original uploads are unchanged.
+- `public/images/combat-sea-broadside.webp` and `combat-boarding-duel.webp` are the
+  owner's 1774 x 887 scene artwork (2026-09-24): two pirate ships in side profile, and
+  two duelists on a boarding plank. The attacker is always drawn left, the defender
+  right. New artwork gets a new file name so image caches never serve the old version.
+- The artwork doubles as the hit display (`CombatScene`). The viewer's latest own round
+  plays on it: cannon fire, Chain Shot, Grape Shot, melee, firearm, Grenado and Smoke Pot
+  each have their own effect built from square pixels. Damage rises from the impact, a hit
+  leaves a pixel reticle on the struck zone, and a label under the struck side keeps the
+  result (for example Critical · Waterline · 30, Crew · 6 or Miss) until the next round.
+  Misses splash beside the ship, are parried between the blades, or land beside the target.
+  The attacker's strike plays first, then the defender's.
+- Only rounds that arrive while the page is open animate; a reload shows the marks and
+  labels still. A round that changes phase finishes on its own artwork before the new phase
+  fades in. Other attackers' rounds stay in the log.
+- The caption under the artwork states the round in words, for example "Round 3: You hit
+  their sails and rigging for 12 and slowed their ship. Bo missed.", and is announced
+  politely to screen readers. With reduced motion, marks and labels appear without effects.
+  The VS badge sits in the sky at the top center, clear of the effects.
+- Anchor points for zones, guns, deck, hands, misses and labels live in
+  `src/lib/combat-scene-anchors.ts`, in the artwork's own pixels. Recalibrate them when the
+  artwork changes; unit tests check that every configured hit zone has a point.
+  `src/lib/combat-scene.ts` turns a round into strikes, labels and the caption. Effect
+  colors are the `--o-fx-*` tokens in `config/theme.css`.
 - The scene follows the current attacker's authoritative phase, including a
   return to sea after Disengage. It does not infer phase from the last clicked
   button or another attacker's phase.
@@ -120,7 +140,10 @@ Edit the combat colors in `config/theme.css`, then sync generated styles.
 
 The existing `tests/e2e/combat.spec.ts` exercises preparation, both phase images,
 real orders, reloads, public reports and widths from 320 to 1680px. It writes
-ignored `.local/attack-*.jpg` screenshots. The combat action-lock suite covers
+ignored `.local/attack-*.jpg` screenshots. With guaranteed hits it checks the scene's
+zones, labels and caption for chain, grape, grenado, pistol and melee strikes and the
+boarding hand-over, and freezes the round animation to write `.local/scene-*.png` frames.
+The combat action-lock suite covers
 defender restrictions independently of the presentation.
 
 Stamina appears after Energy in the condition sidebar, using a green track and the same accessible

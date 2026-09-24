@@ -1,5 +1,5 @@
 import { localAppUrl } from "../support/local";
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import type { Database } from "../../src/lib/database.types";
@@ -26,6 +26,15 @@ async function start(api: SupabaseClient<Database>, targetId: string, requestId:
     if (result.error?.code !== "40001" || i === 3) return result;
   }
 }
+// Freezes the scene's round animation at fixed times and captures each frame for visual review.
+async function sceneFrames(page: Page, name: string) {
+  const art = page.locator(".o-combat-scene-art");
+  for (const time of [200, 600, 1000, 1500, 3000]) {
+    await art.evaluate((element, at) => { for (const animation of element.getAnimations({ subtree: true })) { animation.pause(); animation.currentTime = at; } }, time);
+    await art.screenshot({ path: ".local/scene-" + name + "-" + time + ".png" });
+  }
+  await art.evaluate(element => { for (const animation of element.getAnimations({ subtree: true })) animation.play(); });
+}
 test.use({ launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] } });
 
 test("fullscreen attack keeps preparation and both phases on one route, locks navigation, then publishes a report", async ({ page, browser }) => {
@@ -50,8 +59,8 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await expect(page.locator(".o-masthead")).toHaveCount(0);
     const opponent = main.getByRole("region", { name: "Opponent ship and crew", exact: true });
     await expect(opponent.getByText("Unknown", { exact: true })).toHaveCount(3);
-    const scene = main.locator(".o-combat-scene img");
-    await expect(scene).toHaveAttribute("alt", "Two sailing ships face each other on the open sea.");
+    const scene = main.locator(".o-combat-scene-art > img");
+    await expect(scene).toHaveAttribute("alt", "Two pirate ships face each other on the open sea.");
     await expect.poll(() => scene.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
     await page.screenshot({ path: ".local/attack-prepare-desktop.jpg", type: "jpeg", quality: 75, fullPage: true });
     await main.getByRole("link", { name: "Back to profile", exact: true }).click();
@@ -80,7 +89,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await main.getByRole("button", { name: /^Board Give up/ }).click();
     await expect(main.getByRole("button", { name: /^Melee attack Fists/ })).toBeVisible();
     await expect(main.locator(".o-combat-stage")).toHaveAttribute("data-phase", "boarding");
-    await expect(scene).toHaveAttribute("alt", "Two pirate crews clash across the decks of their ships.");
+    await expect(scene).toHaveAttribute("alt", "Two pirate captains cross cutlasses on a plank between their ships.");
     await expect.poll(() => scene.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
     await page.screenshot({ path: ".local/attack-boarding-desktop.jpg", type: "jpeg", quality: 80, fullPage: true });
     await page.setViewportSize({ width: 375, height: 1050 });
@@ -98,7 +107,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await main.getByRole("button", { name: /^Disengage Take/ }).click();
     await expect(main.getByRole("button", { name: /^Fire cannons 1 salvo/ })).toBeVisible();
     await expect(main.locator(".o-combat-stage")).toHaveAttribute("data-phase", "sea");
-    await expect(scene).toHaveAttribute("alt", "Two sailing ships face each other on the open sea.");
+    await expect(scene).toHaveAttribute("alt", "Two pirate ships face each other on the open sea.");
     await expect.poll(() => scene.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
     await page.screenshot({ path: ".local/attack-sea-desktop.jpg", type: "jpeg", quality: 85, fullPage: true });
     await main.getByRole("button", { name: /^Fire cannons 1 salvo/ }).click();
@@ -358,6 +367,12 @@ test("equipped firearms, melee weapons and armor drive boarding orders and the c
     await expect(ammo.getByRole("radio", { name: /^Chain Shot None in inventory/ })).toBeDisabled();
     await expect(ammo.getByRole("radio", { name: /^Grape Shot None in inventory/ })).toBeDisabled();
     await main.getByRole("button", { name: /^Board Give up/ }).click();
+    const scene = main.locator(".o-combat-scene");
+    await expect(scene).toHaveAttribute("data-phase", "boarding");
+    await expect(scene.locator(".o-scene-leaving .o-scene-overlay")).toHaveAttribute("data-animate", "true");
+    await expect(scene.locator("figcaption")).toContainText("You boarded their ship.");
+    await sceneFrames(page, "board");
+    await expect(scene.locator(".o-scene-leaving")).toBeHidden({ timeout: 5000 });
     const own = main.getByRole("region", { name: "Your ship and crew", exact: true });
     const opponent = main.getByRole("region", { name: "Opponent ship and crew", exact: true });
     await expect(own.locator('[data-slot="firearm"]')).toContainText("Flintlock Pistol");
@@ -370,9 +385,15 @@ test("equipped firearms, melee weapons and armor drive boarding orders and the c
     await main.getByRole("button", { name: "Throw temporary Grenado. Damage 25.00 · Precision 60.00.", exact: true }).click();
     await expect(main.getByText("Round 2 / 25", { exact: true })).toBeVisible();
     await expect(main.getByRole("button", { name: "Throw temporary Grenado. Used up for this fight.", exact: true })).toBeDisabled();
+    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical · )?(Head|Body|Legs|Feet) · \d+$/);
+    expect(["head", "body", "legs", "feet"]).toContain(await scene.locator('.o-scene-mark[data-target="defender"]').getAttribute("data-zone"));
+    await expect(scene.locator('.o-scene-chip[data-target="attacker"]')).toHaveText("Miss");
+    await sceneFrames(page, "grenade");
     expect(testSqlQuantity(a.id)).toBe("1");
     await main.getByRole("button", { name: "Fire firearm Flintlock Pistol. 2 shots left.", exact: true }).click();
     await expect(main.getByText("Round 3 / 25", { exact: true })).toBeVisible();
+    await expect(scene.locator("figcaption")).toContainText(/You hit their (head|body|legs|feet) for \d+/);
+    await sceneFrames(page, "pistol");
     await main.getByRole("button", { name: "Fire firearm Flintlock Pistol. 1 shot left.", exact: true }).click();
     await expect(main.getByText("Round 4 / 25", { exact: true })).toBeVisible();
     await expect(main.getByRole("button", { name: "Fire firearm Flintlock Pistol. 0 shots left.", exact: true })).toBeDisabled();
@@ -389,6 +410,10 @@ test("equipped firearms, melee weapons and armor drive boarding orders and the c
     await expect(log.getByText("Throw temporary · Grenado", { exact: true })).toHaveCount(1);
     await expect(log.getByText(/^(Head|Body|Legs|Feet) · \d+ crew damage/)).toHaveCount(3);
     await page.screenshot({ path: ".local/attack-equipment-desktop.jpg", type: "jpeg", quality: 80, fullPage: true });
+    await main.getByRole("button", { name: /^Melee attack Sailor's Cutlass/ }).click();
+    await expect(main.getByText("Round 5 / 25", { exact: true })).toBeVisible();
+    await expect(scene.locator('.o-scene-mark[data-target="defender"]')).toHaveCount(1);
+    await sceneFrames(page, "melee");
     await main.getByRole("button", { name: /^Retreat Take/ }).click();
     await expect(page).toHaveURL(new RegExp("/combatlog/" + id + "$"));
   } finally { await cleanup([a, d]); }
@@ -417,12 +442,25 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await expect(log.getByText("Fire cannons · Basic cannons · Chain Shot", { exact: true })).toBeVisible();
     await expect(log.getByText(/^Sails and rigging · \d+ ship damage · Ship slowed$/)).toBeVisible();
     await expect(main.getByRole("list", { name: "Opponent active effects", exact: true })).toContainText("Slowed: Ship Speed x0.8 for 3 more rounds");
+    const scene = main.locator(".o-combat-scene");
+    await expect(scene.locator('.o-scene-overlay[data-animate="true"]')).toHaveCount(1);
+    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical · )?Sails and rigging · \d+$/);
+    await expect(scene.locator('.o-scene-mark[data-target="defender"]')).toHaveAttribute("data-zone", "rigging");
+    await expect(scene.locator("figcaption")).toContainText(/You hit their sails and rigging for \d+ and slowed their ship\./);
+    await sceneFrames(page, "chain");
     await ammo.getByText("Grape Shot", { exact: true }).click();
     await main.getByRole("button", { name: /^Fire cannons 1 salvo of Grape Shot/ }).click();
     await expect(main.getByText("Round 2 / 25", { exact: true })).toBeVisible();
     await expect(log.getByText("Fire cannons · Basic cannons · Grape Shot", { exact: true })).toBeVisible();
     await expect(log.getByText(/^(Head|Body|Legs|Feet) · \d+ crew damage/)).toBeVisible();
     await expect(main.getByRole("progressbar", { name: "Opponent Crew Health", exact: true })).not.toHaveAttribute("aria-valuenow", "100");
+    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^Crew · \d+$/);
+    await expect(scene.locator("figcaption")).toContainText(/You hit their crew for \d+\./);
+    await sceneFrames(page, "grape");
+    await page.reload();
+    await expect(scene.locator(".o-scene-overlay")).toHaveAttribute("data-animate", "false");
+    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^Crew · \d+$/);
+    await expect(scene.locator(".o-scene-live")).toHaveCount(0);
     await expect(main.getByRole("list", { name: "Opponent active effects", exact: true })).toContainText("for 2 more rounds");
     expect(sql("select count(*) from private.item_stacks where character_id='" + a.id + "' and item_id in('chain_shot','grape_shot')").trim()).toBe("0");
     await page.screenshot({ path: ".local/attack-ammo-desktop.jpg", type: "jpeg", quality: 80, fullPage: true });
