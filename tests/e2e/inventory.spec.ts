@@ -141,7 +141,7 @@ test("equipment moves between the bag and the loadout and cannot be destroyed or
     await expect(focus.getByLabel("Damage 10.00", { exact: true })).toBeVisible();
     await expect(focus).toContainText("No equipment.");
     await row.getByRole("button", { name: "Equip Sailor's Cutlass", exact: true }).click();
-    await expect(page.getByText("Equipped Sailor's Cutlass.", { exact: true })).toBeVisible();
+    await expect(equipment.getByRole("button", { name: "Melee: Sailor's Cutlass", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(row.getByText("Equipped", { exact: true })).toBeVisible();
     await expect(equipment.getByRole("button", { name: "Melee: Sailor's Cutlass", exact: true }).locator("img")).toBeVisible();
     await expect(focus).toContainText("Sailor's Cutlass");
@@ -156,7 +156,7 @@ test("equipment moves between the bag and the loadout and cannot be destroyed or
     await expect(focus).toContainText("Sailor's Cutlass");
     await page.screenshot({ path: ".local/inventory-loadout.png", fullPage: true });
     await focus.getByRole("button", { name: "Unequip Sailor's Cutlass", exact: true }).click();
-    await expect(page.getByText("Unequipped Sailor's Cutlass.", { exact: true })).toBeVisible();
+    await expect(equipment.getByRole("button", { name: "Melee: Fists", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(focus).toContainText("Fists");
     await expect(row.getByRole("button", { name: "Trash Sailor's Cutlass", exact: true })).toBeEnabled();
     await page.setViewportSize({ width: 375, height: 1000 });
@@ -174,7 +174,6 @@ test("temporaries are equipped from their stack while shot types have no item ac
     const chain = page.locator(".o-item").filter({ hasText: "Chain Shot" });
     await expect(chain.getByRole("button", { name: /^(Use|Equip)/ })).toHaveCount(0);
     await grenado.getByRole("button", { name: "Equip Grenado", exact: true }).click();
-    await expect(page.getByText("Equipped Grenado.", { exact: true })).toBeVisible();
     const equipment = page.getByRole("region", { name: "Equipment", exact: true });
     const slot = equipment.locator('.o-loadout-focus[data-slot="temporary"]');
     await expect(equipment.getByRole("button", { name: "Temporary: Grenado", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -185,9 +184,51 @@ test("temporaries are equipped from their stack while shot types have no item ac
     await expect(grenado.getByRole("button", { name: "Trash Grenado", exact: true })).toBeEnabled();
     await page.screenshot({ path: ".local/inventory-temporary.png", fullPage: true });
     await slot.getByRole("button", { name: "Unequip Grenado", exact: true }).click();
-    await expect(page.getByText("Unequipped Grenado.", { exact: true })).toBeVisible();
     await expect(slot).toContainText("Empty");
     await expect(equipment.getByRole("button", { name: "Temporary: Empty", exact: true })).toBeVisible();
+  } finally { await cleanup([own]); }
+});
+
+test("the loadout panel keeps one size for every slot and its art stays inside the frames", async ({ page }) => {
+  const own = await account(false);
+  const id = (prefix: string) => prefix + "0000-0000-4000-8000-" + own.id.slice(-12);
+  try {
+    sql("insert into private.item_instances(id,character_id,item_id,quality) values('" + id("e2e5") + "','" + own.id + "','flintlock_pistol',96.45)," +
+      "('" + id("e2e6") + "','" + own.id + "','cutlass',28.41),('" + id("e2e7") + "','" + own.id + "','canvas_sails',48.28);" +
+      "insert into private.item_stacks(id,character_id,item_id,quantity) values('" + id("e2e8") + "','" + own.id + "','smoke_pot',3)");
+    for (const prefix of ["e2e5", "e2e6", "e2e7", "e2e8"]) expect((await own.api.rpc("equip_item", { entry_id: id(prefix), request_id: randomUUID() })).error).toBeNull();
+    await login(page, own);
+    await page.goto("/inventory");
+    const equipment = page.getByRole("region", { name: "Equipment", exact: true });
+    await expect(equipment.getByRole("button", { name: "Firearm: Flintlock Pistol", exact: true })).toBeVisible();
+    for (const width of [1280, 375]) {
+      await page.setViewportSize({ width, height: 1000 });
+      const sizes = new Set<string>();
+      for (const tile of await equipment.locator(".o-loadout-tile").all()) {
+        await tile.click();
+        await expect(tile).toHaveAttribute("aria-pressed", "true");
+        const layout = await equipment.evaluate(panel => {
+          const within = (inner: Element, outer: Element) => {
+            const a = inner.getBoundingClientRect(), b = outer.getBoundingClientRect();
+            return a.top >= b.top - 0.5 && a.bottom <= b.bottom + 0.5 && a.left >= b.left - 0.5 && a.right <= b.right + 0.5;
+          };
+          const frame = panel.querySelector(".o-loadout-focus-art")!, copy = panel.querySelector(".o-loadout-focus-copy")!;
+          return { size: panel.getBoundingClientRect().height + "/" + panel.querySelector(".o-loadout-focus")!.getBoundingClientRect().height,
+            art: [...frame.querySelectorAll("img, svg")].every(art => within(art, frame)),
+            tiles: [...panel.querySelectorAll(".o-loadout-tile")].every(tile => [...tile.querySelectorAll("img, svg")].every(art => within(art, tile))),
+            overflow: [...copy.children].filter(child => child.scrollHeight > child.clientHeight + 1 || !within(child, copy))
+              .map(child => child.tagName + "." + child.className + " " + child.scrollHeight + ">" + child.clientHeight) };
+        });
+        expect(layout, width + " " + await tile.getAttribute("data-slot")).toMatchObject({ art: true, tiles: true, overflow: [] });
+        sizes.add(layout.size);
+        await equipment.screenshot({ path: ".local/loadout/" + width + "-" + await tile.getAttribute("data-slot") + ".png" });
+      }
+      expect([...sizes]).toHaveLength(1);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(equipment.locator(".o-loadout-focus")).toContainText("Heavy Canvas Sails");
+    await equipment.getByRole("button", { name: "Temporary: Smoke Pot", exact: true }).click();
+    await expect(equipment.locator(".o-loadout-focus")).toContainText("Accuracy -67% for 3 rounds");
   } finally { await cleanup([own]); }
 });
 

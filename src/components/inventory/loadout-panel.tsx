@@ -14,19 +14,18 @@ const slotIcons: Record<EquipSlot, LucideIcon> = {
 const fallback: Partial<Record<EquipSlot, { name: string; damage: number; precision: number }>> = fallbackWeapons;
 const slotItem = (loadout: Loadout, slot: EquipSlot) => slot === "temporary" ? loadout.temporary : loadout[slot as EquipmentSlot];
 
-// Stat chips and a short note for the selected slot, equipped or not.
+// Stat chips and a short note for the selected slot; together they fit the focus box's fixed two-row grid.
 function slotDetails(loadout: Loadout, slot: EquipSlot): { chips: ReactNode; note: string } {
-  const cannonNote = slot === "cannons" ? "Choose Chain or Grape Shot in battle." : "";
   if (slot === "temporary") {
     const item = loadout.temporary;
-    if (!item) return { chips: null, note: "Nothing equipped. Equip a Grenado or Smoke Pot from your items." };
+    if (!item) return { chips: null, note: "Nothing equipped. Equip a Grenado or Smoke Pot." };
     return { chips: <><span title="Quantity" aria-label={"Quantity " + formatItemCount(item.quantity ?? 0)}><Boxes aria-hidden="true" />x{formatItemCount(item.quantity ?? 0)}</span>
       {item.damage !== undefined && <ItemStatChips stats={{ damage: item.damage, precision: item.precision }} />}</>,
       note: item.damage === undefined ? temporaryEffect(item) : "" };
   }
   const item = loadout[slot as EquipmentSlot], base = fallback[slot];
-  if (item) return { chips: <ItemStatChips stats={item} />, note: cannonNote };
-  if (base) return { chips: <ItemStatChips stats={{ damage: base.damage, precision: base.precision }} />, note: ["No equipment.", cannonNote].join(" ").trim() };
+  if (item) return { chips: <ItemStatChips stats={item} />, note: "" };
+  if (base) return { chips: <ItemStatChips stats={{ damage: base.damage, precision: base.precision }} />, note: "No equipment." };
   return { chips: null, note: "Nothing equipped. Equip one from your items." };
 }
 
@@ -35,6 +34,7 @@ export function LoadoutPanel({ loadout, shipHealthMax, selected, onSelect, disab
   disabled: boolean; pendingSlot: EquipSlot | null; onUnequip: (slot: EquipSlot) => void; feedback?: { message?: string; error?: boolean };
 }) {
   const item = slotItem(loadout, selected), Icon = slotIcons[selected], details = slotDetails(loadout, selected);
+  const name = item?.name ?? fallback[selected]?.name ?? "Empty";
   const tile = (slot: EquipSlot) => {
     const equipped = slotItem(loadout, slot), SlotIcon = slotIcons[slot];
     return <button key={slot} type="button" className="o-loadout-tile" data-slot={slot} data-equipped={!!equipped} aria-pressed={selected === slot}
@@ -50,21 +50,23 @@ export function LoadoutPanel({ loadout, shipHealthMax, selected, onSelect, disab
         <div className="o-loadout-focus-art">{item ? <ItemImage key={item.image_path} item={{ name: item.name, image_path: item.image_path ?? "" }} variant="focus" />
           : <Icon aria-hidden="true" />}</div>
         <div className="o-loadout-focus-copy">
-          <span className="o-loadout-slot">{SLOT_LABELS[selected]}</span>
-          <strong>{item?.name ?? fallback[selected]?.name ?? "Empty"}</strong>
-          {details.chips && <span className="o-item-stats">{details.chips}</span>}
-          {details.note && <small>{details.note}</small>}
+          <div className="o-loadout-focus-head"><span className="o-loadout-slot">{SLOT_LABELS[selected]}</span>
+            {item && <button type="button" className="o-item-action" disabled={disabled || pendingSlot !== null} aria-label={"Unequip " + item.name}
+              onClick={() => onUnequip(selected)}>{pendingSlot === selected ? "Saving..." : "Unequip"}</button>}</div>
+          <strong title={name}>{name}</strong>
+          <div className="o-loadout-stats" data-note-only={!details.chips || undefined}>
+            {details.chips}{details.note && <small title={details.note}>{details.note}</small>}
+          </div>
         </div>
-        {item && <button type="button" className="o-item-action" disabled={disabled || pendingSlot !== null} aria-label={"Unequip " + item.name}
-          onClick={() => onUnequip(selected)}>{pendingSlot === selected ? "Saving..." : "Unequip"}</button>}
       </div>
       <div className="o-loadout-rows">
         <div className="o-loadout-row" role="group" aria-label="Crew equipment"><span aria-hidden="true">Crew</span>{crewTiles.map(tile)}</div>
         <div className="o-loadout-row" role="group" aria-label="Ship equipment"><span aria-hidden="true">Ship</span>{SHIP_SLOTS.map(tile)}</div>
       </div>
     </div>
+    {/* Success shows in the tiles and the live focus box, so only errors add a line. */}
     <div className="o-loadout-feedback" role="status" aria-live="polite">
-      {feedback?.message && <p className={feedback.error ? "o-field-error" : ""}>{feedback.message}</p>}
+      {feedback?.error && feedback.message && <p className="o-field-error">{feedback.message}</p>}
     </div>
   </section>;
 }

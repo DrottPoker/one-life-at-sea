@@ -12,10 +12,14 @@ Länken är tillgänglig även under sjukhusvistelse.
   Materials och Miscellaneous. Aktiv kategori har en tydlig markering.
 - Utrustningen ligger i en egen, kompakt panel ovanför föremålslistan. Små rutor visar
   besättningens sju och skeppets tre platser med föremålets bild, eller platsens ikon när
-  den är tom. Vald ruta visas i en fokusruta med bild, namn, Quality och stats som ikoner,
-  samt Unequip. Tomma vapenplatser visar Fists och Basic cannons. Rubriken visar maximal
-  Ship Health. En ny Equip väljer den platsen. På mobil ligger fokusrutan överst och
-  rutorna fyra per rad.
+  den är tom. Föremål utan egen bild visar platshållarens kubsymbol utan extra ram. Vald ruta
+  visas i en fokusruta med fast storlek: bild, platsnamn och Unequip på första raden, namnet på
+  en rad (förkortat vid behov) och Quality och stats som ikoner i ett rutnät med två rader.
+  Tomma vapenplatser visar Fists och Basic cannons. Rubriken visar maximal Ship Health.
+  En ny Equip eller Unequip väljer den platsen. Lyckade byten syns i rutorna och fokusrutan;
+  bara fel visas som text under panelen. Panelen ändrar alltså inte storlek när man byter
+  plats. Första raden växer till knapphöjden för smala skärmar och pekskärmar. På mobil
+  ligger fokusrutan överst och rutorna fyra per rad.
 - Namnsökning fungerar tillsammans med kategorin. Sökning är skiftlägesokänslig
   och behandlar exempelvis procenttecken som vanlig text.
 - Rader visar miniatyr, namn, stackantal, Equipped-märke och för utrustning Quality samt två huvudstats.

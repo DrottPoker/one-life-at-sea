@@ -47,6 +47,9 @@ describe("equipment", () => {
     expect(melee).toContain('aria-label="Damage 10.00"');
     expect(melee).toContain("No equipment.");
     expect(melee).not.toContain(">Unequip<");
+    // Success is visible in the tiles, so only an error adds a line to the fixed-size panel.
+    expect(renderToStaticMarkup(createElement(LoadoutPanel, { ...props, selected: "hull", feedback: { message: "Equipped Oak Hull Sheathing." } }))).not.toContain("Equipped Oak");
+    expect(renderToStaticMarkup(createElement(LoadoutPanel, { ...props, selected: "hull", feedback: { message: "Try again.", error: true } }))).toContain("Try again.");
   });
   it("shows own equipment stats but only names for a revealed opponent", () => {
     const captain = { id: "test", player_number: 100001, name: "Gear Captain", ship_health: 120, ship_health_max: 125, crew_health: 100,
