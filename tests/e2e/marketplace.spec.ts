@@ -122,7 +122,7 @@ test("Torn-style grid, inventory details, batch listings, real purchases, fees a
     await weaponOffers.getByRole("button", { name: "Buy Sailor's Cutlass from " + seller.name, exact: true }).click();
     await expect(shopping.getByText("Bought 1 for 101 Gold Coins.", { exact: true })).toBeVisible();
     expect((await inventory(buyer)).find(item => item.id === instanceId)?.stats).toBeTruthy();
-    await expect(page.getByText("You have no active listings.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("main").getByText("You have no active listings.", { exact: true })).toBeVisible();
     await shopping.reload();
     expect((await inventory(buyer)).find(item => item.id === instanceId)).toBeDefined();
     expect(errors).toEqual([]);
@@ -243,7 +243,8 @@ test("offers expand by twenty, retain earlier rows, refresh in price order and r
     if (width === 375) await offers.screenshot({ path: ".local/market-compact-mobile.jpg", type: "jpeg", quality: 75 });
   }
   await page.goto("/harbor/marketplace/listings");
-  await expect(page.getByText("You have no active listings.", { exact: true })).toBeVisible();
+  // An interrupted stream can leave a hidden copy of the page outside main.
+  await expect(page.getByRole("main").getByText("You have no active listings.", { exact: true })).toBeVisible();
   await page.goto("/harbor/marketplace");
   await expect(page.locator(".o-market-card").getByText("sold /", { exact: false })).toHaveCount(0);
   await page.getByLabel("Search market items", { exact: true }).fill("zz-no-market-item");
