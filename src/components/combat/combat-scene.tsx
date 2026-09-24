@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode 
 import { Anchor, Swords } from "lucide-react";
 import type { CombatEvent } from "@/lib/combat";
 import { SCENE_ART, SCENE_SIZE, type ScenePoint } from "@/lib/combat-scene-anchors";
-import { latestOwnRound, markTone, roundStrikes, roundSummary, sceneDuration, sceneHistory, scenePercent, seededRandom, strikeLabel, strikePopup,
+import { latestOwnRound, markTone, roundStrikes, roundSummary, sceneDuration, sceneHistory, scenePercent, seededRandom, strikePopup, strikeResult,
   type SceneScar, type SceneStrike } from "@/lib/combat-scene";
 
 const art = {
@@ -171,6 +171,14 @@ function SceneScars({ scars }: { scars: SceneScar[] }) {
   </svg>;
 }
 
+// The result under the struck side reads as text on the artwork rather than a box; the spaces keep its text readable.
+function ResultLabel({ strike }: { strike: SceneStrike }) {
+  const { flag, place, value } = strikeResult(strike), at = scenePercent(strike.label);
+  return <span className="o-scene-chip" data-tone={markTone(strike)} data-target={struck(strike)} style={{ "--x": at.left, "--y": at.top, "--t": ms(strike.impact + 160) } as Vars}>
+    {flag && <><span className="o-chip-flag">{flag}</span>{" "}</>}{place && <><span className="o-chip-place">{place}</span>{" "}</>}<strong className="o-chip-value">{value}</strong>
+  </span>;
+}
+
 function SceneOverlay({ strikes, animate, sequence }: { strikes: SceneStrike[]; animate: boolean; sequence: number }) {
   return <div className="o-scene-overlay" data-animate={animate} data-round={sequence} aria-hidden="true">
     <svg viewBox={"0 0 " + SCENE_SIZE.width + " " + SCENE_SIZE.height} preserveAspectRatio="none" shapeRendering="crispEdges">
@@ -179,8 +187,7 @@ function SceneOverlay({ strikes, animate, sequence }: { strikes: SceneStrike[]; 
     </svg>
     {animate && strikes.map((strike, index) => <span key={"pop" + index} className="o-scene-pop" data-tone={markTone(strike)}
       style={{ ...scenePercent(strike.popup), "--t": ms(strike.impact) } as Vars}>{strikePopup(strike)}</span>)}
-    {strikes.map((strike, index) => <span key={"label" + index} className="o-scene-chip" data-tone={markTone(strike)} data-target={struck(strike)}
-      style={{ ...scenePercent(strike.label), "--t": ms(strike.impact + 160) } as Vars}>{strikeLabel(strike)}</span>)}
+    {strikes.map((strike, index) => <ResultLabel key={"label" + index} strike={strike} />)}
   </div>;
 }
 

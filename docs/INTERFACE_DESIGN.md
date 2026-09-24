@@ -106,9 +106,13 @@ game navigation during combat.
 - The artwork doubles as the hit display (`CombatScene`). The viewer's latest own round
   plays on it: cannon fire, Chain Shot, Grape Shot, melee, firearm, Grenado and Smoke Pot
   each have their own effect built from square pixels. Damage rises from the impact, and a
-  label under the struck side keeps the result (for example Critical · Waterline · 30,
-  Crew · 6 or Miss) until the next round. Misses splash beside the ship, are parried between
-  the blades, or land beside the target. The attacker's strike plays first, then the defender's.
+  label under the struck side keeps the result until the next round. The label is text on
+  the artwork, not a box: the zone in small caps in the display serif, then the damage as a
+  larger number in the result's colour (red, gold for a critical hit with a gold Critical in
+  front, white Blocked, blue Blinded, grey italic Miss), over a soft shadow with a thin rule
+  in the same colour fading out beneath. On scenes narrower than 420 px each label keeps to
+  its own edge. Misses splash beside the ship, are parried between the blades, or land
+  beside the target. The attacker's strike plays first, then the defender's.
 - A hit lands at a random spot inside the struck zone's area, such as any sail for Sails
   and rigging or either leg for Legs, and the effect plays there. The spot is seeded by the
   round, so a reload shows it in the same place. Every strike leaves a small reticle like

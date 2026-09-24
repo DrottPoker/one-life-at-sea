@@ -5,7 +5,7 @@ import { CombatScene } from "../../src/components/combat/combat-scene";
 import { gameplay } from "../../src/config/public";
 import type { CombatEvent } from "../../src/lib/combat";
 import { sceneAnchors, SCENE_SIZE, type CrewAnchors, type SceneArea, type ScenePoint } from "../../src/lib/combat-scene-anchors";
-import { latestOwnRound, markTone, roundStrikes, roundSummary, sceneDuration, sceneHistory, strikeLabel, strikePopup } from "../../src/lib/combat-scene";
+import { latestOwnRound, markTone, roundStrikes, roundSummary, sceneDuration, sceneHistory, strikePopup, strikeResult } from "../../src/lib/combat-scene";
 
 const round = (overrides: Partial<CombatEvent>): CombatEvent => ({
   kind: "round", sequence: 5, actor_id: "a", actor_name: "Ann", round: 3, phase: "sea", attacker_order: "fire", defender_order: "fire",
@@ -73,7 +73,8 @@ describe("combat scene", () => {
     expect(inside(theirs.point, sceneAnchors.sea.attacker.splash)).toBe(true);
     expect(theirs.start).toBeGreaterThan(own.impact);
     expect(sceneDuration([own, theirs])).toBe(theirs.end);
-    expect([strikeLabel(own), strikePopup(own), strikeLabel(theirs), strikePopup(theirs)]).toEqual(["Critical · Waterline · 30", "Critical 30", "Miss", "Miss"]);
+    expect([strikeResult(own), strikePopup(own), strikeResult(theirs), strikePopup(theirs)]).toEqual([
+      { flag: "Critical", place: "Waterline", value: "30" }, "Critical 30", { value: "Miss" }, "Miss"]);
     expect([markTone(own), markTone(theirs)]).toEqual(["critical", "miss"]);
   });
   it("shows chain shot in the rigging, grape shot on the deck crew and blocked hits", () => {
@@ -83,9 +84,9 @@ describe("combat scene", () => {
     const [grape] = roundStrikes(round({ attacker_order: "fire_grape", attacker_hit: true, attacker_damage: 6, attacker_zone: "legs", attacker_target: "crew", defender_order: "board" }));
     expect(grape.kind).toBe("grape");
     expect(inside(grape.point, sceneAnchors.sea.defender.deck)).toBe(true);
-    expect(strikeLabel(grape)).toBe("Crew · 6");
+    expect(strikeResult(grape)).toEqual({ place: "Crew", value: "6" });
     const [blocked] = roundStrikes(round({ attacker_hit: true, attacker_damage: 0, attacker_zone: "hull", attacker_target: "ship", defender_order: "board" }));
-    expect([strikeLabel(blocked), strikePopup(blocked), markTone(blocked)]).toEqual(["Blocked · Hull", "Blocked", "blocked"]);
+    expect([strikeResult(blocked), strikePopup(blocked), markTone(blocked)]).toEqual([{ place: "Hull", value: "Blocked" }, "Blocked", "blocked"]);
   });
   it("uses the boarding figures for melee, firearms and thrown temporaries", () => {
     const base = { phase: "boarding" as const, attacker_target: "crew" as const, defender_target: "crew" as const };
@@ -112,7 +113,7 @@ describe("combat scene", () => {
     const [smoke] = roundStrikes(round({ ...base, attacker_order: "crew_throw", attacker_hit: true, attacker_weapon: "Smoke Pot", attacker_effect: "crew_accuracy", defender_order: "disengage" }));
     expect(smoke).toMatchObject({ kind: "smoke", origin: sceneAnchors.boarding.attacker.hand });
     expect(inside(smoke.point, sceneAnchors.boarding.defender.body)).toBe(true);
-    expect([strikeLabel(smoke), markTone(smoke)]).toEqual(["Blinded", "effect"]);
+    expect([strikeResult(smoke), markTone(smoke)]).toEqual([{ value: "Blinded" }, "effect"]);
     const [thrown] = roundStrikes(round({ ...base, attacker_order: "crew_throw", attacker_weapon: "Smoke Pot", defender_order: "disengage" }));
     expect(thrown.kind).toBe("smoke");
     expect(inside(thrown.point, sceneAnchors.boarding.defender.floor)).toBe(true);
@@ -153,8 +154,10 @@ describe("combat scene", () => {
     expect(html).toContain('data-animate="false"');
     expect(html).not.toContain("o-scene-live");
     expect(html).toContain('data-zone="hull"');
-    expect(html).toContain(">Hull · 14<");
-    expect(html).toContain(">Miss<");
+    // The result reads as text: the place in small caps, then the value, with no box around it.
+    expect(html).toContain('data-tone="hit" data-target="defender" style="--x:');
+    expect(html).toContain('<span class="o-chip-place">Hull</span> <strong class="o-chip-value">14</strong>');
+    expect(html).toContain('<strong class="o-chip-value">Miss</strong>');
     expect(html).toContain("Round 3: You hit their hull for 14. Bo missed.");
     expect(html).not.toContain("o-scene-scar");
     expect(html).toContain('class="o-scene-mark" data-tone="miss" data-zone="ship" data-target="attacker"');

@@ -337,15 +337,29 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 :is(.o-scene-mark,.o-scene-scar)[data-tone="effect"] .o-mark-dot { fill:var(--o-link); }
 :is(.o-scene-mark,.o-scene-scar)[data-tone="miss"] .o-mark-ring { stroke:var(--o-fx-miss); }
 :is(.o-scene-mark,.o-scene-scar)[data-tone="miss"] .o-mark-dot { fill:var(--o-fx-miss); }
-.o-scene-chip { position:absolute; transform:translate(-50%,-50%); padding:2px 8px; border:1px solid var(--o-fx-hit); border-radius:2px; background:color-mix(in srgb,var(--o-bg) 84%,transparent); color:var(--o-combat-danger); font:600 clamp(9px,2.3cqi,12px)/1.45 var(--o-body-font); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
-.o-scene-chip[data-tone="critical"] { border-color:var(--o-gold); color:var(--o-gold); }
-.o-scene-chip[data-tone="miss"],.o-scene-chip[data-tone="blocked"] { border-color:var(--o-line); color:var(--o-muted); }
-.o-scene-chip[data-tone="effect"] { border-color:var(--o-fx-smoke-dark); color:var(--o-fx-smoke); }
+/* Result labels: text on the artwork over a soft shadow, no box. The place is in small caps, the value in the result's colour,
+   and a rule in that colour fades out beneath. On narrow scenes each label keeps to its own edge so long results stay inside. */
+.o-scene-chip { --tone:var(--o-fx-hit); position:absolute; left:var(--x); top:var(--y); transform:translate(-50%,-50%); display:flex; align-items:baseline; gap:.45em;
+  padding:.3em 1.6em .45em; white-space:nowrap; color:var(--o-text); font:400 clamp(10px,2.7cqi,15px)/1.15 var(--o-display-font); text-shadow:0 1px 2px var(--o-bg),0 0 5px var(--o-bg);
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--o-bg) 80%,transparent),color-mix(in srgb,var(--o-bg) 55%,transparent) 55%,transparent); }
+.o-scene-chip::after { content:""; position:absolute; left:18%; right:18%; bottom:.12em; height:1px; background:linear-gradient(90deg,transparent,var(--tone),transparent); opacity:.8; }
+.o-chip-flag { align-self:center; color:var(--o-gold); font-size:.8em; font-variant:small-caps; letter-spacing:.1em; }
+.o-chip-place { color:var(--o-muted); font-variant:small-caps; letter-spacing:.04em; }
+.o-chip-value { color:var(--tone); font-size:1.4em; font-weight:700; line-height:1; }
+.o-scene-chip[data-tone="critical"] { --tone:var(--o-gold); }
+.o-scene-chip[data-tone="blocked"] { --tone:var(--o-text); }
+.o-scene-chip[data-tone="effect"] { --tone:var(--o-link); }
+.o-scene-chip[data-tone="miss"] { --tone:var(--o-fx-miss); }
+.o-scene-chip[data-tone="miss"] .o-chip-value { color:var(--o-fx-smoke); font-size:1.25em; font-style:italic; font-weight:400; }
+@container (max-width:420px) {
+  .o-scene-chip[data-target="attacker"] { left:1%; transform:translate(0,-50%); }
+  .o-scene-chip[data-target="defender"] { left:auto; right:1%; transform:translate(0,-50%); }
+}
 .o-scene-pop { position:absolute; opacity:0; color:var(--o-fx-flash); font:700 clamp(16px,5.4cqi,30px)/1 var(--o-display-font); white-space:nowrap; text-shadow:2px 0 var(--o-bg),-2px 0 var(--o-bg),0 2px var(--o-bg),0 -2px var(--o-bg),2px 2px var(--o-bg),-2px -2px var(--o-bg),2px -2px var(--o-bg),-2px 2px var(--o-bg); animation:o-scene-pop 1.25s ease-out calc(var(--t) + 140ms) forwards; }
 .o-scene-pop[data-tone="critical"] { color:var(--o-gold); font-size:clamp(17px,5.8cqi,32px); }
 .o-scene-pop[data-tone="miss"],.o-scene-pop[data-tone="blocked"] { color:var(--o-muted); }
 .o-scene-overlay[data-animate="true"] .o-scene-mark { opacity:0; animation:o-mark-in .3s cubic-bezier(.2,.8,.3,1) var(--t) forwards; }
-.o-scene-overlay[data-animate="true"] .o-scene-chip { opacity:0; animation:o-scene-in .25s ease-out var(--t) forwards; }
+.o-scene-overlay[data-animate="true"] .o-scene-chip { opacity:0; animation:o-chip-in .35s ease-out var(--t) forwards; }
 /* A finished fight: the artwork darkens and the result with Leave sits in its middle. */
 .o-scene-finale { position:absolute; inset:0; display:grid; place-items:center; padding:8px; background:color-mix(in srgb,var(--o-bg) 55%,transparent); animation:o-scene-finale .35s ease-out both; }
 .o-scene-finale-box { display:grid; justify-items:center; gap:4px; width:min(100%,280px); padding:14px 18px 16px; border:1px solid var(--o-brass); border-radius:4px; background:linear-gradient(var(--o-surface),var(--o-inset)); box-shadow:0 6px 24px var(--o-palette-0006),inset 0 1px var(--o-palette-ffffff13); text-align:center; animation:o-scene-finale-box .35s ease-out both; }
@@ -374,7 +388,7 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 @keyframes o-scene-leave { to { opacity:0; visibility:hidden; } }
 @keyframes o-scene-finale { from { opacity:0; } }
 @keyframes o-scene-finale-box { from { opacity:0; transform:translateY(6px) scale(.97); } }
-@keyframes o-scene-in { to { opacity:1; } }
+@keyframes o-chip-in { from { opacity:0; translate:0 .5em; } to { opacity:1; translate:0 0; } }
 @keyframes o-mark-in { from { opacity:0; transform:scale(2.2); } to { opacity:1; transform:scale(1); } }
 /* The number appears just after the impact and above it, so the blast stays visible. */
 @keyframes o-scene-pop { 0% { opacity:0; transform:translate(-50%,-120%) scale(.7); } 12% { opacity:1; transform:translate(-50%,-175%) scale(1.12); } 25% { transform:translate(-50%,-185%) scale(1); } 75% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-280%); } }

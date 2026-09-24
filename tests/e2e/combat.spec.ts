@@ -408,7 +408,7 @@ test("equipped firearms, melee weapons and armor drive boarding orders and the c
     await main.getByRole("button", { name: "Throw temporary Grenado. Damage 25.00 · Precision 60.00.", exact: true }).click();
     await expect(main.getByText("Round 2 / 25", { exact: true })).toBeVisible();
     await expect(main.getByRole("button", { name: "Throw temporary Grenado. Used up for this fight.", exact: true })).toBeDisabled();
-    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical · )?(Head|Body|Legs|Feet) · \d+$/);
+    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical )?(Head|Body|Legs|Feet) \d+$/);
     expect(["head", "body", "legs", "feet"]).toContain(await scene.locator('.o-scene-mark[data-target="defender"]').getAttribute("data-zone"));
     await expect(scene.locator('.o-scene-chip[data-target="attacker"]')).toHaveText("Miss");
     await sceneFrames(page, "grenade");
@@ -468,7 +468,7 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await expect(main.getByRole("list", { name: "Opponent active effects", exact: true })).toContainText("Slowed: Ship Speed x0.8 for 3 more rounds");
     const scene = main.locator(".o-combat-scene");
     await expect(scene.locator('.o-scene-overlay[data-animate="true"]')).toHaveCount(1);
-    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical · )?Sails and rigging · \d+$/);
+    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical )?Sails and rigging \d+$/);
     await expect(scene.locator('.o-scene-mark[data-target="defender"]')).toHaveAttribute("data-zone", "rigging");
     await expect(scene.locator("figcaption")).toContainText(/You hit their sails and rigging for \d+ and slowed their ship\./);
     await sceneFrames(page, "chain");
@@ -479,12 +479,12 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await expect(log.getByText(/^(Head|Body|Legs|Feet) · \d+ crew damage/)).toBeVisible();
     await expect(main.getByRole("progressbar", { name: "Opponent Crew Health", exact: true })).not.toHaveAttribute("aria-valuenow", "100");
     // Grape shot picks a random crew zone, so a head hit is critical.
-    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical · )?Crew · \d+$/);
+    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical )?Crew \d+$/);
     await expect(scene.locator("figcaption")).toContainText(/You hit their crew for \d+( \(critical\))?\./);
     await sceneFrames(page, "grape");
     await page.reload();
     await expect(scene.locator(".o-scene-overlay")).toHaveAttribute("data-animate", "false");
-    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical · )?Crew · \d+$/);
+    await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical )?Crew \d+$/);
     await expect(scene.locator(".o-scene-live")).toHaveCount(0);
     await expect(main.getByRole("list", { name: "Opponent active effects", exact: true })).toContainText("for 2 more rounds");
     expect(sql("select count(*) from private.item_stacks where character_id='" + a.id + "' and item_id in('chain_shot','grape_shot')").trim()).toBe("0");

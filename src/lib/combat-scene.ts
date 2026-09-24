@@ -124,12 +124,13 @@ function place(strike: SceneStrike) {
   return zoneName(strike.target, strike.zone) ?? (strike.target === "ship" ? "Ship" : "Crew");
 }
 
-// The short result shown under the side that was struck.
-export function strikeLabel(strike: SceneStrike) {
-  if (!strike.hit) return "Miss";
-  if (strike.kind === "smoke") return "Blinded";
-  if (strike.damage === 0) return "Blocked · " + place(strike);
-  return (strike.critical ? "Critical · " : "") + place(strike) + " · " + strike.damage;
+// The result shown under the side that was struck: an optional flag and place, then the value that matters most.
+export type StrikeResult = { flag?: string; place?: string; value: string };
+export function strikeResult(strike: SceneStrike): StrikeResult {
+  if (!strike.hit) return { value: "Miss" };
+  if (strike.kind === "smoke") return { value: "Blinded" };
+  if (strike.damage === 0) return { place: place(strike), value: "Blocked" };
+  return { flag: strike.critical ? "Critical" : undefined, place: place(strike), value: String(strike.damage) };
 }
 
 // The number that rises from the impact point.
