@@ -4,13 +4,13 @@ import { GameLink as Link } from "@/components/game-navigation";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type FormEvent, type ReactNode } from "react";
 import { PageHero, PLACEHOLDER_HERO } from "@/components/page-hero";
-import { ArrowLeft, List, ListPlus, Search, Store, Flame, Package, Swords, CircleDot, Cross, FlaskConical, Boxes, Compass } from "lucide-react";
+import { ArrowLeft, List, ListPlus, Search, Store, Flame, Package } from "lucide-react";
+import { categoryIcon } from "@/components/inventory/category-icons";
 import { createClient } from "@/lib/supabase/browser";
 import { useGameRefresh } from "@/components/game-refresh";
 import { inventoryCategories, type InventoryFilters } from "@/lib/inventory";
 import { MARKET_PATH, marketHref, type MarketMode } from "@/lib/marketplace";
 
-const icons: Record<string, typeof Package> = { swords: Swords, cannon: CircleDot, cross: Cross, flask: FlaskConical, boxes: Boxes, compass: Compass };
 
 export function MarketShell({ children }: { children: ReactNode }) {
   const pathname = usePathname(), { request } = useGameRefresh();
@@ -53,7 +53,7 @@ export function MarketCategories({ filters, mode = "browse" }: { filters: Invent
       {mode === "browse" ? <Flame aria-hidden="true" /> : <Package aria-hidden="true" />}{mode === "browse" ? "Most Popular" : "All items"}
     </Link>
     {inventoryCategories.map(category => {
-      const Icon = icons[category.icon] ?? Package;
+      const Icon = categoryIcon(category.icon);
       return <Link key={category.id} href={marketHref(mode, category.id, filters.query)} aria-current={filters.category === category.id ? "page" : undefined}>
         <Icon aria-hidden="true" />{category.name}</Link>;
     })}

@@ -3,11 +3,12 @@
 import { GameLink as Link } from "@/components/game-navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Bomb, Boxes, CircleDot, ChevronDown, ChevronLeft, ChevronRight, Compass, Cross, Crosshair, FlaskConical, Gauge, HeartPulse, Package, Sailboat, Search, Shield, Swords, Target, Trash2, Wind, Zap } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Crosshair, Gauge, HeartPulse, Package, Search, Shield, Target, Trash2, Wind, Zap } from "lucide-react";
 import { DialogCloseButton } from "@/components/dialog-close-button";
 import { ItemImage } from "@/components/inventory/item-image";
 import { ItemDetails } from "@/components/inventory/item-details";
 import { LoadoutPanel } from "@/components/inventory/loadout-panel";
+import { categoryIcon } from "@/components/inventory/category-icons";
 import { equipItem, unequipItem } from "@/app/inventory-actions";
 import { useEconomyRequests } from "@/components/economy-requests";
 import { useGameState } from "@/components/game-state";
@@ -16,9 +17,6 @@ import { formatItemCount, inventoryCategories, inventoryCategoryName, inventoryE
 import { formatQuality, isShotItem, itemStatRows, itemStatSummary, SLOT_LABELS, type EquipSlot, type EquipResult } from "@/lib/equipment";
 import { MAX_HEALTH } from "@/lib/game";
 
-const categoryIcons: Record<string, typeof Package> = {
-  swords: Swords, shield: Shield, cannon: CircleDot, sail: Sailboat, bomb: Bomb, cross: Cross, flask: FlaskConical, boxes: Boxes, compass: Compass,
-};
 const statIcons = { damage: Zap, precision: Crosshair, shots: Target, armor: Shield, health: HeartPulse, speed: Wind };
 
 export function InventoryPanel({ inventory, filters, characterId }: { inventory: InventoryPage; filters: InventoryFilters; characterId: string }) {
@@ -119,7 +117,7 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
         <Link href={inventoryHref(null, filters.query)} title="All items" aria-label="All items"
           aria-current={filters.category === null ? "page" : undefined}><Package aria-hidden="true" /></Link>
         {inventoryCategories.map(category => {
-          const Icon = categoryIcons[category.icon] ?? Package;
+          const Icon = categoryIcon(category.icon);
           return <Link key={category.id} href={inventoryHref(category.id, filters.query)}
             title={category.name} aria-label={category.name} aria-current={filters.category === category.id ? "page" : undefined}>
             <Icon aria-hidden="true" /></Link>;
