@@ -85,7 +85,7 @@ returnerar bara item, tider och gemensamma värden. Köpare, säljare, kvitton o
 saldon exponeras inte. Interna beräknings- och triggerfunktioner är spärrade.
 Inventory och marknadens itemprojektioner inkluderar `market_value`.
 
-- [Databasgrund](../supabase/migrations/20260920211844_item_market_value_history.sql)
+- [Databasgrund](../supabase/migrations/20260923111042_baseline.sql), ursprungligen migrationen `item_market_value_history`
 - [Kanonisk uppdatering](../supabase/templates/gameplay/market-value-tracking.sql)
 - [Kanonisk läsning](../supabase/templates/gameplay/market-value-history.sql)
 - [Gemensam diagramkomponent](../src/components/item-history-chart.tsx)

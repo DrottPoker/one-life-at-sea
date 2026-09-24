@@ -72,7 +72,7 @@ fokus/återanslutning och reservkontroll uppdaterar gränssnittet.
 
 - [gameplay.json](../config/gameplay.json): hospital.durationSeconds.
 - [gameplay.sql](../supabase/templates/gameplay.sql): auktoritativ logik och RPC.
-- [hospital_recovery.sql](../supabase/migrations/20260919052625_hospital_recovery.sql): kolumner, projektion, RLS och Realtime.
+- [Baslinjen](../supabase/migrations/20260923111042_baseline.sql): kolumner, projektion, RLS och Realtime, ursprungligen från migrationen `hospital_recovery`.
 - [hospital-panel.tsx](../src/components/hospital-panel.tsx): nedräkning och patientlista.
 - [hospital.test.sql](../supabase/tests/hospital.test.sql): databasregler och behörighet.
 - [hospital.spec.ts](../tests/e2e/hospital.spec.ts): webbläsarflöden, PvP och offlineutskrivning.

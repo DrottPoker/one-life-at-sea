@@ -121,11 +121,8 @@ definitionsinnehav förblir synliga i vanliga inventory. Befintliga osålda list
 kan fortfarande återtas, men kan inte köpas. En ändrad avgift påverkar nya listings;
 äldre behåller sin sparade avgiftssats.
 
-- [Grundschema](../supabase/migrations/20260920084639_marketplace_foundation.sql)
-  och [genererad gameplaymigration](../supabase/migrations/20260920085645_central_gameplay_config_0d45ca6e00a0.sql)
-  är applicerade lokalt.
-- [Kompakt expansion i grupper om 20](../supabase/migrations/20260920191132_central_gameplay_config_ffd3fb7bac47.sql)
-  uppdaterar läsreglerna och är applicerad lokalt.
+- Grundschemat (`marketplace_foundation`), den genererade gameplaymigrationen (`central_gameplay_config_0d45ca6e00a0`)
+  och den kompakta expansionen i grupper om 20 (`central_gameplay_config_ffd3fb7bac47`) ingår numera i [baslinjen](../supabase/migrations/20260923111042_baseline.sql).
 - [Läsning och itemöverföring](../supabase/templates/gameplay/marketplace-read.sql),
   [skapande och återtagning](../supabase/templates/gameplay/marketplace-sell.sql)
   och [köp](../supabase/templates/gameplay/marketplace-buy.sql) är de kanoniska SQL-källorna.

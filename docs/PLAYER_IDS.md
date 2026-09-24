@@ -59,7 +59,7 @@ Att känna till ett nummer kringgår inte scouting, platskontroller eller strids
 `supabase/templates/gameplay/player-directory.sql` äger sökfunktionen.
 Nummeruppslag använder unika index och namnsökning ett trigramindex.
 
-Schemat införs av migrationen `20260921034729_public_player_numbers.sql`.
+Schemat infördes av migrationen `public_player_numbers`, numera en del av baslinjen `20260923111042_baseline.sql`.
 Gameplay-funktionerna följer projektets ordinarie configgenerering. Applicera
 migrationerna med `npm run db:migrate` utan databasåterställning.
 

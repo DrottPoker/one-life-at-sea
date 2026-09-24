@@ -20,7 +20,7 @@
 Next.js och testverktygens rotfiler ligger kvar på de platser verktygen kräver.
 `supabase/templates/gameplay.sql` anger delarnas ordning.
 Genererad CSS, Supabase-TOML och gameplayrevision redigeras genom sina källor.
-Äldre migrationer skrivs aldrig om.
+Äldre migrationer skrivs aldrig om. Undantaget är en verifierad sammanslagning till baslinje före hosted drift, se [Konfiguration](CONFIGURATION.md#migrationshistorik-och-baslinje).
 
 ## Gemensam kod
 

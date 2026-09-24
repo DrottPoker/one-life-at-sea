@@ -119,7 +119,7 @@ ur framtida slumpning; erbjudna alternativ behåller sina sparade destinationer.
 
 Ändra SQL i `supabase/templates/gameplay/sea-travel.sql`, kör
 `npm run config:sync` och `npm run db:migrate`. Redigera inte installerade
-migrationer. Schema infördes i `20260920001431_sea_travel_foundation.sql`.
+migrationer. Schema infördes i migrationen `sea_travel_foundation`, numera en del av baslinjen `20260923111042_baseline.sql`.
 
 Tester finns i `supabase/tests/sea-travel.test.sql`,
 `supabase/tests/sea-distance-record.test.sql`,

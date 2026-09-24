@@ -136,10 +136,7 @@ not hardcode or automatically promote any account. For a future hosted database,
 the database owner grants access to the verified account UUID in
 `private.admin_members`; no browser route can perform that bootstrap.
 
-Migrations:
-- `20260919100637_admin_panel.sql`
-- `20260919102311_admin_combat_interruption.sql`
-- `20260919104637_admin_resource_timestamps.sql`
+The schema was introduced by the migrations `admin_panel`, `admin_combat_interruption` and `admin_resource_timestamps`, which are now part of the baseline `20260923111042_baseline.sql`.
 
 ## Verification
 

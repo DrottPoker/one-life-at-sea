@@ -114,11 +114,9 @@ läsbara. Text och kategoritillhörighet kan ändras utan att skriva över indiv
 stats, mängder eller ägare. Flaggan tradable styr marknadens säljbarhet och
 ändrar inte möjligheten att läsa redan ägda items.
 
-- [20260919072355_inventory_foundation.sql](../supabase/migrations/20260919072355_inventory_foundation.sql)
-  skapar tabeller, index och begränsningar.
-- [20260919072801_central_gameplay_config_60b2d2217835.sql](../supabase/migrations/20260919072801_central_gameplay_config_60b2d2217835.sql)
-  installerar katalogen och funktionerna från [gameplay.sql](../supabase/templates/gameplay.sql).
-- Båda är applicerade lokalt. Befintliga karaktärer, saldon, stats och innehav bevaras.
+- Migrationen `inventory_foundation` skapade tabeller, index och begränsningar.
+- Den genererade migrationen `central_gameplay_config_60b2d2217835` installerade katalogen och funktionerna från [gameplay.sql](../supabase/templates/gameplay.sql).
+- Båda ingår numera i [baslinjen](../supabase/migrations/20260923111042_baseline.sql). Befintliga karaktärer, saldon, stats och innehav bevaras.
 
 ## Lokala provitems
 

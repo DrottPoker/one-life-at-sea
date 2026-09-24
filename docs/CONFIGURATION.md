@@ -39,6 +39,16 @@ Att sänka en lagrings- eller hälsogräns under sparade värden stoppas av data
 Det finns ingen tyst klippning. En sådan ändring kräver en avsiktlig datamigration.
 Historiska rundor och ammunition får överstiga nya gränser; nya handlingar valideras mot aktiva regler.
 
+## Migrationshistorik och baslinje
+
+Varje configmigration innehåller hela den genererade gameplay-SQL:en, ungefär 290 kB. SQL-delarna är ordningsberoende (en del kan droppa en trigger som en senare del återskapar), så generatorn skriver alltid hela filen i stället för enbart ändrade delar.
+
+`supabase/migrations/20260923111042_baseline.sql` ersätter de 86 första migrationerna sedan 2026-09-24. Den senaste configmigrationen ligger kvar efter baslinjen, så `config:check` fungerar som tidigare. De ursprungliga filerna finns i Git-historiken.
+
+Baslinjen verifierades mot originalkedjan på en separat, tom Supabase-stack: schema, behörigheter, RLS, Realtime-publikation, storage buckets, cronjobb och startdata stämde, och alla databastester gick igenom. `supabase migration squash` återskapar inte Supabase standardbehörigheter korrekt, så baslinjen återkallar dem uttryckligen före de dumpade GRANT-satserna. Den lägger även till startdata som bara fanns i de sammanslagna migrationerna.
+
+En ny sammanslagning är tillåten så länge ingen hosted databas har migrationerna. Gör den på samma sätt: jämför en tom databas byggd med den gamla respektive nya kedjan och markera sedan de ersatta versionerna som `reverted` i lokala databaser med `supabase migration repair --local`. När en hosted miljö finns skrivs publicerade migrationer aldrig om.
+
 ## Stabil identitet och innehåll
 
 Träningsnivåer behåller installerade ID:n och ordning. XP-krav och effektivitet måste stiga; första nivån är gratis vid 0 XP. Kurvor och sammansatta resultat valideras mot tillåtna numeriska gränser. Se [Träning](TRAINING_FOUNDATION.md).

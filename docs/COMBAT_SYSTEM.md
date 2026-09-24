@@ -244,13 +244,13 @@ Ordnade deltagarlås, idempotenta begärans-ID:n och förväntade lokala rundnum
 samtidiga sluthits och gamla tabbar. Hälsa, logg, resultat och notifieringar sparas i samma transaktion.
 Oberoende möten har separata lås. Förändrad deltagargrupp utlöser transaktionsåterförsök.
 
-Migration 20260916022241_shared_attack_encounters.sql införde delade attacker.
-20260916044300_combat_damage_breakdown.sql lägger till separata skadevärden genom att läsa befintliga händelser.
-20260916051659_torn_style_combat_curves.sql inför de privata statfunktionerna och ersätter beräkningarna i round resolver.
-Alla tre är applicerade lokalt. Befintlig stridshistorik bevaras. Ingen databasreset eller molnändring har gjorts.
+Migrationen `shared_attack_encounters` införde delade attacker.
+`combat_damage_breakdown` lade till separata skadevärden genom att läsa befintliga händelser.
+`torn_style_combat_curves` införde de privata statfunktionerna och ersatte beräkningarna i round resolver.
+Alla tre ingår numera i baslinjen `20260923111042_baseline.sql`. Befintlig stridshistorik bevaras. Ingen databasreset eller molnändring har gjorts.
 De nya kurvorna används för nästa order även i pågående strider; tidigare händelser räknas inte om.
 
-Migration 20260916064805_combat_stats_start_at_ten.sql ändrar endast kolumnernas startvärden för nya karaktärer.
+Migrationen `combat_stats_start_at_ten`, också i baslinjen, ändrade endast kolumnernas startvärden för nya karaktärer.
 
 ## Verifiering
 

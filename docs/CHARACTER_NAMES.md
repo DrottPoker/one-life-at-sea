@@ -19,8 +19,8 @@ som slutför karaktärsskapandet. Administrativa namnbyten följer samma regel.
 `src/lib/validation.ts` delar validering mellan registreringsformuläret,
 karaktärsformuläret och serverhandlingarna. Formulären visar regeln och fel direkt.
 
-Migrationen `20260921041028_character_names_without_numbers_or_spaces.sql`
-inför `private.is_valid_character_name` och en trigger på nya eller ändrade namn.
+Migrationen `character_names_without_numbers_or_spaces`, numera en del av baslinjen `20260923111042_baseline.sql`,
+införde `private.is_valid_character_name` och en trigger på nya eller ändrade namn.
 Databasen skyddar även direktanrop till Auth och Data API. Signup och karaktär
 skapas i samma transaktion, så ett ogiltigt namn lämnar inget konto kvar.
 Tillgänglighetsfunktionen returnerar false för ogiltiga namn.

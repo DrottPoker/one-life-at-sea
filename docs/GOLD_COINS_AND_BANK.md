@@ -58,8 +58,8 @@ Utloggning, omladdning och omstart nollställer inte pengar.
 - src/app/(game)/harbor/bank/page.tsx: banksidan.
 - src/components/resource-bars.tsx: karaktärens saldo över mätarna.
 
-Strukturen infördes i 20260919010606_add_gold_coins_and_bank.sql.
-Den genererade gameplaymigrationen är 20260919010900_central_gameplay_config_6f7dc499f0c0.sql.
+Strukturen infördes i migrationen `add_gold_coins_and_bank` och den genererade gameplaymigrationen `central_gameplay_config_6f7dc499f0c0`.
+Båda ingår numera i baslinjen `20260923111042_baseline.sql`.
 Historiska migrationer och befintliga karaktärer har bevarats.
 
 Verifieringsresultat finns i [IMPLEMENTATION_STATUS](IMPLEMENTATION_STATUS.md).

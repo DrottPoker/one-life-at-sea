@@ -72,8 +72,7 @@ Den fullständiga transaktionshistoriken bevaras även när diagrammet visar sti
 Schema och baseline skapas atomärt under lås på innehavstabellerna. Triggers installeras
 innan låset släpps, så ändringar mellan migrationerna inte tappas.
 
-- [20260919091606_item_circulation_history.sql](../supabase/migrations/20260919091606_item_circulation_history.sql)
-- [20260919091933_central_gameplay_config_ad98e4868b86.sql](../supabase/migrations/20260919091933_central_gameplay_config_ad98e4868b86.sql)
+- Migrationerna `item_circulation_history` och `central_gameplay_config_ad98e4868b86` ingår numera i [baslinjen](../supabase/migrations/20260923111042_baseline.sql).
 - [gameplay.sql](../supabase/templates/gameplay.sql) är fortsatt källan för funktionerna.
 - [circulation.ts](../src/lib/circulation.ts) behåller cirkulationens publika typer och hjälpfunktioner.
 - [item-history.ts](../src/lib/item-history.ts) innehåller den gemensamma diagramgeometrin.

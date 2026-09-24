@@ -62,7 +62,7 @@ Canonical SQL finns i `supabase/templates/gameplay/resources.sql`, med integrati
 i game-state, sea-travel och sea-scouting. Generera nya migrationer via
 `npm run config:sync`; redigera inte redan applicerade migrationsfiler.
 
-Migrationen `20260920040446_central_gameplay_config_51219ed7af39.sql`:
+Den genererade migrationen `central_gameplay_config_51219ed7af39`, numera en del av baslinjen `20260923111042_baseline.sql`:
 - Räknar befintlig återhämtning med de gamla reglerna en sista gång under tabellås.
 - Färdigställer redan anlända resor och bevarar befintliga saldon, stats och rekord.
 - Börjar räkna nya globala ticks från övergångstidpunkten, utan retroaktiva havstillskott.
