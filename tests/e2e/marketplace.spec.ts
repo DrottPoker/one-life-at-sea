@@ -94,8 +94,13 @@ test("Torn-style grid, inventory details, batch listings, real purchases, fees a
     await card.hover();
     await expect(eye).toBeVisible();
     await eye.click();
-    await expect(shopping.getByRole("region", { name: "Linen Bandages details", exact: true })).toContainText("Clean linen");
+    const marketDetails = shopping.getByRole("region", { name: "Linen Bandages details", exact: true });
+    await expect(marketDetails).toContainText("Clean linen");
+    // The details roll down on open and up on close, then leave the grid.
+    await expect(shopping.locator(".o-market-grid > .o-collapsible").filter({ has: marketDetails })).toHaveCSS("animation-name", "o-roll-down");
     await shopping.getByRole("button", { name: "Close Linen Bandages details", exact: true }).click();
+    await expect(marketDetails).toHaveCount(0);
+    await expect(shopping.locator(".o-market-grid > .o-collapsible")).toHaveCount(0);
     const offers = await openOffers(shopping, "Linen Bandages");
     await expect(offers.getByRole("link", { name: seller.name, exact: true })).toBeVisible();
     for (const width of [1280, 375, 320]) {

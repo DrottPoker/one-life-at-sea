@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronLeft, ChevronRight, Package, Search, Trash2 } from "lucide-react";
 import { DialogCloseButton } from "@/components/dialog-close-button";
 import { ItemImage } from "@/components/inventory/item-image";
+import { Collapsible } from "@/components/collapsible";
 import { ItemDetails } from "@/components/inventory/item-details";
 import { LoadoutPanel } from "@/components/inventory/loadout-panel";
 import { categoryIcon } from "@/components/inventory/category-icons";
@@ -173,7 +174,7 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
                 <Trash2 aria-hidden="true" /></button>
             </div>
           </div>
-          {open && <ItemDetails item={item} onClose={() => { setExpanded(null); document.getElementById("item-" + key)?.focus(); }} />}
+          <Collapsible open={open}><ItemDetails item={item} onClose={() => { setExpanded(null); document.getElementById("item-" + key)?.focus(); }} /></Collapsible>
         </li>;
       })}
     </ul>

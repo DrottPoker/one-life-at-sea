@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Coins, Eye, ShoppingCart } from "lucide-react";
 import { gameplay } from "@/config/public";
+import { Collapsible } from "@/components/collapsible";
 import { ItemImage } from "@/components/inventory/item-image";
 import { ItemDetails } from "@/components/inventory/item-details";
 import { MarketCategories, MarketPages, MarketSearch } from "@/components/marketplace/market-shell";
@@ -41,7 +42,11 @@ export function MarketBoard({ market, filters }: { market: MarketPage<MarketItem
       <div className="o-panel-title"><h2>{title}</h2><small>{filters.category ? "Lowest price first" : "Units sold in the last " + gameplay.marketplace.popularityHours + " hours"}</small></div>
       <MarketFeedback mutation={mutation} />
       <div className="o-market-grid" ref={grid}>
-        {market.items.flatMap((item, index) => [
+        {market.items.flatMap((item, index) => {
+          // Each row ends with a details slot per card, so a closing panel keeps its place while it rolls up.
+          const rowEnd = index === market.items.length - 1 || (index + 1) % columns === 0;
+          const row = rowEnd ? market.items.slice(index - index % columns, index + 1) : [];
+          return [
           <article key={"item-" + item.item_id} className="o-market-card" data-item-id={item.item_id} data-expanded={expanded?.id === item.item_id}>
             <div className="o-market-card-art">
               <ItemImage item={details(item)} />
@@ -60,11 +65,14 @@ export function MarketBoard({ market, filters }: { market: MarketPage<MarketItem
               <span className="o-market-card-count">({formatCirculation(item.available)})</span>
             </p>
           </article>,
-          selected && index === afterIndex && <div key={"expanded-" + selected.item_id} className="o-market-expanded">
-            {expanded?.kind === "details" ? <ItemDetails item={details(selected)} quantity={{ label: "Available", value: formatCirculation(selected.available) }} onClose={() => setExpanded(null)} /> :
-              <MarketListings key={selected.item_id} itemId={selected.item_id} itemName={selected.name} observedAt={market.observed_at} mutation={mutation} onClose={() => setExpanded(null)} />}
+          ...row.map(card => <Collapsible key={"details-" + card.item_id} open={expanded?.id === card.item_id && expanded.kind === "details"}>
+            <div className="o-market-expanded"><ItemDetails item={details(card)} quantity={{ label: "Available", value: formatCirculation(card.available) }} onClose={() => setExpanded(null)} /></div>
+          </Collapsible>),
+          selected && expanded?.kind === "listings" && index === afterIndex && <div key={"listings-" + selected.item_id} className="o-market-expanded">
+            <MarketListings key={selected.item_id} itemId={selected.item_id} itemName={selected.name} observedAt={market.observed_at} mutation={mutation} onClose={() => setExpanded(null)} />
           </div>,
-        ])}
+          ];
+        })}
       </div>
       {!market.total && <p className="o-market-empty">No items match this selection. Try another category or search.</p>}
       <MarketPages page={market.page} pageSize={market.page_size} total={market.total} filters={filters} />

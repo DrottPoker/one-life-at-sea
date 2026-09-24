@@ -18,7 +18,7 @@ och egna itembilder.
 - Över bilden visas ett öga till vänster och en varukorg till höger vid hover eller
   tangentbordsfokus. På pekskärm är kontrollerna alltid synliga.
 - Ögat öppnar inventoryns beskrivning, effekttext, bild samt Value och Circ med
-  varsitt diagram. [Value](ITEM_MARKET_VALUE.md) är antalsviktat genomsnitt från
+  varsitt diagram. Detaljerna rullas ut och upp på 0,1 sekunder, som i Inventory. [Value](ITEM_MARKET_VALUE.md) är antalsviktat genomsnitt från
   genomförda köp under 12 timmar, före avgift och avrundat nedåt i Gold Coins.
   Senaste Value ligger kvar när fönstret blir tomt; bara aldrig sålda items visar N/A.
   Varukorgen öppnar listings med säljarlänk, Quality och stats, styckpris,

@@ -31,3 +31,4 @@ Resultaten gäller respektive körning och ska inte läsas som dagens verifierin
 - [2026-09-22](history/2026-09-22.md)
 - [2026-09-23](history/2026-09-23.md)
 - [2026-09-24](history/2026-09-24.md)
+- [2026-09-25](history/2026-09-25.md)

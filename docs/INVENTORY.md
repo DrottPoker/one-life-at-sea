@@ -30,7 +30,8 @@ Länken är tillgänglig även under sjukhusvistelse.
   avskiljare skiljer miniatyren från namnet. Detaljbildens
   yta är högst 280 px bred och 190 px hög (180 px hög på mobil).
 - Klick på en rad öppnar beskrivning, effektbeskrivning, stor bild och detaljer under
-  raden. Detaljerna rullas ut nedåt på 0,1 sekunder (ingen animation vid reducerad rörelse).
+  raden. Detaljerna rullas ut nedåt på 0,1 sekunder och rullas upp lika snabbt när de stängs, i stället för att
+  försvinna direkt (ingen animation vid reducerad rörelse). Under upprullningen går de inte att klicka i.
   Egenskaperna visas i två kolumner med en tunn avskiljare: Category samt Slot, Quality och
   exemplarets stats. Antalet står redan på raden och upprepas inte. Value och Circ. delar
   alltid sista raden; vid udda antal egenskaper fyller Category en egen rad. På mobil ligger

@@ -23,7 +23,6 @@ export function ItemDetails({ item, onClose, quantity }: { item: InventoryEntry;
   // Value and Circ always share the last row, so an odd count lets Category fill its own row.
   const wide = facts.length % 2 === 1;
   return <section className="o-item-details" id={"details-" + inventoryEntryKey(item)} aria-label={item.name + " details"}>
-    <div className="o-item-details-clip"><div className="o-item-details-body">
     <div className="o-item-description"><p>{item.description}</p>
       <button type="button" className="o-item-icon-button" aria-label={"Close " + item.name + " details"} onClick={onClose}><X aria-hidden="true" /></button>
     </div>
@@ -53,7 +52,6 @@ export function ItemDetails({ item, onClose, quantity }: { item: InventoryEntry;
     </div>
     {chart && <ItemHistoryChart key={chart} metric={chart} id={historyId} itemId={item.item_id} name={item.name}
       total={chart === "value" ? item.market_value : item.circulation} />}
-    </div></div>
   </section>;
 }
 

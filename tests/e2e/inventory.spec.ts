@@ -262,16 +262,30 @@ test("item rows keep straight stat and action columns and details roll down with
       await list.screenshot({ path: ".local/inventory-rows-" + width + ".png" });
     }
     await page.setViewportSize({ width: 1280, height: 1000 });
-    await page.getByRole("button", { name: "Linen Bandages details", exact: true }).click();
+    const row = page.getByRole("button", { name: "Linen Bandages details", exact: true });
+    await row.click();
     const details = page.getByRole("region", { name: "Linen Bandages details", exact: true });
+    const panel = page.locator(".o-collapsible").filter({ has: details });
     await expect(details).toBeVisible();
-    expect(await details.evaluate(element => getComputedStyle(element).animationName + " " + getComputedStyle(element).animationDuration)).toBe("o-item-expand 0.1s");
+    const roll = () => panel.evaluate(element => getComputedStyle(element).animationName + " " + getComputedStyle(element).animationDuration);
+    expect(await roll()).toBe("o-roll-down 0.1s");
     await expect(details.locator(".o-item-properties dt")).toHaveText(["Category", "Value", "Circ."]);
     // A click during the roll-down must not scroll the clipped body and hide its top.
     await details.getByRole("button", { name: "Show circulation history for Linen Bandages", exact: true }).click();
     await expect(details.getByRole("slider", { name: "Circulation history timeline" })).toBeVisible();
-    expect(await details.locator(".o-item-details-clip").evaluate(element => element.scrollTop)).toBe(0);
-    await expect(page.getByRole("button", { name: "Linen Bandages details", exact: true })).toContainText("x122");
+    expect(await panel.locator(".o-collapsible-clip").evaluate(element => element.scrollTop)).toBe(0);
+    await expect(row).toContainText("x122");
+    // Closing rolls the details up just as quickly, inert meanwhile, before they leave the page.
+    // The state is read right after the click, well inside the 0.1 s roll, so the check cannot race the unmount.
+    const closing = await row.evaluate(async button => {
+      (button as HTMLButtonElement).click();
+      await new Promise(resolve => setTimeout(resolve));
+      const rolling = document.querySelector('section[aria-label="Linen Bandages details"]')?.closest<HTMLElement>(".o-collapsible");
+      return rolling && { closing: rolling.dataset.closing, roll: getComputedStyle(rolling).animationName + " " + getComputedStyle(rolling).animationDuration, inert: rolling.inert };
+    });
+    expect(closing).toEqual({ closing: "true", roll: "o-roll-up 0.1s", inert: true });
+    await expect(row).toHaveAttribute("aria-expanded", "false");
+    await expect(details).toHaveCount(0);
   } finally { await cleanup([own]); }
 });
 
