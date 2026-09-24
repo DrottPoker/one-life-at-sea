@@ -1,7 +1,7 @@
 import { gameplay } from "@/config/public";
 import type { CombatEvent, CombatOrder } from "@/lib/combat";
 import { zoneName } from "@/lib/equipment";
-import { sceneAnchors, SCENE_SIZE, type SceneSide, type ScenePoint } from "@/lib/combat-scene-anchors";
+import { sceneAnchors, SCENE_SIZE, type SceneArea, type SceneSide, type ScenePoint } from "@/lib/combat-scene-anchors";
 
 export type StrikeKind = "cannon" | "chain" | "grape" | "melee" | "firearm" | "grenade" | "smoke";
 export type SceneStrike = {
@@ -22,6 +22,28 @@ const smokeNames = new Set(gameplay.equipment.temporaries.filter(item => !("dama
 
 export const scenePercent = (point: ScenePoint) => ({ left: point.x / SCENE_SIZE.width * 100 + "%", top: point.y / SCENE_SIZE.height * 100 + "%" });
 
+// Deterministic randomness, so a round always lands and animates the same way, even after a reload.
+export function seededRandom(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state = state + 0x6d2b79f5 >>> 0;
+    let t = Math.imul(state ^ state >>> 15, 1 | state);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// A uniformly random point inside one of an area's ellipses, each weighted by its size.
+export function pointIn(area: SceneArea, random: () => number): ScenePoint {
+  let pick = random() * area.reduce((sum, ellipse) => sum + ellipse.rx * ellipse.ry, 0), ellipse = area[area.length - 1];
+  for (const candidate of area) {
+    pick -= candidate.rx * candidate.ry;
+    if (pick <= 0) { ellipse = candidate; break; }
+  }
+  const angle = random() * Math.PI * 2, distance = Math.sqrt(random());
+  return { x: Math.round(ellipse.x + Math.cos(angle) * distance * ellipse.rx), y: Math.round(ellipse.y + Math.sin(angle) * distance * ellipse.ry) };
+}
+
 // The scene follows the viewer's own rounds; other attackers' rounds stay in the log.
 export function latestOwnRound(events: CombatEvent[], attackerId: string) {
   return events.findLast(event => event.kind === "round" && event.actor_id === attackerId) ?? null;
@@ -33,18 +55,19 @@ function strikeKind(order: CombatOrder, weapon: string | null | undefined, effec
 }
 
 // Where a strike starts, lands and reports, using the round's own phase rather than the current one.
-function strikePoints(phase: "sea" | "boarding", side: SceneSide, kind: StrikeKind, hit: boolean, zone: string | null, target: "ship" | "crew") {
+// Hits land anywhere in the struck zone's area and misses anywhere in their splash or landing area.
+function strikePoints(phase: "sea" | "boarding", side: SceneSide, kind: StrikeKind, hit: boolean, zone: string | null, target: "ship" | "crew", random: () => number) {
   const other: SceneSide = side === "attacker" ? "defender" : "attacker";
   if (phase === "sea") {
     const own = sceneAnchors.sea[side], ship = sceneAnchors.sea[other];
-    const point = !hit ? ship.splash : target === "crew" ? ship.deck : ship[zone as "rigging" | "hull" | "waterline"] ?? ship.hull;
+    const point = pointIn(!hit ? ship.splash : target === "crew" ? ship.deck : ship[zone as "rigging" | "hull" | "waterline"] ?? ship.hull, random);
     return { origin: own.guns, point, popup: point, label: ship.label };
   }
   const own = sceneAnchors.boarding[side], crew = sceneAnchors.boarding[other];
-  const point = hit ? crew[zone as "head" | "body" | "legs" | "feet"] ?? crew.body
-    : kind === "melee" ? sceneAnchors.boarding.parry : kind === "firearm" ? crew.stray : crew.floor;
+  const point = hit ? pointIn(crew[zone as "head" | "body" | "legs" | "feet"] ?? crew.body, random)
+    : kind === "melee" ? sceneAnchors.boarding.parry : pointIn(kind === "firearm" ? crew.stray : crew.floor, random);
   // A parried swing reports over the captain who parried, clear of the other side's numbers.
-  return { origin: kind === "melee" ? null : kind === "firearm" ? own.blade : own.hand, point, popup: !hit && kind === "melee" ? crew.head : point, label: crew.label };
+  return { origin: kind === "melee" ? null : kind === "firearm" ? own.blade : own.hand, point, popup: !hit && kind === "melee" ? crew.head[0] : point, label: crew.label };
 }
 
 export function roundStrikes(event: CombatEvent): SceneStrike[] {
@@ -60,13 +83,31 @@ export function roundStrikes(event: CombatEvent): SceneStrike[] {
     if (!kind) continue;
     const target = entry.target ?? (event.phase === "sea" ? "ship" : "crew"), zone = entry.hit ? entry.zone ?? null : null;
     const start = strikes.length ? strikes[0].impact + DEFENDER_DELAY : 0, impact = start + timing[kind].travel;
+    const random = seededRandom(event.sequence * 2 + (entry.side === "attacker" ? 0 : 1));
     strikes.push({ side: entry.side, kind, hit: entry.hit, damage: entry.damage, critical: !!entry.critical && entry.damage > 0, zone, target,
-      effect: entry.effect ?? null, ...strikePoints(event.phase, entry.side, kind, entry.hit, zone, target), start, impact, end: impact + timing[kind].tail });
+      effect: entry.effect ?? null, ...strikePoints(event.phase, entry.side, kind, entry.hit, zone, target, random), start, impact, end: impact + timing[kind].tail });
   }
   return strikes;
 }
 
 export const sceneDuration = (strikes: SceneStrike[]) => Math.max(0, ...strikes.map(strike => strike.end));
+
+// Hits that leave a marker: misses and effect-only throws do not.
+export type MarkTone = "hit" | "critical" | "blocked";
+export function markTone(strike: SceneStrike): MarkTone | null {
+  if (!strike.hit || strike.kind === "smoke") return null;
+  return strike.critical ? "critical" : strike.damage === 0 ? "blocked" : "hit";
+}
+
+export type SceneScar = { key: string; target: SceneSide; point: ScenePoint; tone: MarkTone; age: number };
+// Where the viewer's earlier rounds in one phase struck either side, newest first; age counts rounds back from the latest.
+export function sceneHistory(events: CombatEvent[], attackerId: string, phase: "sea" | "boarding", before: number): SceneScar[] {
+  const rounds = events.filter(event => event.kind === "round" && event.actor_id === attackerId && event.sequence < before).reverse();
+  return rounds.flatMap((event, age) => event.phase !== phase ? [] : roundStrikes(event).flatMap(strike => {
+    const tone = markTone(strike);
+    return tone ? [{ key: event.sequence + "-" + strike.side, target: strike.side === "attacker" ? "defender" as const : "attacker" as const, point: strike.point, tone, age }] : [];
+  }));
+}
 
 function place(strike: SceneStrike) {
   if (strike.target === "crew" && strike.kind === "grape") return "Crew";

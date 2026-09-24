@@ -319,9 +319,19 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-scene-overlay,.o-scene-leaving { position:absolute; inset:0; pointer-events:none; }
 .o-scene-overlay svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
 .o-scene-leaving { animation:o-scene-leave .35s ease-in var(--hold) forwards; }
-.o-scene-mark rect { fill:var(--o-fx-hit); stroke:var(--o-bg); stroke-width:5px; paint-order:stroke; }
-.o-scene-mark[data-tone="critical"] rect { fill:var(--o-gold); }
-.o-scene-mark[data-tone="blocked"] rect { fill:var(--o-muted); }
+/* Hit markers: the latest hit is a reticle that locks on at impact; earlier hits stay as smaller rings that fade with age. */
+.o-scene-scars { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.o-scene-mark,.o-scene-scar { shape-rendering:geometricPrecision; }
+.o-scene-mark { transform-box:fill-box; transform-origin:center; }
+.o-mark-back { fill:none; stroke:var(--o-bg); stroke-opacity:.75; stroke-width:12px; stroke-linecap:round; }
+.o-mark-ring { fill:none; stroke:var(--o-fx-hit); stroke-width:6px; stroke-linecap:round; }
+.o-mark-dot { fill:var(--o-fx-hit); stroke:var(--o-bg); stroke-opacity:.75; stroke-width:4px; paint-order:stroke; }
+.o-scene-scar .o-mark-back { stroke-width:10px; }
+.o-scene-scar .o-mark-ring { stroke-width:5px; }
+:is(.o-scene-mark,.o-scene-scar)[data-tone="critical"] .o-mark-ring { stroke:var(--o-gold); }
+:is(.o-scene-mark,.o-scene-scar)[data-tone="critical"] .o-mark-dot { fill:var(--o-gold); }
+:is(.o-scene-mark,.o-scene-scar)[data-tone="blocked"] .o-mark-ring { stroke:var(--o-muted); }
+:is(.o-scene-mark,.o-scene-scar)[data-tone="blocked"] .o-mark-dot { fill:var(--o-muted); }
 .o-scene-chip { position:absolute; transform:translate(-50%,-50%); padding:2px 8px; border:1px solid var(--o-fx-hit); border-radius:2px; background:color-mix(in srgb,var(--o-bg) 84%,transparent); color:var(--o-combat-danger); font:600 clamp(9px,2.3cqi,12px)/1.45 var(--o-body-font); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
 .o-scene-chip[data-tone="critical"] { border-color:var(--o-gold); color:var(--o-gold); }
 .o-scene-chip[data-tone="miss"],.o-scene-chip[data-tone="blocked"] { border-color:var(--o-line); color:var(--o-muted); }
@@ -329,7 +339,8 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-scene-pop { position:absolute; opacity:0; color:var(--o-fx-flash); font:700 clamp(16px,5.4cqi,30px)/1 var(--o-display-font); white-space:nowrap; text-shadow:2px 0 var(--o-bg),-2px 0 var(--o-bg),0 2px var(--o-bg),0 -2px var(--o-bg),2px 2px var(--o-bg),-2px -2px var(--o-bg),2px -2px var(--o-bg),-2px 2px var(--o-bg); animation:o-scene-pop 1.25s ease-out calc(var(--t) + 140ms) forwards; }
 .o-scene-pop[data-tone="critical"] { color:var(--o-gold); font-size:clamp(17px,5.8cqi,32px); }
 .o-scene-pop[data-tone="miss"],.o-scene-pop[data-tone="blocked"] { color:var(--o-muted); }
-.o-scene-overlay[data-animate="true"] .o-scene-mark,.o-scene-overlay[data-animate="true"] .o-scene-chip { opacity:0; animation:o-scene-in .25s ease-out var(--t) forwards; }
+.o-scene-overlay[data-animate="true"] .o-scene-mark { opacity:0; animation:o-mark-in .3s cubic-bezier(.2,.8,.3,1) var(--t) forwards; }
+.o-scene-overlay[data-animate="true"] .o-scene-chip { opacity:0; animation:o-scene-in .25s ease-out var(--t) forwards; }
 /* A finished fight: the artwork darkens and the result with Leave sits in its middle. */
 .o-scene-finale { position:absolute; inset:0; display:grid; place-items:center; padding:8px; background:color-mix(in srgb,var(--o-bg) 55%,transparent); animation:o-scene-finale .35s ease-out both; }
 .o-scene-finale-box { display:grid; justify-items:center; gap:4px; width:min(100%,280px); padding:14px 18px 16px; border:1px solid var(--o-brass); border-radius:4px; background:linear-gradient(var(--o-surface),var(--o-inset)); box-shadow:0 6px 24px var(--o-palette-0006),inset 0 1px var(--o-palette-ffffff13); text-align:center; animation:o-scene-finale-box .35s ease-out both; }
@@ -359,6 +370,7 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 @keyframes o-scene-finale { from { opacity:0; } }
 @keyframes o-scene-finale-box { from { opacity:0; transform:translateY(6px) scale(.97); } }
 @keyframes o-scene-in { to { opacity:1; } }
+@keyframes o-mark-in { from { opacity:0; transform:scale(2.2); } to { opacity:1; transform:scale(1); } }
 /* The number appears just after the impact and above it, so the blast stays visible. */
 @keyframes o-scene-pop { 0% { opacity:0; transform:translate(-50%,-120%) scale(.7); } 12% { opacity:1; transform:translate(-50%,-175%) scale(1.12); } 25% { transform:translate(-50%,-185%) scale(1); } 75% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-280%); } }
 @keyframes o-fx-bit { 0% { opacity:1; transform:translate(0,0); } 45% { opacity:1; transform:translate(var(--mx),var(--my)); } 100% { opacity:0; transform:translate(var(--px),var(--py)); } }

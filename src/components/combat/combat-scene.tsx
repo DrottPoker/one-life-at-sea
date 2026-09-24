@@ -6,7 +6,8 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode 
 import { Anchor, Swords } from "lucide-react";
 import type { CombatEvent } from "@/lib/combat";
 import { SCENE_ART, SCENE_SIZE, type ScenePoint } from "@/lib/combat-scene-anchors";
-import { latestOwnRound, roundStrikes, roundSummary, sceneDuration, scenePercent, strikeLabel, strikePopup, type SceneStrike } from "@/lib/combat-scene";
+import { latestOwnRound, markTone, roundStrikes, roundSummary, sceneDuration, sceneHistory, scenePercent, seededRandom, strikeLabel, strikePopup,
+  type SceneScar, type SceneStrike } from "@/lib/combat-scene";
 
 const art = {
   sea: { src: SCENE_ART.sea, alt: "Two pirate ships face each other on the open sea.", tagline: "Two ships. One victory.", Icon: Anchor },
@@ -26,17 +27,6 @@ const white = "--o-fx-water", fire = ["--o-fx-flash", "--o-fx-fire", "--o-fx-emb
 const water = ["--o-fx-water", "--o-fx-water-deep"], smoke = ["--o-fx-smoke", "--o-fx-smoke-dark"], blood = ["--o-fx-hit", "--o-fx-ember"], sparks = ["--o-fx-flash", "--o-gold"];
 // Blast palettes run from the hot centre to the edge.
 const blasts = { fire: [white, "--o-fx-flash", "--o-fx-fire", "--o-fx-ember"], gold: [white, "--o-fx-flash", "--o-gold", "--o-gold"], light: [white, white, "--o-fx-flash", "--o-fx-smoke"] };
-
-// Deterministic randomness per round, so a re-render never reshuffles an effect.
-function seeded(seed: number) {
-  let state = seed >>> 0;
-  return () => {
-    state = state + 0x6d2b79f5 >>> 0;
-    let t = Math.imul(state ^ state >>> 15, 1 | state);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
 
 function square(key: string, className: string, x: number, y: number, side: number, style: Vars) {
   return <rect key={key} className={className} x={x - side / 2} y={y - side / 2} width={side} height={side} style={style} />;
@@ -149,21 +139,36 @@ function delivery(random: () => number, strike: SceneStrike): ReactNode[] {
 }
 
 function StrikeEffects({ strike, seed }: { strike: SceneStrike; seed: number }) {
-  const random = seeded(seed);
+  const random = seededRandom(seed);
   return <g data-kind={strike.kind}>{[...delivery(random, strike), ...(strike.hit ? impact(random, strike) : miss(random, strike))]}</g>;
 }
 
 const tone = (strike: SceneStrike) => !strike.hit ? "miss" : strike.critical ? "critical" : strike.damage === 0 ? strike.kind === "smoke" ? "effect" : "blocked" : "hit";
 const struck = (strike: SceneStrike) => strike.side === "attacker" ? "defender" : "attacker";
 
-// A pixel reticle left on the zone that was hit, until the next round.
+// The latest hit is a reticle that locks on at impact, like Torn's; it stays until the next round.
+const RETICLE = "M-44 0H-18M18 0H44M0-44V-18M0 18V44";
 function mark(strike: SceneStrike, index: number) {
-  if (!strike.hit || strike.kind === "smoke") return null;
-  return <g key={"mark" + index} className="o-scene-mark" data-tone={tone(strike)} data-zone={strike.zone ?? strike.target} data-target={struck(strike)}
-    transform={"translate(" + strike.point.x + " " + strike.point.y + ")"} style={{ "--t": ms(strike.impact + 140) } as Vars}>
-    <rect x={-62} y={-5} width={34} height={10} /><rect x={28} y={-5} width={34} height={10} /><rect x={-5} y={-62} width={10} height={34} />
-    <rect x={-5} y={28} width={10} height={34} /><rect x={-5} y={-5} width={10} height={10} />
+  const markerTone = markTone(strike);
+  if (!markerTone) return null;
+  return <g key={"mark" + index} transform={"translate(" + strike.point.x + " " + strike.point.y + ")"}>
+    <g className="o-scene-mark" data-tone={markerTone} data-zone={strike.zone ?? strike.target} data-target={struck(strike)} style={{ "--t": ms(strike.impact + 60) } as Vars}>
+      <circle className="o-mark-back" r={28} /><path className="o-mark-back" d={RETICLE} />
+      <circle className="o-mark-ring" r={28} /><path className="o-mark-ring" d={RETICLE} /><circle className="o-mark-dot" r={6} />
+    </g>
   </g>;
+}
+
+// Earlier hits of this fight stay as smaller rings where they landed, fading with age.
+function SceneScars({ scars }: { scars: SceneScar[] }) {
+  if (!scars.length) return null;
+  return <svg className="o-scene-scars" viewBox={"0 0 " + SCENE_SIZE.width + " " + SCENE_SIZE.height} preserveAspectRatio="none" aria-hidden="true">
+    {scars.map(scar => <g key={scar.key} transform={"translate(" + scar.point.x + " " + scar.point.y + ")"}>
+      <g className="o-scene-scar" data-tone={scar.tone} data-target={scar.target} style={{ opacity: Math.max(0.35, 0.9 - scar.age * 0.07) }}>
+        <circle className="o-mark-back" r={15} /><circle className="o-mark-ring" r={15} /><circle className="o-mark-dot" r={4.5} />
+      </g>
+    </g>)}
+  </svg>;
 }
 
 function SceneOverlay({ strikes, animate, sequence }: { strikes: SceneStrike[]; animate: boolean; sequence: number }) {
@@ -214,9 +219,11 @@ export function CombatScene({ phase, events = [], attackerId, defenderName, fina
   return <figure className="o-combat-scene" data-phase={phase}>
     <div className="o-combat-scene-art" data-finale={(finale && finaleShown) || undefined}>
       <Image src={art[phase].src} alt={art[phase].alt} width={SCENE_SIZE.width} height={SCENE_SIZE.height} sizes={sizes} loading="eager" />
+      <SceneScars scars={sceneHistory(events, attackerId, phase, round?.sequence ?? Infinity)} />
       {round && round.phase === phase && <SceneOverlay key={round.sequence} strikes={strikes} animate={fresh} sequence={round.sequence} />}
       {leaving && <div key={"leaving" + round.sequence} className="o-scene-leaving" style={{ "--hold": ms(sceneDuration(strikes)) } as Vars}>
         <Image src={art[round.phase].src} alt="" width={SCENE_SIZE.width} height={SCENE_SIZE.height} sizes={sizes} loading="eager" />
+        <SceneScars scars={sceneHistory(events, attackerId, round.phase, round.sequence)} />
         <SceneOverlay strikes={strikes} animate sequence={round.sequence} />
       </div>}
       <span className="o-combat-versus" aria-hidden="true">VS</span>

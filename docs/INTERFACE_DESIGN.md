@@ -105,11 +105,16 @@ game navigation during combat.
   right. New artwork gets a new file name so image caches never serve the old version.
 - The artwork doubles as the hit display (`CombatScene`). The viewer's latest own round
   plays on it: cannon fire, Chain Shot, Grape Shot, melee, firearm, Grenado and Smoke Pot
-  each have their own effect built from square pixels. Damage rises from the impact, a hit
-  leaves a pixel reticle on the struck zone, and a label under the struck side keeps the
-  result (for example Critical · Waterline · 30, Crew · 6 or Miss) until the next round.
-  Misses splash beside the ship, are parried between the blades, or land beside the target.
-  The attacker's strike plays first, then the defender's.
+  each have their own effect built from square pixels. Damage rises from the impact, and a
+  label under the struck side keeps the result (for example Critical · Waterline · 30,
+  Crew · 6 or Miss) until the next round. Misses splash beside the ship, are parried between
+  the blades, or land beside the target. The attacker's strike plays first, then the defender's.
+- A hit lands at a random spot inside the struck zone's area, such as any sail for Sails
+  and rigging or either leg for Legs, and the effect plays there. The spot is seeded by the
+  round, so a reload shows it in the same place. The latest hit leaves a small red reticle
+  like Torn's that locks on at impact (gold for a critical hit, grey when blocked). Earlier
+  hits of the viewer's rounds in the same phase stay as smaller rings with a dot, fading with
+  age, on whichever side they struck. Misses and Smoke Pot leave no marker.
 - Only rounds that arrive while the page is open animate; a reload shows the marks and
   labels still. A round that changes phase finishes on its own artwork before the new phase
   fades in. Other attackers' rounds stay in the log.
@@ -126,9 +131,10 @@ game navigation during combat.
   their sails and rigging for 12 and slowed their ship. Bo missed.", and is announced
   politely to screen readers. With reduced motion, marks and labels appear without effects.
   The VS badge sits in the sky at the top center, clear of the effects.
-- Anchor points for zones, guns, deck, hands, misses and labels live in
-  `src/lib/combat-scene-anchors.ts`, in the artwork's own pixels. Recalibrate them when the
-  artwork changes; unit tests check that every configured hit zone has a point.
+- Hit areas (one or more ellipses per zone, deck, splash and landing spot) and anchor points
+  for guns, hands and labels live in `src/lib/combat-scene-anchors.ts`, in the artwork's own
+  pixels. Recalibrate them when the artwork changes; unit tests check that every configured
+  hit zone has an area inside the artwork and that hits always land inside it.
   `src/lib/combat-scene.ts` turns a round into strikes, labels and the caption. Effect
   colors are the `--o-fx-*` tokens in `config/theme.css`.
 - The scene follows the current attacker's authoritative phase, including a
