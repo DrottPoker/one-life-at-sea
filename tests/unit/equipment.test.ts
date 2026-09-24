@@ -32,17 +32,21 @@ describe("equipment", () => {
     expect(zoneName("ship", "rigging")).toBe("Sails and rigging");
     expect(zoneName("crew", null)).toBeNull();
   });
-  it("shows fallbacks for empty weapon slots and the hull maximum in the loadout", () => {
-    const html = renderToStaticMarkup(createElement(LoadoutPanel, {
-      loadout: { hull: { quality: 100, armor: 10, health: 25, name: "Oak Hull Sheathing" } }, shipHealthMax: 125,
-      disabled: false, pendingSlot: null, onUnequip: () => {},
-    }));
-    expect(html).toContain("Max Ship Health 125");
-    expect(html).toContain("Fists");
-    expect(html).toContain("Basic cannons");
-    expect(html).toContain("Quality 100.00% · Armor 10.00% · Ship Health +25");
-    expect(html).toContain('aria-label="Unequip Oak Hull Sheathing"');
-    expect(html.match(/>Unequip</g)).toHaveLength(1);
+  it("shows the selected slot in the focus box and every slot as a tile", () => {
+    const props = { loadout: { hull: { quality: 100, armor: 10, health: 25, name: "Oak Hull Sheathing", image_path: "/images/items/placeholder.svg" } },
+      shipHealthMax: 125, onSelect: () => {}, disabled: false, pendingSlot: null, onUnequip: () => {} };
+    const hull = renderToStaticMarkup(createElement(LoadoutPanel, { ...props, selected: "hull" }));
+    expect(hull).toContain("Max Ship Health 125");
+    for (const label of ["Quality 100.00%", "Armor 10.00%", "Ship Health +25"]) expect(hull).toContain('aria-label="' + label + '"');
+    expect(hull).toContain('aria-label="Unequip Oak Hull Sheathing"');
+    expect(hull.match(/class="o-loadout-tile"/g)).toHaveLength(10);
+    expect(hull).toContain('aria-label="Melee: Fists"');
+    expect(hull).toContain('aria-label="Cannons: Basic cannons"');
+    expect(hull).toContain('aria-label="Hull: Oak Hull Sheathing" title="Hull"');
+    const melee = renderToStaticMarkup(createElement(LoadoutPanel, { ...props, selected: "melee" }));
+    expect(melee).toContain('aria-label="Damage 10.00"');
+    expect(melee).toContain("No equipment.");
+    expect(melee).not.toContain(">Unequip<");
   });
   it("shows own equipment stats but only names for a revealed opponent", () => {
     const captain = { id: "test", player_number: 100001, name: "Gear Captain", ship_health: 120, ship_health_max: 125, crew_health: 100,

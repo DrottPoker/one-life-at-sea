@@ -1,6 +1,5 @@
 import { InventoryPanel } from "@/components/inventory/inventory-panel";
 import { Package } from "lucide-react";
-import { Panel } from "@/components/shell";
 import { PageHero, PLACEHOLDER_HERO } from "@/components/page-hero";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
@@ -21,8 +20,6 @@ export default async function InventoryRoute({ searchParams }: {
   if (error || !data) throw new Error("Your inventory could not be loaded. Please try again.");
   return <>
     <PageHero title="Inventory" lead="Everything your captain carries." image={PLACEHOLDER_HERO} icon={Package} />
-    <Panel>
-      <InventoryPanel inventory={data} filters={filters} characterId={character.id} />
-    </Panel>
+    <InventoryPanel inventory={data} filters={filters} characterId={character.id} />
   </>;
 }

@@ -5,12 +5,21 @@ import { useState } from "react";
 import { DEFAULT_ITEM_IMAGE } from "@/lib/loot";
 import type { InventoryEntry } from "@/lib/inventory";
 
-export function ItemImage({ item, large = false }: { item: Pick<InventoryEntry, "name" | "image_path">; large?: boolean }) {
+// Sizes: list thumbnail, detail art, and the loadout's tile and focus images.
+const variants = {
+  thumb: { className: "o-item-thumb", width: 64, height: 48 },
+  large: { className: "o-item-art", width: 280, height: 190 },
+  tile: { className: "o-item-tile-art", width: 72, height: 48 },
+  focus: { className: "o-item-focus-art", width: 120, height: 80 },
+};
+
+export function ItemImage({ item, large = false, variant }: { item: Pick<InventoryEntry, "name" | "image_path">; large?: boolean; variant?: "tile" | "focus" }) {
   const [failedPath, setFailedPath] = useState<string | null>(null);
   const path = !item.image_path || failedPath === item.image_path ? DEFAULT_ITEM_IMAGE : item.image_path;
-  return <span className={large ? "o-item-art" : "o-item-thumb"}>
-    {<Image src={path} unoptimized={path.startsWith("/api/item-images/") || path.endsWith(".svg")} alt={large ? item.name : ""} width={large ? 280 : 64} height={large ? 190 : 48}
-        sizes={large ? "280px" : "64px"} onError={() => setFailedPath(item.image_path)} />}
+  const size = variants[variant ?? (large ? "large" : "thumb")];
+  return <span className={size.className}>
+    {<Image src={path} unoptimized={path.startsWith("/api/item-images/") || path.endsWith(".svg")} alt={large || variant === "focus" ? item.name : ""}
+        width={size.width} height={size.height} sizes={size.width + "px"} onError={() => setFailedPath(item.image_path)} />}
   </span>;
 }
 

@@ -10,9 +10,12 @@ Länken är tillgänglig även under sjukhusvistelse.
 
 - Kategoriikoner högst upp: All items, Crew Weapons, Crew Armor, Cannons, Ship Parts, Munitions, Medical, Boosters,
   Materials och Miscellaneous. Aktiv kategori har en tydlig markering.
-- Utrustningspanelen visar besättningens och skeppets platser med utrustat exemplar,
-  Quality och stats, eller Fists, Basic cannons respektive Empty. Skeppsgruppen visar
-  maximal Ship Health. Unequip finns på varje utrustad plats.
+- Utrustningen ligger i en egen, kompakt panel ovanför föremålslistan. Små rutor visar
+  besättningens sju och skeppets tre platser med föremålets bild, eller platsens ikon när
+  den är tom. Vald ruta visas i en fokusruta med bild, namn, Quality och stats som ikoner,
+  samt Unequip. Tomma vapenplatser visar Fists och Basic cannons. Rubriken visar maximal
+  Ship Health. En ny Equip väljer den platsen. På mobil ligger fokusrutan överst och
+  rutorna fyra per rad.
 - Namnsökning fungerar tillsammans med kategorin. Sökning är skiftlägesokänslig
   och behandlar exempelvis procenttecken som vanlig text.
 - Rader visar miniatyr, namn, stackantal, Equipped-märke och för utrustning Quality samt två huvudstats.

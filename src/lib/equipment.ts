@@ -72,7 +72,7 @@ export function formatQuality(value: number) {
 }
 
 // Labels and display values for the stats an item actually has, in a fixed reading order.
-export function itemStatRows(stats: ItemStats) {
+export function itemStatRows(stats: Partial<ItemStats>) {
   return STAT_ORDER.filter(key => stats[key] !== undefined).map(key => {
     const value = stats[key]!;
     const text = key === "shots" || key === "health" ? (key === "health" ? "+" : "") + whole.format(value)

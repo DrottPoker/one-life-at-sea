@@ -3,21 +3,21 @@
 import { GameLink as Link } from "@/components/game-navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, Crosshair, Gauge, HeartPulse, Package, Search, Shield, Target, Trash2, Wind, Zap } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Package, Search, Trash2 } from "lucide-react";
 import { DialogCloseButton } from "@/components/dialog-close-button";
 import { ItemImage } from "@/components/inventory/item-image";
 import { ItemDetails } from "@/components/inventory/item-details";
 import { LoadoutPanel } from "@/components/inventory/loadout-panel";
 import { categoryIcon } from "@/components/inventory/category-icons";
+import { ItemStatChips } from "@/components/inventory/item-stat-chips";
 import { equipItem, unequipItem } from "@/app/inventory-actions";
 import { useEconomyRequests } from "@/components/economy-requests";
 import { useGameState } from "@/components/game-state";
 import { formatItemCount, inventoryCategories, inventoryCategoryName, inventoryEntryKey,
   inventoryHref, parseItemQuantity, type InventoryEntry, type InventoryFilters, type InventoryPage, type TrashResult } from "@/lib/inventory";
-import { formatQuality, isShotItem, itemStatRows, itemStatSummary, SLOT_LABELS, type EquipSlot, type EquipResult } from "@/lib/equipment";
+import { isShotItem, itemStatSummary, SLOT_LABELS, type EquipSlot, type EquipResult } from "@/lib/equipment";
 import { MAX_HEALTH } from "@/lib/game";
 
-const statIcons = { damage: Zap, precision: Crosshair, shots: Target, armor: Shield, health: HeartPulse, speed: Wind };
 
 export function InventoryPanel({ inventory, filters, characterId }: { inventory: InventoryPage; filters: InventoryFilters; characterId: string }) {
   const router = useRouter();
@@ -32,6 +32,7 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
   const [equipPending, startEquip] = useTransition();
   const [equipResult, setEquipResult] = useState<EquipResult>({});
   const [pendingEquip, setPendingEquip] = useState<string | null>(null);
+  const [focusSlot, setFocusSlot] = useState<EquipSlot>("melee");
   const equipRequest = useRef<{ id: string; target: string } | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const request = useRef<{ id: string; entry: InventoryEntry; amount: string } | null>(null);
@@ -98,6 +99,7 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
       try { response = await run(attempt.id); }
       catch { response = { error: true, retry: true, message: "The result could not be confirmed. Retry this action to check it safely." }; }
       setEquipResult(response);
+      if (response.receipt) setFocusSlot(response.receipt.slot);
       if (!response.retry) equipRequest.current = null;
       setPendingEquip(null);
     });
@@ -111,7 +113,11 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
     startFilter(() => router.push(inventoryHref(filters.category, query)));
   }
 
-  return <div className="o-inventory">
+  return <>
+    <LoadoutPanel loadout={inventory.loadout ?? {}} shipHealthMax={inventory.ship_health_max ?? MAX_HEALTH} selected={focusSlot} onSelect={setFocusSlot}
+      disabled={equipBlocked || equipPending} pendingSlot={pendingEquip?.startsWith("unequip:") ? pendingEquip.slice(8) as EquipSlot : null}
+      onUnequip={unequip} feedback={equipResult} />
+    <section className="o-panel"><div className="o-inventory">
     <div className="o-inventory-toolbar">
       <nav className="o-inventory-categories" aria-label="Item categories">
         <Link href={inventoryHref(null, filters.query)} title="All items" aria-label="All items"
@@ -134,11 +140,6 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
       {filters.query && <Link href={inventoryHref(filters.category)}>Clear search</Link>}
       {filterPending && <span role="status">Searching...</span>}
     </div>
-    <LoadoutPanel loadout={inventory.loadout ?? {}} shipHealthMax={inventory.ship_health_max ?? MAX_HEALTH} disabled={equipBlocked || equipPending}
-      pendingSlot={pendingEquip?.startsWith("unequip:") ? pendingEquip.slice(8) as EquipSlot : null} onUnequip={unequip} />
-    <div className="o-inventory-feedback" role="status" aria-live="polite">
-      {equipResult.message && <p className={equipResult.error ? "o-field-error" : ""}>{equipResult.message}</p>}
-    </div>
     <p className="o-inventory-note">Using consumables will be available later.</p>
     {state.active_combat_id && <p className="o-inventory-notice">Your inventory is read-only during combat. You can inspect items, but cannot change them.</p>}
     {state.sea.state !== "in_harbor" && <p className="o-inventory-notice">Your inventory is read-only at sea. Return to The Harbor to use it.</p>}
@@ -155,13 +156,7 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
               <span className="o-item-name">{item.name}{item.entry_type === "stack" && <strong> x{formatItemCount(item.quantity)}</strong>}
                 {item.equipped_slot && <span className="o-item-equipped">Equipped</span>}</span>
               <span className="o-item-stats">
-                {item.stats && <>
-                  <span title="Quality" aria-label={"Quality " + formatQuality(item.stats.quality)}><Gauge aria-hidden="true" />{formatQuality(item.stats.quality)}</span>
-                  {itemStatRows(item.stats).slice(0, 2).map(row => {
-                    const Icon = statIcons[row.key];
-                    return <span key={row.key} title={row.label} aria-label={row.label + " " + row.text}><Icon aria-hidden="true" />{row.text}</span>;
-                  })}
-                </>}
+                {item.stats && <ItemStatChips stats={item.stats} limit={2} />}
                 <ChevronDown className="o-item-chevron" aria-hidden="true" />
               </span>
             </button>
@@ -229,5 +224,6 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
         </div>}
       </form>}
     </dialog>
-  </div>;
+    </div></section>
+  </>;
 }

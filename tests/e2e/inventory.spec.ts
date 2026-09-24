@@ -135,21 +135,29 @@ test("equipment moves between the bag and the loadout and cannot be destroyed or
     const weapons = (await own.api.rpc("list_inventory", { category_id: "crew_weapons" })).data!.items;
     const best = weapons.find(item => item.stats!.quality === 80)!;
     const row = page.locator('[data-item-id="' + best.id + '"]');
-    const melee = page.getByRole("region", { name: "Equipment", exact: true }).locator('[data-slot="melee"]');
-    await expect(melee).toContainText("Fists");
+    const equipment = page.getByRole("region", { name: "Equipment", exact: true });
+    const focus = equipment.locator(".o-loadout-focus");
+    await expect(equipment.getByRole("button", { name: "Melee: Fists", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(focus.getByLabel("Damage 10.00", { exact: true })).toBeVisible();
+    await expect(focus).toContainText("No equipment.");
     await row.getByRole("button", { name: "Equip Sailor's Cutlass", exact: true }).click();
     await expect(page.getByText("Equipped Sailor's Cutlass.", { exact: true })).toBeVisible();
     await expect(row.getByText("Equipped", { exact: true })).toBeVisible();
-    await expect(melee).toContainText("Sailor's Cutlass");
-    await expect(melee).toContainText("Quality 80.00%");
+    await expect(equipment.getByRole("button", { name: "Melee: Sailor's Cutlass", exact: true }).locator("img")).toBeVisible();
+    await expect(focus).toContainText("Sailor's Cutlass");
+    await expect(focus.getByLabel("Quality 80.00%", { exact: true })).toBeVisible();
+    await equipment.getByRole("button", { name: "Hull: Empty", exact: true }).click();
+    await expect(focus).toContainText("Nothing equipped");
+    await equipment.getByRole("button", { name: "Melee: Sailor's Cutlass", exact: true }).click();
     await expect(row.getByRole("button", { name: "Trash Sailor's Cutlass", exact: true })).toBeDisabled();
     expect((await own.api.rpc("create_market_listings", { entries: [{ entry_id: best.id, entry_type: "instance", quantity: 1, unit_price: 10 }],
       request_id: randomUUID() })).error?.message).toBe("ITEM_EQUIPPED");
     await page.reload();
-    await expect(melee).toContainText("Sailor's Cutlass");
-    await melee.getByRole("button", { name: "Unequip Sailor's Cutlass", exact: true }).click();
+    await expect(focus).toContainText("Sailor's Cutlass");
+    await page.screenshot({ path: ".local/inventory-loadout.png", fullPage: true });
+    await focus.getByRole("button", { name: "Unequip Sailor's Cutlass", exact: true }).click();
     await expect(page.getByText("Unequipped Sailor's Cutlass.", { exact: true })).toBeVisible();
-    await expect(melee).toContainText("Fists");
+    await expect(focus).toContainText("Fists");
     await expect(row.getByRole("button", { name: "Trash Sailor's Cutlass", exact: true })).toBeEnabled();
     await page.setViewportSize({ width: 375, height: 1000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -167,15 +175,19 @@ test("temporaries are equipped from their stack while shot types have no item ac
     await expect(chain.getByRole("button", { name: /^(Use|Equip)/ })).toHaveCount(0);
     await grenado.getByRole("button", { name: "Equip Grenado", exact: true }).click();
     await expect(page.getByText("Equipped Grenado.", { exact: true })).toBeVisible();
-    const slot = page.getByRole("region", { name: "Equipment", exact: true }).locator('[data-slot="temporary"]');
+    const equipment = page.getByRole("region", { name: "Equipment", exact: true });
+    const slot = equipment.locator('.o-loadout-focus[data-slot="temporary"]');
+    await expect(equipment.getByRole("button", { name: "Temporary: Grenado", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(slot).toContainText("Grenado");
-    await expect(slot).toContainText("x2 · Damage 25.00 · Precision 60.00");
+    await expect(slot.getByLabel("Quantity 2", { exact: true })).toBeVisible();
+    await expect(slot.getByLabel("Damage 25.00", { exact: true })).toBeVisible();
     await expect(grenado.getByText("Equipped", { exact: true })).toBeVisible();
     await expect(grenado.getByRole("button", { name: "Trash Grenado", exact: true })).toBeEnabled();
     await page.screenshot({ path: ".local/inventory-temporary.png", fullPage: true });
     await slot.getByRole("button", { name: "Unequip Grenado", exact: true }).click();
     await expect(page.getByText("Unequipped Grenado.", { exact: true })).toBeVisible();
     await expect(slot).toContainText("Empty");
+    await expect(equipment.getByRole("button", { name: "Temporary: Empty", exact: true })).toBeVisible();
   } finally { await cleanup([own]); }
 });
 
