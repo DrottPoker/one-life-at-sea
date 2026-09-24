@@ -100,6 +100,7 @@ insert into results select 'smoke',private.resolve_combat_round(jsonb_set(jsonb_
 select is((select value#>>'{event,attacker_damage}' from results where key='smoke'),'0','Smoke deals no damage');
 select is((select value#>'{state,defender,effects,crew_accuracy}' from results where key='smoke'),'{"multiplier":0.33,"rounds":3}'::jsonb,'Smoke weakens the target crew for its rounds');
 select is((select value#>>'{event,attacker_effect}' from results where key='smoke'),'crew_accuracy','The effect is recorded');
+select is((select value#>'{event,attacker_zone}' from results where key='smoke'),'null'::jsonb,'Smoke lands on the crew as a whole, not on one zone');
 insert into results select 'blinded',private.resolve_combat_round(jsonb_set(value,'{defender,effects}','{"crew_accuracy":{"multiplier":0.01,"rounds":1}}'),
   'crew_attack',array[0.0,0.0,0.0,0.3,0.3]) from results where key='boarding';
 select is((select value#>>'{event,defender_hit}' from results where key='blinded'),'false','A blinded crew misses even a zero roll');
@@ -235,6 +236,14 @@ select is(private.stack_quantity((select d from f),'smoke_pot'),0::bigint,'The d
 select is((select defender_temporary_uses from private.combat_participants where character_id=(select a from f)),0,'The defender allowance is spent');
 select is((select count(*) from private.combat_rounds r join private.combats b on b.id=r.combat_id where b.defender_id=(select d from f)
   and r.event->>'defender_order'='crew_throw'),1::bigint,'The defender threw only once');
+select is((select state#>>'{defender,temporary_uses}' from private.combats where defender_id=(select d from f)),'0','The defender view keeps its spent allowance');
+select set_config('request.jwt.claims','{"sub":"e9000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+set local role authenticated;
+select is((select public.get_combat((value#>>'{battle,id}')::uuid)#>'{attacker,effects,crew_accuracy,rounds}' from results where key='battle'),'3'::jsonb,
+  'The attacker sees the smoke that blinds its crew');
+select is((select public.get_combat((value#>>'{battle,id}')::uuid)#>'{defender,effects}' from results where key='battle'),'{}'::jsonb,
+  'Opponent effects are visible, and the missed grenado applied none');
+reset role;
 select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
   where n.nspname='private' and c.relname='character_equipment' and c.relrowsecurity),1::bigint,'Equipment rows have RLS');
 select * from finish();

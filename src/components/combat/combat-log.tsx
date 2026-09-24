@@ -2,7 +2,7 @@ import { gameplay, frontend } from "@/config/public";
 import Link from "next/link";
 import { ScrollText, Users } from "lucide-react";
 import { ORDER_LABELS, type CombatEvent, type CombatOrder, type CombatPerson } from "@/lib/combat";
-import { zoneName } from "@/lib/equipment";
+import { SHOT_NAMES, zoneName } from "@/lib/equipment";
 
 function CaptainName({ id, name, playerNumber }: { id: string; name: string; playerNumber?: number | null }) {
   return <Link href={playerNumber ? "/players/" + playerNumber : "/characters/" + id} prefetch={false}>{name}</Link>;
@@ -18,7 +18,8 @@ function EventAction({ id, name, playerNumber, order, hit, damage, phase, weapon
   const struck = target ?? (phase === "sea" ? "ship" : "crew"), place = hit ? zoneName(struck, zone) : null;
   const result = effect && damage === 0 ? effectLabels[effect] : (damage === 0 ? "Blocked · 0 damage" : damage + " " + struck + " damage")
     + (critical && damage > 0 ? " · Critical" : "") + (effect ? " · " + effectLabels[effect] : "");
-  return <p><strong><CaptainName id={id} name={name} playerNumber={playerNumber} /></strong><span>{ORDER_LABELS[order]}{weapon ? " · " + weapon : ""}</span>
+  const shot = order === "fire_chain" ? SHOT_NAMES.chain : order === "fire_grape" ? SHOT_NAMES.grape : null;
+  return <p><strong><CaptainName id={id} name={name} playerNumber={playerNumber} /></strong><span>{ORDER_LABELS[order]}{weapon ? " · " + weapon : ""}{shot ? " · " + shot : ""}</span>
     {attacking.includes(order) && <span className={hit ? "o-damage" : "o-copy"}>{hit ? (place ? place + " · " : "") + result : "Missed"}</span>}
   </p>;
 }

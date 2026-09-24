@@ -59,7 +59,7 @@ describe("equipment", () => {
     expect(sea).toContain("120 / 125");
     expect(sea).toContain("10 salvos remaining");
     const hidden = renderToStaticMarkup(createElement(CombatantPanel, { own: false, phase: "sea", captain: { ...captain, loadout: null } }));
-    expect(hidden.match(/Unknown/g)).toHaveLength(4);
+    expect(hidden.match(/Unknown/g)).toHaveLength(3);
   });
   it("describes temporaries and recognizes the stage 2 item types", () => {
     expect(temporaryEffect({ item_id: "grenado", name: "Grenado", damage: 25, precision: 60 })).toBe("Damage 25.00 · Precision 60.00");

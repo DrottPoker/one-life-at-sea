@@ -156,6 +156,29 @@ test("equipment moves between the bag and the loadout and cannot be destroyed or
   } finally { await cleanup([own]); }
 });
 
+test("temporaries are equipped from their stack while shot types have no item action", async ({ page }) => {
+  const own = await account(false);
+  try {
+    sql("insert into private.item_stacks(character_id,item_id,quantity) values('" + own.id + "','grenado',2),('" + own.id + "','chain_shot',3); select private.notify_training('" + own.id + "');");
+    await login(page, own);
+    await page.goto("/inventory");
+    const grenado = page.locator(".o-item").filter({ hasText: "Grenado" });
+    const chain = page.locator(".o-item").filter({ hasText: "Chain Shot" });
+    await expect(chain.getByRole("button", { name: /^(Use|Equip)/ })).toHaveCount(0);
+    await grenado.getByRole("button", { name: "Equip Grenado", exact: true }).click();
+    await expect(page.getByText("Equipped Grenado.", { exact: true })).toBeVisible();
+    const slot = page.getByRole("region", { name: "Equipment", exact: true }).locator('[data-slot="temporary"]');
+    await expect(slot).toContainText("Grenado");
+    await expect(slot).toContainText("x2 · Damage 25.00 · Precision 60.00");
+    await expect(grenado.getByText("Equipped", { exact: true })).toBeVisible();
+    await expect(grenado.getByRole("button", { name: "Trash Grenado", exact: true })).toBeEnabled();
+    await page.screenshot({ path: ".local/inventory-temporary.png", fullPage: true });
+    await slot.getByRole("button", { name: "Unequip Grenado", exact: true }).click();
+    await expect(page.getByText("Unequipped Grenado.", { exact: true })).toBeVisible();
+    await expect(slot).toContainText("Empty");
+  } finally { await cleanup([own]); }
+});
+
 test("a lost trash response is safely retried even after the last item disappears", async ({ page }) => {
   const own = await account();
   try {

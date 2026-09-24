@@ -325,7 +325,21 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-combat-message p { margin:0 0 5px; }
 .o-combat-message .o-text-button { display:inline; padding:0 8px; }
 .o-combat-orders { border:1px solid var(--o-brass); border-radius:4px; overflow:hidden; background:var(--o-inset); }
-.o-order-buttons { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:10px; padding:12px; }
+/* Attacks share a row; in boarding the two maneuvers fill a second row at half width each. */
+.o-order-buttons { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; padding:12px; }
+.o-order-buttons > button { grid-column:span 2; }
+.o-order-buttons[data-phase="boarding"] > button[data-group="maneuver"] { grid-column:span 3; }
+.o-ammo-select { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0; padding:12px 12px 0; border:0; min-width:0; }
+.o-ammo-select legend { float:left; margin-right:6px; color:var(--o-gold); font:10px var(--o-display-font); letter-spacing:.14em; text-transform:uppercase; }
+.o-ammo-select label { position:relative; display:flex; align-items:center; gap:8px; min-width:0; padding:7px 11px; border:1px solid var(--o-line); border-radius:4px; background:var(--o-heading); cursor:pointer; }
+.o-ammo-select label[data-selected="true"] { border-color:var(--o-gold); box-shadow:inset 0 0 0 1px var(--o-gold); background:var(--o-combat-gold); }
+.o-ammo-select label:has(input:disabled) { opacity:.48; cursor:not-allowed; }
+.o-ammo-select label:has(input:focus-visible) { outline:2px solid var(--o-gold); outline-offset:2px; }
+.o-ammo-select input { position:absolute; opacity:0; pointer-events:none; }
+.o-ammo-select svg { width:18px; height:18px; color:var(--o-gold); flex-shrink:0; }
+.o-ammo-select strong { display:block; font-size:12px; }
+.o-ammo-select small { display:block; color:var(--o-muted); font-size:10px; }
+.o-combat-effects { margin:0; padding:8px 14px; list-style:none; border-top:1px solid var(--o-line); color:var(--o-combat-danger); font-size:11px; line-height:1.5; }
 .o-order-buttons button { --order-accent:var(--o-link); --order-surface:var(--o-heading); display:flex; align-items:center; gap:13px; min-width:0; min-height:82px; padding:13px; text-align:left; color:var(--o-text); border:1px solid var(--order-accent); border-radius:4px; background:linear-gradient(125deg,var(--order-surface),var(--o-inset)); box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--order-accent) 10%,transparent); transition:background .15s,border-color .15s; }
 .o-order-buttons button[data-tone="primary"] { --order-accent:var(--o-gold); --order-surface:var(--o-combat-gold); }
 .o-order-buttons button[data-tone="danger"] { --order-accent:var(--o-combat-danger); --order-surface:var(--o-combat-danger-surface); }
@@ -465,7 +479,12 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
  .o-combat-stats dt svg { width:12px; height:12px; }
  .o-combat-stats dd { font-size:16px; }
  .o-combat-start { flex-direction:column; align-items:stretch; }
- .o-order-buttons { grid-auto-flow:row; grid-template-columns:minmax(0,1fr); gap:8px; padding:10px; }
+ .o-order-buttons { grid-template-columns:minmax(0,1fr); gap:8px; padding:10px; }
+ .o-order-buttons[data-phase] > button[data-group] { grid-column:auto; }
+ .o-ammo-select { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; padding:12px 10px 0; }
+ .o-ammo-select legend { float:none; margin:0 0 6px; }
+ .o-ammo-select label { padding:6px 8px; }
+ .o-ammo-select svg { display:none; }
  .o-order-buttons button { min-height:70px; padding:11px 14px; }
  .o-order-copy small { margin-top:4px; }
  .o-combat-rule { text-align:left; }
@@ -551,6 +570,7 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-loadout-group dd { display:flex; flex-direction:column; min-width:0; margin:0; }
 .o-loadout-name { font-size:13px; overflow-wrap:anywhere; }
 .o-loadout-group [data-equipped="false"] .o-loadout-name { color:var(--o-muted); }
+.o-loadout-note { margin:0; padding:9px 12px; color:var(--o-muted); font-size:11px; line-height:1.5; }
 .o-loadout-group dd small { color:var(--o-muted); font-size:11px; line-height:1.45; font-variant-numeric:tabular-nums; }
 .o-item-equipped { display:inline-block; margin-left:6px; padding:0 5px; border:1px solid var(--o-gold); border-radius:2px; color:var(--o-gold); font-size:10px; line-height:16px; letter-spacing:0.04em; text-transform:uppercase; vertical-align:1px; }
 .o-item-list { list-style:none; margin:0; padding:0; border-top:1px solid var(--o-line); }

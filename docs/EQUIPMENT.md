@@ -84,13 +84,16 @@ Under striden ser motståndaren namnen på utrustningen men inte dess stats.
 ## Order
 
 Alla order för fasen visas alltid. En order som inte går att använda är spärrad och
-anger orsaken, till exempel att inget skjutvapen är utrustat eller att kultypen saknas.
+anger orsaken, till exempel att inget skjutvapen är utrustat. Till sjöss finns en enda
+Fire cannons-order. Ovanför den väljer spelaren ammunition: Round shot, Chain Shot eller
+Grape Shot. En kultyp utan lager är spärrad, och om den valda typen tar slut återgår
+valet till Round shot.
 
 | Fas | Order | Regel |
 | --- | --- | --- |
-| Sea | Fire cannons | Round shot med utrustade kanoner. En salva per order. |
-| Sea | Fire chain shot | En salva och en Chain Shot ur inventory. Träffar alltid riggen med full skada och sänker målets Ship Speed i tre rundor. |
-| Sea | Fire grape shot | En salva och en Grape Shot ur inventory. Skadar besättningen med 60 % av skadan, mot besättningens zoner och rustning. |
+| Sea | Fire cannons, Round shot | En salva med utrustade kanoner. Skadar skeppet. |
+| Sea | Fire cannons, Chain Shot | En salva och en Chain Shot ur inventory. Träffar alltid riggen med full skada och sänker målets Ship Speed i tre rundor. |
+| Sea | Fire cannons, Grape Shot | En salva och en Grape Shot ur inventory. Skadar besättningen med 60 % av skadan, mot besättningens zoner och rustning. |
 | Boarding | Fire firearm | Kräver kvarvarande skott. Ett skott per order. |
 | Boarding | Throw temporary | Kräver utrustad Temporary med kvarvarande användning. Förbrukar ett föremål. |
 | Boarding | Melee attack | Melee eller Fists. Alltid tillgänglig. |
@@ -112,12 +115,13 @@ stapeln räcker. Stapeln kan fortfarande handlas och slängas.
 | --- | --- |
 | Grenado | Damage 25 och Precision 60. Träffar en zon som ett vapen. |
 | Smoke Pot | Precision 100. Vid träff multipliceras målets Crew Accuracy med 0,33 i tre rundor. |
-| Chain Shot | Kultyp, se Fire chain shot. Förbrukas per salva, även vid miss. |
-| Grape Shot | Kultyp, se Fire grape shot. Förbrukas per salva, även vid miss. |
+| Chain Shot | Kanonammunition, se Order. Förbrukas per salva, även vid miss. |
+| Grape Shot | Kanonammunition, se Order. Förbrukas per salva, även vid miss. |
 
 Effekter gäller det mötet mellan angriparen och försvararen och räknas ned efter varje
 runda. En ny effekt av samma slag ersätter den gamla. Loggen visar "Crew blinded" och
-"Ship slowed".
+"Ship slowed", och båda stridskorten visar aktiva effekter med återstående rundor.
+Smoke Pot träffar besättningen som helhet och anger därför ingen zon.
 
 ## Utrusta
 

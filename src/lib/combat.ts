@@ -1,6 +1,6 @@
 import { gameplay } from "@/config/public";
 import type { Stat } from "@/lib/game";
-import type { CombatLoadout } from "@/lib/equipment";
+import type { CombatEffects, CombatLoadout } from "@/lib/equipment";
 
 export const COMBAT_COST = gameplay.combat.energyCost;
 export const MAX_ROUNDS = gameplay.combat.maxRounds;
@@ -12,7 +12,7 @@ export type Combatant = {
   id: string; player_number: number; name: string; ship_health: number; crew_health: number;
   crew_morale?: number | null; morale_multiplier?: number | null;
   ship_health_max?: number; ammo: number | null; shots?: number | null; temporary_uses?: number | null;
-  shot_stock?: { chain: number; grape: number } | null; ship: CombatStats | null; crew: CombatStats | null;
+  shot_stock?: { chain: number; grape: number } | null; effects?: CombatEffects | null; ship: CombatStats | null; crew: CombatStats | null;
   loadout: CombatLoadout | null;
 };
 export type AttackLock = { battle_id: string; target_id: string; target_player_number: number };
@@ -52,7 +52,7 @@ export type CombatError = { error: string };
 export type CombatResponse = { battle: Battle } | CombatError;
 export type CombatActionResult = { message?: string; battleId?: string };
 export const ORDER_LABELS: Record<CombatOrder, string> = {
-  fire: "Fire cannons", fire_chain: "Fire chain shot", fire_grape: "Fire grape shot", board: "Board",
+  fire: "Fire cannons", fire_chain: "Fire cannons", fire_grape: "Fire cannons", board: "Board",
   crew_shoot: "Fire firearm", crew_throw: "Throw temporary", crew_attack: "Melee attack",
   disengage: "Disengage", retreat: "Retreat",
 };

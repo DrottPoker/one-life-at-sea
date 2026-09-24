@@ -25,6 +25,7 @@ export function LoadoutPanel({ loadout, shipHealthMax, disabled, pendingSlot, on
               aria-label={"Unequip " + item.name} onClick={() => onUnequip(slot)}>{pendingSlot === slot ? "Saving..." : "Unequip"}</button>}
           </div>;
         })}</dl>
+        {group === "Ship" && <p className="o-loadout-note">Chain Shot and Grape Shot are chosen as cannon ammunition in battle and used from your Munitions.</p>}
       </div>)}
   </section>;
 }

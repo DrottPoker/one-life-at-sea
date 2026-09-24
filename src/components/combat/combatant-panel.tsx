@@ -1,11 +1,11 @@
 import { gameplay } from "@/config/public";
 import Link from "next/link";
-import { Bomb, Ship, ShipWheel, Skull, Swords, Crosshair, HelpCircle, Shield, Sailboat, Target, Package } from "lucide-react";
+import { Bomb, Ship, ShipWheel, Skull, Swords, Crosshair, HelpCircle, Shield, Sailboat, Target } from "lucide-react";
 import { STATS, STAT_LABELS } from "@/lib/game";
 import { formatMorale, formatMoraleMultiplier } from "@/lib/morale";
 import { formatStat } from "@/lib/format";
 import type { Combatant } from "@/lib/combat";
-import { fallbackWeapons, hasStats, itemStatRows, SLOT_LABELS, temporaryEffect, type LoadoutItem, type RevealedItem } from "@/lib/equipment";
+import { effectLines, fallbackWeapons, hasStats, itemStatRows, SLOT_LABELS, temporaryEffect, type LoadoutItem, type RevealedItem } from "@/lib/equipment";
 
 const statIcons = { attack: Swords, defense: Shield, speed: Ship, accuracy: Crosshair };
 const statText = (item: LoadoutItem | RevealedItem | undefined) => hasStats(item) ? itemStatRows(item).filter(row => row.key !== "shots").map(row => row.label + " " + row.text).join(" · ") : "";
@@ -15,20 +15,18 @@ function equipmentCells(captain: Combatant, own: boolean, phase: "sea" | "boardi
   const loadout = captain.loadout;
   if (phase === "sea") return [
     { key: "cannons", label: "Cannons", Icon: Crosshair, name: loadout?.cannons?.name ?? fallbackWeapons.cannons.name,
-      note: own ? (captain.ammo ?? 0) + " salvos remaining" + (loadout?.cannons ? " · " + statText(loadout.cannons) : "") : "Ammunition unknown" },
+      note: own ? (captain.ammo ?? 0) + ((captain.ammo ?? 0) === 1 ? " salvo" : " salvos") + " remaining" + (loadout?.cannons ? " · " + statText(loadout.cannons) : "") : "Ammunition unknown" },
     { key: "hull", label: "Hull", Icon: Ship, name: loadout?.hull?.name ?? "None", note: own ? statText(loadout?.hull) : "" },
     { key: "sails", label: "Sails", Icon: Sailboat, name: loadout?.sails?.name ?? "None", note: own ? statText(loadout?.sails) : "" },
-    { key: "shot", label: "Special shot", Icon: Package, name: own ? "Chain " + (captain.shot_stock?.chain ?? 0) + " · Grape " + (captain.shot_stock?.grape ?? 0) : "Unknown",
-      note: own ? "Used from your inventory" : "" },
   ];
   const temporary = loadout?.temporary;
   const armor = (["head", "body", "legs", "feet"] as const).filter(slot => loadout?.[slot]);
   return [
     { key: "firearm", label: "Firearm", Icon: Target, name: loadout?.firearm?.name ?? "None",
-      note: own && loadout?.firearm ? (captain.shots ?? 0) + " shots remaining · " + statText(loadout.firearm) : "" },
+      note: own && loadout?.firearm ? (captain.shots ?? 0) + ((captain.shots ?? 0) === 1 ? " shot" : " shots") + " remaining · " + statText(loadout.firearm) : "" },
     { key: "melee", label: "Melee", Icon: Swords, name: loadout?.melee?.name ?? fallbackWeapons.melee.name, note: own ? statText(loadout?.melee) : "" },
     { key: "temporary", label: "Temporary", Icon: Bomb, name: temporary?.name ?? "None",
-      note: own && temporary && "precision" in temporary ? (captain.temporary_uses ? "Ready · " : "Used · ") + temporaryEffect(temporary) : "" },
+      note: own && temporary && "precision" in temporary ? (captain.temporary_uses ? "Ready" : (temporary.quantity ?? 0) < 1 ? "None in inventory" : "Used") + " · " + temporaryEffect(temporary) : "" },
     { key: "armor", label: "Armor", Icon: Shield, name: armor.length ? armor.map(slot => loadout![slot]!.name).join(", ") : "None",
       note: own ? armor.flatMap(slot => { const item = loadout![slot]; return hasStats(item) ? [SLOT_LABELS[slot] + " " + itemStatRows(item)[0].text] : []; }).join(" · ") : "" },
   ];
@@ -57,6 +55,9 @@ export function CombatantPanel({ captain, own, phase }: { captain: Combatant; ow
         </div>;
       })}
     </div>
+    {effectLines(captain.effects).length > 0 && <ul className="o-combat-effects" aria-label={prefix + " active effects"}>
+      {effectLines(captain.effects).map(line => <li key={line}>{line}</li>)}
+    </ul>}
     <div className="o-combat-equipment-heading">{phase === "sea" ? "Ship equipment" : "Crew equipment"}</div>
     <dl className="o-combat-equipment">
       {equipmentCells(captain, own, phase).map(({ key, label, Icon, name, note }) => <div key={key} data-slot={key}>

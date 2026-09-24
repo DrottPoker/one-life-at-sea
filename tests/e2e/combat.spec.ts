@@ -49,7 +49,7 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
     await expect(page.locator(".o-sidebar")).toHaveCount(0);
     await expect(page.locator(".o-masthead")).toHaveCount(0);
     const opponent = main.getByRole("region", { name: "Opponent ship and crew", exact: true });
-    await expect(opponent.getByText("Unknown", { exact: true })).toHaveCount(4);
+    await expect(opponent.getByText("Unknown", { exact: true })).toHaveCount(3);
     const scene = main.locator(".o-combat-scene img");
     await expect(scene).toHaveAttribute("alt", "Two sailing ships face each other on the open sea.");
     await expect.poll(() => scene.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
@@ -208,7 +208,7 @@ test("joined attackers and an online defender receive shared HP live; the defend
     await pageB.goto(sharedUrl);
     const ownB = pageB.getByRole("region", { name: "Your ship and crew", exact: true });
     await expect(ownB.getByRole("link", { name: b.name, exact: true })).toBeVisible();
-    await expect(pageB.getByRole("region", { name: "Opponent ship and crew", exact: true }).getByText("Unknown", { exact: true })).toHaveCount(4);
+    await expect(pageB.getByRole("region", { name: "Opponent ship and crew", exact: true }).getByText("Unknown", { exact: true })).toHaveCount(3);
     expect((await b.api.rpc("get_game_state")).data?.energy).toBe(100);
     await expect(pageB.getByRole("button", { name: "Join battle 10 Energy", exact: true })).toBeEnabled();
     await pageB.getByRole("button", { name: "Join battle 10 Energy", exact: true }).click();
@@ -287,7 +287,7 @@ test("a shared victory opens the same report for both attackers and the target l
     await expect(page.getByRole("button", { name: "Start battle 10 Energy", exact: true })).toBeVisible();
     await page.reload();
     await expect(page).toHaveURL(sharedUrl);
-    await expect(page.getByRole("region", { name: "Opponent ship and crew", exact: true }).getByText("Unknown", { exact: true })).toHaveCount(4);
+    await expect(page.getByRole("region", { name: "Opponent ship and crew", exact: true }).getByText("Unknown", { exact: true })).toHaveCount(3);
     await page.goto("/attack?target=" + d.id + "&battle=" + id);
     await expect(page).toHaveURL(sharedUrl);
     await expect(page.getByRole("button", { name: "Start battle 10 Energy", exact: true })).toBeVisible();
@@ -353,8 +353,10 @@ test("equipped firearms, melee weapons and armor drive boarding orders and the c
     const main = page.getByRole("main");
     await main.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
     await expect(main.getByRole("button", { name: /^Fire cannons 1 salvo with Basic cannons/ })).toBeEnabled();
-    await expect(main.getByRole("button", { name: "Fire chain shot None in your inventory.", exact: true })).toBeDisabled();
-    await expect(main.getByRole("button", { name: "Fire grape shot None in your inventory.", exact: true })).toBeDisabled();
+    const ammo = main.getByRole("group", { name: "Cannon ammunition", exact: true });
+    await expect(ammo.getByRole("radio", { name: /^Round shot/ })).toBeChecked();
+    await expect(ammo.getByRole("radio", { name: /^Chain Shot None in inventory/ })).toBeDisabled();
+    await expect(ammo.getByRole("radio", { name: /^Grape Shot None in inventory/ })).toBeDisabled();
     await main.getByRole("button", { name: /^Board Give up/ }).click();
     const own = main.getByRole("region", { name: "Your ship and crew", exact: true });
     const opponent = main.getByRole("region", { name: "Opponent ship and crew", exact: true });
@@ -389,5 +391,46 @@ test("equipped firearms, melee weapons and armor drive boarding orders and the c
     await page.screenshot({ path: ".local/attack-equipment-desktop.jpg", type: "jpeg", quality: 80, fullPage: true });
     await main.getByRole("button", { name: /^Retreat Take/ }).click();
     await expect(page).toHaveURL(new RegExp("/combatlog/" + id + "$"));
+  } finally { await cleanup([a, d]); }
+});
+
+test("one fire order uses the chosen cannon ammunition and falls back to round shot when it runs out", async ({ page }) => {
+  const a = await captain(), d = await captain();
+  try {
+    // Guaranteed attacker hits at sea and guaranteed defender misses.
+    sql("update public.characters set ship_accuracy=4096,ship_speed=64 where id='" + a.id + "'");
+    sql("insert into private.item_stacks(character_id,item_id,quantity) values('" + a.id + "','chain_shot',1),('" + a.id + "','grape_shot',1)");
+    await login(page, a);
+    await page.goto("/attack/" + d.playerNumber);
+    const main = page.getByRole("main");
+    await main.getByRole("button", { name: "Start battle 10 Energy", exact: true }).click();
+    const ammo = main.getByRole("group", { name: "Cannon ammunition", exact: true });
+    await expect(ammo.getByRole("radio", { name: /^Round shot/ })).toBeChecked();
+    await expect(main.getByRole("button", { name: /^Fire cannons/ })).toHaveCount(1);
+    await ammo.getByText("Chain Shot", { exact: true }).click();
+    await expect(ammo.getByRole("radio", { name: /^Chain Shot/ })).toBeChecked();
+    await main.getByRole("button", { name: /^Fire cannons 1 salvo of Chain Shot with Basic cannons\. Tears the rigging/ }).click();
+    await expect(main.getByText("Round 1 / 25", { exact: true })).toBeVisible();
+    await expect(ammo.getByRole("radio", { name: /^Chain Shot None in inventory/ })).toBeDisabled();
+    await expect(ammo.getByRole("radio", { name: /^Round shot/ })).toBeChecked();
+    const log = main.getByRole("region", { name: "Combat log", exact: true });
+    await expect(log.getByText("Fire cannons · Basic cannons · Chain Shot", { exact: true })).toBeVisible();
+    await expect(log.getByText(/^Sails and rigging · \d+ ship damage · Ship slowed$/)).toBeVisible();
+    await expect(main.getByRole("list", { name: "Opponent active effects", exact: true })).toContainText("Slowed: Ship Speed x0.8 for 3 more rounds");
+    await ammo.getByText("Grape Shot", { exact: true }).click();
+    await main.getByRole("button", { name: /^Fire cannons 1 salvo of Grape Shot/ }).click();
+    await expect(main.getByText("Round 2 / 25", { exact: true })).toBeVisible();
+    await expect(log.getByText("Fire cannons · Basic cannons · Grape Shot", { exact: true })).toBeVisible();
+    await expect(log.getByText(/^(Head|Body|Legs|Feet) · \d+ crew damage/)).toBeVisible();
+    await expect(main.getByRole("progressbar", { name: "Opponent Crew Health", exact: true })).not.toHaveAttribute("aria-valuenow", "100");
+    await expect(main.getByRole("list", { name: "Opponent active effects", exact: true })).toContainText("for 2 more rounds");
+    expect(sql("select count(*) from private.item_stacks where character_id='" + a.id + "' and item_id in('chain_shot','grape_shot')").trim()).toBe("0");
+    await page.screenshot({ path: ".local/attack-ammo-desktop.jpg", type: "jpeg", quality: 80, fullPage: true });
+    await page.setViewportSize({ width: 375, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: ".local/attack-ammo-mobile.jpg", type: "jpeg", quality: 80, fullPage: true });
+    // Wait for the saved retreat so account cleanup never races the order.
+    await main.getByRole("button", { name: /^Retreat Take/ }).click();
+    await expect(page).toHaveURL(/\/combatlog\//);
   } finally { await cleanup([a, d]); }
 });

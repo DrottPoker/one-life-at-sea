@@ -113,7 +113,7 @@ Karaktär, skepp, besättning, tränade stats och pengar behålls.
 | Fas | Order | Regel |
 | --- | --- | --- |
 | Sea | Fire cannons | En salva även vid miss. Träff skadar Ship Health. Utrustade kanoner eller Basic cannons. |
-| Sea | Fire chain shot, Fire grape shot | Specialkulor ur inventory, se [utrustning](EQUIPMENT.md#order). |
+| Sea | Fire cannons med Chain Shot eller Grape Shot | Ammunition väljs före Fire och tas ur inventory, se [utrustning](EQUIPMENT.md#order). |
 | Sea | Board | Ingen egen salva. Bordningsförsök efter motståndarens handling. |
 | Boarding | Fire firearm | Kräver skjutvapen och kvarvarande skott. Ett skott per order. Träff skadar Crew Health. |
 | Boarding | Throw temporary | Kastar utrustad Temporary, se [utrustning](EQUIPMENT.md#temporary-och-kultyper). |

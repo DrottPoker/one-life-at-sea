@@ -39,6 +39,21 @@ const temporaryIds = new Set<string>(gameplay.equipment.temporaries.map(item => 
 const shotIds = new Set<string>([shotTypes.chain.itemId, shotTypes.grape.itemId]);
 export const isTemporaryItem = (itemId: string) => temporaryIds.has(itemId);
 export const isShotItem = (itemId: string) => shotIds.has(itemId);
+const itemName = (itemId: string) => gameplay.inventory.items.find(item => item.id === itemId)?.name ?? itemId;
+export type ShotKind = "chain" | "grape";
+export const SHOT_NAMES: Record<ShotKind, string> = { chain: itemName(shotTypes.chain.itemId), grape: itemName(shotTypes.grape.itemId) };
+export type CombatEffects = Partial<Record<"crew_accuracy" | "ship_speed", { multiplier: number; rounds: number }>>;
+const EFFECT_TEXT = { crew_accuracy: ["Blinded", "Crew Accuracy"], ship_speed: ["Slowed", "Ship Speed"] } as const;
+
+// Active effects as short lines, for example "Blinded: Crew Accuracy x0.33 for 2 more rounds".
+export function effectLines(effects: CombatEffects | null | undefined) {
+  return (Object.keys(EFFECT_TEXT) as (keyof typeof EFFECT_TEXT)[]).flatMap(key => {
+    const effect = effects?.[key];
+    if (!effect || effect.rounds < 1) return [];
+    const [name, stat] = EFFECT_TEXT[key];
+    return [name + ": " + stat + " x" + effect.multiplier + " for " + effect.rounds + (effect.rounds === 1 ? " more round" : " more rounds")];
+  });
+}
 export const hitZones = gameplay.equipment.zones;
 
 export function isEquipmentSlot(value: unknown): value is EquipmentSlot {

@@ -42,9 +42,26 @@ as $$
     'crew',case when own then snapshot->'crew' end,
     'crew_morale',case when own then snapshot->'crew_morale' end,
     'morale_multiplier',case when own then snapshot->'morale_multiplier' end,
+    'effects',case when own or revealed then coalesce(snapshot->'effects','{}'::jsonb) end,
     'loadout',case when own then coalesce(snapshot->'loadout','{}'::jsonb)
       when revealed then (select coalesce(jsonb_object_agg(key,jsonb_build_object('name',value->'name')),'{}'::jsonb)
         from jsonb_each(coalesce(snapshot->'loadout','{}'::jsonb))) end);
+$$;
+
+-- Defender effects belong to one attacker pair and are merged from that pair's participant row.
+create or replace function private.combat_view(battle_id uuid, viewer_id uuid)
+returns jsonb language sql stable security invoker set search_path = ''
+as $$
+  select jsonb_build_object('id',b.id,'status',b.status,'phase',p.phase,'round',p.round,
+    'outcome',b.state->'outcome','winner_id',b.state->'winner_id','participant_status',p.status,
+    'attacker',private.visible_combatant(p.snapshot,p.character_id=viewer_id,true),
+    'defender',private.visible_combatant(b.state->'defender'||jsonb_build_object('effects',p.defender_effects),b.defender_id=viewer_id,true),
+    'viewer_id',viewer_id,'started_at',b.started_at,'deadline',p.deadline,'finished_at',b.finished_at,
+    'observed_at',clock_timestamp(),'people',private.combat_people(b.id),
+    'events',coalesce((select jsonb_agg(event order by round) from private.combat_rounds where combat_id=b.id),'[]'::jsonb))
+  from private.combats b join private.combat_participants p on p.combat_id=b.id
+    and p.character_id=case when viewer_id=b.defender_id then b.attacker_id else viewer_id end
+  where b.id=battle_id;
 $$;
 
 create or replace function private.combat_hit_chance(accuracy numeric, speed numeric)
@@ -139,9 +156,8 @@ begin
     select z.zone,z.multiplier,z.armor_slot,z.critical into struck from (values {{equipment.zonesSql}}) z(zone_group,position,zone,weight,multiplier,armor_slot,critical)
       where z.zone_group=hit_group and z.zone=forced_zone;
   end if;
-  if weapon->>'damage' is null then
-    return jsonb_build_object('hit',true,'damage',0,'weapon',weapon->>'name','target',hit_group,'zone',struck.zone,'critical',false);
-  end if;
+  -- Effect-only items land on the target as a whole, not on one zone.
+  if weapon->>'damage' is null then return jsonb_build_object('hit',true,'damage',0,'weapon',weapon->>'name','target',hit_group); end if;
   damage:=least((target->>(hit_group||'_health'))::integer,private.combat_damage((striker->group_name->>'attack')::numeric,
     (target->group_name->>'defense')::numeric,(weapon->>'damage')::numeric*damage_scale,coalesce(zone_multiplier,struck.multiplier),
     coalesce((target->'loadout'->struck.armor_slot->>'armor')::numeric,0)));
@@ -303,7 +319,7 @@ $$;
 create or replace function private.advance_shared_combat(battle_id uuid, actor uuid, player_order text, request_id uuid, occurred_at timestamptz, timed_out boolean)
 returns void language plpgsql volatile security invoker set search_path='' as $$
 declare b private.combats%rowtype; p private.combat_participants%rowtype;
-  resolved jsonb; s jsonb; d jsonb; a jsonb; personal_status text; ending text; winner uuid;
+  resolved jsonb; s jsonb; d jsonb; a jsonb; personal_status text; ending text; winner uuid; consumed record;
 begin
   select * into b from private.combats where id=battle_id for update;
   select * into p from private.combat_participants where combat_id=battle_id and character_id=actor;
@@ -315,9 +331,12 @@ begin
         private.stack_quantity(b.defender_id,b.state#>>'{defender,loadout,temporary,item_id}')))),
     player_order,array[private.combat_roll(),private.combat_roll(),private.combat_roll(),private.combat_roll(),private.combat_roll()]);
   s:=resolved->'state'; a:=s->'attacker'; d:=s->'defender';
-  if resolved#>>'{event,attacker_consumed}' is not null and not private.consume_stack(actor,resolved#>>'{event,attacker_consumed}') then
-    raise exception 'ITEM_NOT_FOUND' using errcode='P0001'; end if;
-  if resolved#>>'{event,defender_consumed}' is not null then perform private.consume_stack(b.defender_id,resolved#>>'{event,defender_consumed}'); end if;
+  -- Item order keeps circulation locks consistent with other multi-item transactions.
+  for consumed in select * from (values(actor,resolved#>>'{event,attacker_consumed}',true),(b.defender_id,resolved#>>'{event,defender_consumed}',false))
+    v(owner_id,item_id,required) where v.item_id is not null order by v.item_id,v.owner_id
+  loop
+    if not private.consume_stack(consumed.owner_id,consumed.item_id) and consumed.required then raise exception 'ITEM_NOT_FOUND' using errcode='P0001'; end if;
+  end loop;
   personal_status:=case
     when (a->>'ship_health')::integer=0 or (a->>'crew_health')::integer=0 then 'defeated'
     when player_order='retreat' then 'retreated'
@@ -357,7 +376,7 @@ begin
   perform private.append_combat_event(battle_id,actor,request_id,
     resolved->'event' || jsonb_build_object('kind','round','actor_name',p.snapshot->>'name',
       'at',occurred_at,'timed_out',timed_out,'participant_result',personal_status,'outcome',ending));
-  update private.combats set state=state || jsonb_build_object('defender',d-'effects'-'temporary_uses','status',case when ending is null then 'active' else 'completed' end,
+  update private.combats set state=state || jsonb_build_object('defender',d-'effects','status',case when ending is null then 'active' else 'completed' end,
     'outcome',ending,'winner_id',winner),
     deadline=coalesce((select min(deadline) from private.combat_participants where combat_id=battle_id and status='active'),occurred_at),
     finished_at=case when ending is not null then occurred_at end where id=battle_id;
