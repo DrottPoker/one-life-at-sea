@@ -35,7 +35,6 @@ export default async function CharacterProfilePage({ params }: { params: Promise
   const backLabel = state.hospital_until ? "Hospital" : state.sea.state !== "in_harbor" ? "At Sea" : "The Harbor";
 
   return <>
-    <nav className="o-breadcrumb" aria-label="Breadcrumb"><Link href={backUrl}>{backLabel}</Link><span aria-hidden="true">/</span><span>Profile</span></nav>
     <Panel title="Profile" detail={ownProfile ? "Your character" : "Captain"}>
       <div className="o-profile">
         <div className="o-profile-portrait" aria-hidden="true"><Anchor /><span>{frontend.site.name.toUpperCase()}</span></div>

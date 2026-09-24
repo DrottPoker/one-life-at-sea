@@ -16,7 +16,6 @@ export default async function Harbor() {
   const client = await createClient();
   const roster = await loadHarborRoster(client, 0).catch(() => null);
   return <>
-    <nav className="o-breadcrumb" aria-label="Breadcrumb"><span>The Harbor</span><span aria-hidden="true">/</span><span>Overview</span></nav>
     <Panel title="The Harbor" detail="A safe port for bolder horizons" icon={Anchor} className="o-harbor-welcome"><HarborArt priority /><div className="o-arrival">
       <h2>Welcome ashore, {character.display_name}.</h2><p className="o-copy">Salt in the air. Sunlight on the water. Beyond the palms, the open sea waits.</p>
     </div></Panel>

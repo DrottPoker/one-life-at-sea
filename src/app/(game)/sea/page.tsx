@@ -10,7 +10,6 @@ export default async function SeaPage() {
   const state = await gameStateForPlayer();
   if (state.sea.state === "in_harbor") redirect("/harbor");
   return <>
-    <nav className="o-breadcrumb" aria-label="Breadcrumb"><span>At Sea</span><span aria-hidden="true">/</span><span>{state.sea.state === "traveling" ? "Traveling" : "Sea distance " + state.sea.step}</span></nav>
     <SeaTravelPanel />
     <SeaScouting />
   </>;

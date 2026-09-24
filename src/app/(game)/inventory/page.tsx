@@ -18,7 +18,6 @@ export default async function InventoryRoute({ searchParams }: {
   }));
   if (error || !data) throw new Error("Your inventory could not be loaded. Please try again.");
   return <>
-    <nav className="o-breadcrumb" aria-label="Breadcrumb"><span>Harbor</span><span aria-hidden="true">/</span><span>Inventory</span></nav>
     <Panel title="Inventory" detail={inventoryCategoryName(filters.category)}>
       <InventoryPanel inventory={data} filters={filters} />
     </Panel>

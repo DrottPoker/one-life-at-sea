@@ -13,8 +13,6 @@ export default async function CraftingPage() {
   const { data, error } = await client.rpc("list_crafting_recipes");
   if (error || !data) throw new Error("Crafting recipes could not be loaded.");
   return <>
-    <nav className="o-breadcrumb" aria-label="Breadcrumb"><Link href="/harbor">The Harbor</Link><span aria-hidden="true">/</span>
-      <Link href="/hideout">Hideout</Link><span aria-hidden="true">/</span><span>Crafting</span></nav>
     <Panel title="Crafting" detail="Hideout workshop" icon={Hammer}>
       <CraftingPanel recipes={data} />
       <div className="o-panel-foot o-hideout-links"><Link href="/inventory"><Package aria-hidden="true" />View your inventory</Link></div>

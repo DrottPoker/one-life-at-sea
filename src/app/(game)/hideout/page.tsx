@@ -19,7 +19,6 @@ export default async function HideoutPage() {
   const progress = await ownSkillProgress();
   const format = new Intl.NumberFormat(frontend.site.locale);
   return <>
-    <nav className="o-breadcrumb" aria-label="Breadcrumb"><Link href="/harbor">The Harbor</Link><span aria-hidden="true">/</span><span>Hideout</span></nav>
     <Panel title="Hideout" detail="Your home ashore" icon={House}>
       <div className="o-hideout-home">
         <div className="o-hideout-emblem" aria-hidden="true"><House /></div>

@@ -20,7 +20,7 @@ export default async function HarborLocation({ params }: { params: Promise<{ loc
   await requireCharacter();
   const { location } = await params;
   const place = placeFor(location);
-  return <><nav className="o-breadcrumb" aria-label="Breadcrumb"><Link href="/harbor">The Harbor</Link><span aria-hidden="true">/</span><span>{place.title}</span></nav>
+  return <>
     <Panel title={place.title} detail="Coming later"><HarborArt short className={location === "shipyard" ? "o-ship-art" : ""} priority />
       <div className="o-closed"><h2>{place.heading}</h2><p className="o-copy">{place.copy}</p><p>{place.later}</p></div>
       <div className="o-panel-foot"><Link href="/harbor">Back to The Harbor</Link></div>
