@@ -38,8 +38,8 @@ export function CrewTrainingPanel() {
             {result.receipt.perfect && <span className="o-training-perfect">Perfect Drill</span>}
             <output aria-label={STAT_LABELS[stat] + " gained"}>+{formatStatGain(result.receipt.stat_gain)} {STAT_LABELS[stat]}</output>
           </>}>
-          {retryButton && <div className="o-training-retry">{retryButton}</div>}
-          <button className="o-training-button o-training-action" type="submit" aria-label={`Train ${STAT_LABELS[stat]} for ${TRAINING_COST} Energy`} disabled={blocked || !ready}>Train {STAT_LABELS[stat]}</button>
+          {retryButton ? <div className="o-training-retry">{retryButton}</div> :
+            <button className="o-training-button o-training-action" type="submit" aria-label={`Train ${STAT_LABELS[stat]} for ${TRAINING_COST} Energy`} disabled={blocked || !ready}>Train {STAT_LABELS[stat]}</button>}
         </TrainingStatBody>}
       </TrainingActionForm>
     </TrainingStatCard>)}</div>

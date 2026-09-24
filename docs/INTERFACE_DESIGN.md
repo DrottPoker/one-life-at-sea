@@ -153,8 +153,11 @@ introduced. The economy journal continues to lock all drills during an unresolve
 Compact card spacing puts Energy directly below the description with a 5px gap. Stat
 art is 98px; confirmed gains use prominent 20px semibold green text. The result slot
 keeps the buttons aligned without adding blank space before the Energy cost. Since
-September 24 it reserves a single line (31px) and a Perfect Drill shows as a badge in the
-card corner, so a result never changes the card height. Matching
+September 24 every card row has a fixed size, so a result never changes the card height: the
+description reserves two lines, the result slot is a fixed 38px single line (gain text
+scales with the page and truncates, pending/error text clamps to two lines), stat values stay
+on one line, a Perfect Drill shows as a badge in the card corner and a retry button replaces
+the Train button. Crew and ship cards therefore measure the same at every width. Matching
 18px corner accents frame all four corners.
 
 Drill Schools displays all ten configured tiers with active, owned and locked states,
