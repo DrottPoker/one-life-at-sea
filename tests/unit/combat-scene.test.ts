@@ -51,6 +51,19 @@ describe("combat scene", () => {
     const spots = new Set(Array.from({ length: 12 }, (_, sequence) => JSON.stringify(roundStrikes({ ...event, sequence })[0].point)));
     expect(spots.size).toBeGreaterThan(8);
   });
+  it("spreads misses around the target instead of one spot", () => {
+    // Every ellipse of a miss area is used, so cannon misses reach the water on all sides of the ship and shots every side of the captain.
+    const used = (area: SceneArea, points: ScenePoint[]) => new Set(points.map(point => area.findIndex(ellipse => inside(point, [ellipse])))).size;
+    const shots = Array.from({ length: 300 }, (_, sequence) => roundStrikes(round({ sequence, defender_order: "board" }))[0]);
+    expect(shots.every(shot => shot.area === "splash" && inside(shot.point, sceneAnchors.sea.defender.splash))).toBe(true);
+    expect(used(sceneAnchors.sea.defender.splash, shots.map(shot => shot.point))).toBe(sceneAnchors.sea.defender.splash.length);
+    const strays = Array.from({ length: 300 }, (_, sequence) => roundStrikes(round({ sequence, phase: "boarding", attacker_order: "crew_shoot", defender_order: "disengage",
+      attacker_target: "crew" }))[0]);
+    expect(strays.every(stray => inside(stray.point, sceneAnchors.boarding.defender.near))).toBe(true);
+    expect(used(sceneAnchors.boarding.defender.near, strays.map(stray => stray.point))).toBe(sceneAnchors.boarding.defender.near.length);
+    const xs = shots.map(shot => shot.point.x);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(400);
+  });
   it("places cannon hits on the struck ship zone and misses in the water", () => {
     const [own, theirs] = roundStrikes(round({ attacker_hit: true, attacker_damage: 30, attacker_zone: "waterline", attacker_critical: true, attacker_target: "ship" }));
     expect(own).toMatchObject({ side: "attacker", kind: "cannon", critical: true, origin: sceneAnchors.sea.attacker.guns, label: sceneAnchors.sea.defender.label });
@@ -80,12 +93,22 @@ describe("combat scene", () => {
       defender_order: "crew_shoot", defender_hit: false }));
     expect(melee).toMatchObject({ kind: "melee", origin: null });
     expect(inside(melee.point, sceneAnchors.boarding.defender.head)).toBe(true);
-    expect(shot).toMatchObject({ kind: "firearm", origin: sceneAnchors.boarding.defender.blade });
-    expect(inside(shot.point, sceneAnchors.boarding.attacker.stray)).toBe(true);
-    const [parried] = roundStrikes(round({ ...base, attacker_order: "crew_attack", defender_order: "disengage" }));
-    expect(parried.popup).toEqual(sceneAnchors.boarding.defender.head[0]);
-    expect(inside(parried.point, sceneAnchors.boarding.parry)).toBe(true);
-    expect(markTone(parried)).toBe("miss");
+    expect(shot).toMatchObject({ kind: "firearm", origin: sceneAnchors.boarding.defender.blade, area: "near" });
+    expect(inside(shot.point, sceneAnchors.boarding.attacker.near)).toBe(true);
+    // A missed swing is either parried between the blades, reported over the defender's head, or dodged beside them.
+    const swings = Array.from({ length: 60 }, (_, sequence) => roundStrikes(round({ ...base, sequence, attacker_order: "crew_attack", defender_order: "disengage" }))[0]);
+    for (const swing of swings) {
+      expect(markTone(swing)).toBe("miss");
+      if (swing.area === "parry") {
+        expect(inside(swing.point, sceneAnchors.boarding.parry)).toBe(true);
+        expect(swing.popup).toEqual(sceneAnchors.boarding.defender.head[0]);
+      } else {
+        expect(swing.area).toBe("near");
+        expect(inside(swing.point, sceneAnchors.boarding.defender.near)).toBe(true);
+        expect(swing.popup).toEqual(swing.point);
+      }
+    }
+    expect(new Set(swings.map(swing => swing.area))).toEqual(new Set(["parry", "near"]));
     const [smoke] = roundStrikes(round({ ...base, attacker_order: "crew_throw", attacker_hit: true, attacker_weapon: "Smoke Pot", attacker_effect: "crew_accuracy", defender_order: "disengage" }));
     expect(smoke).toMatchObject({ kind: "smoke", origin: sceneAnchors.boarding.attacker.hand });
     expect(inside(smoke.point, sceneAnchors.boarding.defender.body)).toBe(true);

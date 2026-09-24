@@ -4,9 +4,13 @@ import { zoneName } from "@/lib/equipment";
 import { sceneAnchors, SCENE_SIZE, type SceneArea, type SceneSide, type ScenePoint } from "@/lib/combat-scene-anchors";
 
 export type StrikeKind = "cannon" | "chain" | "grape" | "melee" | "firearm" | "grenade" | "smoke";
+type ShipZone = "rigging" | "hull" | "waterline";
+type CrewZone = "head" | "body" | "legs" | "feet";
+// The area a strike landed in: a hit zone, the deck grape shot sweeps, or where a miss went.
+export type SceneAreaName = ShipZone | CrewZone | "deck" | "splash" | "near" | "floor" | "parry";
 export type SceneStrike = {
   side: SceneSide; kind: StrikeKind; hit: boolean; damage: number; critical: boolean; zone: string | null;
-  target: "ship" | "crew"; effect: "crew_accuracy" | "ship_speed" | null;
+  target: "ship" | "crew"; effect: "crew_accuracy" | "ship_speed" | null; area: SceneAreaName;
   origin: ScenePoint | null; point: ScenePoint; popup: ScenePoint; label: ScenePoint; start: number; impact: number; end: number;
 };
 
@@ -17,6 +21,10 @@ const timing: Record<StrikeKind, { travel: number; tail: number }> = {
   firearm: { travel: 170, tail: 560 }, melee: { travel: 140, tail: 520 }, grenade: { travel: 600, tail: 860 }, smoke: { travel: 600, tail: 1300 },
 };
 const DEFENDER_DELAY = 260;
+// A missed swing is parried between the blades this often; otherwise the target dodges and it passes beside them.
+const PARRY_SHARE = 0.5;
+const isShipZone = (zone: string | null): zone is ShipZone => zone === "rigging" || zone === "hull" || zone === "waterline";
+const isCrewZone = (zone: string | null): zone is CrewZone => zone === "head" || zone === "body" || zone === "legs" || zone === "feet";
 const itemNames = new Map<string, string>(gameplay.inventory.items.map(item => [item.id, item.name]));
 const smokeNames = new Set(gameplay.equipment.temporaries.filter(item => !("damage" in item)).map(item => itemNames.get(item.itemId)));
 
@@ -55,19 +63,21 @@ function strikeKind(order: CombatOrder, weapon: string | null | undefined, effec
 }
 
 // Where a strike starts, lands and reports, using the round's own phase rather than the current one.
-// Hits land anywhere in the struck zone's area and misses anywhere in their splash or landing area.
+// Hits land anywhere in the struck zone's area. Misses land around the target: cannon shot in the water on any side of the
+// ship, shots in the space around the captain, swings parried between the blades or dodged beside them, throws on the plank.
 function strikePoints(phase: "sea" | "boarding", side: SceneSide, kind: StrikeKind, hit: boolean, zone: string | null, target: "ship" | "crew", random: () => number) {
   const other: SceneSide = side === "attacker" ? "defender" : "attacker";
   if (phase === "sea") {
     const own = sceneAnchors.sea[side], ship = sceneAnchors.sea[other];
-    const point = pointIn(!hit ? ship.splash : target === "crew" ? ship.deck : ship[zone as "rigging" | "hull" | "waterline"] ?? ship.hull, random);
-    return { origin: own.guns, point, popup: point, label: ship.label };
+    const area: SceneAreaName = !hit ? "splash" : target === "crew" ? "deck" : isShipZone(zone) ? zone : "hull";
+    const point = pointIn(ship[area], random);
+    return { origin: own.guns, area, point, popup: point, label: ship.label };
   }
   const own = sceneAnchors.boarding[side], crew = sceneAnchors.boarding[other];
-  const point = hit ? pointIn(crew[zone as "head" | "body" | "legs" | "feet"] ?? crew.body, random)
-    : pointIn(kind === "melee" ? sceneAnchors.boarding.parry : kind === "firearm" ? crew.stray : crew.floor, random);
+  const area: SceneAreaName = hit ? isCrewZone(zone) ? zone : "body" : kind === "melee" ? random() < PARRY_SHARE ? "parry" : "near" : kind === "firearm" ? "near" : "floor";
+  const point = pointIn(area === "parry" ? sceneAnchors.boarding.parry : crew[area], random);
   // A parried swing reports over the captain who parried, clear of the other side's numbers.
-  return { origin: kind === "melee" ? null : kind === "firearm" ? own.blade : own.hand, point, popup: !hit && kind === "melee" ? crew.head[0] : point, label: crew.label };
+  return { origin: kind === "melee" ? null : kind === "firearm" ? own.blade : own.hand, area, point, popup: area === "parry" ? crew.head[0] : point, label: crew.label };
 }
 
 export function roundStrikes(event: CombatEvent): SceneStrike[] {

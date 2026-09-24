@@ -113,8 +113,11 @@ game navigation during combat.
   and rigging or either leg for Legs, and the effect plays there. The spot is seeded by the
   round, so a reload shows it in the same place. Every strike leaves a small reticle like
   Torn's that locks on where it landed: red for damage, gold for a critical hit, white for a
-  blocked hit, blue for Smoke Pot and grey for a miss, which lands anywhere in the water
-  beside the ship, in the sky behind the target, on the plank or between the blades. Earlier
+  blocked hit, blue for Smoke Pot and grey for a miss. Misses land around the target rather
+  than in one spot: cannon shot in the water along the ship's side, off the bow, behind the
+  stern or farther out; firearm shots in the space around the captain (above the head, beside
+  the head and waist, between the legs); swings are either parried between the blades, with
+  sparks, or dodged beside the captain; throws land along the plank. Earlier
   strikes of the viewer's rounds in the same phase stay as smaller rings with a dot in the
   same colours, fading with age, on whichever side they were aimed at.
 - Only rounds that arrive while the page is open animate; a reload shows the marks and

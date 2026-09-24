@@ -99,8 +99,11 @@ function impact(random: () => number, strike: SceneStrike): ReactNode[] {
 
 function miss(random: () => number, strike: SceneStrike): ReactNode[] {
   const { point, impact: time } = strike;
-  if (strike.kind === "melee") return [core("core", point, 16, time, 220), ...bits(random, point, 26, sparks, 8, 60, 20, 20, time, 480)];
-  if (strike.kind === "firearm") return bits(random, point, 16, wood, 10, 34, 10, 30, time, 500);
+  // A parried swing throws sparks between the blades; a dodged one only stirs the air beside the target.
+  if (strike.kind === "melee") return strike.area === "parry" ? [core("core", point, 16, time, 220), ...bits(random, point, 26, sparks, 8, 60, 20, 20, time, 480)]
+    : bits(random, point, 12, ["--o-fx-smoke", "--o-fx-water"], 7, 34, 8, 6, time, 380);
+  // A stray shot leaves a faint puff wherever it passes, against the sky or the ship behind.
+  if (strike.kind === "firearm") return [core("core", point, 8, time, 160), ...bits(random, point, 12, ["--o-fx-smoke", "--o-fx-flash"], 7, 28, 8, 12, time, 400)];
   if (strike.kind === "grenade") return [core("core", point, 28, time, 260), ...blast(random, point, 34, 60, "fire", time, 440),
     ...bits(random, point, 22, fire, 10, 90, 40, 20, time, 640), ...puffs(random, point, 18, 18, 46, 60, time + 80, 1100)];
   if (strike.kind === "smoke") return puffs(random, point, 32, 18, 56, 40, time, 1300);
