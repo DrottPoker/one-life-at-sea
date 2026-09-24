@@ -1,6 +1,8 @@
 // Anchor points in the combat artwork's own pixels (public/images/combat-*.webp). The attacker is drawn left, the defender right.
 // Recalibrate these when the artwork changes; unit tests check that every configured hit zone has a point.
 export const SCENE_SIZE = { width: 1774, height: 887 } as const;
+// A new artwork gets a new file name so image caches never serve the old one.
+export const SCENE_ART = { sea: "/images/combat-sea-broadside.webp", boarding: "/images/combat-boarding-duel.webp" } as const;
 export type ScenePoint = { x: number; y: number };
 export type SceneSide = "attacker" | "defender";
 // Ship zones plus the deck crew grape shot hits, the bow gun that fires, where a miss splashes and where the result label sits.

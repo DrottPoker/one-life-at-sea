@@ -419,16 +419,41 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-combat-feedback { margin:0; padding:0 12px; font-size:12px; color:var(--o-palette-f1d9aa); }
 .o-combat-feedback:not(:empty) { padding-block:10px; }
 .o-combat-feedback button { display:inline; margin-left:8px; }
-.o-combat-log ol { list-style:none; margin:0; padding:0; max-height:400px; overflow:auto; scrollbar-gutter:stable; }
-.o-combat-log li { padding:9px 12px; border-bottom:1px solid var(--o-palette-436b81); }
-.o-combat-log li:nth-child(even) { background:var(--o-palette-1d445c); }
-.o-combat-log li header { display:flex; gap:10px; flex-wrap:wrap; font-size:10px; color:var(--o-muted); margin-bottom:5px; }
-.o-combat-log li header strong { color:var(--o-link); }
-.o-combat-log li p { display:flex; flex-wrap:wrap; gap:4px 9px; margin:3px 0; font-size:12px; }
-.o-combat-log li p > strong { font-weight:500; overflow-wrap:anywhere; }
-.o-combat-log a { overflow-wrap: anywhere; }
-.o-damage { color:var(--o-palette-efcf96); }
-.o-log-transition { color:var(--o-palette-92d8ed); }
+/* Combat log timeline: a marker per entry on a vertical line; each order reads as aligned actor, order and result columns. */
+.o-combat-log ol { list-style:none; margin:0; padding:4px 0; max-height:400px; overflow:auto; scrollbar-gutter:stable; }
+.o-combat-log li { position:relative; padding:10px 14px 11px 48px; }
+.o-combat-log li + li { border-top:1px solid color-mix(in srgb,var(--o-line) 55%,transparent); }
+.o-combat-log li::before { content:""; position:absolute; left:24px; top:0; bottom:0; width:1px; background:var(--o-line); }
+.o-combat-log li:first-child::before { top:21px; }
+.o-combat-log li:last-child::before { bottom:auto; height:21px; }
+.o-combat-log li:only-child::before { content:none; }
+.o-log-marker { position:absolute; left:13px; top:9px; display:grid; place-items:center; width:23px; height:23px; border:1px solid var(--o-line); border-radius:50%; background:var(--o-inset); color:var(--o-muted); }
+.o-log-marker svg { width:13px; height:13px; stroke-width:1.8; }
+.o-combat-log li[data-phase="sea"] .o-log-marker { border-color:color-mix(in srgb,var(--o-link) 50%,var(--o-line)); color:var(--o-link); }
+.o-combat-log li[data-phase="boarding"] .o-log-marker { border-color:color-mix(in srgb,var(--o-gold) 50%,var(--o-line)); color:var(--o-gold); }
+.o-combat-log li[data-kind="hospital"] .o-log-marker { border-color:var(--o-combat-danger); color:var(--o-combat-danger); }
+.o-combat-log li[data-final] { background:linear-gradient(90deg,color-mix(in srgb,var(--o-gold) 11%,transparent),transparent 75%); }
+.o-combat-log li[data-final] .o-log-marker { border-color:var(--o-gold); background:var(--o-combat-gold); color:var(--o-gold); }
+.o-combat-log li header { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; margin-bottom:6px; color:var(--o-muted); font-size:10px; }
+.o-combat-log li header strong { color:var(--o-text); font:400 11px var(--o-display-font); letter-spacing:.12em; text-transform:uppercase; }
+.o-combat-log li[data-phase="sea"] header strong { color:var(--o-link); }
+.o-combat-log li[data-phase="boarding"] header strong { color:var(--o-gold); }
+.o-combat-log time { margin-left:auto; font-size:10px; font-variant-numeric:tabular-nums; }
+.o-combat-log a { overflow-wrap:anywhere; }
+.o-log-tag { padding:0 6px; border:1px solid var(--o-combat-danger); border-radius:2px; color:var(--o-combat-danger); letter-spacing:.06em; text-transform:uppercase; }
+.o-log-actions { display:grid; grid-template-columns:minmax(0,13em) minmax(0,22em) minmax(0,1fr); gap:5px 16px; font-size:12px; }
+.o-log-action { display:grid; grid-column:1 / -1; grid-template-columns:subgrid; align-items:baseline; margin:0; }
+.o-log-actor { font-weight:500; overflow-wrap:anywhere; }
+.o-log-order { min-width:0; color:var(--o-text); }
+.o-log-result { font-variant-numeric:tabular-nums; }
+.o-log-result[data-tone="hit"] { color:var(--o-palette-efcf96); }
+.o-log-result[data-tone="critical"] { color:var(--o-gold); font-weight:600; }
+.o-log-result[data-tone="miss"],.o-log-result[data-tone="blocked"] { color:var(--o-muted); }
+.o-log-result[data-tone="effect"] { color:var(--o-link); }
+.o-log-transition { display:flex; flex-wrap:wrap; gap:4px 6px; margin:7px 0 0; color:var(--o-palette-92d8ed); font-size:12px; }
+.o-log-outcome { color:#ffe8a4; font:400 14px/1.4 var(--o-display-font); }
+.o-log-note { display:flex; flex-wrap:wrap; gap:4px 8px; margin:0; font-size:12px; }
+.o-log-note > strong { font-weight:500; }
 /* The encounter owns the viewport; regular harbor navigation is absent. */
 .o-attack-shell { width:min(var(--o-combat-width),100%); margin:0 auto; padding:24px 28px 40px; min-height:100dvh; background:var(--o-bg); border:1px solid var(--o-line); }
 .o-attack-main { min-width: 0; }
@@ -453,10 +478,49 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-combat-people dl > div { display: flex; justify-content: space-between; gap: 6px; }
 .o-combat-people dd { margin: 0; font-weight: 700; }
 .o-person-condition { display: flex; gap: 14px; color: var(--o-muted); font-size: 11px; }
-.o-public-log { padding: 20px; background: var(--o-bg); }
-.o-public-log .o-combat-result { margin: 0 0 16px; }
-.o-log-share { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; font-size: 12px; }
-.o-battle-record .o-combat-log time { margin-left: auto; font-size: 10px; font-variant-numeric: tabular-nums; }
+/* Public combat log: an artwork banner with the outcome, the matchup, then the full timeline without an inner scroll. */
+.o-public-log { display:grid; gap:16px; padding:20px; background:var(--o-bg); }
+.o-log-share { display:flex; align-items:center; flex-wrap:wrap; gap:12px; font-size:12px; }
+.o-log-hero { position:relative; isolation:isolate; display:flex; flex-direction:column; justify-content:space-between; gap:24px; min-height:260px; overflow:hidden; border:1px solid var(--o-brass); border-radius:4px; background:var(--o-inset); container-type:inline-size; }
+.o-log-hero-art { z-index:-2; object-fit:cover; object-position:center 55%; }
+.o-log-hero::after { content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(180deg,color-mix(in srgb,var(--o-bg) 78%,transparent),color-mix(in srgb,var(--o-bg) 22%,transparent) 30%,color-mix(in srgb,var(--o-bg) 50%,transparent) 58%,color-mix(in srgb,var(--o-bg) 94%,transparent)); }
+.o-log-hero-bar { display:flex; justify-content:flex-end; padding:12px 18px; font-size:12px; }
+.o-log-hero-bar a { padding:3px 9px; border-radius:2px; background:color-mix(in srgb,var(--o-bg) 65%,transparent); }
+.o-log-hero-copy { padding:0 20px 18px; }
+.o-log-hero-eyebrow { display:flex; align-items:center; gap:8px; margin:0 0 6px; color:var(--o-gold); font:400 11px var(--o-display-font); letter-spacing:.2em; text-transform:uppercase; }
+.o-log-hero-eyebrow svg { width:16px; height:16px; stroke-width:1.5; }
+.o-log-hero h1 { margin:0; color:#ffe8a4; font:400 clamp(24px,4cqi,36px)/1.15 var(--o-display-font); text-shadow:0 2px 4px #000b; overflow-wrap:anywhere; }
+.o-log-hero-lead { margin:6px 0 0; color:#d4e7ef; font:400 15px/1.45 var(--o-display-font); text-shadow:0 1px 3px #000b; }
+.o-log-hero-lead strong { font-weight:400; }
+.o-log-hero-foot { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 24px; margin-top:16px; }
+.o-log-hero-foot dl { display:flex; flex-wrap:wrap; gap:6px 26px; margin:0; }
+.o-log-hero-foot dt { color:var(--o-muted); font-size:10px; letter-spacing:.14em; text-transform:uppercase; }
+.o-log-hero-foot dd { margin:3px 0 0; font-size:13px; font-variant-numeric:tabular-nums; }
+.o-log-hero .o-training-button { border-color:var(--o-brass); background:color-mix(in srgb,var(--o-bg) 70%,transparent); color:var(--o-gold); }
+.o-log-matchup,.o-public-log .o-combat-log { overflow:hidden; border:1px solid var(--o-line); border-radius:4px; background:var(--o-surface); }
+.o-public-log .o-combat-log ol { max-height:none; overflow:visible; }
+.o-log-sides { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:14px; padding:14px; }
+.o-log-sides > ul { display:grid; gap:10px; min-width:0; margin:0; padding:0; list-style:none; }
+.o-log-versus { color:var(--o-gold); font:italic 30px/1 var(--o-display-font); text-shadow:0 2px 3px var(--o-bg); }
+.o-log-person { padding:12px 14px; border:1px solid var(--o-line); border-radius:4px; background:linear-gradient(135deg,var(--o-heading),var(--o-inset)); }
+.o-log-person[data-final] { border-color:var(--o-gold); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--o-gold) 30%,transparent); }
+.o-log-person-head { display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--o-muted); font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
+.o-log-person .o-person-result { padding:1px 7px; border:1px solid currentColor; border-radius:2px; letter-spacing:.06em; }
+.o-log-person[data-result="assist"] .o-person-result { color:var(--o-link); }
+.o-log-person[data-result="defeated"] .o-person-result { color:var(--o-combat-danger); }
+.o-log-person[data-result="survived"] .o-person-result { color:var(--o-stamina); }
+.o-log-person[data-result="retreated"] .o-person-result,.o-log-person[data-result="draw"] .o-person-result { color:var(--o-muted); }
+.o-log-person-name { display:flex; align-items:baseline; flex-wrap:wrap; gap:2px 8px; margin:6px 0 10px; font:400 19px/1.25 var(--o-display-font); overflow-wrap:anywhere; }
+.o-log-person-name small { font:11px var(--o-body-font); color:var(--o-muted); }
+.o-log-person dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin:0 0 10px; border-block:1px solid var(--o-line); }
+.o-log-person dl > div { display:flex; flex-direction:column-reverse; align-items:center; gap:3px; min-width:0; padding:8px 4px; text-align:center; }
+.o-log-person dl > div + div { border-left:1px solid var(--o-line); }
+.o-log-person dt { color:var(--o-muted); font-size:10px; }
+.o-log-person dd { margin:0; font:400 20px/1.1 var(--o-display-font); font-variant-numeric:tabular-nums; }
+.o-log-person-health { display:grid; gap:6px; }
+.o-log-person-health > div { display:grid; grid-template-columns:34px minmax(0,1fr) auto; align-items:center; gap:8px; color:var(--o-muted); font-size:11px; }
+.o-log-person-health strong { min-width:54px; color:var(--o-text); font-weight:500; text-align:right; font-variant-numeric:tabular-nums; }
+.o-log-footnote { margin:0; color:var(--o-muted); font-size:11px; text-align:center; }
 @media (max-width: {{frontend.layout.combatBreakpointPx}}px) {
   .o-attack-shell { padding: 16px 12px 28px; }
   .o-battle-record { grid-template-columns: minmax(0, 1fr); }
@@ -464,7 +528,9 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
   .o-combat-people ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .o-attack-heading { gap: 10px; }
   .o-attack-heading h1 { font-size: 24px; }
-  .o-public-log { padding: 12px; }
+  .o-public-log { gap: 12px; padding: 12px; }
+  .o-log-sides { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 10px; }
+  .o-log-versus { justify-self: center; font-size: 24px; }
 }
 @media (max-width: {{frontend.layout.narrowBreakpointPx}}px) {
   .o-attack-shell { padding: 12px 6px 20px; }
@@ -498,7 +564,7 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-encounter-shell .o-battle-record { grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:12px; margin-top:14px; }
 .o-encounter-shell .o-combat-log,.o-encounter-shell .o-combat-people { border:1px solid var(--o-brass); border-radius:4px; overflow:hidden; background:var(--o-inset); min-width:0; }
 .o-encounter-shell .o-combat-log ol { max-height:310px; }
-.o-encounter-shell .o-combat-log li { padding:9px 12px; border-color:var(--o-line); }
+.o-encounter-shell .o-combat-log li { padding-block:9px; }
 .o-encounter-shell .o-combat-people li { padding:10px 12px; }
 .o-encounter-shell .o-combat-people dl { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:8px 0 5px; }
 .o-encounter-shell .o-combat-people dl > div { display:grid; gap:2px; font-size:11px; }
@@ -520,6 +586,13 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
  .o-encounter-shell .o-combat-people { order:0; }
 }
 @media(max-width:{{frontend.layout.compactBreakpointPx}}px) {
+ .o-log-actions { grid-template-columns:minmax(0,1fr); gap:6px; }
+ .o-log-action { display:flex; flex-wrap:wrap; align-items:baseline; gap:1px 10px; }
+ .o-log-actor { flex-basis:100%; }
+ .o-log-result { margin-left:auto; text-align:right; }
+ .o-log-hero { min-height:230px; gap:16px; }
+ .o-log-hero::after { background:linear-gradient(180deg,color-mix(in srgb,var(--o-bg) 72%,transparent),color-mix(in srgb,var(--o-bg) 58%,transparent) 40%,color-mix(in srgb,var(--o-bg) 94%,transparent)); }
+ .o-log-hero-copy { padding:0 14px 14px; }
  .o-combat-stage { gap:8px; margin:10px 0; }
  .o-combatant-heading { margin:0 10px; padding:10px 0; gap:8px; min-height:76px; }
  .o-combatant-heading h2 { font-size:17px; }

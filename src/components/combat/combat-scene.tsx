@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Anchor, Swords } from "lucide-react";
 import type { CombatEvent } from "@/lib/combat";
-import { SCENE_SIZE, type ScenePoint } from "@/lib/combat-scene-anchors";
+import { SCENE_ART, SCENE_SIZE, type ScenePoint } from "@/lib/combat-scene-anchors";
 import { latestOwnRound, roundStrikes, roundSummary, sceneDuration, scenePercent, strikeLabel, strikePopup, type SceneStrike } from "@/lib/combat-scene";
 
 const art = {
-  sea: { src: "/images/combat-sea-broadside.webp", alt: "Two pirate ships face each other on the open sea.", tagline: "Two ships. One victory.", Icon: Anchor },
-  boarding: { src: "/images/combat-boarding-duel.webp", alt: "Two pirate captains cross cutlasses on a plank between their ships.", tagline: "Steel. Blood. Plunder.", Icon: Swords },
+  sea: { src: SCENE_ART.sea, alt: "Two pirate ships face each other on the open sea.", tagline: "Two ships. One victory.", Icon: Anchor },
+  boarding: { src: SCENE_ART.boarding, alt: "Two pirate captains cross cutlasses on a plank between their ships.", tagline: "Steel. Blood. Plunder.", Icon: Swords },
 };
 const sizes = "(max-width: 800px) 100vw, (max-width: 1400px) 45vw, 600px";
 // The pause after the final round's effects fade before the result of the fight appears.

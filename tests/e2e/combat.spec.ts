@@ -139,16 +139,29 @@ test("fullscreen attack keeps preparation and both phases on one route, locks na
         const time = log.locator("time").filter({ hasText: new Date(event.at).toLocaleTimeString("en-GB", { timeZone: "UTC" }) });
         expect(await time.count()).toBeGreaterThan(0);
       }
+      // The banner states the outcome and when the encounter was fought; the matchup sets the attacker against the defender.
+      await expect(tab.getByRole("heading", { level: 1 })).toHaveText("The attackers withdrew.");
+      await expect(tab.locator(".o-log-hero dt")).toHaveText(["Fought", "Lasted"]);
+      await expect(tab.getByRole("list", { name: "Attacker", exact: true }).getByRole("link", { name: a.name, exact: true })).toBeVisible();
+      await expect(tab.getByRole("list", { name: "Defender", exact: true }).getByRole("link", { name: d.name, exact: true })).toBeVisible();
       for (const person of report.people) {
-        const entry = tab.locator(".o-combat-people li").filter({ has: tab.getByRole("link", { name: person.name, exact: true }) });
+        const entry = tab.locator(".o-log-person").filter({ has: tab.getByRole("link", { name: person.name, exact: true }) });
         await expect(entry.locator("dl > div").filter({ hasText: "Ship damage" }).locator("dd")).toHaveText(String(person.ship_damage));
         await expect(entry.locator("dl > div").filter({ hasText: "Crew damage" }).locator("dd")).toHaveText(String(person.crew_damage));
+        await expect(entry.getByRole("progressbar", { name: person.name + " Ship Health", exact: true })).toHaveAttribute("aria-valuenow", String(person.ship_health));
+        await expect(entry.getByRole("progressbar", { name: person.name + " Crew Health", exact: true })).toHaveAttribute("aria-valuenow", String(person.crew_health));
         expect(await tab.getByText(person.name, { exact: true }).evaluateAll(
           (elements, href) => elements.length > 0 && elements.every(element => element.closest("a")?.getAttribute("href") === href),
           "/players/" + person.player_number,
         )).toBe(true);
       }
-      await tab.screenshot({ path: ".local/combat-public-log.jpg", type: "jpeg", quality: 75, fullPage: true });
+      await tab.setViewportSize({ width: 1280, height: 1000 });
+      await tab.screenshot({ path: ".local/combat-public-log.jpg", type: "jpeg", quality: 80, fullPage: true });
+      for (const width of [768, 375, 320]) {
+        await tab.setViewportSize({ width, height: 1000 });
+        expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        if (width === 375) await tab.screenshot({ path: ".local/combat-public-log-mobile.jpg", type: "jpeg", quality: 80, fullPage: true });
+      }
     } finally { await anonymous.close(); }
     await page.getByRole("link", { name: "Back to The Harbor", exact: true }).click();
     await expect(page).toHaveURL(/\/harbor$/);

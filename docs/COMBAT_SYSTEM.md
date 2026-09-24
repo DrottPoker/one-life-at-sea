@@ -226,7 +226,10 @@ anpassningar för statskalan och full blockering vid 25 gånger Defense.
 - Återhämtning räknas från deadline, inte från återbesöket.
 - Offentlig rapport skapas när hela mötet är avslutat. Den visar starter, anslutningar, order,
   vapen, träffzoner, kritiska träffar, skador, fasbyten, servertid (UTC), final blow, assists och deltagarnas träffar.
-  Äldre händelser utan vapen och zon visas som tidigare.
+  Äldre händelser utan vapen och zon visas som tidigare. Rapporten inleds med stridsbilden från den fas som
+  avgjorde mötet, utfallet, vem som gav det sista slaget, när striden utkämpades och hur länge den varade.
+  Därefter står angriparna mot försvararen med träffar, skada och hälsa efter striden, följt av hela
+  händelselistan som en tidslinje. Se [gränssnittsdesignen](INTERFACE_DESIGN.md#combat-presentation).
 - Attackvyn spelar också upp den egna senaste rundan i stridsbilden, med träffzon, skada och miss
   för båda sidor. Se [gränssnittsdesignen](INTERFACE_DESIGN.md#combat-presentation).
 - Loggen visar inga lokala rundnummer eller summerat antal rundor. Det egna rundtaket visas fortfarande i attackvyn.

@@ -141,7 +141,19 @@ game navigation during combat.
   All controls retain text labels, keyboard focus, pending states and disabled
   ammunition/start conditions. Boarding offers Crew attack, Disengage and Retreat.
 - The compact log and people panels keep timestamps, contributions, participant
-  conditions and profile links. Public reports retain their existing layout.
+  conditions and profile links.
+- The combat log reads as a timeline in both the attack view and the public report: a
+  marker per entry on a vertical line (flag for the start, ship for cannon combat, crossed
+  swords for boarding, heart for hospital), blue or gold headings by phase, and each order
+  as aligned captain, order and result columns. Hits are gold, criticals bold gold, misses
+  and blocked hits muted, and the deciding entry is highlighted. Narrow screens put the
+  captain on its own line and let a long result drop below the order.
+- The public report (`/combatlog/<id>`) opens with a banner of the artwork of the phase that
+  decided the encounter, the outcome as its headline, who landed the final blow, when it was
+  fought and how long it lasted, and Copy public link. Below it the attackers face the
+  defender as cards with a VS between them: role, result badge, hits and damage as large
+  numbers, and Ship and Crew Health bars after the fight. The full timeline follows without
+  an inner scroll, and the PvP survival note closes the page.
 
 Combat artwork is served through Next Image with explicit dimensions and
 responsive sizes. No image generation or external asset dependency is required.
