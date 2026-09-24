@@ -3,6 +3,16 @@ import { existsSync, mkdirSync, writeFileSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { loadConfig, root, read, generatedFiles, latestConfigMigration, migrationSql, revision } from "./core.mjs";
 
+// Windows can briefly lock a freshly written file (indexing or antivirus); retry before failing.
+function writeFile(target, content) {
+  for (let attempt = 0; ; attempt++) {
+    try { return writeFileSync(target, content); }
+    catch (error) {
+      if (attempt >= 4 || !["UNKNOWN", "EBUSY", "EPERM"].includes(error.code)) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100 * (attempt + 1));
+    }
+  }
+}
 const mode = process.argv[2] ?? "check";
 if (!["check", "sync"].includes(mode)) throw new Error("Use check or sync.");
 const config = loadConfig();
@@ -24,13 +34,13 @@ if (mode === "check") {
     const created = readdirSync(directory).filter(name => !before.has(name));
     if (created.length !== 1 || !created[0].endsWith("_" + name + ".sql")) throw new Error("Could not identify the new migration.");
     const target = resolve(directory, created[0]);
-    writeFileSync(target, sql);
+    writeFile(target, sql);
     console.log("Created gameplay migration: " + target);
   }
   for (const [path, content] of Object.entries(files)) {
     const target = resolve(root, path);
     mkdirSync(dirname(target), { recursive: true });
-    if (!existsSync(target) || read(path) !== content) writeFileSync(target, content);
+    if (!existsSync(target) || read(path) !== content) writeFile(target, content);
   }
   console.log("Config artifacts synchronized. Apply database changes with npm run db:migrate; restart Supabase after infrastructure/auth changes.");
 }
