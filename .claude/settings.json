@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run lint)",
+      "Bash(npm run typecheck)",
+      "Bash(npm test)",
+      "Bash(npm run test)",
+      "Bash(npm run check)",
+      "Bash(npm run docs:check)",
+      "Bash(npm run config:check)",
+      "Bash(npm run config:sync)",
+      "Bash(npm run db:status)",
+      "Bash(npm run db:start)",
+      "Bash(npm run db:stop)",
+      "Bash(npm run db:migrate)",
+      "Bash(npm run test:db)",
+      "Bash(npm run test:config:db)",
+      "Bash(npm run test:e2e *)",
+      "Bash(npm run test:e2e)",
+      "Bash(npm run audit:economy)",
+      "Bash(npx vitest *)",
+      "Bash(npx supabase migration list --local)",
+      "Bash(git status *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git diff)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  }
+}
