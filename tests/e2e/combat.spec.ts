@@ -505,6 +505,9 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     expect(Date.now() - endedAt).toBeGreaterThanOrEqual(1000);
     await expect(scene.getByRole("heading", { name: "You withdrew", exact: true })).toBeVisible();
     await expect(scene.getByText("The attackers withdrew.", { exact: true })).toBeVisible();
+    // Both salvos train Ship Battling; the defender's three automatic salvos train it too, although they all miss.
+    await expect(scene.getByText("+20 Ship Battling XP", { exact: true })).toBeVisible();
+    expect(sql("select string_agg(xp::text,',' order by character_id='" + a.id + "' desc) from private.character_skills where character_id in('" + a.id + "','" + d.id + "') and skill_id='ship_battling'").trim()).toBe("20,30");
     await expect(scene.locator(".o-combat-versus")).toHaveCSS("opacity", "0");
     await page.waitForTimeout(1500);
     await expect(page).toHaveURL(new RegExp("/attack/" + d.playerNumber + "$"));

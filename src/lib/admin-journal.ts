@@ -2,7 +2,7 @@ import type { AdminAction, AdminJson, AdminPayload } from "@/lib/admin";
 import { isUuid } from "@/lib/validation";
 
 export type AdminRequest = { action: AdminAction; payload: AdminPayload; reason: string; id: string };
-const actions: readonly AdminAction[] = ["update", "delete", "grant_items", "cancel_ship_job", "end_combat", "save_item", "save_loot_table", "save_activity_loot"];
+const actions: readonly AdminAction[] = ["update", "delete", "grant_items", "cancel_ship_job", "end_combat", "release_hospital", "save_item", "save_loot_table", "save_activity_loot"];
 
 function isJson(value: unknown, depth = 0): value is AdminJson {
   if (depth > 32) return false;

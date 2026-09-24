@@ -2,7 +2,7 @@
 
 # PvP och gemensamma attacker
 
-Uppdaterat 2026-09-24. Detta dokument beskriver den implementerade versionen.
+Uppdaterat 2026-09-25. Detta dokument beskriver den implementerade versionen.
 Vapen, rustning, träffzoner och Quality beskrivs i [utrustning](EQUIPMENT.md).
 [FIRST_COMBAT_PLAN.md](archive/plans/FIRST_COMBAT_PLAN.md) är den historiska planen för version 1.
 
@@ -100,8 +100,9 @@ Karaktär, skepp, besättning, tränade stats och pengar behålls.
 
 - Ship Health: +1 per 30 sekunder efter deltagarens avslut.
 - Crew Health: +1 per 10 sekunder efter deltagarens avslut.
-- Överlevande återhämtar båda parallellt, även offline, högst 100. Utrustad Hull höjer maximal Ship Health.
-  Sjukhuspatienter får full hälsa enligt aktuell utrustning vid utskrivning.
+- Överlevande återhämtar båda parallellt, även offline, upp till sitt maxvärde: 100 plus bonusar.
+  Utrustad Hull och Ship Battling höjer maximal Ship Health; Crew Battling höjer maximal Crew Health.
+  Sjukhuspatienter får full hälsa enligt aktuell utrustning och aktuella nivåer vid utskrivning.
 - Hälsa återhämtas inte för aktiva deltagare. En tillbakadragen angripare kan börja återhämta sig medan mötet fortsätter.
 - Energy: +5 vid fasta femminutersticks i hamnen och Hospital, samt vid fasta
   tiominutersticks till havs och under resor. Högst 100, alltid heltal. Se [Energy](ENERGY_RECOVERY.md).
@@ -134,6 +135,23 @@ Detta är en tillfällig tilldelning utan inventarium eller ammunitionsekonomi.
 
 Bordningschans: clamp(0.70 + 0.30 * (ship_speed - enemy_ship_speed) / (ship_speed + enemy_ship_speed), 0.20, 0.90).
 Crew-stats gäller boarding; Ship-stats gäller till sjöss. Speed påverkar undvikande och bordning.
+
+## XP och maxhälsa
+
+Varje anfallsorder ger `combat.xpGain` XP (10), även vid miss eller blockerad träff.
+Fire cannons, även med Chain Shot eller Grape Shot, tränar Ship Battling. Fire firearm,
+Throw temporary och Melee attack tränar Crew Battling. Board, Disengage och Retreat ger ingen XP.
+Försvararens automatiska motattacker ger försvararen XP på samma sätt, även offline och även
+i rundan där angriparen drar sig tillbaka eller når tidsgränsen.
+
+XP delas ut i samma transaktion som rundan. Ett återförsök med samma begärans-ID ger den sparade
+rundan utan ny XP. Rundornas händelser och combat log innehåller ingen XP. Resultatrutan i
+attackvyn summerar XP från spelarens egna anfallsordrar.
+
+Crew Battling höjer maximal Crew Health och Ship Battling höjer maximal Ship Health, se
+[Skills](SKILLS.md#combat-xp-and-battling-health). En ny nivå läker inte. Stridens ögonblicksbild
+behåller maxvärdena från starten, så en nivå som nås under striden gäller först efteråt.
+Motståndare och combat log visar maxhälsan, liksom tidigare, vilket avslöjar bonusen.
 
 ## Statkurvor och skada
 
@@ -239,7 +257,7 @@ anpassningar för statskalan och full blockering vid 25 gånger Defense.
   Navigationslåset gäller fortfarande under en aktiv attack.
 - Rapportens hälsa är historiska slutvärden, inte senare återhämtad hälsa.
 - Rapporten avslöjar inga konton, e-postadresser, privata stats, ammunition, försvarsförval eller begärans-ID:n.
-- Guld, föremål och XP delas ännu inte ut. PvE och flottuppdrag ingår inte.
+- Guld och föremål delas ännu inte ut; XP beskrivs ovan. PvE och flottuppdrag ingår inte.
 
 ## Lagring och behörighet
 

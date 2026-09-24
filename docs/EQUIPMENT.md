@@ -135,7 +135,8 @@ Smoke Pot träffar besättningen som helhet och anger därför ingen zon.
 
 ### Ship Health från Hull
 
-Maximal Ship Health är grundvärdet plus utrustad Hulls Ship Health. Vid Equip och Unequip
+Maximal Ship Health är grundvärdet plus utrustad Hulls Ship Health och bonusen från
+Ship Battling-nivån, se [Skills](SKILLS.md#combat-xp-and-battling-health). Vid Equip och Unequip
 räknas återhämtad hälsa fram först med det gamla maxvärdet. Unequip sänker aktuell hälsa
 till det nya maxvärdet om den är högre. En ny Hull ger alltså inte gratis hälsa, utan
 återhämtas i vanlig takt. Hospital skriver ut med full hälsa enligt aktuell utrustning.

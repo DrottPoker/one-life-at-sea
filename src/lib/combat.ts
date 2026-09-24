@@ -1,4 +1,4 @@
-import { gameplay } from "@/config/public";
+import { gameplay, frontend } from "@/config/public";
 import type { Stat } from "@/lib/game";
 import type { CombatEffects, CombatLoadout } from "@/lib/equipment";
 
@@ -11,7 +11,7 @@ export type CombatStats = Record<Stat, number>;
 export type Combatant = {
   id: string; player_number: number; name: string; ship_health: number; crew_health: number;
   crew_morale?: number | null; morale_multiplier?: number | null;
-  ship_health_max?: number; ammo: number | null; shots?: number | null; temporary_uses?: number | null;
+  ship_health_max?: number; crew_health_max?: number; ammo: number | null; shots?: number | null; temporary_uses?: number | null;
   shot_stock?: { chain: number; grape: number } | null; effects?: CombatEffects | null; ship: CombatStats | null; crew: CombatStats | null;
   loadout: CombatLoadout | null;
 };
@@ -31,7 +31,8 @@ export type CombatEvent = {
 };
 export type CombatPerson = {
   id: string; player_number: number | null; name: string; role: "attacker" | "defender"; status: ParticipantStatus | "survived";
-  hits: number; damage: number; ship_damage: number; crew_damage: number; ship_health: number; ship_health_max?: number; crew_health: number; phase: "sea" | "boarding" | null;
+  hits: number; damage: number; ship_damage: number; crew_damage: number; ship_health: number; ship_health_max?: number; crew_health: number; crew_health_max?: number;
+  phase: "sea" | "boarding" | null;
 };
 export type Battle = {
   id: string; status: "active" | "completed"; phase: "sea" | "boarding"; round: number;
@@ -91,4 +92,23 @@ export function attackUrl(targetId: string | number) {
 }
 export function isCombatOrder(value: unknown): value is CombatOrder {
   return typeof value === "string" && ORDERS.some(order => order === value);
+}
+// Every attacking order trains the battling skill of its phase, hit or miss. The server awards it; this only sums the own rounds.
+const ORDER_SKILLS: Partial<Record<CombatOrder, "ship_battling" | "crew_battling">> = {
+  fire: "ship_battling", fire_chain: "ship_battling", fire_grape: "ship_battling",
+  crew_shoot: "crew_battling", crew_throw: "crew_battling", crew_attack: "crew_battling",
+};
+const formatXp = new Intl.NumberFormat(frontend.site.locale);
+export function combatXp(events: CombatEvent[], attackerId: string) {
+  const earned = { ship_battling: 0, crew_battling: 0 };
+  for (const event of events) {
+    const skill = event.kind === "round" && event.actor_id === attackerId ? ORDER_SKILLS[event.attacker_order] : undefined;
+    if (skill) earned[skill] += gameplay.combat.xpGain;
+  }
+  return earned;
+}
+export function combatXpLabel(events: CombatEvent[], attackerId: string) {
+  const earned = combatXp(events, attackerId);
+  return ([["Ship Battling", earned.ship_battling], ["Crew Battling", earned.crew_battling]] as const)
+    .filter(([, xp]) => xp > 0).map(([name, xp]) => "+" + formatXp.format(xp) + " " + name + " XP").join(" · ") || null;
 }

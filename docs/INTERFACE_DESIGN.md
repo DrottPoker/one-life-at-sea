@@ -132,8 +132,9 @@ game navigation during combat.
   rise just after and above the impact so the blast stays visible.
 - The round that ends the encounter plays out in full. 0.5 seconds after its effects fade
   (`FINALE_DELAY` in `combat-scene.tsx`) the artwork darkens, the VS badge fades out and a
-  centered box shows the outcome (Victory, Defeat, You withdrew or Draw) with a Leave button
-  that takes focus. The combat log opens only when the player chooses Leave; the order panel
+  centered box shows the outcome (Victory, Defeat, You withdrew or Draw) and the battling XP
+  from the player's own attacks, with a Leave button that takes focus. A captain who leaves while
+  other attackers fight on sees the same XP line. The combat log opens only when the player chooses Leave; the order panel
   and the heading's back link are gone meanwhile. When the final round is not new to this
   view, such as another attacker's final blow, the box follows after the same short pause.
 - The caption under the artwork states the round in words, for example "Round 3: You hit
@@ -187,7 +188,8 @@ hover/focus/touch tooltip as the other resources. Its tooltip shows only the rec
 
 Profiles display public Character Level alongside Player ID. Only the owner receives the
 Skills section: seven compact cards with level, XP and progress to the next level, in two
-columns on desktop and one on mobile. Maxed skills display Maximum level. Other players
+columns on desktop and one on mobile. Maxed skills display Maximum level. Crew Battling and
+Ship Battling add a row with their maximum health bonus and what the next level adds. Other players
 receive neither these cards nor their underlying private data.
 
 Activities is a sidebar destination and a harbor directory entry. Three rows show a themed

@@ -1,13 +1,13 @@
 # Aktuell implementationsstatus
 
-Verifierat lokalt 2026-09-24. Tidigare leveransnoteringar finns i [arkivet](archive/README.md); de är inte dagens kontrollresultat.
+Verifierat lokalt 2026-09-25. Tidigare leveransnoteringar finns i [arkivet](archive/README.md); de är inte dagens kontrollresultat.
 
 ## Implementerat
 
 | System | Aktuellt beteende |
 | --- | --- |
 | Konto och identitet | Supabase Auth, återställning, en beständig karaktär per konto, namnregler, publika nummer och profiler |
-| Resurser och progression | Energy, Stamina, Morale, träning, materialbetalda skeppsjobb, Skills och Character Level |
+| Resurser och progression | Energy, Stamina, Morale, träning, materialbetalda skeppsjobb, Skills med strids-XP och Battling-hälsa, Character Level |
 | Resa och PvP | Offlinebeständiga resor, scouting, gemensamma strider med utrustning och träffzoner, Hospital och offentliga combat logs |
 | Ekonomi | Gold/Bank, Inventory med Equip, Marketplace, kvitton och pris-/cirkulationshistorik |
 | Aktiviteter och hem | Aktiviteter med loot, Hideout och Crafting |
@@ -22,17 +22,17 @@ Exakta regler finns i [dokumentindexet](README.md). Helhetsgranskningen rättar 
 | Kontroll | Resultat |
 | --- | --- |
 | `npm run check` | Godkänd dokumentkontroll, lint utan varningar, typkontroll och produktionsbygge |
-| Enhetstester | 442 godkända i 31 filer |
-| `npm run test:db` | 2 000 godkända påståenden i 41 filer |
-| `npm run test:config:db` | 121 godkända påståenden; alternativ config rullades tillbaka |
-| Hela webbläsarsviten med prestandaprov | 117 godkända, 1 villkorligt överhoppad och 1 fel i ett marknadstest, Edge mot produktionsbygget. Testet rättades och 34 tester i de sju berörda specfilerna gick igenom mot slutbygget |
+| Enhetstester | 473 godkända i 33 filer |
+| `npm run test:db` | 2 102 godkända påståenden i 42 filer |
+| `npm run test:config:db` | 126 godkända påståenden; alternativ config rullades tillbaka |
+| Hela webbläsarsviten | 123 godkända och 1 överhoppad, Edge mot produktionsbygget. Den överhoppade är den opt-in-styrda prestandamätningen, som inte kördes denna gång |
 | SQL-lint | Inga varningar eller fel |
 | Databasens säkerhets-/prestandarådgivare | Inga fynd på varnings- eller felnivå (2026-09-23, inte omkörd) |
 | `npm audit` | 0 kända sårbarheter |
 | RPC-avtal | Alla 67 typade funktioner finns med rätt parameterlistor |
 | Ekonomins integritet efter alla tester | 0 avvikelser i samtliga 8 kontroller |
 
-Den nya SQL-migrationen är applicerad lokalt. Next.js 16.3.6, Supabase JS 2.117.1 och Vitest 5.0.1 ingår i verifieringen.
+De två nya SQL-migrationerna är applicerade lokalt. Next.js 16.3.6, Supabase JS 2.117.1 och Vitest 5.0.1 ingår i verifieringen.
 [Granskningsrapporten](PROJECT_AUDIT.md) beskriver fynd, rättningar och kontrollernas omfattning.
 [Prestanda](PERFORMANCE.md) innehåller faktiska lokala mätvärden.
 

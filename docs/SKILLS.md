@@ -50,10 +50,42 @@ remain nonnegative safe integers, capped at 9,007,199,254,740,991 for JSON trans
 Award inputs must be positive; the shared helper saturates without wrapping.
 Crafting checks capacity first so every successful craft awards its full configured XP.
 
+## Combat XP and battling health
+
+Every attacking order in [combat](COMBAT_SYSTEM.md#xp-och-maxhälsa) awards `combat.xpGain`
+XP (10) to the skill of its phase, hit or miss. Cannon salvos train Ship Battling; firearm shots,
+thrown temporaries and melee attacks train Crew Battling. The defender's automatic replies train
+the defender the same way. Board, Disengage and Retreat award nothing.
+
+Crew Battling raises maximum Crew Health and Ship Battling raises maximum Ship Health. Level 1
+adds nothing. Every later level L adds L × `skills.battlingHealthPerLevel` (1), and the additions
+stack, so the total bonus is L(L+1)/2 - 1 at the default setting:
+
+| Level | Added by the level | Total bonus |
+| --- | ---: | ---: |
+| 1 | 0 | 0 |
+| 2 | 2 | 2 |
+| 3 | 3 | 5 |
+| 4 | 4 | 9 |
+| 10 | 10 | 54 |
+| 50 | 50 | 1,274 |
+| 100 | 100 | 5,049 |
+
+Maximum Ship Health also includes the equipped Hull, see [equipment](EQUIPMENT.md#ship-health-från-hull).
+A new level raises only the maximum: current health keeps its value and recovers at the normal
+rate, while Hospital discharge restores the raised maxima. A combat snapshot keeps the maxima
+from the start of the encounter, so a level gained during a fight applies afterwards. An
+administrative XP correction settles recovery at the previous maximum first and lowers current
+health to a reduced maximum. `private.battling_health_bonus` is authoritative; the profile shows
+the same formula. The database bounds stored health by the level-100 bonus.
+
 ## Privacy and profile
 
 The owner sees a Skills section on their own profile with all levels, total XP and
-progress/remaining XP to the next level. Other players see only Character Level.
+progress/remaining XP to the next level. The Crew Battling and Ship Battling cards also show
+their health bonus and what the next level adds. Other players see only Character Level.
+Opponents and public combat logs still show maximum health, as they did before these bonuses,
+so the battling health bonus of a fighter can be inferred there.
 Existing registered-player profile access rules remain in effect: public here means
 visible to other registered players, not anonymous visitors.
 
@@ -79,8 +111,9 @@ and new skill level, total XP and Character Level.
 
 Future activity RPCs must validate eligibility and call the helper in the same
 transaction as costs/rewards and their durable idempotency receipt. A request replay
-returns its saved result without awarding XP again. The helper accepts a target
-character so future server-resolved combat may reward offline participants. It is
+returns its saved result without awarding XP again. Combat calls the helper for the
+attacker and the defender while resolving a round, under the locks it already holds, so
+offline defenders are rewarded too and a replayed order awards nothing new. The helper is
 not itself a public action or an idempotent activity endpoint.
 
 Administrators can make audited XP corrections in the character_skills database
@@ -95,8 +128,9 @@ therefore increase the public total by one.
 
 Progression, privacy and display are implemented. [Activities](ACTIVITIES.md) now provides
 Shore Fishing, Foraging and Logging for 1 Stamina and 10 XP each.
-[Crafting](CRAFTING.md) grants 10 Crafting XP per successful craft. Cooking, additional
-recipes, level requirements and level bonuses remain future work. Crew Training and Ship Upgrades keep their own workshop/training
+[Crafting](CRAFTING.md) grants 10 Crafting XP per successful craft. [Combat](COMBAT_SYSTEM.md#xp-och-maxhälsa)
+grants Crew Battling and Ship Battling XP, and those levels raise maximum health. Cooking, additional
+recipes, level requirements and other level bonuses remain future work. Crew Training and Ship Upgrades keep their own workshop/training
 XP and do not award Crew Battling or Ship Battling skill XP automatically.
 
 ## Verification
@@ -107,3 +141,8 @@ projection, max level, invalid awards, transaction rollback, admin changes and c
 Alternative config tests double XP thresholds and add an eighth skill within a rolled-
 back transaction. Browser tests cover ownership, live updates, responsive profiles
 and eight concurrent XP awards without lost increments or an inconsistent public sum.
+Database tests in `battling-skills.test.sql` cover the health formula, both maxima with and
+without a Hull, recovery, Hospital, administrative corrections and release, and XP from every
+attacking order for both sides. Alternative config tests change the XP per attack and the
+health per level. Browser tests cover the profile bonus, the raised Crew Health bar and the XP
+line in the combat result.

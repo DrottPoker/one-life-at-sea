@@ -135,7 +135,8 @@ create or replace function private.ship_health_max(captain_id uuid)
 returns integer language sql stable security invoker set search_path='' as $$
   select {{gameplay.resources.healthMax}}+coalesce((select round(private.equipment_stat(d.health_min,d.health_max,i.quality))::integer
     from private.character_equipment e join private.item_instances i on i.id=e.instance_id
-    join private.item_definitions d on d.id=i.item_id where e.character_id=captain_id and e.slot='hull'),0);
+    join private.item_definitions d on d.id=i.item_id where e.character_id=captain_id and e.slot='hull'),0)
+    +private.battling_health_bonus(private.character_skill_level(captain_id,'ship_battling'));
 $$;
 
 -- Caller holds the character lock. Recovery so far uses the maximum that applied until now.
@@ -145,8 +146,19 @@ returns void language sql volatile security invoker set search_path='' as $$
     {{gameplay.resources.shipRecoverySeconds}},private.ship_health_max(id)),ship_recovery_at=observed_at where id=captain_id;
   update public.characters set ship_health=private.ship_health_max(id) where id=captain_id and ship_health>private.ship_health_max(id);
 $$;
+-- Settles both health values around a change of maximum. Combat and Hospital pause recovery, so they are left alone.
+create or replace function private.settle_health(captain_id uuid,observed_at timestamptz)
+returns void language plpgsql volatile security invoker set search_path='' as $$
+begin
+  if exists(select 1 from private.combat_engagements where character_id=captain_id)
+    or not exists(select 1 from public.characters where id=captain_id and hospital_until is null) then return; end if;
+  perform private.settle_ship_health(captain_id,observed_at);
+  update public.characters set crew_health=private.health_snapshot(crew_health,crew_recovery_at,observed_at,
+    {{gameplay.resources.crewRecoverySeconds}},private.crew_health_max(id)),crew_recovery_at=observed_at where id=captain_id;
+end;
+$$;
 revoke all on function private.equipment_stat(numeric,numeric,numeric),private.item_stats(private.item_definitions,numeric),
-  private.character_loadout(uuid),private.ship_health_max(uuid),private.settle_ship_health(uuid,timestamptz),private.temporary_catalog(),
+  private.character_loadout(uuid),private.ship_health_max(uuid),private.settle_ship_health(uuid,timestamptz),private.settle_health(uuid,timestamptz),private.temporary_catalog(),
   private.stack_quantity(uuid,text),private.consume_stack(uuid,text),private.character_temporary_loadout(uuid) from public,anon,authenticated;
 
 create or replace function private.equip_item(entry_id uuid,request_id uuid)

@@ -60,7 +60,11 @@ directory includes registration/last-activity timestamps, activity filters and s
   Limits: 1,000,000 stack items or 100 equipment instances per request.
 - Correct stack quantities and equipment Quality, or delete an entire inventory row.
   Deleting an equipped piece also removes it from the captain's loadout.
-- Release a hospital patient with full health.
+- Release a hospital patient with full health, including Hull and battling level bonuses.
+  The release is its own audited action and is refused while the captain is in an encounter.
+- Correct private skill XP. A Crew Battling or Ship Battling correction first settles health
+  recovery at the previous maximum, so a raised maximum grants no free health, and lowers
+  current health to a reduced maximum.
 - End an entire combat as a draw without another damage round. Health, previous
   events and snapshot stats remain intact. Active participants become draws,
   engagement locks are removed and a public `admin_end` event explains the ending.

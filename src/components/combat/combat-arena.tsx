@@ -11,7 +11,7 @@ import { Anchor, Bomb, ChevronRight, Crosshair, Grape, Link2, Ship, Swords, Targ
 import { submitOrder } from "@/app/combat-actions";
 import { CombatStage } from "@/components/combat/combat-stage";
 import { CombatEvents, CombatPeople, outcomeLabel } from "@/components/combat/combat-log";
-import { type Battle, type CombatOrder, ORDER_LABELS } from "@/lib/combat";
+import { type Battle, type CombatOrder, ORDER_LABELS, combatXpLabel } from "@/lib/combat";
 import { fallbackWeapons, SHOT_NAMES, temporaryEffect, type ShotKind } from "@/lib/equipment";
 
 const salvos = `${gameplay.combat.ammoPerShot} salvo${gameplay.combat.ammoPerShot === 1 ? "" : "s"}`;
@@ -63,9 +63,10 @@ export function CombatArena({ battle }: { battle: Battle }) {
   // A special shot that runs out falls back to round shot instead of leaving Fire unusable.
   const ammo: Ammo = ammoChoice !== "round" && stock[ammoChoice] < 1 ? "round" : ammoChoice;
   const orders = phaseOrders[battle.phase], options = orderOptions(battle, ammo);
+  const xp = combatXpLabel(battle.events, battle.attacker.id);
   // A finished fight hands its result to the scene, whose Leave button opens the combat log.
   const finale = battle.status === "completed" ? { title: finishedTitles[battle.participant_status] ?? "Battle over", text: outcomeLabel(battle.outcome),
-    href: "/combatlog/" + battle.id } : undefined;
+    xp, href: "/combatlog/" + battle.id } : undefined;
   const orderFor = (button: OrderButton): CombatOrder => button === "fire" && ammo !== "round" ? ammo === "chain" ? "fire_chain" : "fire_grape" : button;
 
   function giveOrder(order: CombatOrder) {
@@ -116,6 +117,7 @@ export function CombatArena({ battle }: { battle: Battle }) {
     </section> : battle.status === "active" && <section className="o-combat-result">
       <h2>{battle.participant_status === "retreated" ? "You withdrew" : battle.participant_status === "draw" ? "Round limit reached" : "Defeat"}</h2>
       <p>The other attackers are still fighting. The public combat log becomes available when the encounter ends.</p>
+      {xp && <p className="o-combat-xp">{xp}</p>}
       <Link href="/harbor" className="o-training-button">Back to The Harbor</Link>
     </section>}
     <div className="o-combat-feedback" role="status">{message}{message && <button className="o-text-button" onClick={() => router.refresh()}>Reload fight</button>}</div>

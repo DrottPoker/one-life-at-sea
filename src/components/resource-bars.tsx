@@ -38,7 +38,7 @@ export function ResourceBars() {
         (state.stamina >= MAX_STAMINA ? " Recovery paused at " + MAX_STAMINA + ". Storage limit: " + gameplay.stamina.storageMaximum + "." : "") },
     { key: "ship", label: "Ship Health", value: state.ship_health, min: 0, max: state.ship_health_max ?? MAX_HEALTH, Icon: Ship,
       description: healthHint(gameplay.resources.shipRecoverySeconds) },
-    { key: "crew", label: "Crew Health", value: state.crew_health, min: 0, max: MAX_HEALTH, Icon: Users,
+    { key: "crew", label: "Crew Health", value: state.crew_health, min: 0, max: state.crew_health_max ?? MAX_HEALTH, Icon: Users,
       description: healthHint(gameplay.resources.crewRecoverySeconds) +
         (state.protected_until ? " Protected until you attack." : "") },
     { key: "morale", label: "Crew Morale", value: state.crew_morale, min: -gameplay.morale.maximum, max: gameplay.morale.maximum, Icon: Heart,

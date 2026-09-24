@@ -23,6 +23,7 @@ export type GameState = Record<`${TrainingGroup}_${Stat}`, number> & {
   ship_health: number;
   ship_health_max?: number;
   crew_health: number;
+  crew_health_max?: number;
   health_next_at: string | null;
   active_combat_id: string | null;
   active_attack: import("@/lib/combat").AttackLock | null;

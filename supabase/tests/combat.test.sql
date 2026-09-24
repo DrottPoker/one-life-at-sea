@@ -73,11 +73,11 @@ select throws_ok($$select private.resolve_combat_round(value,'crew_attack',array
   '22023','INVALID_ORDER','Wrong phase orders are rejected');
 select throws_ok($$select private.resolve_combat_round(jsonb_set(value,'{attacker,ammo}','0'),'fire',array[0.0,0.0,0.0,0.3,0.3]) from combat_results where name='base'$$,
   'P0001','NO_AMMO','Empty ammunition cannot fire');
-select is(private.health_snapshot(0,'2026-01-01Z','2026-01-01 00:00:29Z',30),0,'Hull recovery waits for a complete interval');
-select is(private.health_snapshot(0,'2026-01-01Z','2026-01-01 00:00:30Z',30),1,'Hull recovers after thirty seconds');
-select is(private.health_snapshot(0,'2026-01-01Z','2026-01-01 00:00:10Z',10),1,'Crew recovers after ten seconds');
-select is(private.health_snapshot(99,'2026-01-01Z','2026-01-02Z',10),100,'Offline healing caps at 100');
-select is(private.health_snapshot(50,'2026-01-02Z','2026-01-01Z',10),50,'Backwards time does not remove health');
+select is(private.health_snapshot(0,'2026-01-01Z','2026-01-01 00:00:29Z',30,100),0,'Hull recovery waits for a complete interval');
+select is(private.health_snapshot(0,'2026-01-01Z','2026-01-01 00:00:30Z',30,100),1,'Hull recovers after thirty seconds');
+select is(private.health_snapshot(0,'2026-01-01Z','2026-01-01 00:00:10Z',10,100),1,'Crew recovers after ten seconds');
+select is(private.health_snapshot(99,'2026-01-01Z','2026-01-02Z',10,100),100,'Offline healing caps at the maximum');
+select is(private.health_snapshot(50,'2026-01-02Z','2026-01-01Z',10,100),50,'Backwards time does not remove health');
 
 update public.characters set ship_health=41,crew_health=65,ship_recovery_at=clock_timestamp(),crew_recovery_at=clock_timestamp()
   where id=(select a from combat_fixtures);

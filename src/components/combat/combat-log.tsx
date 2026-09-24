@@ -98,7 +98,7 @@ export function CombatPeople({ people, winnerId }: { people: CombatPerson[]; win
     <ul>{people.map(person => <li key={person.id} data-result={person.status}>
       <div><strong><CaptainName id={person.id} name={person.name} playerNumber={person.player_number} /></strong>{person.player_number && <small className="o-player-number"> [{person.player_number}]</small>}<span className="o-person-result">{personLabel(person, winnerId)}</span></div>
       <dl><div><dt>Hits</dt><dd>{person.hits}</dd></div><div><dt>Ship damage</dt><dd>{person.ship_damage}</dd></div><div><dt>Crew damage</dt><dd>{person.crew_damage}</dd></div></dl>
-      <div className="o-person-condition"><span>Ship {person.ship_health}/{person.ship_health_max ?? gameplay.resources.healthMax}</span><span>Crew {person.crew_health}/{gameplay.resources.healthMax}</span></div>
+      <div className="o-person-condition"><span>Ship {person.ship_health}/{person.ship_health_max ?? gameplay.resources.healthMax}</span><span>Crew {person.crew_health}/{person.crew_health_max ?? gameplay.resources.healthMax}</span></div>
     </li>)}</ul>
   </section>;
 }
@@ -106,7 +106,7 @@ export function CombatPeople({ people, winnerId }: { people: CombatPerson[]; win
 function PersonCard({ person, winnerId }: { person: CombatPerson; winnerId: string | null }) {
   const health = [
     { kind: "ship", label: "Ship", value: person.ship_health, max: person.ship_health_max ?? gameplay.resources.healthMax },
-    { kind: "crew", label: "Crew", value: person.crew_health, max: gameplay.resources.healthMax },
+    { kind: "crew", label: "Crew", value: person.crew_health, max: person.crew_health_max ?? gameplay.resources.healthMax },
   ];
   return <li className="o-log-person" data-result={person.status} data-final={person.id === winnerId || undefined}>
     <div className="o-log-person-head"><span>{person.role === "attacker" ? "Attacker" : "Defender"}</span><span className="o-person-result">{personLabel(person, winnerId)}</span></div>

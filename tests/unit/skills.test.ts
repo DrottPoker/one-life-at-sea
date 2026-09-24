@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { gameplay } from "../../src/config/public";
-import { MAX_CHARACTER_LEVEL, MAX_SKILL_LEVEL, skillProgress } from "../../src/lib/skills";
+import { MAX_CHARACTER_LEVEL, MAX_SKILL_LEVEL, battlingHealthBonus, skillProgress } from "../../src/lib/skills";
 
 describe("rebalanced skill progression", () => {
   it.each([[1,0],[2,200],[3,416],[10,2495],[50,105265],[92,2704683],[99,4630405],[100,5000000]])("matches level %i at %i XP", (level, xp) => {
@@ -23,5 +23,19 @@ describe("rebalanced skill progression", () => {
   });
   it.each([-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])("rejects invalid XP %s", xp => {
     expect(() => skillProgress(xp)).toThrow(RangeError);
+  });
+});
+
+describe("battling health bonus", () => {
+  it.each([[1, 0], [2, 2], [3, 5], [4, 9], [10, 54], [100, 5049]])("level %i adds %i maximum health", (level, bonus) => {
+    expect(battlingHealthBonus(level)).toBe(bonus * gameplay.skills.battlingHealthPerLevel);
+  });
+  it("adds each level's own number on top of the previous levels", () => {
+    for (let level = 2; level <= MAX_SKILL_LEVEL; level++) {
+      expect(battlingHealthBonus(level) - battlingHealthBonus(level - 1)).toBe(level * gameplay.skills.battlingHealthPerLevel);
+    }
+  });
+  it.each([0, 101, 1.5, NaN])("rejects invalid level %s", level => {
+    expect(() => battlingHealthBonus(level)).toThrow(RangeError);
   });
 });

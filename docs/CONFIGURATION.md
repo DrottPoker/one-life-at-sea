@@ -54,6 +54,8 @@ En ny sammanslagning är tillåten så länge ingen hosted databas har migration
 Träningsnivåer behåller installerade ID:n och ordning. XP-krav och effektivitet måste stiga; första nivån är gratis vid 0 XP. Kurvor och sammansatta resultat valideras mot tillåtna numeriska gränser. Se [Träning](TRAINING_FOUNDATION.md).
 
 Skill-ID:n får inte tas bort. Nya skills initialiseras och påverkar Character Level enligt [Skills](SKILLS.md).
+Crew Battling och Ship Battling krävs, eftersom strid delar ut deras XP och deras nivåer höjer maxhälsan.
+Hälsokolumnernas databasgräns inkluderar bonusen på nivå 100, och kontrollen stoppar värden som skulle överskrida heltalsgränsen.
 Aktivitets-ID och koppling till skill är stabila; avaktivera i stället för att radera.
 Item-ID, ägartyp och utrustningsplats består; ägda antal och individuell Quality skrivs inte över.
 Ändrade statintervall gäller alla exemplar, eftersom stats räknas fram från Quality.

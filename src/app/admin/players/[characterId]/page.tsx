@@ -2,12 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { activeAdminItemDefinitions, adminCatalog, readAdminTable } from "@/lib/admin-server";
 import { isUuid } from "@/lib/validation";
-import { gameplay } from "@/config/public";
 import { RecordEditor } from "@/components/admin/record-editor";
 import { DatabaseTable } from "@/components/admin/database-table";
 import { GrantItems } from "@/components/admin/grant-items";
 import { MutationForm } from "@/components/admin/mutation-form";
-import { adminLabel, rowKey } from "@/lib/admin";
+import { adminLabel } from "@/lib/admin";
 
 export default async function AdminPlayer({ params }: { params: Promise<{ characterId: string }> }) {
   const { characterId } = await params;
@@ -36,10 +35,8 @@ export default async function AdminPlayer({ params }: { params: Promise<{ charac
       <RecordEditor resource={resource("characters")} row={row} label="Edit character" />
       <Link href={"/players/" + captain.player_number}>View game profile</Link>
       <p>Hospital until: {captain.hospital_until ?? "Not hospitalized"}</p>
-      {captain.hospital_until && <MutationForm action="update" payload={{
-        resource: "characters", key: rowKey(resource("characters"), row), version: row.version,
-        changes: { hospital_started_at: null, hospital_until: null, ship_health: String(gameplay.resources.healthMax), crew_health: String(gameplay.resources.healthMax) },
-      }} label="Review hospital release" summary="Release this captain from hospital and restore full ship and crew health." />}
+      {captain.hospital_until && <MutationForm action="release_hospital" payload={{ character_id: characterId, version: row.version }}
+        label="Review hospital release" summary="Release this captain from hospital and restore full ship and crew health, including equipment and battling level bonuses." />}
     </section>
     <GrantItems characterId={characterId} playerName={captain.display_name!} definitions={definitions} />
     <section className="admin-card"><h2>Skill progression</h2><p>Correct private skill XP here. Skill levels and public Character Level update automatically.</p><DatabaseTable resource={resource("character_skills")} data={skills} /></section>

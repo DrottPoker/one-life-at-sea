@@ -5,7 +5,7 @@ export type AdminResource = {
   columns: { name: string; type: string; nullable: boolean; primary: boolean }[];
 };
 export type AdminPage = { rows: AdminRow[]; total: string; page: number; page_size: number };
-export type AdminAction = "update" | "delete" | "grant_items" | "cancel_ship_job" | "end_combat" | "save_item" | "save_loot_table" | "save_activity_loot";
+export type AdminAction = "update" | "delete" | "grant_items" | "cancel_ship_job" | "end_combat" | "release_hospital" | "save_item" | "save_loot_table" | "save_activity_loot";
 export type AdminJson = string | number | boolean | null | AdminJson[] | { [key: string]: AdminJson };
 export type AdminPayload = Record<string, AdminJson>;
 export type AdminReceipt = { audit_id: string; message: string; id?: string };

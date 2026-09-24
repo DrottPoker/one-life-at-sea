@@ -196,6 +196,7 @@
     "maxDurationSeconds": 600,
     "protectionSeconds": 300,
     "defaultDefenceOrder": "cannon",
+    "xpGain": 10,
     "hitChance": {
       "extremeRatio": 64,
       "exponent": 0.5
@@ -686,6 +687,7 @@
     "storageMaximum": 200
   },
   "skills": {
+    "battlingHealthPerLevel": 1,
     "catalog": [
       {
         "id": "fishing",

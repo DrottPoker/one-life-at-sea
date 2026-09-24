@@ -2,7 +2,7 @@ create or replace function private.get_game_state()
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare c public.characters%rowtype; active private.combats%rowtype; engagement private.combat_engagements%rowtype; observed_at timestamptz;
   recovered record; stamina_state record; morale_state record; energy_tick_seconds bigint; ship_hp integer; crew_hp integer; health_next_at timestamptz; last_id uuid;
-  ship_max integer;
+  ship_max integer; crew_max integer;
 begin
   if auth.uid() is null or not private.is_registered_player() then return null; end if;
   select * into c from public.characters where user_id=auth.uid();
@@ -16,12 +16,12 @@ begin
   select * into recovered from private.character_energy_snapshot(c,observed_at);
   select * into stamina_state from private.stamina_snapshot(c.stamina,c.stamina_updated_at,observed_at);
   select * into morale_state from private.morale_snapshot(c.crew_morale,c.morale_updated_at,observed_at);
-  ship_max:=private.ship_health_max(c.id);
+  ship_max:=private.ship_health_max(c.id); crew_max:=private.crew_health_max(c.id);
   ship_hp:=case when active.id is not null or c.hospital_until is not null then c.ship_health else private.health_snapshot(c.ship_health,c.ship_recovery_at,observed_at,{{gameplay.resources.shipRecoverySeconds}},ship_max) end;
-  crew_hp:=case when active.id is not null or c.hospital_until is not null then c.crew_health else private.health_snapshot(c.crew_health,c.crew_recovery_at,observed_at,{{gameplay.resources.crewRecoverySeconds}}) end;
+  crew_hp:=case when active.id is not null or c.hospital_until is not null then c.crew_health else private.health_snapshot(c.crew_health,c.crew_recovery_at,observed_at,{{gameplay.resources.crewRecoverySeconds}},crew_max) end;
   if active.id is null and c.hospital_until is null then
     health_next_at:=least(case when ship_hp<ship_max then c.ship_recovery_at+(ship_hp-c.ship_health+1)*make_interval(secs => {{gameplay.resources.shipRecoverySeconds}}) end,
-      case when crew_hp<{{gameplay.resources.healthMax}} then c.crew_recovery_at+(crew_hp-c.crew_health+1)*make_interval(secs => {{gameplay.resources.crewRecoverySeconds}}) end);
+      case when crew_hp<crew_max then c.crew_recovery_at+(crew_hp-c.crew_health+1)*make_interval(secs => {{gameplay.resources.crewRecoverySeconds}}) end);
   end if;
   select recent.id into last_id from (
     (select b.id,b.started_at from private.combats b where b.defender_id=c.id
@@ -39,7 +39,7 @@ begin
     'crew_morale',morale_state.morale,'morale_next_at',morale_state.morale_next_at,
     'sea',private.sea_state(c),'gold_coins',c.gold_coins,'bank_gold_coins',c.bank_gold_coins,'training',private.training_state(c.id),
     'revision',coalesce((select revision from public.player_game_events where character_id=c.id),0),
-    'hospital_until',c.hospital_until,'observed_at',observed_at,'ship_health',ship_hp,'ship_health_max',ship_max,'crew_health',crew_hp,'health_next_at',health_next_at,
+    'hospital_until',c.hospital_until,'observed_at',observed_at,'ship_health',ship_hp,'ship_health_max',ship_max,'crew_health',crew_hp,'crew_health_max',crew_max,'health_next_at',health_next_at,
     'active_combat_id',active.id,'combat_next_at',active.deadline,'last_combat_id',last_id,
     'active_attack',case when engagement.role='attacker' then jsonb_build_object('battle_id',active.id,'target_id',active.defender_id,
       'target_player_number',(select player_number from public.characters where id=active.defender_id)) end,

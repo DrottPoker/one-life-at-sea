@@ -9,7 +9,8 @@ as $$
     'effects', '{}'::jsonb,
     'ship_health', private.health_snapshot(c.ship_health, c.ship_recovery_at, observed_at, {{gameplay.resources.shipRecoverySeconds}}, l.ship_max),
     'ship_health_max', l.ship_max,
-    'crew_health', private.health_snapshot(c.crew_health, c.crew_recovery_at, observed_at, {{gameplay.resources.crewRecoverySeconds}}),
+    'crew_health', private.health_snapshot(c.crew_health, c.crew_recovery_at, observed_at, {{gameplay.resources.crewRecoverySeconds}}, l.crew_max),
+    'crew_health_max', l.crew_max,
     'ship', jsonb_build_object('attack',c.ship_attack,'defense',c.ship_defense,
       'speed',trim_scale(c.ship_speed*(1+coalesce((l.loadout->'sails'->>'speed')::numeric,0)/100)),'accuracy',c.ship_accuracy),
     'crew_morale',m.morale,'morale_multiplier',private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}}),
@@ -19,7 +20,7 @@ as $$
       'speed',trim_scale(c.crew_speed*private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}})),
       'accuracy',trim_scale(c.crew_accuracy*private.morale_multiplier(m.morale,{{gameplay.morale.statBonusBps}})))
   ) from private.morale_snapshot(c.crew_morale,c.morale_updated_at,observed_at) m
-  cross join lateral (select e.loadout,{{gameplay.resources.healthMax}}+coalesce((e.loadout->'hull'->>'health')::integer,0) ship_max
+  cross join lateral (select e.loadout,private.ship_health_max(c.id) ship_max,private.crew_health_max(c.id) crew_max
     from (select coalesce(jsonb_object_agg(key,value-'entry_id'-'image_path'),'{}'::jsonb) loadout
       from jsonb_each(private.character_loadout(c.id))) e) l;
 $$;
@@ -34,6 +35,7 @@ as $$
       (select to_jsonb(player_number) from public.characters where id=(snapshot->>'id')::uuid)),
     'ship_health',snapshot->'ship_health','crew_health',snapshot->'crew_health',
     'ship_health_max',coalesce(snapshot->'ship_health_max',to_jsonb({{gameplay.resources.healthMax}})),
+    'crew_health_max',coalesce(snapshot->'crew_health_max',to_jsonb({{gameplay.resources.healthMax}})),
     'ammo',case when own then snapshot->'ammo' end,
     'shots',case when own then coalesce(snapshot->'shots','0'::jsonb) end,
     'temporary_uses',case when own then coalesce(snapshot->'temporary_uses','0'::jsonb) end,
@@ -209,11 +211,18 @@ begin
 end;
 $$;
 
+-- Every attacking order trains the battling skill of its phase, hit or miss.
+create or replace function private.combat_order_skill(combat_order text)
+returns text language sql immutable strict security invoker set search_path='' as $$
+  select case when combat_order in ('fire','fire_chain','fire_grape') then 'ship_battling'
+    when combat_order in ('crew_shoot','crew_throw','crew_attack') then 'crew_battling' end;
+$$;
+
 revoke all on function private.combat_precision_chance(double precision,numeric),private.combat_damage(numeric,numeric,numeric,numeric,numeric),
   private.combat_zone(text,double precision),private.combat_weapon(jsonb,text),
   private.combat_strike(jsonb,jsonb,text,jsonb,double precision,double precision,text,text,numeric,numeric),
   private.combat_with_effects(jsonb),private.combat_tick_effects(jsonb),
-  private.combat_action(jsonb,jsonb,text,double precision,double precision) from public,anon,authenticated;
+  private.combat_action(jsonb,jsonb,text,double precision,double precision),private.combat_order_skill(text) from public,anon,authenticated;
 
 create or replace function private.resolve_combat_round(input_state jsonb, player_order text, rolls double precision[])
 returns jsonb language plpgsql stable security invoker set search_path = ''
@@ -319,7 +328,7 @@ $$;
 create or replace function private.advance_shared_combat(battle_id uuid, actor uuid, player_order text, request_id uuid, occurred_at timestamptz, timed_out boolean)
 returns void language plpgsql volatile security invoker set search_path='' as $$
 declare b private.combats%rowtype; p private.combat_participants%rowtype;
-  resolved jsonb; s jsonb; d jsonb; a jsonb; personal_status text; ending text; winner uuid; consumed record;
+  resolved jsonb; s jsonb; d jsonb; a jsonb; personal_status text; ending text; winner uuid; consumed record; trained record;
 begin
   select * into b from private.combats where id=battle_id for update;
   select * into p from private.combat_participants where combat_id=battle_id and character_id=actor;
@@ -336,6 +345,13 @@ begin
     v(owner_id,item_id,required) where v.item_id is not null order by v.item_id,v.owner_id
   loop
     if not private.consume_stack(consumed.owner_id,consumed.item_id) and consumed.required then raise exception 'ITEM_NOT_FOUND' using errcode='P0001'; end if;
+  end loop;
+  -- The defender's automatic reply trains like any other attack. Both captains are already locked.
+  for trained in select * from (values(actor,private.combat_order_skill(resolved#>>'{event,attacker_order}')),
+    (b.defender_id,private.combat_order_skill(resolved#>>'{event,defender_order}'))) v(captain_id,skill_id)
+    where v.skill_id is not null order by v.captain_id
+  loop
+    perform private.award_skill_xp(trained.captain_id,trained.skill_id,{{gameplay.combat.xpGain}});
   end loop;
   personal_status:=case
     when (a->>'ship_health')::integer=0 or (a->>'crew_health')::integer=0 then 'defeated'

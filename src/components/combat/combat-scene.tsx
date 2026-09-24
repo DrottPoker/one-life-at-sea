@@ -16,7 +16,7 @@ const art = {
 const sizes = "(max-width: 800px) 100vw, (max-width: 1400px) 45vw, 600px";
 // The pause after the final round's effects fade before the result of the fight appears.
 export const FINALE_DELAY = 500;
-export type SceneFinale = { title: string; text: string; href: string };
+export type SceneFinale = { title: string; text: string; xp?: string | null; href: string };
 // Effects are drawn in the artwork's pixels. Particles stay a few art pixels wide to match its detail, while
 // distances are scaled up because the scene is shown at well under half the artwork's width.
 const SPREAD = 2.5;
@@ -199,7 +199,8 @@ function Finale({ finale }: { finale: SceneFinale }) {
     <section className="o-scene-finale-box" aria-labelledby={id + "-title"}>
       <h2 id={id + "-title"}>{finale.title}</h2>
       <p id={id + "-text"}>{finale.text}</p>
-      <Link ref={leave} href={finale.href} replace className="o-scene-leave" aria-describedby={id + "-title " + id + "-text"}>Leave</Link>
+      {finale.xp && <p id={id + "-xp"} className="o-scene-finale-xp">{finale.xp}</p>}
+      <Link ref={leave} href={finale.href} replace className="o-scene-leave" aria-describedby={id + "-title " + id + "-text" + (finale.xp ? " " + id + "-xp" : "")}>Leave</Link>
     </section>
   </div>;
 }

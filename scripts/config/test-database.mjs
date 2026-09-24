@@ -29,7 +29,8 @@ config.gameplay.training.shipMaterials.forEach(item => { item.quantity = 2; });
 config.gameplay.training.shipMinEnergy = 7;
 for (const group of Object.values(config.gameplay.startingStats)) for (const stat of Object.keys(group)) group[stat] = 12;
 Object.assign(config.gameplay.combat, { energyCost: 13, maxRounds: 7, startingAmmo: 6, ammoPerShot: 2,
-  minimumHealth: 2, idleSeconds: 90, maxDurationSeconds: 360, protectionSeconds: 45 });
+  minimumHealth: 2, idleSeconds: 90, maxDurationSeconds: 360, protectionSeconds: 45, xpGain: 7 });
+config.gameplay.skills.battlingHealthPerLevel = 3;
 config.gameplay.combat.hitChance.extremeRatio = 100;
 config.gameplay.notifications.pageSize = 2;
 config.gameplay.combat.mitigation.fullReductionDefenseRatio = 50;
@@ -64,8 +65,10 @@ const checks = [
 "select is(private.item_stats(d,10.25)->>'damage','21.03','Stat ranges follow the configured definition') from private.item_definitions d where id='cutlass';",
 "select is(private.combat_damage(12,12,40,1,0),40,'Weapon scale is configurable');",
 "select is((select zone from private.combat_zone('crew',0.4)),'head','Hit zone weights are configurable');",
-"select lives_ok($$update public.characters set ship_health=210 where id=(select captain from old_training_fixture)$$,'Ship Health may reach the configured equipment maximum');",
-"select throws_ok($$update public.characters set ship_health=211 where id=(select captain from old_training_fixture)$$,'23514',null,'Ship Health cannot exceed the configured equipment maximum');",
+"select lives_ok($$update public.characters set ship_health=15357 where id=(select captain from old_training_fixture)$$,'Ship Health may reach the configured equipment and battling maximum');",
+"select throws_ok($$update public.characters set ship_health=15358 where id=(select captain from old_training_fixture)$$,'23514',null,'Ship Health cannot exceed the configured equipment and battling maximum');",
+"select lives_ok($$update public.characters set crew_health=15297 where id=(select captain from old_training_fixture)$$,'Crew Health may reach the configured battling maximum');",
+"select throws_ok($$update public.characters set crew_health=15298 where id=(select captain from old_training_fixture)$$,'23514',null,'Crew Health cannot exceed the configured battling maximum');",
 "select is(public.list_inventory('medical')#>>'{items,0,quantity}','7','Catalog changes preserve stack quantities');",
 "create temporary table hospital_config_fixture as select gen_random_uuid() id;",
 "insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','HospitalConfig'||translate(id::text,'0123456789','ghijklmnop')) from hospital_config_fixture;",
@@ -81,7 +84,7 @@ const checks = [
 "select is((select ship_attack from public.characters where id=(select captain from old_training_fixture)),10::numeric,'Config migration preserves existing stats');",
 "select is(public.get_gameplay_revision(),'" + revision(config) + "','Alternative revision is installed within transaction');",
 "select is((select energy from private.energy_snapshot(118,'2026-01-01Z','2026-01-01 00:02Z')),120,'Energy interval and cap are configurable');",
-"select is(private.health_snapshot(149,'2026-01-01Z','2026-01-02Z',7),150,'Health cap is configurable');",
+"select is(private.battling_health_bonus(3),15,'Battling health per level is configurable');",
 "select is(private.combat_hit_chance(1,100),0.0::double precision,'Alternative evasion threshold applies');",
 "select ok(private.combat_hit_chance(1,64)>0,'Old evasion threshold no longer guarantees misses');",
 "select is(private.combat_damage(12,12),20,'Damage coefficients are configurable');",
@@ -93,6 +96,9 @@ const checks = [
 "select is((select ship_attack from public.characters where id=(select a from config_captains)),12::numeric,'Creation uses changed starting stats');",
 "select is((select ship_health from public.characters where id=(select a from config_captains)),120,'Creation uses changed ship health');",
 "select is((select crew_health from public.characters where id=(select a from config_captains)),110,'Creation uses changed crew health');",
+"select is((select private.crew_health_max(a) from config_captains),150,'Health cap is configurable');",
+"select private.award_skill_xp(a,'crew_battling',400) from config_captains;",
+"select is((select private.crew_health_max(a) from config_captains),156,'Configured thresholds and health per level set the Crew Health maximum');",
 "select set_config('request.jwt.claims',jsonb_build_object('sub',a,'role','authenticated')::text,true) from config_users;",
 "select is((public.get_game_state()->>\'gold_coins\')::bigint,77::bigint,\'Configured starting Gold Coins are used\');",
 "select is((public.get_game_state()->>\'bank_gold_coins\')::bigint,0::bigint,\'Bank still starts empty\');",
@@ -123,6 +129,7 @@ const checks = [
 "select is((select value#>>'{state,attacker,ammo}' from config_round),'4','A shot consumes configured ammunition');",
 "select is((select private.resolve_combat_round(state||jsonb_build_object('phase','sea','round',6),'fire',array[0.99,0.99,0.0,0.3,0.3])#>>'{state,outcome}' from private.combats where id=(select (value#>>'{battle,id}')::uuid from config_battle)),'draw','Alternative round limit is enforced');",
 "select public.submit_combat_order((value#>>'{battle,id}')::uuid,0,'retreat',gen_random_uuid()) from config_battle;",
+"select is((select xp from private.character_skills where character_id=(select d from config_captains) and skill_id='ship_battling'),7::bigint,'Combat XP per attack follows configuration');",
 "select is((select extract(epoch from(protected_until-ship_recovery_at))::int from public.characters where id=(select a from config_captains)),45,'Protection duration is configurable');",
 "select ok(jsonb_array_length(public.list_harbor_players()->'players')<=3,'Harbor page size is configurable');",
 "select is((select travel_arrives_at from public.characters where id=(select id from old_sea_fixture)),(select travel_arrives_at from old_sea_fixture),'Config changes preserve saved arrival time');",

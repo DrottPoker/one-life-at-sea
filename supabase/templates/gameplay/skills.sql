@@ -27,6 +27,19 @@ returns integer language sql stable strict security invoker set search_path='' a
   select sum(private.skill_level(coalesce(s.xp,0)))::integer from private.skill_definitions d
     left join private.character_skills s on s.skill_id=d.id and s.character_id=target_id;
 $$;
+create or replace function private.character_skill_level(target_id uuid,target_skill text)
+returns integer language sql stable strict security invoker set search_path='' as $$
+  select private.skill_level(coalesce((select xp from private.character_skills where character_id=target_id and skill_id=target_skill),0));
+$$;
+-- Every battling level from two upwards adds its own number to the matching health maximum.
+create or replace function private.battling_health_bonus(battling_level integer)
+returns integer language sql immutable strict security invoker set search_path='' as $$
+  select {{gameplay.skills.battlingHealthPerLevel}}*(battling_level*(battling_level+1)/2-1);
+$$;
+create or replace function private.crew_health_max(captain_id uuid)
+returns integer language sql stable strict security invoker set search_path='' as $$
+  select {{gameplay.resources.healthMax}}+private.battling_health_bonus(private.character_skill_level(captain_id,'crew_battling'));
+$$;
 alter table public.character_profiles add column if not exists character_level integer not null default 7;
 -- The default also covers the brief interval before a new character's skills are initialized.
 do $skill_default$ begin
@@ -100,7 +113,8 @@ begin
     'character_level',private.character_level(target_id));
 end;
 $$;
-revoke all on function private.skill_level(bigint),private.character_level(uuid),private.sync_skill_progress(),
+revoke all on function private.skill_level(bigint),private.character_level(uuid),private.character_skill_level(uuid,text),
+  private.battling_health_bonus(integer),private.crew_health_max(uuid),private.sync_skill_progress(),
   private.initialize_skills(),private.award_skill_xp(uuid,text,numeric),private.get_own_skills(),public.get_own_skills()
   from public,anon,authenticated;
 grant execute on function private.get_own_skills(),public.get_own_skills() to authenticated;

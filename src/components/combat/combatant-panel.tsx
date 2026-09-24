@@ -44,7 +44,7 @@ export function CombatantPanel({ captain, own, phase }: { captain: Combatant; ow
     <div className="o-combat-health">
       {(["ship", "crew"] as const).map(kind => {
         const hp = kind === "ship" ? captain.ship_health : captain.crew_health;
-        const max = kind === "ship" ? captain.ship_health_max ?? gameplay.resources.healthMax : gameplay.resources.healthMax;
+        const max = (kind === "ship" ? captain.ship_health_max : captain.crew_health_max) ?? gameplay.resources.healthMax;
         const label = kind === "ship" ? "Ship Health" : "Crew Health";
         return <div className={"o-combat-health-row " + (phase === (kind === "ship" ? "sea" : "boarding") ? "is-current" : "")} key={kind}>
           <div><span>{label}</span><strong>{hp} / {max}</strong></div>
