@@ -17,7 +17,7 @@ levererade `ChatGPT Image 21 sep. 2026 04_06_27.png`, optimerad till
 `public/images/harbor-background-night.webp` med samma 1672 x 941 pixlar,
 341 932 byte. Originalet i Downloads är oförändrat.
 
-Den ordinarie dagbilden, hamnens välkomstbild, stridsbilder, färger, resurser
+Den ordinarie dagbilden, sidornas headerbilder, stridsbilder, färger, resurser
 och spelregler behålls. Bakgrunden används där den redan visas, även på
 inloggnings- och stridssidorna. Den kompakta layouten döljer fortfarande
 bakgrundslagret enligt befintlig design.

@@ -36,7 +36,7 @@ test("registration rejects numbers and spaces in the browser and server action",
     await page.getByLabel("Confirm password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Create account", exact: true }).click();
     await expect(page).toHaveURL(/\/harbor$/);
-    await expect(page.getByRole("heading", { name: "Welcome ashore, " + name + ".", exact: true })).toBeVisible();
+    await expect(page.locator(".o-page-hero").getByText("Welcome ashore, " + name + ".", { exact: true })).toBeVisible();
   } finally { await page.close(); cleanupTestRegistrations([email]); }
 });
 

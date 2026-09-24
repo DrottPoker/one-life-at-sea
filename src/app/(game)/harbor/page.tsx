@@ -2,7 +2,7 @@ import { gameplay } from "@/config/public";
 import { GameLink as Link } from "@/components/game-navigation";
 import { Compass, Utensils, Anchor, Store, Hammer, Swords, Ship, Landmark, HeartPulse, House } from "lucide-react";
 import { requireCharacter } from "@/lib/player";
-import { Panel, HarborArt } from "@/components/shell";
+import { PageHero, PLACEHOLDER_HERO } from "@/components/page-hero";
 
 import { SeaTravelPanel } from "@/components/sea-travel-panel";
 import { HarborPlayers } from "@/components/harbor-players";
@@ -16,9 +16,7 @@ export default async function Harbor() {
   const client = await createClient();
   const roster = await loadHarborRoster(client, 0).catch(() => null);
   return <>
-    <Panel title="The Harbor" detail="A safe port for bolder horizons" icon={Anchor} className="o-harbor-welcome"><HarborArt priority /><div className="o-arrival">
-      <h2>Welcome ashore, {character.display_name}.</h2><p className="o-copy">Salt in the air. Sunlight on the water. Beyond the palms, the open sea waits.</p>
-    </div></Panel>
+    <PageHero title="The Harbor" lead={"Welcome ashore, " + character.display_name + "."} image={PLACEHOLDER_HERO} icon={Anchor} />
     <SeaTravelPanel />
     <div className="o-harbor-columns">
     <HarborPlayers initial={roster} characterId={character.id} />

@@ -40,8 +40,6 @@ a:focus-visible,button:focus-visible,input:focus-visible { outline:2px solid var
 .o-panel-body { padding:12px; }
 .o-art { display:block; width:100%; height:var(--o-art-height); object-fit:cover; object-position:50% 28%; background:var(--o-inset); }
 .o-art-frame { padding:4px; background:var(--o-inset); border-bottom:1px solid var(--o-line); }
-.o-arrival { padding:12px 16px; }
-.o-arrival h2 { margin:0 0 4px; font:400 21px/1.3 var(--o-display-font); color:var(--o-ink); }
 p { margin:0 0 10px; }
 p:last-child { margin-bottom:0; }
 .o-copy { color:var(--o-muted); }
@@ -136,7 +134,6 @@ fieldset { border:0; padding:0; margin:0; min-width:0; }
 .o-nav,.o-directory-row { text-decoration:none; }
 .o-nav[aria-current="page"] { color:var(--o-gold); }
 .o-directory-row:hover { color:var(--o-text); }
-.o-arrival h2 { overflow-wrap:anywhere; }
 .o-confirm .o-panel-body { padding-bottom:0; }
 .o-confirm .o-form { padding:20px; }
 .story-heading { font:400 22px/1.4 Georgia,serif; margin:0 0 12px; }
@@ -844,15 +841,6 @@ dialog button.o-dialog-close svg { width:18px; height:18px; }
 .o-resource-label > span:first-child { display:flex; align-items:center; gap:6px; }
 .o-resource-label svg { width:13px; height:13px; color:var(--o-gold); flex-shrink:0; }
 .o-account-module .o-nav { border-radius:0 0 3px 3px; }
-.o-harbor-welcome { background:var(--o-surface); border-color:var(--o-line); }
-.o-harbor-welcome > .o-panel-title { padding:5px 16px; }
-.o-harbor-welcome > .o-panel-title h1 { font-size:25px; }
-.o-harbor-welcome > .o-panel-title small { font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
-.o-harbor-welcome .o-art-frame { padding:0; }
-.o-harbor-welcome .o-art { height:calc(var(--o-art-height) + 24px); }
-.o-harbor-welcome .o-arrival { padding:6px 16px; background:var(--o-surface); border-radius:0 0 3px 3px; }
-.o-harbor-welcome .o-arrival h2 { color:var(--o-text); }
-.o-harbor-welcome .o-copy { color:var(--o-muted); font-size:12px; }
 .o-harbor-columns { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:14px; align-items:start; }
 .o-harbor-columns .o-roster-list { grid-template-columns:minmax(0,1fr); }
 .o-harbor-columns .o-roster-list li:nth-child(odd) { border-right:0; }
@@ -870,7 +858,6 @@ dialog button.o-dialog-close svg { width:18px; height:18px; }
  .game-shell { min-height:calc(100dvh - 24px); }
  .o-workspace { grid-template-columns:205px minmax(0,1fr); gap:12px; padding:12px; }
  .o-harbor-columns { grid-template-columns:minmax(0,1fr); gap:0; }
- .o-harbor-welcome > .o-panel-title small { display:none; }
  .o-masthead { padding:15px 18px; }
  .o-brand-title,.o-brand-subtitle { font-size:27px; }
 }
@@ -905,12 +892,6 @@ dialog button.o-dialog-close svg { width:18px; height:18px; }
  .o-nav { padding:9px 4px; font-size:11px; }
  .o-navigation-module > .o-side-title { display:none; }
  .o-panel-title h1,.o-panel-title h2 { font-size:17px; }
- .o-harbor-welcome > .o-panel-title { padding:5px 12px; }
- .o-harbor-welcome .o-art { height:140px; }
- .o-harbor-welcome .o-arrival { padding:5px 12px; }
- .o-harbor-welcome > .o-panel-title h1 { font-size:23px; }
- .o-arrival { padding:11px 12px; }
- .o-arrival h2 { font-size:19px; }
  .o-sea-departure { padding:13px; gap:12px; }
 }
 
@@ -1273,7 +1254,7 @@ dialog button.o-dialog-close svg { width:18px; height:18px; }
 .o-page-hero-content > img,.o-page-hero-content > svg { flex-shrink:0; width:82px; height:82px; object-fit:contain; filter:drop-shadow(0 3px 3px #0008); }
 .o-page-hero-content > svg { padding:8px; color:var(--o-gold); stroke-width:1.3; }
 .o-page-hero h1 { margin:0 0 7px; color:#ffe8a4; font:400 clamp(26px,4.1cqi,38px)/1.15 var(--o-display-font); text-shadow:0 2px 4px #000b; }
-.o-page-hero p { margin:0; color:#d4e7ef; font:400 15px/1.45 var(--o-display-font); }
+.o-page-hero p { margin:0; color:#d4e7ef; font:400 15px/1.45 var(--o-display-font); overflow-wrap:anywhere; }
 @container page-hero (max-width:650px) {
   .o-page-hero-content { max-width:95%; padding:18px; gap:12px; }
   .o-page-hero-content > img,.o-page-hero-content > svg { width:65px; height:65px; }

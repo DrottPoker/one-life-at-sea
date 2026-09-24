@@ -9,7 +9,7 @@ test("nautical frame keeps scenery fixed and game views usable across screen siz
   try {
     await page.setViewportSize({ width: 1680, height: 940 });
     await loginTestAccount(page, account);
-    const hero = page.locator(".o-harbor-welcome .o-art");
+    const hero = page.locator(".o-page-hero-image").first();
     await expect(hero).toBeVisible();
     await hero.evaluate(image => (image as HTMLImageElement).decode());
     const scenery = await page.request.get("/images/harbor-background.webp");

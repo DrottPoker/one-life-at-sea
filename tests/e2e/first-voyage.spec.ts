@@ -71,8 +71,8 @@ test("registration creates the character and returns to the same harbor after lo
   await register(page, email, secret, name);
   await page.goto("/create-character");
   await expect(page).toHaveURL(/\/harbor$/);
-  await expect(page.getByRole("heading", { name: `Welcome ashore, ${name}.` })).toBeVisible();
-  const image = page.getByRole("img");
+  await expect(page.locator(".o-page-hero").getByText(`Welcome ashore, ${name}.`, { exact: true })).toBeVisible();
+  const image = page.locator(".o-page-hero-image");
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
   await page.getByRole("navigation", { name: "Harbor locations" }).getByRole("link", { name: "Marketplace" }).click();
   await expect(page.getByRole("heading", { name: "Most Popular", exact: true })).toBeVisible();
@@ -81,9 +81,9 @@ test("registration creates the character and returns to the same harbor after lo
   await expect(page.getByRole("heading", { name: "The shipwright is not taking orders." })).toBeVisible();
   await page.getByRole("link", { name: "Back to The Harbor" }).click();
   await expect(page).toHaveURL(/\/harbor$/);
-  await expect(page.getByRole("heading", { name: `Welcome ashore, ${name}.` })).toBeVisible();
+  await expect(page.locator(".o-page-hero").getByText(`Welcome ashore, ${name}.`, { exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("heading", { name: `Welcome ashore, ${name}.` })).toBeVisible();
+  await expect(page.locator(".o-page-hero").getByText(`Welcome ashore, ${name}.`, { exact: true })).toBeVisible();
   const response = await page.goto("/harbor");
   expect(response?.headers()["cache-control"]).toContain("no-store");
   for (const width of [1280, 768, 375, 320]) {
@@ -96,7 +96,7 @@ test("registration creates the character and returns to the same harbor after lo
   await expect(page).toHaveURL(/\/login$/);
   await login(page, email, secret);
   await expect(page).toHaveURL(/\/harbor$/);
-  await expect(page.getByRole("heading", { name: `Welcome ashore, ${name}.` })).toBeVisible();
+  await expect(page.locator(".o-page-hero").getByText(`Welcome ashore, ${name}.`, { exact: true })).toBeVisible();
 
   const otherContext = await browser.newContext({ baseURL: localAppUrl });
   const other = await otherContext.newPage();
@@ -135,7 +135,7 @@ test("password recovery uses the local email link and preserves the character", 
   await expect(page.locator(".o-notice[role=alert]")).toContainText("incorrect");
   await login(page, email, newPassword);
   await expect(page).toHaveURL(/\/harbor$/);
-  await expect(page.getByRole("heading", { name: `Welcome ashore, ${name}.` })).toBeVisible();
+  await expect(page.locator(".o-page-hero").getByText(`Welcome ashore, ${name}.`, { exact: true })).toBeVisible();
 });
 
 test("the real Data API enforces owner isolation and one character per account", async () => {

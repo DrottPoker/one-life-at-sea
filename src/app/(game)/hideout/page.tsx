@@ -2,6 +2,7 @@ import { ArrowUpFromLine, CookingPot, Hammer, House, Package, Compass } from "lu
 import { frontend } from "@/config/public";
 import { GameLink as Link } from "@/components/game-navigation";
 import { Panel } from "@/components/shell";
+import { PageHero, PLACEHOLDER_HERO } from "@/components/page-hero";
 import { requireCharacter } from "@/lib/player";
 import { ownSkillProgress } from "@/lib/skills-server";
 
@@ -19,7 +20,8 @@ export default async function HideoutPage() {
   const progress = await ownSkillProgress();
   const format = new Intl.NumberFormat(frontend.site.locale);
   return <>
-    <Panel title="Hideout" detail="Your home ashore" icon={House}>
+    <PageHero title="Hideout" lead="Your home ashore." image={PLACEHOLDER_HERO} icon={House} />
+    <Panel>
       <div className="o-hideout-home">
         <div className="o-hideout-emblem" aria-hidden="true"><House /></div>
         <div><p className="o-hideout-eyebrow">A place of your own</p>
