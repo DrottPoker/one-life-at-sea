@@ -158,6 +158,15 @@ Endast nästa nivå kan köpas, efter upplåsning och med tillräckligt med burn
 Den högsta köpta nivån används automatiskt. Designskissens extra val och mängdreglage
 inför inte nya spelregler. Befintliga strids-, sjukhus- och reselås samt återförsök behålls.
 
+## Ship Upgrades-gränssnitt
+
+Sidan har samma layout som Crew Training: bildheader, översikt (verkstad, nivå, effektivitet,
+arbetstid per Energy, varvsstatus och Energy), fyra statkort, Shipyard Workshops och en guide.
+Stat väljs genom att klicka på ett kort. Arbetsordern under korten har mängdreglaget,
+förhandsvisad gain, material och Start work. Under pågående jobb visar kortet för den stat
+som byggs förväntad gain och nedräkning. Spelregler och serverflöde är oförändrade.
+Bilderna är tillfälligt samma som på Crew Training.
+
 ## Material i Ship Upgrades
 
 För vald arbetsstorlek visas nödvändigt antal och aktuellt innehav av varje material.

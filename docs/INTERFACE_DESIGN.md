@@ -160,4 +160,15 @@ percentage progress and the next available purchase. The highest purchased tier 
 automatically active. The adjacent guide uses the real Energy, morale and Perfect Drill
 settings. Stable training forms retain pending locks, purchase results and retry recovery.
 Container breakpoints change four cards to two, then one, and collapse the overview and
-schools without horizontal scrolling. Ship Upgrades keeps its existing interface.
+schools without horizontal scrolling.
+
+## Ship Upgrades, September 24
+
+Ship Upgrades uses the Crew Training layout through shared components in
+`src/components/training/training-layout.tsx` and `training-tiers.tsx`, with the generic
+`o-training-*` classes. The header, overview, stat cards, Shipyard Workshops and guide
+mirror the crew page. Stat cards are selectable radio cards; the Work Order below holds the
+Energy slider, gain preview, materials and Start work. During a job the card for that stat
+shows the expected gain and countdown and the Work Order is replaced by the running job.
+The artwork currently reuses the crew training images as placeholders, defined in one
+constant in `ship-upgrade-panel.tsx`.

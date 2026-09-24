@@ -39,7 +39,7 @@ test("crew XP, carried-gold purchases, two tabs, login and responsive layout", a
     await expect(card.getByText("5 Energy per drill", { exact: true })).toBeVisible();
   }
   await expect(page.getByRole("main")).not.toContainText("Gain per drill");
-  await expect.poll(() => page.locator(".o-crew-page img").evaluateAll(images =>
+  await expect.poll(() => page.locator(".o-training-page img").evaluateAll(images =>
     images.every(image => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0))).toBe(true);
   await page.setViewportSize({ width: 1440, height: 1050 });
   await page.screenshot({ path: ".local/crew-training-ready-desktop.png", fullPage: true });
@@ -289,13 +289,13 @@ test("ship slider tracks available Energy and awards fractional stats", async ({
   await slider.press("ArrowLeft");
   await expect(slider).toHaveValue("6");
   await expect(page.getByText("+2.42 Attack", { exact: true })).toBeVisible();
-  await page.getByLabel("Stat", { exact: true }).selectOption("defense");
+  await page.getByRole("radio", { name: "Defense", exact: true }).check();
   await expect(page.getByText("+" + formatStatGain(shipTrainingStatGain(10000.625, 1, 6)) + " Defense", { exact: true })).toBeVisible();
-  await page.getByLabel("Stat", { exact: true }).selectOption("speed");
+  await page.getByRole("radio", { name: "Speed", exact: true }).check();
   const largeGain = shipTrainingStatGain(10000000000.625, 1, 6);
   expect(largeGain).toBeGreaterThan(10000);
   await expect(page.getByText("+" + formatStatGain(largeGain) + " Speed", { exact: true })).toBeVisible();
-  await page.getByLabel("Stat", { exact: true }).selectOption("attack");
+  await page.getByRole("radio", { name: "Attack", exact: true }).check();
   await expect(page.getByText("+2.42 Attack", { exact: true })).toBeVisible();
   await expect(page.getByText("6 Energy · 36 seconds", { exact: true })).toBeVisible();
   for (const width of [1280, 375, 320]) {
