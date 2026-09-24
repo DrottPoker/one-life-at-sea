@@ -8,12 +8,15 @@ Implementerat lokalt 2026-09-19.
   i hela spelvärlden. Stackar räknas efter antal, utrustning per exemplar oavsett stats.
 - Diagramknappen öppnar/stänger historiken under bild och egenskaper, före nästa itemrad.
 - Perioderna är Last month, Last 3 months, Last 6 months, Last year, Last 3 years och
-  All time. Ett nyöppnat diagram börjar på All time.
+  All time, visade som en kompakt knappgrupp (1M, 3M, 6M, 1Y, 3Y, All) med de långa namnen
+  som tillgängligt namn och tooltip. Ett nyöppnat diagram börjar på All time.
 - Vänsterkant är periodens början, eller första kända registrering om historiken är
   yngre. Högerkant är serverns observationstid. Diagrammet uppdateras med den befintliga
   inventarieuppdateringen, normalt inom 15 sekunder medan sidan är synlig.
-- Muspekare och tryck väljer närmaste registrerade punkt och visar datum, tid i UTC
-  och exakt antal. Tangenterna vänster/höger samt Home/End fungerar när diagrammet har fokus.
+- Muspekare och tryck väljer närmaste registrerade punkt. Avläsningen ovanför diagrammet
+  visar exakt antal samt datum och tid i UTC, och visar den senaste punkten när pekaren är
+  utanför. Ingen ruta ligger över kurvan. Tangenterna vänster/höger samt Home/End fungerar
+  när diagrammet har fokus.
 - Bild och stats behåller sin tidigare utformning. Diagrammet ligger över hela
   detaljpanelens bredd, även på mobil.
 - Historiken börjar vid införandet med befintligt antal. Inga äldre värden konstrueras.
@@ -23,7 +26,8 @@ Implementerat lokalt 2026-09-19.
   stickprovets tid, aldrig ett interpolerat antal.
 - Vid periodbyte ligger kurvan kvar tills den nya är klar. Diagramytan behåller sin
   höjd och DOM-nod, vilket bevarar scroll, fokus och uppmätt bredd även vid långsam hämtning.
-  Laddningsstatus, fel och information om stickprov visas ovanpå diagramytan.
+  Laddningsstatus och fel visas ovanpå diagramytan; stickprov märks med Sampled i avläsningen.
+  Ingen förklarande text visas under diagrammet.
 - Fel vid hämtning ger Retry och behåller en eventuell senast hämtad kurva.
   Feltexten anger vilken tidigare period som fortfarande visas.
   Diagrammet får läsas i Hospital. Det ger ingen ny item-handling.

@@ -57,9 +57,9 @@ test("inventory rows, categories, details, item images and mobile layout", async
       const parent = await thumb.boundingBox(), image = await thumb.locator("img").boundingBox();
       expect(image!.y + image!.height).toBeLessThanOrEqual(parent!.y + parent!.height);
     }
-    await page.screenshot({ path: ".local/inventory-desktop.png", fullPage: true });
+    await page.screenshot({ path: ".local/inventory-desktop.png", fullPage: true, animations: "disabled" });
     await page.setViewportSize({ width: 375, height: 1000 });
-    await page.screenshot({ path: ".local/inventory-mobile.png", fullPage: true });
+    await page.screenshot({ path: ".local/inventory-mobile.png", fullPage: true, animations: "disabled" });
     await page.getByRole("navigation", { name: "Item categories" }).getByRole("link", { name: "Medical", exact: true }).click();
     await expect(list.locator(":scope > li")).toHaveCount(1);
     await expect(page.getByRole("button", { name: "Linen Bandages details", exact: true })).toContainText("x10");
@@ -154,7 +154,7 @@ test("equipment moves between the bag and the loadout and cannot be destroyed or
       request_id: randomUUID() })).error?.message).toBe("ITEM_EQUIPPED");
     await page.reload();
     await expect(focus).toContainText("Sailor's Cutlass");
-    await page.screenshot({ path: ".local/inventory-loadout.png", fullPage: true });
+    await page.screenshot({ path: ".local/inventory-loadout.png", fullPage: true, animations: "disabled" });
     await focus.getByRole("button", { name: "Unequip Sailor's Cutlass", exact: true }).click();
     await expect(equipment.getByRole("button", { name: "Melee: Fists", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(focus).toContainText("Fists");
@@ -182,7 +182,7 @@ test("temporaries are equipped from their stack while shot types have no item ac
     await expect(slot.getByLabel("Damage 25.00", { exact: true })).toBeVisible();
     await expect(grenado.getByText("Equipped", { exact: true })).toBeVisible();
     await expect(grenado.getByRole("button", { name: "Trash Grenado", exact: true })).toBeEnabled();
-    await page.screenshot({ path: ".local/inventory-temporary.png", fullPage: true });
+    await page.screenshot({ path: ".local/inventory-temporary.png", fullPage: true, animations: "disabled" });
     await slot.getByRole("button", { name: "Unequip Grenado", exact: true }).click();
     await expect(slot).toContainText("Empty");
     await expect(equipment.getByRole("button", { name: "Temporary: Empty", exact: true })).toBeVisible();
@@ -229,6 +229,49 @@ test("the loadout panel keeps one size for every slot and its art stays inside t
     await expect(equipment.locator(".o-loadout-focus")).toContainText("Heavy Canvas Sails");
     await equipment.getByRole("button", { name: "Temporary: Smoke Pot", exact: true }).click();
     await expect(equipment.locator(".o-loadout-focus")).toContainText("Accuracy -67% for 3 rounds");
+  } finally { await cleanup([own]); }
+});
+
+test("item rows keep straight stat and action columns and details roll down without a quantity row", async ({ page }) => {
+  const own = await account(false);
+  const pistol = "e2e90000-0000-4000-8000-" + own.id.slice(-12);
+  try {
+    sql("insert into private.item_instances(id,character_id,item_id,quality) values('" + pistol + "','" + own.id + "','flintlock_pistol',96.45);" +
+      "insert into private.item_instances(character_id,item_id,quality) values('" + own.id + "','flintlock_pistol',1.14),('" + own.id + "','leather_tricorn',60.11)," +
+      "('" + own.id + "','canvas_sails',1.98),('" + own.id + "','deck_cannon',50);" +
+      "insert into private.item_stacks(character_id,item_id,quantity) values('" + own.id + "','linen_bandages',122),('" + own.id + "','iron_nails',89)");
+    expect((await own.api.rpc("equip_item", { entry_id: pistol, request_id: randomUUID() })).error).toBeNull();
+    await login(page, own);
+    await page.goto("/inventory");
+    const list = page.getByRole("list", { name: "Your items" });
+    await expect(list.locator(":scope > li")).toHaveCount(7);
+    await expect(list.getByRole("button", { name: "Unequip Flintlock Pistol", exact: true })).toBeVisible();
+    for (const width of [1280, 375]) {
+      await page.setViewportSize({ width, height: 1000 });
+      const rows = await list.evaluate(element => [...element.querySelectorAll(".o-item-row")].map(row => {
+        const box = (selector: string) => row.querySelector(selector)?.getBoundingClientRect();
+        const chips = [...row.querySelectorAll(".o-item-stats > span")].map(chip => Math.round(chip.getBoundingClientRect().left));
+        return { actions: Math.round(box(".o-item-actions")!.left) + "/" + Math.round(box(".o-item-actions")!.width), chevron: Math.round(box(".o-item-chevron")!.right),
+          button: box(".o-item-action") ? Math.round(box(".o-item-action")!.width) : null, first: chips[0] ?? null, second: chips[1] ?? null,
+          quality: !!row.querySelector('.o-item-stats [aria-label^="Quality"]') };
+      }));
+      for (const key of ["actions", "chevron", "button", "first", "second"] as const)
+        expect(new Set(rows.map(row => row[key]).filter(value => value !== null)).size, width + " " + key).toBe(1);
+      expect(rows.filter(row => row.second !== null)).toHaveLength(4);
+      expect(rows.some(row => row.quality)).toBe(false);
+      await list.screenshot({ path: ".local/inventory-rows-" + width + ".png" });
+    }
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.getByRole("button", { name: "Linen Bandages details", exact: true }).click();
+    const details = page.getByRole("region", { name: "Linen Bandages details", exact: true });
+    await expect(details).toBeVisible();
+    expect(await details.evaluate(element => getComputedStyle(element).animationName + " " + getComputedStyle(element).animationDuration)).toBe("o-item-expand 0.1s");
+    await expect(details.locator(".o-item-properties dt")).toHaveText(["Category", "Value", "Circ."]);
+    // A click during the roll-down must not scroll the clipped body and hide its top.
+    await details.getByRole("button", { name: "Show circulation history for Linen Bandages", exact: true }).click();
+    await expect(details.getByRole("slider", { name: "Circulation history timeline" })).toBeVisible();
+    expect(await details.locator(".o-item-details-clip").evaluate(element => element.scrollTop)).toBe(0);
+    await expect(page.getByRole("button", { name: "Linen Bandages details", exact: true })).toContainText("x122");
   } finally { await cleanup([own]); }
 });
 
@@ -363,19 +406,24 @@ test("circulation chart shows world totals, periods, inspection, refresh and hos
     const plot = chart.getByRole("slider", { name: "Circulation history timeline" });
     await expect(plot).toBeVisible();
     await expect(chart.getByRole("radio", { name: "All time", exact: true })).toBeChecked();
-    const loadedAt = await chart.locator(".o-chart-caption").innerText();
-    expect(loadedAt).toContain("UTC");
+    const readout = chart.locator(".o-chart-readout");
+    await expect(readout).toContainText("Total in circulation");
+    await expect(readout).toContainText("UTC");
+    await expect(chart.locator(".o-chart-caption")).toHaveCount(0);
     await plot.focus();
     await page.keyboard.press("End");
-    await expect(chart.getByRole("tooltip")).toContainText("Total in circulation: " + numbers.format(BigInt(first.total)));
-    await expect(chart.getByRole("tooltip")).toContainText("UTC");
+    await expect(readout.locator("strong")).toHaveText(numbers.format(BigInt(first.total)));
     await page.keyboard.press("Home");
     await expect(plot).toHaveAttribute("aria-valuenow", "0");
     await page.keyboard.press("ArrowRight");
     await expect(plot).toHaveAttribute("aria-valuenow", "1");
     const box = (await plot.boundingBox())!;
     await page.mouse.move(box.x + box.width * .55, box.y + 60);
-    await expect(chart.getByRole("tooltip")).toBeVisible();
+    await expect(plot.locator(".o-chart-cursor")).toHaveCount(1);
+    // The inspected value is read above the plot, never on top of the curve.
+    const readoutBox = (await readout.boundingBox())!;
+    expect(readoutBox.y + readoutBox.height).toBeLessThanOrEqual(box.y);
+    expect(await chart.getByRole("tooltip").count()).toBe(0);
     for (const [period, label] of [["1m","Last month"],["3m","Last 3 months"],["6m","Last 6 months"],["1y","Last year"],["3y","Last 3 years"],["all","All time"]]) {
       const loaded = page.waitForResponse(response => response.url().includes("/rpc/get_item_circulation") &&
         response.request().postDataJSON()?.period === period);
@@ -388,14 +436,15 @@ test("circulation chart shows world totals, periods, inspection, refresh and hos
     await page.setViewportSize({ width: 1280, height: 1100 });
     await plot.focus();
     await page.keyboard.press("End");
-    await page.screenshot({ path: ".local/circulation-desktop.png", fullPage: true });
+    await expect(plot.locator("svg")).toHaveAttribute("viewBox", /^0 0 [1-9][\d.]* 180$/);
+    await page.screenshot({ path: ".local/circulation-desktop.png", fullPage: true, animations: "disabled" });
     for (const width of [768,375,320]) {
       await page.setViewportSize({ width, height: 1100 });
       await expect(plot).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
     await page.setViewportSize({ width: 375, height: 1100 });
-    await page.screenshot({ path: ".local/circulation-mobile.png", fullPage: true });
+    await page.screenshot({ path: ".local/circulation-mobile.png", fullPage: true, animations: "disabled" });
     const ownStack = (await own.api.rpc("list_inventory", { category_id: "medical" })).data!.items[0];
     const otherStack = (await other.api.rpc("list_inventory", { category_id: "medical" })).data!.items[0];
     const destroyed = await Promise.all([own,other].map((a,i) => a.api.rpc("trash_inventory_item", {
@@ -408,7 +457,7 @@ test("circulation chart shows world totals, periods, inspection, refresh and hos
     await expect(details.locator(".o-circulation-value")).toContainText(numbers.format(expected), { timeout: 20000 });
     await plot.focus();
     await page.keyboard.press("End");
-    await expect(chart.getByRole("tooltip")).toContainText("Total in circulation: " + numbers.format(expected), { timeout: 20000 });
+    await expect(readout.locator("strong")).toHaveText(numbers.format(expected), { timeout: 20000 });
     await details.getByRole("button", { name: "Hide circulation history for Linen Bandages", exact: true }).click();
     await expect(chart).toHaveCount(0);
     let recovering = false;

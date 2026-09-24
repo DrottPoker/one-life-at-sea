@@ -61,7 +61,7 @@ export function MarketBoard({ market, filters }: { market: MarketPage<MarketItem
             </p>
           </article>,
           selected && index === afterIndex && <div key={"expanded-" + selected.item_id} className="o-market-expanded">
-            {expanded?.kind === "details" ? <ItemDetails item={details(selected)} quantityLabel="Available" quantityDisplay={formatCirculation(selected.available)} onClose={() => setExpanded(null)} /> :
+            {expanded?.kind === "details" ? <ItemDetails item={details(selected)} quantity={{ label: "Available", value: formatCirculation(selected.available) }} onClose={() => setExpanded(null)} /> :
               <MarketListings key={selected.item_id} itemId={selected.item_id} itemName={selected.name} observedAt={market.observed_at} mutation={mutation} onClose={() => setExpanded(null)} />}
           </div>,
         ])}

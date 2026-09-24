@@ -1,12 +1,12 @@
 import { frontend } from "@/config/public";
 
 export const itemHistoryPeriods = [
-  { id: "1m", label: "Last month" },
-  { id: "3m", label: "Last 3 months" },
-  { id: "6m", label: "Last 6 months" },
-  { id: "1y", label: "Last year" },
-  { id: "3y", label: "Last 3 years" },
-  { id: "all", label: "All time" },
+  { id: "1m", label: "Last month", short: "1M" },
+  { id: "3m", label: "Last 3 months", short: "3M" },
+  { id: "6m", label: "Last 6 months", short: "6M" },
+  { id: "1y", label: "Last year", short: "1Y" },
+  { id: "3y", label: "Last 3 years", short: "3Y" },
+  { id: "all", label: "All time", short: "All" },
 ] as const;
 export type ItemHistoryPeriod = typeof itemHistoryPeriods[number]["id"];
 export type ItemHistoryPoint = { at: string; total: string | null };

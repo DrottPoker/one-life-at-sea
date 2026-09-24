@@ -156,7 +156,7 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
               <span className="o-item-name">{item.name}{item.entry_type === "stack" && <strong> x{formatItemCount(item.quantity)}</strong>}
                 {item.equipped_slot && <span className="o-item-equipped">Equipped</span>}</span>
               <span className="o-item-stats">
-                {item.stats && <ItemStatChips stats={item.stats} limit={2} />}
+                {item.stats && <ItemStatChips stats={item.stats} limit={2} quality={false} />}
                 <ChevronDown className="o-item-chevron" aria-hidden="true" />
               </span>
             </button>

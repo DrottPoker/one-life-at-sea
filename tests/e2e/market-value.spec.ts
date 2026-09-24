@@ -53,7 +53,8 @@ test("market value follows completed purchases in inventory and marketplace", as
     await expect(plot).toBeVisible();
     await plot.focus();
     await page.keyboard.press("End");
-    await expect(chart.getByRole("tooltip")).toContainText("Average market value: " + BigInt(expected).toLocaleString("en-US") + " Gold Coins");
+    await expect(chart.locator(".o-chart-readout")).toContainText("Average market value");
+    await expect(chart.locator(".o-chart-readout strong")).toHaveText(BigInt(expected).toLocaleString("en-US"));
 
     for (const period of ["Last month", "Last 3 months", "Last 6 months", "Last year", "Last 3 years", "All time"]) {
       await chart.getByRole("radio", { name: period, exact: true }).check();
@@ -75,7 +76,7 @@ test("market value follows completed purchases in inventory and marketplace", as
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await plot.focus();
       await page.keyboard.press("End");
-      if (width !== 320) await page.screenshot({ path: ".local/market-value-" + width + ".png", fullPage: true });
+      if (width !== 320) await page.screenshot({ path: ".local/market-value-" + width + ".png", fullPage: true, animations: "disabled" });
     }
     await details.getByRole("button", { name: "Show circulation history for Oak Planks", exact: true }).click();
     await expect(chart).toHaveCount(0);
@@ -105,8 +106,8 @@ test("market value follows completed purchases in inventory and marketplace", as
     }
     await plot.focus();
     await page.keyboard.press("End");
-    await expect(chart.getByRole("tooltip")).toContainText("Average market value");
-    await page.screenshot({ path: ".local/market-value-marketplace.png", fullPage: true });
+    await expect(chart.locator(".o-chart-readout")).toContainText("Average market value");
+    await page.screenshot({ path: ".local/market-value-marketplace.png", fullPage: true, animations: "disabled" });
     // An empty twelve-hour window retains the last nonempty value.
     testSql("update private.market_sales set sold_at=statement_timestamp()-interval '13 hours' where buyer_id='" + buyer.id + "';");
     const expired = await seller.api.rpc("get_item_market_value", { target_item: "oak_planks" });
@@ -122,7 +123,7 @@ test("market value follows completed purchases in inventory and marketplace", as
     await details.getByRole("button", { name: "Show market value history for Oak Planks", exact: true }).click();
     await plot.focus();
     await page.keyboard.press("End");
-    await expect(chart.getByRole("tooltip")).toContainText(BigInt(retained).toLocaleString("en-US"));
+    await expect(chart.locator(".o-chart-readout strong")).toHaveText(BigInt(retained).toLocaleString("en-US"));
     expect(errors).toEqual([]);
   } finally {
     // Cleanup must run even if Playwright has already closed a timed-out page.

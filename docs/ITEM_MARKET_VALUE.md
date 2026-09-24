@@ -10,7 +10,7 @@ hela Gold Coins med valutaikon. Diagramknappen öppnar historiken under samma
 bild och egenskaper som Circ. Endast ett av diagrammen visas åt gången.
 
 Diagrammen delar komponent, färger, höjd, periodval och interaktioner.
-Informationsrutan visar datum/tid i UTC och **Average market value**.
+Avläsningen ovanför diagrammet visar **Average market value** med datum/tid i UTC.
 Mus, tryck, piltangenter och Home/End fungerar som i Circ. En nyöppnad historik
 börjar på All time; övriga val är en, tre och sex månader samt ett och tre år.
 Periodbyten behåller befintlig kurva under laddning. Nätverksfel ger Retry.

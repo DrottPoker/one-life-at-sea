@@ -22,15 +22,19 @@ Länken är tillgänglig även under sjukhusvistelse.
   ligger fokusrutan överst och rutorna fyra per rad.
 - Namnsökning fungerar tillsammans med kategorin. Sökning är skiftlägesokänslig
   och behandlar exempelvis procenttecken som vanlig text.
-- Rader visar miniatyr, namn, stackantal, Equipped-märke och för utrustning Quality samt två huvudstats.
+- Rader visar miniatyr, namn, stackantal, Equipped-märke och för utrustning två huvudstats.
+  Quality visas först i detaljerna. Stats ligger i två fasta kolumner och handlingskolumnen har
+  fast bredd med lika breda Equip-, Unequip- och Use-knappar, så alla rader linjerar.
   Panelen fyller innehållsytans bredd. Radernas grundhöjd är 36 px på dator
   och 45 px på mobil, med utrymme att växa vid radbrutna namn. En tunn, indragen
   avskiljare skiljer miniatyren från namnet. Detaljbildens
   yta är högst 280 px bred och 190 px hög (180 px hög på mobil).
 - Klick på en rad öppnar beskrivning, effektbeskrivning, stor bild och detaljer under
-  raden. Egenskaperna visas i två kolumner med en tunn avskiljare: Category/Quantity
-  samt Slot, Quality och exemplarets stats. På mobil ligger kolumnerna under bilden.
-  En rad är öppen åt gången. Handlingsknappar öppnar inte detaljpanelen.
+  raden. Detaljerna rullas ut nedåt på 0,1 sekunder (ingen animation vid reducerad rörelse).
+  Egenskaperna visas i två kolumner med en tunn avskiljare: Category samt Slot, Quality och
+  exemplarets stats. Antalet står redan på raden och upprepas inte. Value och Circ. delar
+  alltid sista raden; vid udda antal egenskaper fyller Category en egen rad. På mobil ligger
+  kolumnerna under bilden. En rad är öppen åt gången. Handlingsknappar öppnar inte detaljpanelen.
 - Varje utrustningsexemplar har en egen Quality. Stats räknas fram från definitionens intervall.
   Förbrukningsvaror och material samlas i stackar.
 - Equip och Unequip fungerar i The Harbor utanför strid och Hospital. Equip ersätter
