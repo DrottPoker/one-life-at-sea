@@ -4,7 +4,7 @@ import { ArrowUp, ChevronsUp, Cog, Star, UsersRound, Zap } from "lucide-react";
 import { gameplay, durationLabel } from "@/config/public";
 import { useGameState } from "@/components/game-state";
 import { TrainingActionForm } from "@/components/training/training-action-form";
-import { TrainingGuide, TrainingHero, TrainingOverview, TrainingStatCard } from "@/components/training/training-layout";
+import { TrainingGuide, TrainingHero, TrainingOverview, TrainingStatBody, TrainingStatCard } from "@/components/training/training-layout";
 import { TrainingTiers } from "@/components/training/training-tiers";
 import { STATS, STAT_LABELS, TRAINING_COST } from "@/lib/game";
 import { trainingTier, trainingTiers } from "@/lib/training";
@@ -33,17 +33,14 @@ export function CrewTrainingPanel() {
     <div className="o-training-stat-grid">{STATS.map(stat => <TrainingStatCard key={stat} stat={stat} value={state[`crew_${stat}`]} description={descriptions[stat]}
       image={"/images/training/" + stat + ".webp"} label={STAT_LABELS[stat] + " training"}>
       <TrainingActionForm label={STAT_LABELS[stat] + " drill"} className="o-training-stat-form" fields={{ action: "crew", tier_id: tier.id, stat }} customFeedback>
-        {(blocked, { result, pending, retryButton }) => <>
-          <small className="o-training-energy-cost">{TRAINING_COST} Energy per drill</small>
-          <div className="o-training-result" role="status" aria-label={STAT_LABELS[stat] + " training result"} aria-atomic="true">
-            {pending ? <p>Training...</p> : result.error ? <p className="o-field-error">{result.message}</p> : result.receipt?.kind === "crew" && <>
-              {result.receipt.perfect && <span className="o-training-perfect">Perfect Drill</span>}
-              <output aria-label={STAT_LABELS[stat] + " gained"}>+{formatStatGain(result.receipt.stat_gain)} {STAT_LABELS[stat]}</output>
-            </>}
-          </div>
+        {(blocked, { result, pending, retryButton }) => <TrainingStatBody note={TRAINING_COST + " Energy per drill"} resultLabel={STAT_LABELS[stat] + " training result"}
+          result={pending ? <p>Training...</p> : result.error ? <p className="o-field-error">{result.message}</p> : result.receipt?.kind === "crew" && <>
+            {result.receipt.perfect && <span className="o-training-perfect">Perfect Drill</span>}
+            <output aria-label={STAT_LABELS[stat] + " gained"}>+{formatStatGain(result.receipt.stat_gain)} {STAT_LABELS[stat]}</output>
+          </>}>
           {retryButton && <div className="o-training-retry">{retryButton}</div>}
           <button className="o-training-button o-training-action" type="submit" aria-label={`Train ${STAT_LABELS[stat]} for ${TRAINING_COST} Energy`} disabled={blocked || !ready}>Train {STAT_LABELS[stat]}</button>
-        </>}
+        </TrainingStatBody>}
       </TrainingActionForm>
     </TrainingStatCard>)}</div>
     {state.active_combat_id && <p className="o-training-notice" role="status">Finish your current fight before training.</p>}

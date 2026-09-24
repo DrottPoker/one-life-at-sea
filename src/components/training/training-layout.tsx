@@ -34,6 +34,15 @@ export function TrainingStatCard({ stat, value, description, image, label, selec
   </section>;
 }
 
+// Shared card body: cost note, a reserved one-line result slot and the card action, so every card keeps the same height.
+export function TrainingStatBody({ note, resultLabel, result, children }: { note: string; resultLabel: string; result: ReactNode; children: ReactNode }) {
+  return <>
+    <small className="o-training-energy-cost">{note}</small>
+    <div className="o-training-result" role="status" aria-label={resultLabel} aria-atomic="true">{result}</div>
+    {children}
+  </>;
+}
+
 export function TrainingGuide({ title, items }: { title: string; items: TrainingGuideItem[] }) {
   return <section className="o-training-guide" aria-label={title}>
     <header className="o-training-section-heading"><BookOpen aria-hidden="true" /><h2>{title}</h2></header>

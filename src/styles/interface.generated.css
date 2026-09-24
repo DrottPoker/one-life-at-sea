@@ -1301,8 +1301,7 @@ dialog button.o-dialog-close svg { width:18px; height:18px; }
 .o-training-energy-cost { color:var(--o-muted); font-size:10px; text-align:center; }
 .o-training-result { display:flex; flex:1; flex-wrap:wrap; align-items:center; justify-content:center; gap:2px 6px; min-height:31px; padding:3px 0; text-align:center; }
 .o-training-result output { color:#c1e98e; font-size:20px; font-weight:600; line-height:1.25; text-shadow:0 0 12px #90c65133; overflow-wrap:anywhere; }
-.o-training-result small { flex-basis:100%; color:var(--o-gold); font-size:10px; }
-.o-training-perfect { padding:1px 5px; border:1px solid var(--o-brass); border-radius:2px; color:var(--o-gold); font-size:10px; text-transform:uppercase; }
+.o-training-perfect { position:absolute; top:12px; right:12px; z-index:1; padding:1px 5px; background:#031c29cc; border:1px solid var(--o-brass); border-radius:2px; color:var(--o-gold); font-size:10px; text-transform:uppercase; }
 .o-training-result p { margin:0; color:var(--o-muted); font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
 .o-training-result p.o-field-error { color:var(--o-palette-ffcfb7); }
 .o-training-retry { margin-bottom:8px; text-align:center; }

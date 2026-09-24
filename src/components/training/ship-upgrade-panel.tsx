@@ -5,7 +5,7 @@ import { Anchor, ChevronsUp, Clock, Cog, Hammer, Package, Wrench, Zap } from "lu
 import { gameplay, durationLabel } from "@/config/public";
 import { useGameState } from "@/components/game-state";
 import { TrainingActionForm } from "@/components/training/training-action-form";
-import { TrainingGuide, TrainingHero, TrainingOverview, TrainingStatCard } from "@/components/training/training-layout";
+import { TrainingGuide, TrainingHero, TrainingOverview, TrainingStatBody, TrainingStatCard } from "@/components/training/training-layout";
 import { TrainingTiers } from "@/components/training/training-tiers";
 import { useServerCountdown } from "@/hooks/use-server-countdown";
 import { formatCountdown } from "@/lib/time";
@@ -22,11 +22,13 @@ function ShipCountdown({ job, observedAt }: { job: ShipJob; observedAt: string }
   return <>{seconds ? formatCountdown(seconds) + " remaining" : "Completing..."}</>;
 }
 
-function ShipStatGrid({ control, selectable }: { selectable?: boolean; control: (stat: Stat) => { selected?: boolean; children: ReactNode } }) {
-  const state = useGameState();
+function ShipStatGrid({ control, selectable }: { selectable?: boolean; control: (stat: Stat) => { selected?: boolean; result?: ReactNode; action: ReactNode } }) {
+  const state = useGameState(), minimum = gameplay.training.shipMinEnergy;
   return <div className="o-training-stat-grid" role={selectable ? "radiogroup" : undefined} aria-label={selectable ? "Ship stat" : undefined}>{STATS.map(stat => {
-    const { selected, children } = control(stat);
-    return <TrainingStatCard key={stat} stat={stat} value={state[`ship_${stat}`]} description={descriptions[stat]} image={art.stat(stat)} label={STAT_LABELS[stat] + " upgrade"} selected={selected}>{children}</TrainingStatCard>;
+    const { selected, result, action } = control(stat);
+    return <TrainingStatCard key={stat} stat={stat} value={state[`ship_${stat}`]} description={descriptions[stat]} image={art.stat(stat)} label={STAT_LABELS[stat] + " upgrade"} selected={selected}>
+      <TrainingStatBody note={"From " + minimum + " Energy per job"} resultLabel={STAT_LABELS[stat] + " upgrade result"} result={result}>{action}</TrainingStatBody>
+    </TrainingStatCard>;
   })}</div>;
 }
 
@@ -54,10 +56,10 @@ export function ShipUpgradePanel() {
       { label: "Energy available", value: `${state.energy} / ${gameplay.resources.energyMax}`, Icon: Zap },
     ]} />
     {job ? <>
-      <ShipStatGrid control={key => ({ children: key === job.stat ? <>
-        <div className="o-training-result"><small>Shipwrights at work</small><output>+{formatStatGain(job.stat_gain)} {STAT_LABELS[key]}</output></div>
-        <span className="o-ship-card-status"><ShipCountdown job={job} observedAt={state.observed_at} /></span>
-      </> : <span className="o-ship-card-status" data-idle>Workshop busy</span> })} />
+      <ShipStatGrid control={key => key === job.stat ? {
+        result: <output>+{formatStatGain(job.stat_gain)} {STAT_LABELS[key]}</output>,
+        action: <span className="o-ship-card-status"><ShipCountdown job={job} observedAt={state.observed_at} /></span>,
+      } : { action: <span className="o-ship-card-status" data-idle>Workshop busy</span> }} />
       <section className="o-ship-order" aria-label="Ship work in progress">
         <header className="o-training-section-heading"><Hammer aria-hidden="true" /><div><h2>{STAT_LABELS[job.stat]} upgrade</h2><p><ShipCountdown job={job} observedAt={state.observed_at} /></p></div></header>
         <div className="o-ship-job">
@@ -68,7 +70,7 @@ export function ShipUpgradePanel() {
       </section>
     </> : <TrainingActionForm label="Start ship work" className="o-ship-work" fields={{ action: "ship", tier_id: tier.id }}>
       {blocked => <>
-        <ShipStatGrid selectable control={key => ({ selected: key === stat, children:
+        <ShipStatGrid selectable control={key => ({ selected: key === stat, action:
           <label className="o-training-button o-training-action o-ship-select">
             <input type="radio" name="stat" value={key} aria-label={STAT_LABELS[key]} checked={key === stat} disabled={blocked || locked} onChange={() => setStat(key)} />
             {key === stat ? "Selected" : "Select " + STAT_LABELS[key]}

@@ -153,8 +153,8 @@ introduced. The economy journal continues to lock all drills during an unresolve
 Compact card spacing puts Energy directly below the description with a 5px gap. Stat
 art is 98px; confirmed gains use prominent 20px semibold green text. The result slot
 keeps the buttons aligned without adding blank space before the Energy cost. Since
-September 24 it reserves a single line (31px): a Perfect Drill shows as a small badge beside
-the gain instead of on its own line, keeping the cards close to the Ship Upgrades height. Matching
+September 24 it reserves a single line (31px) and a Perfect Drill shows as a badge in the
+card corner, so a result never changes the card height. Matching
 18px corner accents frame all four corners.
 
 Drill Schools displays all ten configured tiers with active, owned and locked states,
@@ -169,8 +169,11 @@ schools without horizontal scrolling.
 Ship Upgrades uses the Crew Training layout through shared components in
 `src/components/training/training-layout.tsx` and `training-tiers.tsx`, with the generic
 `o-training-*` classes. The header, overview, stat cards, Shipyard Workshops and guide
-mirror the crew page. Stat cards are selectable radio cards; the Work Order below holds the
-Energy slider, gain preview, materials and Start work. During a job the card for that stat
-shows the expected gain and countdown and the Work Order is replaced by the running job.
+mirror the crew page. Both pages build every card body with `TrainingStatBody`: a cost note,
+the reserved one-line result slot and the card action, so all cards keep one height in every
+state. Ship stat cards are selectable radio cards; the Work Order below holds the Energy
+slider, gain preview, materials and Start work. During a job the card for that stat shows
+the expected gain in its result slot and the countdown in place of the button, and the Work
+Order is replaced by the running job.
 The artwork currently reuses the crew training images as placeholders, defined in one
 constant in `ship-upgrade-panel.tsx`.
