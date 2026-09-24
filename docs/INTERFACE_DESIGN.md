@@ -152,7 +152,9 @@ same card, with no shared training result panel. No Energy selector or batch qua
 introduced. The economy journal continues to lock all drills during an unresolved request.
 Compact card spacing puts Energy directly below the description with a 5px gap. Stat
 art is 98px; confirmed gains use prominent 20px semibold green text. The result slot
-keeps the buttons aligned without adding blank space before the Energy cost. Matching
+keeps the buttons aligned without adding blank space before the Energy cost. Since
+September 24 it reserves a single line (31px): a Perfect Drill shows as a small badge beside
+the gain instead of on its own line, keeping the cards close to the Ship Upgrades height. Matching
 18px corner accents frame all four corners.
 
 Drill Schools displays all ten configured tiers with active, owned and locked states,

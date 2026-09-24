@@ -37,7 +37,7 @@ export function CrewTrainingPanel() {
           <small className="o-training-energy-cost">{TRAINING_COST} Energy per drill</small>
           <div className="o-training-result" role="status" aria-label={STAT_LABELS[stat] + " training result"} aria-atomic="true">
             {pending ? <p>Training...</p> : result.error ? <p className="o-field-error">{result.message}</p> : result.receipt?.kind === "crew" && <>
-              {result.receipt.perfect && <small>Perfect Drill!</small>}
+              {result.receipt.perfect && <span className="o-training-perfect">Perfect Drill</span>}
               <output aria-label={STAT_LABELS[stat] + " gained"}>+{formatStatGain(result.receipt.stat_gain)} {STAT_LABELS[stat]}</output>
             </>}
           </div>
