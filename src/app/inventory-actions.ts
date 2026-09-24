@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
 import { isUuid } from "@/lib/validation";
 import { formatItemCount, isInventoryEntryType, parseItemQuantity, type TrashResult } from "@/lib/inventory";
-import { isEquipmentSlot, type EquipReceipt, type EquipResult } from "@/lib/equipment";
+import { isEquipSlot, type EquipReceipt, type EquipResult } from "@/lib/equipment";
 
 const errors: Record<string, string> = {
   INVALID_REQUEST: "Please reload your inventory and try again.",
@@ -23,6 +23,7 @@ const errors: Record<string, string> = {
   ITEM_EQUIPPED: "Unequip this item first.",
   NOT_EQUIPPED: "That slot is already empty.",
   INVALID_SLOT: "Choose a valid equipment slot.",
+  NOT_EQUIPPABLE: "This item cannot be equipped.",
 };
 const equipBlocked: Record<string, string> = {
   IN_HOSPITAL: "You cannot change equipment while in hospital.",
@@ -76,7 +77,7 @@ export async function equipItem(entryId: string, requestId: string, characterId:
 export async function unequipItem(slot: string, requestId: string, characterId: string): Promise<EquipResult> {
   const character = await requireCharacter({ allowHospital: true, allowSea: true });
   if (character.id !== characterId) return changedCharacter;
-  if (!isEquipmentSlot(slot) || !isUuid(requestId)) return { error: true, message: "Choose a valid equipment slot." };
+  if (!isEquipSlot(slot) || !isUuid(requestId)) return { error: true, message: "Choose a valid equipment slot." };
   const client = await createClient();
   const response = await withDatabaseRetry(() => client.rpc("unequip_item", { equipment_slot: slot, request_id: requestId }));
   revalidatePath("/(game)", "layout");

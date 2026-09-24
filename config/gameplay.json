@@ -225,6 +225,15 @@
       "melee": { "name": "Fists", "damage": 10, "precision": 50 },
       "cannons": { "name": "Basic cannons", "damage": 10, "precision": 50 }
     },
+    "temporaryUsesPerFight": 1,
+    "temporaries": [
+      { "itemId": "grenado", "damage": 25, "precision": 60 },
+      { "itemId": "smoke_pot", "precision": 100, "debuff": { "stat": "accuracy", "multiplier": 0.33, "rounds": 3 } }
+    ],
+    "shotTypes": {
+      "chain": { "itemId": "chain_shot", "zone": "rigging", "multiplier": 1, "speedMultiplier": 0.8, "rounds": 3 },
+      "grape": { "itemId": "grape_shot", "crewMultiplier": 0.6 }
+    },
     "limits": {
       "maxDamage": 100,
       "maxArmor": 75,
@@ -283,6 +292,11 @@
         "id": "ship_parts",
         "name": "Ship Parts",
         "icon": "sail"
+      },
+      {
+        "id": "munitions",
+        "name": "Munitions",
+        "icon": "bomb"
       },
       {
         "id": "medical",
@@ -422,6 +436,54 @@
         "active": true,
         "tradable": true,
         "stats": { "armor": { "min": 3, "max": 6 }, "speed": { "min": 2, "max": 6 } }
+      },
+      {
+        "id": "grenado",
+        "name": "Grenado",
+        "categoryId": "munitions",
+        "kind": "consumable",
+        "slot": "none",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A clay pot packed with powder and scrap iron, lit by a short fuse and thrown onto an enemy deck.",
+        "effectDescription": "Temporary. Thrown during boarding for one strong hit. Used up when thrown.",
+        "active": true,
+        "tradable": true
+      },
+      {
+        "id": "smoke_pot",
+        "name": "Smoke Pot",
+        "categoryId": "munitions",
+        "kind": "consumable",
+        "slot": "none",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A sealed jar of damp tar and sulphur that pours thick, choking smoke when broken.",
+        "effectDescription": "Temporary. Thrown during boarding to blind the enemy crew and cut their Accuracy for a few rounds. Used up when thrown.",
+        "active": true,
+        "tradable": true
+      },
+      {
+        "id": "chain_shot",
+        "name": "Chain Shot",
+        "categoryId": "munitions",
+        "kind": "consumable",
+        "slot": "none",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "Two iron half-balls joined by a short chain that whirls through sails and rigging.",
+        "effectDescription": "Cannon shot. Always strikes the rigging and slows the enemy ship for a few rounds. One is used per salvo.",
+        "active": true,
+        "tradable": true
+      },
+      {
+        "id": "grape_shot",
+        "name": "Grape Shot",
+        "categoryId": "munitions",
+        "kind": "consumable",
+        "slot": "none",
+        "imagePath": "/images/items/placeholder.svg",
+        "description": "A canvas bag of musket balls that bursts from the muzzle and sweeps an enemy deck.",
+        "effectDescription": "Cannon shot. Wounds the enemy crew instead of the hull. One is used per salvo.",
+        "active": true,
+        "tradable": true
       },
       {
         "id": "linen_bandages",

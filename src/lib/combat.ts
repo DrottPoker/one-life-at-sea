@@ -4,14 +4,15 @@ import type { CombatLoadout } from "@/lib/equipment";
 
 export const COMBAT_COST = gameplay.combat.energyCost;
 export const MAX_ROUNDS = gameplay.combat.maxRounds;
-export const ORDERS = ["fire", "board", "crew_shoot", "crew_attack", "disengage", "retreat"] as const;
+export const ORDERS = ["fire", "fire_chain", "fire_grape", "board", "crew_shoot", "crew_throw", "crew_attack", "disengage", "retreat"] as const;
 export type CombatOrder = typeof ORDERS[number];
 export type DefenceOrder = "cannon" | "boarding";
 export type CombatStats = Record<Stat, number>;
 export type Combatant = {
   id: string; player_number: number; name: string; ship_health: number; crew_health: number;
   crew_morale?: number | null; morale_multiplier?: number | null;
-  ship_health_max?: number; ammo: number | null; shots?: number | null; ship: CombatStats | null; crew: CombatStats | null;
+  ship_health_max?: number; ammo: number | null; shots?: number | null; temporary_uses?: number | null;
+  shot_stock?: { chain: number; grape: number } | null; ship: CombatStats | null; crew: CombatStats | null;
   loadout: CombatLoadout | null;
 };
 export type AttackLock = { battle_id: string; target_id: string; target_player_number: number };
@@ -23,6 +24,8 @@ export type CombatEvent = {
   attacker_hit: boolean; defender_hit: boolean; attacker_damage: number; defender_damage: number;
   attacker_weapon?: string | null; defender_weapon?: string | null; attacker_zone?: string | null; defender_zone?: string | null;
   attacker_critical?: boolean | null; defender_critical?: boolean | null;
+  attacker_target?: "ship" | "crew" | null; defender_target?: "ship" | "crew" | null;
+  attacker_effect?: "crew_accuracy" | "ship_speed" | null; defender_effect?: "crew_accuracy" | "ship_speed" | null;
   transition: "boarded" | "boarding_failed" | "disengaged" | null;
   outcome: CombatOutcome | null; at: string; timed_out: boolean; participant_result: ParticipantStatus;
 };
@@ -49,7 +52,8 @@ export type CombatError = { error: string };
 export type CombatResponse = { battle: Battle } | CombatError;
 export type CombatActionResult = { message?: string; battleId?: string };
 export const ORDER_LABELS: Record<CombatOrder, string> = {
-  fire: "Fire cannons", board: "Board", crew_shoot: "Fire firearm", crew_attack: "Melee attack",
+  fire: "Fire cannons", fire_chain: "Fire chain shot", fire_grape: "Fire grape shot", board: "Board",
+  crew_shoot: "Fire firearm", crew_throw: "Throw temporary", crew_attack: "Melee attack",
   disengage: "Disengage", retreat: "Retreat",
 };
 const ERROR_MESSAGES: Record<string, string> = {
@@ -72,6 +76,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   COMBAT_NOT_FOUND: "This fight is not available to you.",
   NO_AMMO: "No salvos left. You can board or retreat.",
   NO_SHOTS: "No firearm shots left. Use melee, disengage or retreat.",
+  NO_SHOT_STOCK: "You have no more of that shot in your inventory.",
+  NO_TEMPORARY: "Your temporary is used up for this fight.",
   STALE_ROUND: "The fight has moved on. The latest round has been loaded.",
   INVALID_ORDER: "Choose an order available in the current phase.",
   REQUEST_CONFLICT: "This order was already submitted. Reload the fight before continuing.",

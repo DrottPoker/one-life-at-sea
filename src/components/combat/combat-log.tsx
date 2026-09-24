@@ -8,14 +8,18 @@ function CaptainName({ id, name, playerNumber }: { id: string; name: string; pla
   return <Link href={playerNumber ? "/players/" + playerNumber : "/characters/" + id} prefetch={false}>{name}</Link>;
 }
 
-function EventAction({ id, name, playerNumber, order, hit, damage, phase, weapon, zone, critical }: {
+const effectLabels = { crew_accuracy: "Crew blinded", ship_speed: "Ship slowed" };
+const attacking: CombatOrder[] = ["fire", "fire_chain", "fire_grape", "crew_shoot", "crew_throw", "crew_attack"];
+
+function EventAction({ id, name, playerNumber, order, hit, damage, phase, weapon, zone, critical, target, effect }: {
   id: string; name: string; playerNumber?: number | null; order: CombatOrder; hit: boolean; damage: number; phase: string;
-  weapon?: string | null; zone?: string | null; critical?: boolean | null;
+  weapon?: string | null; zone?: string | null; critical?: boolean | null; target?: "ship" | "crew" | null; effect?: keyof typeof effectLabels | null;
 }) {
-  const place = hit ? zoneName(phase === "sea" ? "ship" : "crew", zone) : null;
+  const struck = target ?? (phase === "sea" ? "ship" : "crew"), place = hit ? zoneName(struck, zone) : null;
+  const result = effect && damage === 0 ? effectLabels[effect] : (damage === 0 ? "Blocked · 0 damage" : damage + " " + struck + " damage")
+    + (critical && damage > 0 ? " · Critical" : "") + (effect ? " · " + effectLabels[effect] : "");
   return <p><strong><CaptainName id={id} name={name} playerNumber={playerNumber} /></strong><span>{ORDER_LABELS[order]}{weapon ? " · " + weapon : ""}</span>
-    {(order === "fire" || order === "crew_shoot" || order === "crew_attack") && <span className={hit ? "o-damage" : "o-copy"}>
-      {hit ? (place ? place + " · " : "") + (damage === 0 ? "Blocked · 0 damage" : damage + " " + (phase === "sea" ? "ship" : "crew") + " damage") + (critical && damage > 0 ? " · Critical" : "") : "Missed"}</span>}
+    {attacking.includes(order) && <span className={hit ? "o-damage" : "o-copy"}>{hit ? (place ? place + " · " : "") + result : "Missed"}</span>}
   </p>;
 }
 
@@ -31,9 +35,9 @@ export function CombatEvents({ events, people, defenderId, defenderName, newestF
       </header>
       {event.kind === "round" ? <>
         <EventAction id={event.actor_id} name={event.actor_name} playerNumber={numbers.get(event.actor_id)} order={event.attacker_order} hit={event.attacker_hit} damage={event.attacker_damage} phase={event.phase}
-          weapon={event.attacker_weapon} zone={event.attacker_zone} critical={event.attacker_critical} />
+          weapon={event.attacker_weapon} zone={event.attacker_zone} critical={event.attacker_critical} target={event.attacker_target} effect={event.attacker_effect} />
         <EventAction id={defenderId} name={defenderName} playerNumber={numbers.get(defenderId)} order={event.defender_order} hit={event.defender_hit} damage={event.defender_damage} phase={event.phase}
-          weapon={event.defender_weapon} zone={event.defender_zone} critical={event.defender_critical} />
+          weapon={event.defender_weapon} zone={event.defender_zone} critical={event.defender_critical} target={event.defender_target} effect={event.defender_effect} />
         {event.transition && <p className="o-log-transition">
           {event.transition === "boarding_failed" ? "The boarding attempt failed." : <>
             <CaptainName id={event.actor_id} name={event.actor_name} playerNumber={numbers.get(event.actor_id)} />

@@ -3,7 +3,7 @@
 import { GameLink as Link } from "@/components/game-navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Boxes, CircleDot, ChevronDown, ChevronLeft, ChevronRight, Compass, Cross, Crosshair, FlaskConical, Gauge, HeartPulse, Package, Sailboat, Search, Shield, Swords, Target, Trash2, Wind, Zap } from "lucide-react";
+import { Bomb, Boxes, CircleDot, ChevronDown, ChevronLeft, ChevronRight, Compass, Cross, Crosshair, FlaskConical, Gauge, HeartPulse, Package, Sailboat, Search, Shield, Swords, Target, Trash2, Wind, Zap } from "lucide-react";
 import { DialogCloseButton } from "@/components/dialog-close-button";
 import { ItemImage } from "@/components/inventory/item-image";
 import { ItemDetails } from "@/components/inventory/item-details";
@@ -13,11 +13,11 @@ import { useEconomyRequests } from "@/components/economy-requests";
 import { useGameState } from "@/components/game-state";
 import { formatItemCount, inventoryCategories, inventoryCategoryName, inventoryEntryKey,
   inventoryHref, parseItemQuantity, type InventoryEntry, type InventoryFilters, type InventoryPage, type TrashResult } from "@/lib/inventory";
-import { formatQuality, itemStatRows, itemStatSummary, SLOT_LABELS, type EquipmentSlot, type EquipResult } from "@/lib/equipment";
+import { formatQuality, isShotItem, itemStatRows, itemStatSummary, SLOT_LABELS, type EquipSlot, type EquipResult } from "@/lib/equipment";
 import { MAX_HEALTH } from "@/lib/game";
 
 const categoryIcons: Record<string, typeof Package> = {
-  swords: Swords, shield: Shield, cannon: CircleDot, sail: Sailboat, cross: Cross, flask: FlaskConical, boxes: Boxes, compass: Compass,
+  swords: Swords, shield: Shield, cannon: CircleDot, sail: Sailboat, bomb: Bomb, cross: Cross, flask: FlaskConical, boxes: Boxes, compass: Compass,
 };
 const statIcons = { damage: Zap, precision: Crosshair, shots: Target, armor: Shield, health: HeartPulse, speed: Wind };
 
@@ -105,7 +105,7 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
     });
   }
   const equip = (item: InventoryEntry) => changeEquipment("equip:" + item.id, id => equipItem(item.id, id, characterId));
-  const unequip = (slot: EquipmentSlot) => changeEquipment("unequip:" + slot, id => unequipItem(slot, id, characterId));
+  const unequip = (slot: EquipSlot) => changeEquipment("unequip:" + slot, id => unequipItem(slot, id, characterId));
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -137,7 +137,7 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
       {filterPending && <span role="status">Searching...</span>}
     </div>
     <LoadoutPanel loadout={inventory.loadout ?? {}} shipHealthMax={inventory.ship_health_max ?? MAX_HEALTH} disabled={equipBlocked || equipPending}
-      pendingSlot={pendingEquip?.startsWith("unequip:") ? pendingEquip.slice(8) as EquipmentSlot : null} onUnequip={unequip} />
+      pendingSlot={pendingEquip?.startsWith("unequip:") ? pendingEquip.slice(8) as EquipSlot : null} onUnequip={unequip} />
     <div className="o-inventory-feedback" role="status" aria-live="polite">
       {equipResult.message && <p className={equipResult.error ? "o-field-error" : ""}>{equipResult.message}</p>}
     </div>
@@ -168,15 +168,15 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
               </span>
             </button>
             <div className="o-item-actions">
-              {item.kind === "equipment" ? item.equipped_slot ?
+              {item.slot ? item.equipped_slot ?
                 <button className="o-item-action" type="button" disabled={equipBlocked || equipPending} aria-label={"Unequip " + item.name}
                   onClick={() => unequip(item.equipped_slot!)}>{pendingEquip === "unequip:" + item.equipped_slot ? "Saving..." : "Unequip"}</button> :
                 <button className="o-item-action" type="button" disabled={equipBlocked || equipPending} aria-label={"Equip " + item.name}
                   title={item.slot ? "Equip in the " + SLOT_LABELS[item.slot] + " slot" : undefined}
                   onClick={() => equip(item)}>{pendingEquip === "equip:" + item.id ? "Saving..." : "Equip"}</button> :
-                item.kind === "consumable" && <button className="o-item-action" type="button" disabled title="Item use will be available later">Use</button>}
-              <button className="o-item-icon-button o-item-trash" type="button" title={item.equipped_slot ? "Unequip before destroying" : "Trash"}
-                aria-label={"Trash " + item.name} disabled={blocked || pending || !!result.retry || !!item.equipped_slot} onClick={() => chooseTrash(item)}>
+                item.kind === "consumable" && !isShotItem(item.item_id) && <button className="o-item-action" type="button" disabled title="Item use will be available later">Use</button>}
+              <button className="o-item-icon-button o-item-trash" type="button" title={item.entry_type === "instance" && item.equipped_slot ? "Unequip before destroying" : "Trash"}
+                aria-label={"Trash " + item.name} disabled={blocked || pending || !!result.retry || (item.entry_type === "instance" && !!item.equipped_slot)} onClick={() => chooseTrash(item)}>
                 <Trash2 aria-hidden="true" /></button>
             </div>
           </div>

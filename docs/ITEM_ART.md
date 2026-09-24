@@ -26,6 +26,7 @@ Use case: stylized-concept. Asset type: individual pirate game inventory item il
 - [compass.png](../public/images/items/compass.png): One open brass mariner's compass with a dark face and a simple clear compass rose, lid hinged behind it, viewed three-quarter above.
 
 Utrustningen som tillkom 2026-09-24 (Flintlock Pistol, fyra rustningsdelar, Oak Hull Sheathing och
-Heavy Canvas Sails) använder tills vidare den gemensamma platshållarbilden. Se [utrustning](EQUIPMENT.md).
+Heavy Canvas Sails) samt munitionen (Grenado, Smoke Pot, Chain Shot och Grape Shot) använder tills vidare
+den gemensamma platshållarbilden. Se [utrustning](EQUIPMENT.md).
 
 Bildernas användning och itemkatalog beskrivs i [Inventory](INVENTORY.md).

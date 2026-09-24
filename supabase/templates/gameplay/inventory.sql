@@ -32,13 +32,15 @@ begin
   if category_id is not null and not exists(select 1 from private.item_categories c where c.id=category_id) then
     raise exception 'INVALID_CATEGORY' using errcode='22023'; end if;
   with owned as (
-    select s.id,'stack'::text entry_type,s.item_id,s.quantity,null::numeric quality,null::text equipped_slot
+    select s.id,'stack'::text entry_type,s.item_id,s.quantity,null::numeric quality,
+      case when exists(select 1 from private.character_temporary t where t.character_id=viewer_id and t.item_id=s.item_id) then 'temporary' end equipped_slot
       from private.item_stacks s where s.character_id=viewer_id
     union all
     select i.id,'instance',i.item_id,1::bigint,i.quality,e.slot
       from private.item_instances i left join private.character_equipment e on e.instance_id=i.id where i.character_id=viewer_id
   ), matching as (
-    select o.id,o.entry_type,o.item_id,o.quantity,o.equipped_slot,d.slot,
+    select o.id,o.entry_type,o.item_id,o.quantity,o.equipped_slot,
+      coalesce(d.slot,case when exists(select 1 from private.temporary_catalog() t where t.item_id=o.item_id) then 'temporary' end) slot,
       case when o.quality is not null then private.item_stats(d,o.quality) end stats,
       d.name,d.category_id,d.kind,d.description,d.effect_description,d.image_path
       from owned o join private.item_definitions d on d.id=o.item_id

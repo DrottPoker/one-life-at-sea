@@ -457,6 +457,30 @@
               "precision": { "type": "number", "integer": false, "minimum": 0, "maximum": 100 }
             } }
           } },
+          "temporaryUsesPerFight": { "type": "number", "integer": true, "minimum": 1, "maximum": 10 },
+          "temporaries": { "type": "array", "items": { "type": "object", "properties": {
+            "itemId": { "type": "string" },
+            "damage": { "type": "number", "integer": false, "optional": true, "minimum": 0.01, "maximum": 1000 },
+            "precision": { "type": "number", "integer": false, "minimum": 0, "maximum": 100 },
+            "debuff": { "type": "object", "optional": true, "properties": {
+              "stat": { "type": "string" },
+              "multiplier": { "type": "number", "integer": false, "minimum": 0.01, "maximum": 1 },
+              "rounds": { "type": "number", "integer": true, "minimum": 1, "maximum": 25 }
+            } }
+          } } },
+          "shotTypes": { "type": "object", "properties": {
+            "chain": { "type": "object", "properties": {
+              "itemId": { "type": "string" },
+              "zone": { "type": "string" },
+              "multiplier": { "type": "number", "integer": false, "minimum": 0.01, "maximum": 10 },
+              "speedMultiplier": { "type": "number", "integer": false, "minimum": 0.01, "maximum": 1 },
+              "rounds": { "type": "number", "integer": true, "minimum": 1, "maximum": 25 }
+            } },
+            "grape": { "type": "object", "properties": {
+              "itemId": { "type": "string" },
+              "crewMultiplier": { "type": "number", "integer": false, "minimum": 0.01, "maximum": 10 }
+            } }
+          } },
           "limits": { "type": "object", "properties": {
             "maxDamage": { "type": "number", "integer": true, "minimum": 1, "maximum": 1000 },
             "maxArmor": { "type": "number", "integer": true, "minimum": 0, "maximum": 99 },

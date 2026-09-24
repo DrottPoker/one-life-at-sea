@@ -113,8 +113,10 @@ Karaktär, skepp, besättning, tränade stats och pengar behålls.
 | Fas | Order | Regel |
 | --- | --- | --- |
 | Sea | Fire cannons | En salva även vid miss. Träff skadar Ship Health. Utrustade kanoner eller Basic cannons. |
+| Sea | Fire chain shot, Fire grape shot | Specialkulor ur inventory, se [utrustning](EQUIPMENT.md#order). |
 | Sea | Board | Ingen egen salva. Bordningsförsök efter motståndarens handling. |
 | Boarding | Fire firearm | Kräver skjutvapen och kvarvarande skott. Ett skott per order. Träff skadar Crew Health. |
+| Boarding | Throw temporary | Kastar utrustad Temporary, se [utrustning](EQUIPMENT.md#temporary-och-kultyper). |
 | Boarding | Melee attack | Närstridsvapen eller Fists. Träff skadar Crew Health. |
 | Boarding | Disengage | Ta motattacken och återgå till Sea om besättningen överlever. |
 | Båda | Retreat | Ta motattacken och lämna mötet om kaptenen överlever. |
@@ -123,7 +125,8 @@ Nederlag avgörs före reträtt och fasbyte. Lyckad boarding börjar crew-strid 
 Båda som väljer Board lyckas utan slump. Skador följer med mellan faserna.
 
 Cannon focus skjuter så länge ammunition finns och boardar därefter. Boarding focus boardar direkt.
-I boarding skjuter försvararen med sitt skjutvapen så länge skott finns och använder därefter närstrid.
+I boarding kastar försvararen först sin Temporary, skjuter sedan så länge skott finns och använder därefter närstrid.
+Alla order för fasen visas; otillgängliga order är spärrade med orsaken.
 
 Varje angripare får tio utvecklingssalvor. Försvararen har tio salvor per angriparpar.
 Skjutvapnets skott laddas på samma sätt, för angriparen vid start och för försvararen per angriparpar.
@@ -226,7 +229,7 @@ anpassningar för statskalan och full blockering vid 25 gånger Defense.
   Äldre händelser utan vapen och zon visas som tidigare.
 - Loggen visar inga lokala rundnummer eller summerat antal rundor. Det egna rundtaket visas fortfarande i attackvyn.
 - Deltagarlistan visar Ship damage och Crew damage separat för både angripare och försvarare.
-  Summorna räknas från sparade händelsers fas, vilket även fungerar för äldre strider.
+  Summorna räknas från vilken hälsa varje träff skadade; äldre händelser använder sin fas.
 - Alla karaktärsnamn i attackvyn, händelselistan, deltagarlistan och resultatet länkar till profilen.
   Navigationslåset gäller fortfarande under en aktiv attack.
 - Rapportens hälsa är historiska slutvärden, inte senare återhämtad hälsa.

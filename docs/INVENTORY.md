@@ -8,7 +8,7 @@ Equip och Unequip tillkom 2026-09-24. Regler för platser, Quality och stridseff
 Inventory finns som egen länk i sidopanelens Harbor-meny på /inventory.
 Länken är tillgänglig även under sjukhusvistelse.
 
-- Kategoriikoner högst upp: All items, Crew Weapons, Crew Armor, Cannons, Ship Parts, Medical, Boosters,
+- Kategoriikoner högst upp: All items, Crew Weapons, Crew Armor, Cannons, Ship Parts, Munitions, Medical, Boosters,
   Materials och Miscellaneous. Aktiv kategori har en tydlig markering.
 - Utrustningspanelen visar besättningens och skeppets platser med utrustat exemplar,
   Quality och stats, eller Fists, Basic cannons respektive Empty. Skeppsgruppen visar
@@ -27,7 +27,9 @@ Länken är tillgänglig även under sjukhusvistelse.
 - Varje utrustningsexemplar har en egen Quality. Stats räknas fram från definitionens intervall.
   Förbrukningsvaror och material samlas i stackar.
 - Equip och Unequip fungerar i The Harbor utanför strid och Hospital. Equip ersätter
-  föregående exemplar i samma plats. Use är synlig för consumables men inaktiv.
+  föregående exemplar i samma plats. Temporaries utrustas från sin stapel och kan ändå
+  handlas och slängas. Use är synlig för övriga consumables men inaktiv. Kultyper har
+  varken Equip eller Use; de väljs som order i sjöstriden.
   Passiva items har ingen sådan knapp.
 - Trash fungerar direkt för allt som inte är utrustat. Bekräftelsen visar itemnamn,
   eventuell Quality och stats samt valt antal. Radering ger inga Gold Coins.
@@ -77,6 +79,7 @@ Tabellerna ligger i private och har RLS aktiverat:
 | item_stacks | Ett positivt heltalsantal per karaktär och stackbar definition. |
 | item_instances | Separat ID och Quality för varje utrustningsexemplar. |
 | character_equipment | Ett utrustat exemplar per kapten och plats. |
+| character_temporary | Vald Temporary-typ per kapten. |
 | inventory_requests | Privata kvitton som hindrar upprepad radering, Equip och Unequip vid återförsök. |
 
 Klienten har ingen direkt läs- eller skrivrätt till dessa tabeller.

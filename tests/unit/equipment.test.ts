@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LoadoutPanel } from "../../src/components/inventory/loadout-panel";
 import { CombatantPanel } from "../../src/components/combat/combatant-panel";
+import { temporaryEffect, isShotItem, isTemporaryItem, isEquipSlot } from "../../src/lib/equipment";
 import { equipmentSlotStats } from "../../scripts/config/core.mjs";
 import { gameplay } from "../../src/config/public";
 import { EQUIPMENT_SLOTS, SLOT_STATS, isEquipmentSlot, itemStatRows, itemStatSummary, zoneName } from "../../src/lib/equipment";
@@ -58,6 +59,11 @@ describe("equipment", () => {
     expect(sea).toContain("120 / 125");
     expect(sea).toContain("10 salvos remaining");
     const hidden = renderToStaticMarkup(createElement(CombatantPanel, { own: false, phase: "sea", captain: { ...captain, loadout: null } }));
-    expect(hidden.match(/Unknown/g)).toHaveLength(3);
+    expect(hidden.match(/Unknown/g)).toHaveLength(4);
+  });
+  it("describes temporaries and recognizes the stage 2 item types", () => {
+    expect(temporaryEffect({ item_id: "grenado", name: "Grenado", damage: 25, precision: 60 })).toBe("Damage 25.00 · Precision 60.00");
+    expect(temporaryEffect({ item_id: "smoke_pot", name: "Smoke Pot", precision: 100, debuff_multiplier: 0.33, debuff_rounds: 3 })).toBe("Accuracy -67% for 3 rounds");
+    expect([isTemporaryItem("grenado"), isTemporaryItem("chain_shot"), isShotItem("grape_shot"), isEquipSlot("temporary"), isEquipSlot("pocket")]).toEqual([true, false, true, true, false]);
   });
 });

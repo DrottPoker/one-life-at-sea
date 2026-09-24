@@ -40,7 +40,7 @@ Den nya SQL-migrationen är applicerad lokalt. Next.js 16.3.6, Supabase JS 2.117
 
 Next.js loggar fortfarande streamfel vid vissa avbrutna sidladdningar och en Gzip-varning om listeners. Detta redovisas i granskningsrapporten och har inte dolts genom loggfilter.
 
-Use och aktiva föremålseffekter, utrustningens etapp 2, matlagning, hemuppgraderingar, Shipyard, fler platsaktiviteter, PvE och fraktionssystem är inte färdiga.
+Use och aktiva föremålseffekter, källor för munition, matlagning, hemuppgraderingar, Shipyard, fler platsaktiviteter, PvE och fraktionssystem är inte färdiga.
 Se [Roadmap](ROADMAP.md) för fortsatt riktning och öppna beslut.
 
 Lokal verifiering bekräftar inte hosted miljö, produktionsmejl, backupåterställning eller kapacitet vid större samtidig last.

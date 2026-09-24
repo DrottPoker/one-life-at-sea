@@ -58,6 +58,53 @@ revoke all on private.character_equipment from public,anon,authenticated;
 alter table private.combat_participants add column if not exists defender_shots integer not null default 0;
 alter table private.combat_participants drop constraint if exists combat_participants_defender_shots_check,
   add constraint combat_participants_defender_shots_check check(defender_shots>=0);
+-- Per attacker pair: the defender's remaining temporary uses and the effects that currently weaken it.
+alter table private.combat_participants add column if not exists defender_temporary_uses integer not null default 0,
+  add column if not exists defender_effects jsonb not null default '{}'::jsonb;
+alter table private.combat_participants drop constraint if exists combat_participants_defender_temporary_uses_check,
+  add constraint combat_participants_defender_temporary_uses_check check(defender_temporary_uses>=0);
+
+-- The temporary slot points at a stackable item type; each use consumes one from the stack.
+create table if not exists private.character_temporary(
+  character_id uuid primary key references public.characters(id) on delete cascade,
+  item_id text not null references private.item_definitions(id),
+  equipped_at timestamptz not null default clock_timestamp()
+);
+comment on table private.character_temporary is 'Temporary item type chosen by each captain. Owners change it through equip_item and unequip_item.';
+alter table private.character_temporary enable row level security;
+revoke all on private.character_temporary from public,anon,authenticated;
+create index if not exists character_temporary_item_idx on private.character_temporary(item_id);
+
+create or replace function private.temporary_catalog()
+returns table(item_id text,damage numeric,weapon_precision numeric,debuff_multiplier numeric,debuff_rounds integer)
+language sql immutable security invoker set search_path='' as $$
+  select * from (values {{equipment.temporariesSql}}) t(item_id,damage,weapon_precision,debuff_multiplier,debuff_rounds);
+$$;
+
+create or replace function private.stack_quantity(captain_id uuid,target_item text)
+returns bigint language sql stable security invoker set search_path='' as $$
+  select coalesce((select quantity from private.item_stacks where character_id=captain_id and item_id=target_item),0);
+$$;
+
+-- Caller holds the character lock. Returns false when nothing is left to consume.
+create or replace function private.consume_stack(captain_id uuid,target_item text)
+returns boolean language plpgsql volatile security invoker set search_path='' as $$
+begin
+  update private.item_stacks set quantity=quantity-1 where character_id=captain_id and item_id=target_item and quantity>1;
+  if found then return true; end if;
+  delete from private.item_stacks where character_id=captain_id and item_id=target_item and quantity=1;
+  return found;
+end;
+$$;
+
+create or replace function private.character_temporary_loadout(captain_id uuid)
+returns jsonb language sql stable security invoker set search_path='' as $$
+  select jsonb_strip_nulls(jsonb_build_object('item_id',d.id,'name',d.name,'image_path',d.image_path,
+    'quantity',private.stack_quantity(captain_id,d.id),'damage',t.damage,'precision',t.weapon_precision,
+    'debuff_multiplier',t.debuff_multiplier,'debuff_rounds',t.debuff_rounds))
+  from private.character_temporary c join private.item_definitions d on d.id=c.item_id
+  join private.temporary_catalog() t on t.item_id=c.item_id where c.character_id=captain_id;
+$$;
 
 create or replace function private.equipment_stat(minimum numeric,maximum numeric,quality numeric)
 returns numeric language sql immutable strict security invoker set search_path='' as $$
@@ -77,10 +124,11 @@ $$;
 
 create or replace function private.character_loadout(captain_id uuid)
 returns jsonb language sql stable security invoker set search_path='' as $$
-  select coalesce(jsonb_object_agg(e.slot,private.item_stats(d,i.quality)
-    ||jsonb_build_object('entry_id',i.id,'item_id',d.id,'name',d.name,'image_path',d.image_path)),'{}'::jsonb)
-  from private.character_equipment e join private.item_instances i on i.id=e.instance_id
-  join private.item_definitions d on d.id=i.item_id where e.character_id=captain_id;
+  select coalesce((select jsonb_object_agg(e.slot,private.item_stats(d,i.quality)
+    ||jsonb_build_object('entry_id',i.id,'item_id',d.id,'name',d.name,'image_path',d.image_path))
+    from private.character_equipment e join private.item_instances i on i.id=e.instance_id
+    join private.item_definitions d on d.id=i.item_id where e.character_id=captain_id),'{}'::jsonb)
+    ||coalesce((select jsonb_build_object('temporary',t) from private.character_temporary_loadout(captain_id) t where t is not null),'{}'::jsonb);
 $$;
 
 create or replace function private.ship_health_max(captain_id uuid)
@@ -98,13 +146,14 @@ returns void language sql volatile security invoker set search_path='' as $$
   update public.characters set ship_health=private.ship_health_max(id) where id=captain_id and ship_health>private.ship_health_max(id);
 $$;
 revoke all on function private.equipment_stat(numeric,numeric,numeric),private.item_stats(private.item_definitions,numeric),
-  private.character_loadout(uuid),private.ship_health_max(uuid),private.settle_ship_health(uuid,timestamptz) from public,anon,authenticated;
+  private.character_loadout(uuid),private.ship_health_max(uuid),private.settle_ship_health(uuid,timestamptz),private.temporary_catalog(),
+  private.stack_quantity(uuid,text),private.consume_stack(uuid,text),private.character_temporary_loadout(uuid) from public,anon,authenticated;
 
 create or replace function private.equip_item(entry_id uuid,request_id uuid)
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); previous private.inventory_requests%rowtype;
-  item private.item_instances%rowtype; definition private.item_definitions%rowtype;
-  payload jsonb; result jsonb; replaced uuid; observed_at timestamptz;
+  item private.item_instances%rowtype; definition private.item_definitions%rowtype; stack private.item_stacks%rowtype;
+  payload jsonb; result jsonb; replaced uuid; observed_at timestamptz; replaced_item text;
 begin
   if request_id is null or entry_id is null then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
   payload:=jsonb_build_object('action','equip','entry_id',entry_id);
@@ -116,7 +165,22 @@ begin
   end if;
   perform private.assert_can_act(viewer_id);
   select * into item from private.item_instances i where i.id=entry_id and i.character_id=viewer_id for update;
-  if not found then raise exception 'ITEM_NOT_FOUND' using errcode='P0001'; end if;
+  if not found then
+    -- A stack can only be equipped as the crew temporary.
+    select * into stack from private.item_stacks s where s.id=entry_id and s.character_id=viewer_id for update;
+    if not found then raise exception 'ITEM_NOT_FOUND' using errcode='P0001'; end if;
+    if not exists(select 1 from private.temporary_catalog() t where t.item_id=stack.item_id) then
+      raise exception 'NOT_EQUIPPABLE' using errcode='P0001'; end if;
+    select name into definition.name from private.item_definitions where id=stack.item_id;
+    select c.item_id into replaced_item from private.character_temporary c where c.character_id=viewer_id for update;
+    insert into private.character_temporary(character_id,item_id,equipped_at) values(viewer_id,stack.item_id,clock_timestamp())
+      on conflict(character_id) do update set item_id=excluded.item_id,equipped_at=excluded.equipped_at;
+    result:=jsonb_build_object('action','equip','entry_id',stack.id,'slot','temporary','name',definition.name,
+      'replaced_item_id',case when replaced_item is distinct from stack.item_id then replaced_item end);
+    insert into private.inventory_requests(character_id,request_id,payload,result) values(viewer_id,request_id,payload,result);
+    perform private.notify_training(viewer_id);
+    return result;
+  end if;
   select * into definition from private.item_definitions where id=item.item_id;
   observed_at:=clock_timestamp();
   if definition.slot='hull' then perform private.settle_ship_health(viewer_id,observed_at); end if;
@@ -143,10 +207,10 @@ grant execute on function public.equip_item(uuid,uuid) to authenticated;
 create or replace function private.unequip_item(equipment_slot text,request_id uuid)
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); previous private.inventory_requests%rowtype;
-  payload jsonb; result jsonb; removed uuid; item_name text; observed_at timestamptz;
+  payload jsonb; result jsonb; removed uuid; item_name text; observed_at timestamptz; removed_item text;
 begin
   if request_id is null then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
-  if equipment_slot is null or equipment_slot not in ('firearm','melee','head','body','legs','feet','cannons','hull','sails') then
+  if equipment_slot is null or equipment_slot not in ('firearm','melee','head','body','legs','feet','cannons','hull','sails','temporary') then
     raise exception 'INVALID_SLOT' using errcode='22023'; end if;
   payload:=jsonb_build_object('action','unequip','slot',equipment_slot);
   perform private.settle_combat_context(array[viewer_id]);
@@ -156,6 +220,15 @@ begin
     return previous.result;
   end if;
   perform private.assert_can_act(viewer_id);
+  if equipment_slot='temporary' then
+    delete from private.character_temporary c where c.character_id=viewer_id returning c.item_id into removed_item;
+    if removed_item is null then raise exception 'NOT_EQUIPPED' using errcode='P0001'; end if;
+    result:=jsonb_build_object('action','unequip','entry_id',(select s.id from private.item_stacks s where s.character_id=viewer_id and s.item_id=removed_item),
+      'slot','temporary','name',(select name from private.item_definitions where id=removed_item));
+    insert into private.inventory_requests(character_id,request_id,payload,result) values(viewer_id,request_id,payload,result);
+    perform private.notify_training(viewer_id);
+    return result;
+  end if;
   observed_at:=clock_timestamp();
   if equipment_slot='hull' then perform private.settle_ship_health(viewer_id,observed_at); end if;
   delete from private.character_equipment e where e.character_id=viewer_id and e.slot=equipment_slot returning e.instance_id into removed;

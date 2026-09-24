@@ -5,8 +5,8 @@ Detta dokument samlar kvarstående riktning. Det är inte en beskrivning av leve
 ## Befintliga ytor som väntar på funktion
 
 - Inventory har läsning, handel, Trash, Equip och Unequip. Use och aktiva itemeffekter kräver egna spelregler.
-- Utrustningens etapp 2 är accepterad riktning: Temporary-plats för besättningen och kultyper för kanonerna.
-  Sällsynthet och bonusar är uppskjutna. Se [utrustning](EQUIPMENT.md#etapp-2).
+- Utrustningens Temporary-plats och kultyper är implementerade. Sällsynthet och bonusar är uppskjutna.
+  Källor för munitionen (butik, crafting eller loot) återstår. Se [utrustning](EQUIPMENT.md).
 - Hideout har Crafting; Cooking och hemuppgraderingar är ännu framtida funktioner.
 - Shipyard är en platshållare. Fler aktiviteter på havsplatser, PvE och intjäningssystem behöver design.
 - Fraktionsmedlemskap, behörigheter och utskick till hela fraktionen är inte implementerade. Kraven på beständiga batchade utskick finns i [Brevpost](MESSAGES.md).

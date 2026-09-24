@@ -7,23 +7,41 @@ import { gameplay } from "@/config/public";
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Anchor, ChevronRight, Crosshair, Ship, Swords, Target, Undo2 } from "lucide-react";
+import { Anchor, Bomb, ChevronRight, Crosshair, Grape, Link2, Ship, Swords, Target, Undo2 } from "lucide-react";
 import { submitOrder } from "@/app/combat-actions";
 import { CombatStage } from "@/components/combat/combat-stage";
 import { CombatEvents, CombatPeople } from "@/components/combat/combat-log";
 import { type Battle, type CombatOrder, ORDER_LABELS } from "@/lib/combat";
-import { fallbackWeapons } from "@/lib/equipment";
+import { fallbackWeapons, temporaryEffect } from "@/lib/equipment";
 
 const salvos = `${gameplay.combat.ammoPerShot} salvo${gameplay.combat.ammoPerShot === 1 ? "" : "s"}`;
-const orderDetails: Record<CombatOrder, string> = {
-  fire: salvos + ". Damage the opposing hull.",
-  board: "Give up your shot to attempt boarding.",
-  crew_shoot: "One shot at the opposing crew.",
-  crew_attack: "Attack the opposing crew.",
-  disengage: "Take a counterattack, then return to sea.",
-  retreat: "Take a counterattack, then leave the fight.",
+const orderIcons = { fire: Crosshair, fire_chain: Link2, fire_grape: Grape, board: Anchor, crew_shoot: Target, crew_throw: Bomb, crew_attack: Swords, disengage: Undo2, retreat: Ship };
+const phaseOrders: Record<"sea" | "boarding", CombatOrder[]> = {
+  sea: ["fire", "fire_chain", "fire_grape", "board", "retreat"],
+  boarding: ["crew_shoot", "crew_throw", "crew_attack", "disengage", "retreat"],
 };
-const orderIcons = { fire: Crosshair, board: Anchor, crew_shoot: Target, crew_attack: Swords, disengage: Undo2, retreat: Ship };
+const plural = (count: number, word: string) => count + " " + word + (count === 1 ? "" : "s");
+
+// Every order stays visible; unavailable ones are disabled with the reason as their description.
+function orderOptions(battle: Battle): Record<CombatOrder, { detail: string; available: boolean }> {
+  const own = battle.attacker, loadout = own.loadout, ammo = (own.ammo ?? 0) >= gameplay.combat.ammoPerShot;
+  const cannons = loadout?.cannons?.name ?? fallbackWeapons.cannons.name, stock = own.shot_stock ?? { chain: 0, grape: 0 };
+  const firearm = loadout?.firearm, temporary = loadout?.temporary && "precision" in loadout.temporary ? loadout.temporary : null;
+  const shots = own.shots ?? 0, uses = own.temporary_uses ?? 0;
+  const special = (count: number) => !ammo ? "No salvos left." : count < 1 ? "None in your inventory." : plural(count, "shot") + " in stock.";
+  return {
+    fire: { detail: salvos + " with " + cannons + ". Damage the opposing hull.", available: ammo },
+    fire_chain: { detail: special(stock.chain) + (stock.chain > 0 && ammo ? " Tears the rigging and slows the ship." : ""), available: ammo && stock.chain > 0 },
+    fire_grape: { detail: special(stock.grape) + (stock.grape > 0 && ammo ? " Sweeps the enemy crew." : ""), available: ammo && stock.grape > 0 },
+    board: { detail: "Give up your shot to attempt boarding.", available: true },
+    crew_shoot: { detail: firearm ? firearm.name + ". " + plural(shots, "shot") + " left." : "No firearm equipped.", available: !!firearm && shots > 0 },
+    crew_throw: { detail: !temporary ? "No temporary equipped." : temporary.name + ". " + (uses > 0 ? temporaryEffect(temporary) + "." : "Used up for this fight."),
+      available: !!temporary && uses > 0 },
+    crew_attack: { detail: (loadout?.melee?.name ?? fallbackWeapons.melee.name) + ". Attack the opposing crew.", available: true },
+    disengage: { detail: "Take a counterattack, then return to sea.", available: true },
+    retreat: { detail: "Take a counterattack, then leave the fight.", available: true },
+  };
+}
 
 export function CombatArena({ battle }: { battle: Battle }) {
   const router = useRouter();
@@ -34,13 +52,7 @@ export function CombatArena({ battle }: { battle: Battle }) {
   const inFlight = useRef(false);
   const request = useRef<{ round: number; order: CombatOrder; id: string } | null>(null);
   const active = battle.status === "active" && battle.participant_status === "active";
-  const own = battle.attacker, firearm = own.loadout?.firearm;
-  const orders: CombatOrder[] = battle.phase === "sea" ? ["fire", "board", "retreat"] : [...(firearm ? ["crew_shoot" as const] : []), "crew_attack", "disengage", "retreat"];
-  const shots = own.shots ?? 0;
-  const details: Record<CombatOrder, string> = { ...orderDetails,
-    fire: salvos + " with " + (own.loadout?.cannons?.name ?? fallbackWeapons.cannons.name) + ". Damage the opposing hull.",
-    crew_shoot: (firearm?.name ?? "Firearm") + ". " + shots + (shots === 1 ? " shot" : " shots") + " left.",
-    crew_attack: (own.loadout?.melee?.name ?? fallbackWeapons.melee.name) + ". " + orderDetails.crew_attack };
+  const orders = phaseOrders[battle.phase], options = orderOptions(battle);
 
   function giveOrder(order: CombatOrder) {
     if (inFlight.current || !active) return;
@@ -67,10 +79,10 @@ export function CombatArena({ battle }: { battle: Battle }) {
       <div className="o-section-bar"><h2 id="orders-heading"><Anchor aria-hidden="true" />Your next order</h2><span>Both sides act together</span></div>
       <div className="o-order-buttons">{orders.map(order => {
         const Icon = orderIcons[order];
-        return <button key={order} data-tone={order === "retreat" ? "danger" : order === "fire" || order === "crew_shoot" || order === "crew_attack" ? "primary" : "secondary"} onClick={() => giveOrder(order)}
-          disabled={pending || (order === "fire" && (battle.attacker.ammo ?? 0) < gameplay.combat.ammoPerShot) || (order === "crew_shoot" && shots < 1)}>
+        return <button key={order} data-tone={order === "retreat" ? "danger" : order === "board" || order === "disengage" ? "secondary" : "primary"} onClick={() => giveOrder(order)}
+          disabled={pending || !options[order].available}>
           <span className="o-order-icon" aria-hidden="true">{pending && selected === order ? <span className="o-spinner" /> : <Icon />}</span>
-          <span className="o-order-copy"><strong>{ORDER_LABELS[order]}</strong><small>{details[order]}</small></span>
+          <span className="o-order-copy"><strong>{ORDER_LABELS[order]}</strong><small>{options[order].detail}</small></span>
           <ChevronRight className="o-order-chevron" aria-hidden="true" />
         </button>;
       })}</div>

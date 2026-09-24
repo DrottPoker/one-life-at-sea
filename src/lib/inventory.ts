@@ -1,12 +1,12 @@
 import { frontend, gameplay } from "@/config/public";
-import type { EquipmentSlot, ItemStats, Loadout } from "@/lib/equipment";
+import type { EquipSlot, ItemStats, Loadout } from "@/lib/equipment";
 
 export type InventoryEntryType = "stack" | "instance";
 export type InventoryEntry = {
   id: string; entry_type: InventoryEntryType; item_id: string; quantity: number;
   name: string; category_id: string; kind: "equipment" | "consumable" | "passive";
   description: string; effect_description: string; image_path: string;
-  stats: ItemStats | null; slot?: EquipmentSlot | null; equipped_slot?: EquipmentSlot | null;
+  stats: ItemStats | null; slot?: EquipSlot | null; equipped_slot?: EquipSlot | null;
   circulation: string; market_value: string | null;
 };
 export type InventoryPage = { items: InventoryEntry[]; total: number; page: number; page_size: number; loadout?: Loadout; ship_health_max?: number };

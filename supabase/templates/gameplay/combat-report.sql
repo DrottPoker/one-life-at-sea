@@ -1,12 +1,12 @@
--- Derive damage by phase from saved events, including existing encounters.
+-- Derive damage by struck health from saved events; older events fall back to their phase.
 create or replace function private.combat_people(battle_id uuid)
 returns jsonb language sql stable security invoker set search_path='' as $$
   with damage as materialized (
     select r.actor_id,
-      coalesce(sum((r.event->>'attacker_damage')::integer) filter (where r.event->>'phase'='sea'),0) ship_damage,
-      coalesce(sum((r.event->>'attacker_damage')::integer) filter (where r.event->>'phase'='boarding'),0) crew_damage,
-      coalesce(sum((r.event->>'defender_damage')::integer) filter (where r.event->>'phase'='sea'),0) defender_ship_damage,
-      coalesce(sum((r.event->>'defender_damage')::integer) filter (where r.event->>'phase'='boarding'),0) defender_crew_damage,
+      coalesce(sum((r.event->>'attacker_damage')::integer) filter (where coalesce(r.event->>'attacker_target',r.event->>'phase')in('sea','ship')),0) ship_damage,
+      coalesce(sum((r.event->>'attacker_damage')::integer) filter (where coalesce(r.event->>'attacker_target',r.event->>'phase')in('boarding','crew')),0) crew_damage,
+      coalesce(sum((r.event->>'defender_damage')::integer) filter (where coalesce(r.event->>'defender_target',r.event->>'phase')in('sea','ship')),0) defender_ship_damage,
+      coalesce(sum((r.event->>'defender_damage')::integer) filter (where coalesce(r.event->>'defender_target',r.event->>'phase')in('boarding','crew')),0) defender_crew_damage,
       count(*) filter (where (r.event->>'defender_hit')::boolean) defender_hits
     from private.combat_rounds r where r.combat_id=battle_id group by r.actor_id
   )

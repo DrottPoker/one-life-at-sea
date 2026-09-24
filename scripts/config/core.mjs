@@ -71,7 +71,7 @@ export function validateConfig(config) {
   for (const category of inventory.categories) {
     check(/^[a-z][a-z0-9_]{0,47}$/.test(category.id) && category.id !== "all", "Invalid inventory category ID.");
     check(category.name.length <= 60, "Category name is too long.");
-    check(["swords","shield","cannon","sail","cross","flask","boxes","compass"].includes(category.icon), "Unknown inventory category icon.");
+    check(["swords","shield","cannon","sail","bomb","cross","flask","boxes","compass"].includes(category.icon), "Unknown inventory category icon.");
   }
   for (const item of inventory.items) {
     check(/^[a-z][a-z0-9_]{0,47}$/.test(item.id), "Item IDs must be stable lowercase identifiers.");
@@ -144,6 +144,19 @@ export function validateConfig(config) {
   for (const weapon of Object.values(equipment.fallbackWeapons)) {
     check(weapon.name.length <= 100 && weapon.damage <= equipment.limits.maxDamage && hasTwoDecimals(weapon.damage) && hasTwoDecimals(weapon.precision), "Invalid fallback weapon.");
   }
+  const consumable = id => inventory.items.some(item => item.id === id && item.kind === "consumable");
+  check(new Set(equipment.temporaries.map(item => item.itemId)).size === equipment.temporaries.length, "Temporary items must be unique.");
+  for (const temporary of equipment.temporaries) {
+    check(consumable(temporary.itemId), "Temporaries must be consumable items.");
+    check((temporary.damage !== undefined) !== (temporary.debuff !== undefined), "A temporary either deals damage or applies a debuff.");
+    check(temporary.damage === undefined || (temporary.damage <= equipment.limits.maxDamage && hasTwoDecimals(temporary.damage)), "Invalid temporary damage.");
+    check(hasTwoDecimals(temporary.precision) && (!temporary.debuff || (temporary.debuff.stat === "accuracy" && hasTwoDecimals(temporary.debuff.multiplier))), "Invalid temporary effect.");
+  }
+  const shots = equipment.shotTypes;
+  check(consumable(shots.chain.itemId) && consumable(shots.grape.itemId) && shots.chain.itemId !== shots.grape.itemId, "Shot types must be distinct consumable items.");
+  check(!equipment.temporaries.some(item => [shots.chain.itemId, shots.grape.itemId].includes(item.itemId)), "A shot type cannot also be a temporary.");
+  check(equipment.zones.ship.some(zone => zone.id === shots.chain.zone), "Chain shot needs a ship hit zone.");
+  check([shots.chain.multiplier, shots.chain.speedMultiplier, shots.grape.crewMultiplier].every(hasTwoDecimals), "Shot multipliers support at most two decimals.");
   for (const [group, slots] of [["crew", ["head", "body", "legs", "feet"]], ["ship", ["hull", "sails"]]]) {
     const zones = equipment.zones[group];
     check(zones.length <= 20 && new Set(zones.map(zone => zone.id)).size === zones.length, "Hit zone IDs must be unique.");
@@ -215,6 +228,7 @@ export function gameplaySql(config) {
       "('" + item.itemId.replaceAll("'", "''") + "'," + item.quantity + "::bigint)").join(","))
     .replace("{{inventory.catalogSql}}", () => inventoryCatalogSql(config))
     .replaceAll("{{equipment.zonesSql}}", () => equipmentZonesSql(config))
+    .replaceAll("{{equipment.temporariesSql}}", () => equipmentTemporariesSql(config))
     .replace("{{seaTravel.catalogSql}}", () => seaTravelCatalogSql(config)), config);
 }
 export function revision(config) {
@@ -243,6 +257,12 @@ export function generatedFiles(config) {
 }
 
 const equipmentStatColumns = "damage_min,damage_max,precision_min,precision_max,armor_min,armor_max,health_min,health_max,speed_min,speed_max,shots";
+// Temporaries as SQL rows: item, damage, precision, debuff multiplier, debuff rounds.
+export function equipmentTemporariesSql(config) {
+  const quote = value => "'" + value.replaceAll("'", "''") + "'";
+  return config.gameplay.equipment.temporaries.map(item => "(" + [quote(item.itemId), item.damage === undefined ? "null::numeric" : item.damage + "::numeric",
+    item.precision + "::numeric", item.debuff ? item.debuff.multiplier + "::numeric" : "null::numeric", item.debuff ? item.debuff.rounds : "null::integer"].join(",") + ")").join(",");
+}
 export function equipmentZonesSql(config) {
   const quote = value => "'" + value.replaceAll("'", "''") + "'";
   return Object.entries(config.gameplay.equipment.zones).flatMap(([group, zones]) => zones.map((zone, i) =>
