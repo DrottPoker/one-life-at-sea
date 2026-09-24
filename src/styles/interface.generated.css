@@ -320,7 +320,8 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-scene-overlay,.o-scene-leaving { position:absolute; inset:0; pointer-events:none; }
 .o-scene-overlay svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
 .o-scene-leaving { animation:o-scene-leave .35s ease-in var(--hold) forwards; }
-/* Hit markers: the latest hit is a reticle that locks on at impact; earlier hits stay as smaller rings that fade with age. */
+/* Strike markers: the latest strikes are reticles that lock on where they landed; earlier ones stay as smaller rings that fade with age.
+   Red is damage, gold a critical hit, white a blocked hit, blue an effect without damage and grey a miss. */
 .o-scene-scars { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
 .o-scene-mark,.o-scene-scar { shape-rendering:geometricPrecision; }
 .o-scene-mark { transform-box:fill-box; transform-origin:center; }
@@ -331,8 +332,12 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-scene-scar .o-mark-ring { stroke-width:5px; }
 :is(.o-scene-mark,.o-scene-scar)[data-tone="critical"] .o-mark-ring { stroke:var(--o-gold); }
 :is(.o-scene-mark,.o-scene-scar)[data-tone="critical"] .o-mark-dot { fill:var(--o-gold); }
-:is(.o-scene-mark,.o-scene-scar)[data-tone="blocked"] .o-mark-ring { stroke:var(--o-muted); }
-:is(.o-scene-mark,.o-scene-scar)[data-tone="blocked"] .o-mark-dot { fill:var(--o-muted); }
+:is(.o-scene-mark,.o-scene-scar)[data-tone="blocked"] .o-mark-ring { stroke:var(--o-text); }
+:is(.o-scene-mark,.o-scene-scar)[data-tone="blocked"] .o-mark-dot { fill:var(--o-text); }
+:is(.o-scene-mark,.o-scene-scar)[data-tone="effect"] .o-mark-ring { stroke:var(--o-link); }
+:is(.o-scene-mark,.o-scene-scar)[data-tone="effect"] .o-mark-dot { fill:var(--o-link); }
+:is(.o-scene-mark,.o-scene-scar)[data-tone="miss"] .o-mark-ring { stroke:var(--o-fx-miss); }
+:is(.o-scene-mark,.o-scene-scar)[data-tone="miss"] .o-mark-dot { fill:var(--o-fx-miss); }
 .o-scene-chip { position:absolute; transform:translate(-50%,-50%); padding:2px 8px; border:1px solid var(--o-fx-hit); border-radius:2px; background:color-mix(in srgb,var(--o-bg) 84%,transparent); color:var(--o-combat-danger); font:600 clamp(9px,2.3cqi,12px)/1.45 var(--o-body-font); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
 .o-scene-chip[data-tone="critical"] { border-color:var(--o-gold); color:var(--o-gold); }
 .o-scene-chip[data-tone="miss"],.o-scene-chip[data-tone="blocked"] { border-color:var(--o-line); color:var(--o-muted); }

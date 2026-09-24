@@ -14,7 +14,7 @@ export type ShipAnchors = { rigging: SceneArea; hull: SceneArea; waterline: Scen
 export type CrewAnchors = { head: SceneArea; body: SceneArea; legs: SceneArea; feet: SceneArea; stray: SceneArea; floor: SceneArea;
   blade: ScenePoint; hand: ScenePoint; label: ScenePoint };
 
-export const sceneAnchors: { sea: Record<SceneSide, ShipAnchors>; boarding: Record<SceneSide, CrewAnchors> & { parry: ScenePoint } } = {
+export const sceneAnchors: { sea: Record<SceneSide, ShipAnchors>; boarding: Record<SceneSide, CrewAnchors> & { parry: SceneArea } } = {
   sea: {
     attacker: {
       rigging: [{ x: 350, y: 362, rx: 100, ry: 100 }, { x: 330, y: 196, rx: 62, ry: 44 }, { x: 522, y: 392, rx: 56, ry: 70 }, { x: 478, y: 258, rx: 48, ry: 36 },
@@ -54,6 +54,6 @@ export const sceneAnchors: { sea: Record<SceneSide, ShipAnchors>; boarding: Reco
       floor: [{ x: 975, y: 732, rx: 40, ry: 7 }],
       blade: { x: 1060, y: 520 }, hand: { x: 1350, y: 490 }, label: { x: 1214, y: 818 },
     },
-    parry: { x: 895, y: 402 },
+    parry: [{ x: 895, y: 402, rx: 26, ry: 22 }],
   },
 };

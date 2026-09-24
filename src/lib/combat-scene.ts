@@ -65,7 +65,7 @@ function strikePoints(phase: "sea" | "boarding", side: SceneSide, kind: StrikeKi
   }
   const own = sceneAnchors.boarding[side], crew = sceneAnchors.boarding[other];
   const point = hit ? pointIn(crew[zone as "head" | "body" | "legs" | "feet"] ?? crew.body, random)
-    : kind === "melee" ? sceneAnchors.boarding.parry : pointIn(kind === "firearm" ? crew.stray : crew.floor, random);
+    : pointIn(kind === "melee" ? sceneAnchors.boarding.parry : kind === "firearm" ? crew.stray : crew.floor, random);
   // A parried swing reports over the captain who parried, clear of the other side's numbers.
   return { origin: kind === "melee" ? null : kind === "firearm" ? own.blade : own.hand, point, popup: !hit && kind === "melee" ? crew.head[0] : point, label: crew.label };
 }
@@ -92,21 +92,21 @@ export function roundStrikes(event: CombatEvent): SceneStrike[] {
 
 export const sceneDuration = (strikes: SceneStrike[]) => Math.max(0, ...strikes.map(strike => strike.end));
 
-// Hits that leave a marker: misses and effect-only throws do not.
-export type MarkTone = "hit" | "critical" | "blocked";
-export function markTone(strike: SceneStrike): MarkTone | null {
-  if (!strike.hit || strike.kind === "smoke") return null;
-  return strike.critical ? "critical" : strike.damage === 0 ? "blocked" : "hit";
+// What a strike did, for its marker, number and label: every strike leaves a marker where it landed.
+export type MarkTone = "hit" | "critical" | "blocked" | "effect" | "miss";
+export function markTone(strike: SceneStrike): MarkTone {
+  if (!strike.hit) return "miss";
+  if (strike.critical) return "critical";
+  return strike.damage > 0 ? "hit" : strike.kind === "smoke" ? "effect" : "blocked";
 }
 
 export type SceneScar = { key: string; target: SceneSide; point: ScenePoint; tone: MarkTone; age: number };
-// Where the viewer's earlier rounds in one phase struck either side, newest first; age counts rounds back from the latest.
+// Where the viewer's earlier rounds in one phase landed on either side, hits and misses, newest first; age counts rounds back.
 export function sceneHistory(events: CombatEvent[], attackerId: string, phase: "sea" | "boarding", before: number): SceneScar[] {
   const rounds = events.filter(event => event.kind === "round" && event.actor_id === attackerId && event.sequence < before).reverse();
-  return rounds.flatMap((event, age) => event.phase !== phase ? [] : roundStrikes(event).flatMap(strike => {
-    const tone = markTone(strike);
-    return tone ? [{ key: event.sequence + "-" + strike.side, target: strike.side === "attacker" ? "defender" as const : "attacker" as const, point: strike.point, tone, age }] : [];
-  }));
+  return rounds.flatMap((event, age) => event.phase !== phase ? [] : roundStrikes(event).map(strike => ({
+    key: event.sequence + "-" + strike.side, target: strike.side === "attacker" ? "defender" as const : "attacker" as const, point: strike.point, tone: markTone(strike), age,
+  })));
 }
 
 function place(strike: SceneStrike) {

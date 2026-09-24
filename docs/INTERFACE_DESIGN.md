@@ -111,10 +111,12 @@ game navigation during combat.
   the blades, or land beside the target. The attacker's strike plays first, then the defender's.
 - A hit lands at a random spot inside the struck zone's area, such as any sail for Sails
   and rigging or either leg for Legs, and the effect plays there. The spot is seeded by the
-  round, so a reload shows it in the same place. The latest hit leaves a small red reticle
-  like Torn's that locks on at impact (gold for a critical hit, grey when blocked). Earlier
-  hits of the viewer's rounds in the same phase stay as smaller rings with a dot, fading with
-  age, on whichever side they struck. Misses and Smoke Pot leave no marker.
+  round, so a reload shows it in the same place. Every strike leaves a small reticle like
+  Torn's that locks on where it landed: red for damage, gold for a critical hit, white for a
+  blocked hit, blue for Smoke Pot and grey for a miss, which lands anywhere in the water
+  beside the ship, in the sky behind the target, on the plank or between the blades. Earlier
+  strikes of the viewer's rounds in the same phase stay as smaller rings with a dot in the
+  same colours, fading with age, on whichever side they were aimed at.
 - Only rounds that arrive while the page is open animate; a reload shows the marks and
   labels still. A round that changes phase finishes on its own artwork before the new phase
   fades in. Other attackers' rounds stay in the log.

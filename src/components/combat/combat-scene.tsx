@@ -143,23 +143,20 @@ function StrikeEffects({ strike, seed }: { strike: SceneStrike; seed: number }) 
   return <g data-kind={strike.kind}>{[...delivery(random, strike), ...(strike.hit ? impact(random, strike) : miss(random, strike))]}</g>;
 }
 
-const tone = (strike: SceneStrike) => !strike.hit ? "miss" : strike.critical ? "critical" : strike.damage === 0 ? strike.kind === "smoke" ? "effect" : "blocked" : "hit";
 const struck = (strike: SceneStrike) => strike.side === "attacker" ? "defender" : "attacker";
 
-// The latest hit is a reticle that locks on at impact, like Torn's; it stays until the next round.
+// The latest strikes leave a reticle that locks on where they landed, like Torn's; it stays until the next round.
 const RETICLE = "M-44 0H-18M18 0H44M0-44V-18M0 18V44";
 function mark(strike: SceneStrike, index: number) {
-  const markerTone = markTone(strike);
-  if (!markerTone) return null;
   return <g key={"mark" + index} transform={"translate(" + strike.point.x + " " + strike.point.y + ")"}>
-    <g className="o-scene-mark" data-tone={markerTone} data-zone={strike.zone ?? strike.target} data-target={struck(strike)} style={{ "--t": ms(strike.impact + 60) } as Vars}>
+    <g className="o-scene-mark" data-tone={markTone(strike)} data-zone={strike.zone ?? strike.target} data-target={struck(strike)} style={{ "--t": ms(strike.impact + 60) } as Vars}>
       <circle className="o-mark-back" r={28} /><path className="o-mark-back" d={RETICLE} />
       <circle className="o-mark-ring" r={28} /><path className="o-mark-ring" d={RETICLE} /><circle className="o-mark-dot" r={6} />
     </g>
   </g>;
 }
 
-// Earlier hits of this fight stay as smaller rings where they landed, fading with age.
+// Earlier strikes of this fight stay as smaller rings where they landed, fading with age.
 function SceneScars({ scars }: { scars: SceneScar[] }) {
   if (!scars.length) return null;
   return <svg className="o-scene-scars" viewBox={"0 0 " + SCENE_SIZE.width + " " + SCENE_SIZE.height} preserveAspectRatio="none" aria-hidden="true">
@@ -177,9 +174,9 @@ function SceneOverlay({ strikes, animate, sequence }: { strikes: SceneStrike[]; 
       {animate && <g className="o-scene-live">{strikes.map((strike, index) => <StrikeEffects key={index} strike={strike} seed={sequence * 10 + index} />)}</g>}
       {strikes.map(mark)}
     </svg>
-    {animate && strikes.map((strike, index) => <span key={"pop" + index} className="o-scene-pop" data-tone={tone(strike)}
+    {animate && strikes.map((strike, index) => <span key={"pop" + index} className="o-scene-pop" data-tone={markTone(strike)}
       style={{ ...scenePercent(strike.popup), "--t": ms(strike.impact) } as Vars}>{strikePopup(strike)}</span>)}
-    {strikes.map((strike, index) => <span key={"label" + index} className="o-scene-chip" data-tone={tone(strike)} data-target={struck(strike)}
+    {strikes.map((strike, index) => <span key={"label" + index} className="o-scene-chip" data-tone={markTone(strike)} data-target={struck(strike)}
       style={{ ...scenePercent(strike.label), "--t": ms(strike.impact + 160) } as Vars}>{strikeLabel(strike)}</span>)}
   </div>;
 }

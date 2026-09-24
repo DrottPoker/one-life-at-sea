@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { CombatScene } from "../../src/components/combat/combat-scene";
 import { gameplay } from "../../src/config/public";
 import type { CombatEvent } from "../../src/lib/combat";
-import { sceneAnchors, SCENE_SIZE, type SceneArea, type ScenePoint } from "../../src/lib/combat-scene-anchors";
+import { sceneAnchors, SCENE_SIZE, type CrewAnchors, type SceneArea, type ScenePoint } from "../../src/lib/combat-scene-anchors";
 import { latestOwnRound, markTone, roundStrikes, roundSummary, sceneDuration, sceneHistory, strikeLabel, strikePopup } from "../../src/lib/combat-scene";
 
 const round = (overrides: Partial<CombatEvent>): CombatEvent => ({
@@ -22,7 +22,8 @@ describe("combat scene", () => {
       for (const zone of gameplay.equipment.zones.ship) expect((sceneAnchors.sea[side] as Record<string, unknown>)[zone.id]).toEqual(expect.arrayContaining([expect.anything()]));
       for (const zone of gameplay.equipment.zones.crew) expect((sceneAnchors.boarding[side] as Record<string, unknown>)[zone.id]).toEqual(expect.arrayContaining([expect.anything()]));
     }
-    const values = [...Object.values(sceneAnchors.sea).flatMap(Object.values), ...Object.values(sceneAnchors.boarding).flatMap(value => "x" in value ? [value] : Object.values(value))];
+    const values: (SceneArea | ScenePoint)[] = [...Object.values(sceneAnchors.sea).flatMap(anchors => Object.values(anchors)),
+      ...Object.values(sceneAnchors.boarding).flatMap(value => Array.isArray(value) ? [value as SceneArea] : Object.values(value as CrewAnchors))];
     for (const shape of values.flatMap(value => Array.isArray(value) ? value : [{ ...value as ScenePoint, rx: 0, ry: 0 }])) {
       expect(shape.x - shape.rx).toBeGreaterThan(0); expect(shape.x + shape.rx).toBeLessThan(SCENE_SIZE.width);
       expect(shape.y - shape.ry).toBeGreaterThan(0); expect(shape.y + shape.ry).toBeLessThan(SCENE_SIZE.height);
@@ -60,7 +61,7 @@ describe("combat scene", () => {
     expect(theirs.start).toBeGreaterThan(own.impact);
     expect(sceneDuration([own, theirs])).toBe(theirs.end);
     expect([strikeLabel(own), strikePopup(own), strikeLabel(theirs), strikePopup(theirs)]).toEqual(["Critical · Waterline · 30", "Critical 30", "Miss", "Miss"]);
-    expect([markTone(own), markTone(theirs)]).toEqual(["critical", null]);
+    expect([markTone(own), markTone(theirs)]).toEqual(["critical", "miss"]);
   });
   it("shows chain shot in the rigging, grape shot on the deck crew and blocked hits", () => {
     const [chain] = roundStrikes(round({ attacker_order: "fire_chain", attacker_hit: true, attacker_damage: 4, attacker_zone: "rigging", attacker_target: "ship", attacker_effect: "ship_speed", defender_order: "board" }));
@@ -82,18 +83,20 @@ describe("combat scene", () => {
     expect(shot).toMatchObject({ kind: "firearm", origin: sceneAnchors.boarding.defender.blade });
     expect(inside(shot.point, sceneAnchors.boarding.attacker.stray)).toBe(true);
     const [parried] = roundStrikes(round({ ...base, attacker_order: "crew_attack", defender_order: "disengage" }));
-    expect(parried).toMatchObject({ point: sceneAnchors.boarding.parry, popup: sceneAnchors.boarding.defender.head[0] });
+    expect(parried.popup).toEqual(sceneAnchors.boarding.defender.head[0]);
+    expect(inside(parried.point, sceneAnchors.boarding.parry)).toBe(true);
+    expect(markTone(parried)).toBe("miss");
     const [smoke] = roundStrikes(round({ ...base, attacker_order: "crew_throw", attacker_hit: true, attacker_weapon: "Smoke Pot", attacker_effect: "crew_accuracy", defender_order: "disengage" }));
     expect(smoke).toMatchObject({ kind: "smoke", origin: sceneAnchors.boarding.attacker.hand });
     expect(inside(smoke.point, sceneAnchors.boarding.defender.body)).toBe(true);
-    expect([strikeLabel(smoke), markTone(smoke)]).toEqual(["Blinded", null]);
+    expect([strikeLabel(smoke), markTone(smoke)]).toEqual(["Blinded", "effect"]);
     const [thrown] = roundStrikes(round({ ...base, attacker_order: "crew_throw", attacker_weapon: "Smoke Pot", defender_order: "disengage" }));
     expect(thrown.kind).toBe("smoke");
     expect(inside(thrown.point, sceneAnchors.boarding.defender.floor)).toBe(true);
     const [grenade] = roundStrikes(round({ ...base, attacker_order: "crew_throw", attacker_weapon: "Grenado", attacker_hit: true, attacker_damage: 20, attacker_zone: "body", defender_order: "disengage" }));
     expect(grenade.kind).toBe("grenade");
   });
-  it("keeps earlier hits of the viewer's rounds in the same phase as markers, newest first", () => {
+  it("keeps earlier hits and misses of the viewer's rounds in the same phase as markers, newest first", () => {
     const events = [
       round({ sequence: 1, attacker_hit: true, attacker_damage: 10, attacker_zone: "hull", attacker_target: "ship",
         defender_hit: true, defender_damage: 5, defender_zone: "rigging", defender_target: "ship" }),
@@ -105,9 +108,9 @@ describe("combat scene", () => {
     ];
     const scars = sceneHistory(events, "a", "sea", 5);
     expect(scars.map(scar => [scar.key, scar.target, scar.tone, scar.age])).toEqual([
-      ["4-attacker", "defender", "blocked", 0], ["1-attacker", "defender", "hit", 2], ["1-defender", "attacker", "hit", 2]]);
-    expect(scars[1].point).toEqual(roundStrikes(events[0])[0].point);
-    expect(sceneHistory(events, "a", "boarding", 5).map(scar => scar.key)).toEqual(["3-attacker"]);
+      ["4-attacker", "defender", "blocked", 0], ["4-defender", "attacker", "miss", 0], ["1-attacker", "defender", "hit", 2], ["1-defender", "attacker", "hit", 2]]);
+    expect(scars[2].point).toEqual(roundStrikes(events[0])[0].point);
+    expect(sceneHistory(events, "a", "boarding", 5).map(scar => [scar.key, scar.tone])).toEqual([["3-attacker", "hit"], ["3-defender", "miss"]]);
     expect(sceneHistory(events, "a", "sea", 1)).toEqual([]);
   });
   it("skips orders without a strike and summarizes the round from the viewer's side", () => {
@@ -131,12 +134,14 @@ describe("combat scene", () => {
     expect(html).toContain(">Miss<");
     expect(html).toContain("Round 3: You hit their hull for 14. Bo missed.");
     expect(html).not.toContain("o-scene-scar");
-    // An earlier hit in the same phase stays as a smaller marker beside the latest one.
+    expect(html).toContain('class="o-scene-mark" data-tone="miss" data-zone="ship" data-target="attacker"');
+    // An earlier hit and miss in the same phase stay as smaller markers beside the latest ones.
     const earlier = round({ sequence: 4, round: 2, attacker_hit: true, attacker_damage: 3, attacker_zone: "rigging", attacker_target: "ship" });
     const marked = renderToStaticMarkup(createElement(CombatScene, { phase: "sea", events: [earlier, ...events], attackerId: "a", defenderName: "Bo" }));
-    expect(marked.match(/class="o-scene-scar"/g)).toHaveLength(1);
+    expect(marked.match(/class="o-scene-scar"/g)).toHaveLength(2);
     expect(marked).toContain('class="o-scene-scar" data-tone="hit" data-target="defender"');
-    expect(marked.match(/class="o-scene-mark"/g)).toHaveLength(1);
+    expect(marked).toContain('class="o-scene-scar" data-tone="miss" data-target="attacker"');
+    expect(marked.match(/class="o-scene-mark"/g)).toHaveLength(2);
     // The result of a finished fight waits for its final round to play out, so the first render never shows Leave.
     const finale = { title: "Victory", text: "The defending ship was sunk.", href: "/combatlog/test" };
     const finished = renderToStaticMarkup(createElement(CombatScene, { phase: "sea", events, attackerId: "a", defenderName: "Bo", finale }));
