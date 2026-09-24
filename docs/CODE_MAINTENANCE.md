@@ -45,6 +45,17 @@ Ta bort en fil först efter att importer, dynamiska namn, SQL, konfiguration och
 Kör hela sviten när delade livscykler, rättigheter eller navigation ändras.
 Testkonton ska använda gemensamma hjälpare och städas även vid testfel. Stäng deras webbläsarsidor före radering så att bakgrundsanrop inte läser borttagna konton. Spara inga inloggningshemligheter i testartefakter.
 
+Next.js 16.3 loggar `⨯ Error: The destination stream closed early.` när en klient avbryter en
+strömmad RSC-rendering, till exempel när ett sidbyte avbryter en pågående uppdatering. Det är inget
+serverfel: bara GET-renderingen avbryts och inget sparas. React rapporterar avbrottet som ett vanligt
+`Error`, medan Next bara tystar `AbortError` och `ResponseAborted`
+([vercel/next.js#96704](https://github.com/vercel/next.js/issues/96704)). Rättningen
+([#96715](https://github.com/vercel/next.js/pull/96715)) finns i canary men inte i 16.3.6. Ta bort
+noteringen efter uppgradering till en version med rättningen. I webbläsartesterna syns raden nästan
+en gång per test: när realtidskanalen ansluter efter inloggningen begär `app-frame.tsx` en
+uppdatering för att fånga missade ändringar, och testets nästa `page.goto` avbryter den. Playwright
+kan inte pålitligt vänta ut den uppdateringen, så testerna gör det inte.
+
 ## Dokumentation
 
 [Dokumentindexet](README.md) pekar ut aktuella källor. Regler finns i respektive funktionsdokument, arbetsflöden i konfigurationsguiden och systemgränser i arkitekturen.
