@@ -180,3 +180,15 @@ the expected gain in its result slot and the countdown in place of the button, a
 Order is replaced by the running job.
 The artwork currently reuses the crew training images as placeholders, defined in one
 constant in `ship-upgrade-panel.tsx`.
+
+## Page banners, September 24
+
+Crew Training, Ship Upgrades, Activities, Inventory, Hospital, Tavern, Bank and Marketplace
+open with the same banner (`PageHero` in `src/components/page-hero.tsx`, classes `o-page-hero-*`):
+artwork, the page's `h1`, a short lead and an icon. The banner has one fixed height (158px, 168px
+on narrow containers) on every page and is its own size container, so it looks the same inside
+and outside the training layout. The banner replaces the former panel title on those pages;
+`Panel` renders without a title bar when none is given. Marketplace keeps its link row below the
+banner on every marketplace route. Pages without dedicated artwork use `PLACEHOLDER_HERO`
+(`public/images/headers/harbor-placeholder.webp`, the owner's harbor scene re-encoded to about
+295 KiB) and their navigation icon; replace the `image` prop per page when final art exists.

@@ -4,7 +4,8 @@ import { ArrowUp, ChevronsUp, Cog, Star, UsersRound, Zap } from "lucide-react";
 import { gameplay, durationLabel } from "@/config/public";
 import { useGameState } from "@/components/game-state";
 import { TrainingActionForm } from "@/components/training/training-action-form";
-import { TrainingGuide, TrainingHero, TrainingOverview, TrainingStatBody, TrainingStatCard } from "@/components/training/training-layout";
+import { PageHero } from "@/components/page-hero";
+import { TrainingGuide, TrainingOverview, TrainingStatBody, TrainingStatCard } from "@/components/training/training-layout";
 import { TrainingTiers } from "@/components/training/training-tiers";
 import { STATS, STAT_LABELS, TRAINING_COST } from "@/lib/game";
 import { trainingTier, trainingTiers } from "@/lib/training";
@@ -21,7 +22,7 @@ export function CrewTrainingPanel() {
   const moraleCost = formatMorale(TRAINING_COST * gameplay.morale.lossPerEnergy).replace("+", "");
   const moraleEffect = formatMoraleBonus(state.crew_morale, "training");
   return <div className="o-training-page">
-    <TrainingHero title="Crew Training" lead="Sharpen your crew for battle and voyage." header="/images/training/header.webp" icon="/images/training/attack.webp" />
+    <PageHero title="Crew Training" lead="Sharpen your crew for battle and voyage." image="/images/training/header.webp" icon="/images/training/attack.webp" />
     <TrainingOverview label="Training overview" items={[
       { label: "Current exercise", value: tier.name, Icon: UsersRound },
       { label: "Training tier", value: `Tier ${tierNumber} / ${tiers.length}`, Icon: ChevronsUp },

@@ -29,9 +29,9 @@ export function Masthead({ isAdmin = false, notifications, messages }: { message
   </header>;
 }
 
-export function Panel({ title, detail, children, className = "", icon: Icon }: { title: string; detail?: string; children: ReactNode; className?: string; icon?: LucideIcon }) {
+export function Panel({ title, detail, children, className = "", icon: Icon }: { title?: string; detail?: string; children: ReactNode; className?: string; icon?: LucideIcon }) {
   return <section className={"o-panel " + className}>
-    <header className="o-panel-title"><h1>{Icon && <Icon aria-hidden="true" />}{title}</h1>{detail && <small>{detail}</small>}</header>
+    {title && <header className="o-panel-title"><h1>{Icon && <Icon aria-hidden="true" />}{title}</h1>{detail && <small>{detail}</small>}</header>}
     {children}
   </section>;
 }

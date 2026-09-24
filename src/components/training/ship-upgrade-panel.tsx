@@ -5,7 +5,8 @@ import { Anchor, ChevronsUp, Clock, Cog, Hammer, Package, Wrench, Zap } from "lu
 import { gameplay, durationLabel } from "@/config/public";
 import { useGameState } from "@/components/game-state";
 import { TrainingActionForm } from "@/components/training/training-action-form";
-import { TrainingGuide, TrainingHero, TrainingOverview, TrainingStatBody, TrainingStatCard } from "@/components/training/training-layout";
+import { PageHero } from "@/components/page-hero";
+import { TrainingGuide, TrainingOverview, TrainingStatBody, TrainingStatCard } from "@/components/training/training-layout";
 import { TrainingTiers } from "@/components/training/training-tiers";
 import { useServerCountdown } from "@/hooks/use-server-countdown";
 import { formatCountdown } from "@/lib/time";
@@ -46,7 +47,7 @@ export function ShipUpgradePanel() {
   const enoughMaterials = materials.length > 0 && materials.every(item => item.available && item.owned >= item.quantity);
   const locked = !!state.active_combat_id || !!state.hospital_until;
   return <div className="o-training-page">
-    <TrainingHero title="Ship Upgrades" lead="Leave the work to your shipwrights." header={art.header} icon={art.icon} />
+    <PageHero title="Ship Upgrades" lead="Leave the work to your shipwrights." image={art.header} icon={art.icon} />
     <TrainingOverview label="Ship work overview" items={[
       { label: "Current workshop", value: tier.name, Icon: Hammer },
       { label: "Workshop tier", value: `Tier ${tierNumber} / ${tiers.length}`, Icon: ChevronsUp },

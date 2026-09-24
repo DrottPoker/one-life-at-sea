@@ -7,15 +7,6 @@ import { STAT_LABELS, type Stat } from "@/lib/game";
 export type TrainingOverviewItem = { label: string; value: ReactNode; Icon: LucideIcon };
 export type TrainingGuideItem = { title: string; text: ReactNode; Icon: LucideIcon };
 
-export function TrainingHero({ title, lead, header, icon }: { title: string; lead: string; header: string; icon: string }) {
-  return <header className="o-training-hero">
-    <Image className="o-training-header-image" src={header} alt="" fill sizes="(max-width: 760px) 100vw, 940px" preload />
-    <div className="o-training-hero-content"><Image src={icon} alt="" width={82} height={82} />
-      <div><h1>{title}</h1><p>{lead}</p></div>
-    </div>
-  </header>;
-}
-
 export function TrainingOverview({ label, items }: { label: string; items: TrainingOverviewItem[] }) {
   return <dl className="o-training-summary" aria-label={label}>{items.map(({ label, value, Icon }) =>
     <div key={label}><dt><Icon aria-hidden="true" /><span>{label}</span></dt><dd>{value}</dd></div>

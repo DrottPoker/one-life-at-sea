@@ -1,9 +1,11 @@
 import { InventoryPanel } from "@/components/inventory/inventory-panel";
+import { Package } from "lucide-react";
 import { Panel } from "@/components/shell";
+import { PageHero, PLACEHOLDER_HERO } from "@/components/page-hero";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
-import { inventoryFilters, inventoryCategoryName } from "@/lib/inventory";
+import { inventoryFilters } from "@/lib/inventory";
 
 export const metadata = { title: "Inventory" };
 
@@ -18,7 +20,8 @@ export default async function InventoryRoute({ searchParams }: {
   }));
   if (error || !data) throw new Error("Your inventory could not be loaded. Please try again.");
   return <>
-    <Panel title="Inventory" detail={inventoryCategoryName(filters.category)}>
+    <PageHero title="Inventory" lead="Everything your captain carries." image={PLACEHOLDER_HERO} icon={Package} />
+    <Panel>
       <InventoryPanel inventory={data} filters={filters} />
     </Panel>
   </>;

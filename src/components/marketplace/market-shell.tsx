@@ -3,7 +3,8 @@
 import { GameLink as Link } from "@/components/game-navigation";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, List, ListPlus, Search, Flame, Package, Swords, CircleDot, Cross, FlaskConical, Boxes, Compass } from "lucide-react";
+import { PageHero, PLACEHOLDER_HERO } from "@/components/page-hero";
+import { ArrowLeft, List, ListPlus, Search, Store, Flame, Package, Swords, CircleDot, Cross, FlaskConical, Boxes, Compass } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
 import { useGameRefresh } from "@/components/game-refresh";
 import { inventoryCategories, type InventoryFilters } from "@/lib/inventory";
@@ -24,11 +25,12 @@ export function MarketShell({ children }: { children: ReactNode }) {
     return () => { disposed = true; void client.removeChannel(channel); };
   }, [request]);
   return <div className="o-market">
-    <header className="o-market-top"><h1>Marketplace</h1><nav aria-label="Marketplace">
+    <PageHero title="Marketplace" lead="Buy and sell goods with other captains." image={PLACEHOLDER_HERO} icon={Store} />
+    <div className="o-market-top"><nav aria-label="Marketplace">
       {pathname !== MARKET_PATH && <Link href={MARKET_PATH}><ArrowLeft aria-hidden="true" />Back to Item Market</Link>}
       <Link href={marketHref("add")} aria-current={pathname.endsWith("/add") ? "page" : undefined}><ListPlus aria-hidden="true" />Add Listings</Link>
       <Link href={marketHref("listings")} aria-current={pathname.endsWith("/listings") ? "page" : undefined}><List aria-hidden="true" />View Your Listings</Link>
-    </nav></header>
+    </nav></div>
     {children}
   </div>;
 }
