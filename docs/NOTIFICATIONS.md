@@ -27,6 +27,14 @@ is applied produce a notification when they subsequently finish. Offline players
 saved notifications when they return; expired combats settle through existing gameplay
 reads, after which the same completion trigger creates the notification.
 
+## Forum replies and quotes
+
+`forum.reply` tells a thread subscriber about a new reply and `forum.quote` tells an author that a post quoted theirs. Both
+payloads (version 1) hold the thread ID and title, the post ID and number and the author's name and player number; the
+link opens `/forums/posts/<post-id>`. A subscriber has at most one waiting reply notice per thread until they read past it,
+and players on the recipient's mail ignore list send neither kind. The post ID is the event key, so a replayed post never
+notifies twice. See [Forum](FORUMS.md#prenumerationer-och-notiser).
+
 ## Storage, delivery and privacy
 
 - `private.player_notifications` owns the recipient, kind, stable event key, versioned
