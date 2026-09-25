@@ -76,8 +76,17 @@ function SessionFrame({ children, accountId, characterId, attack, hospitalUntil,
         queue.event(typeof next === "number" ? next : null);
         schedule(false);
       });
+    // Changes committed between the server render and the subscription send no realtime event, but
+    // they raise the stored revision. Refresh only when it moved; a failed read refreshes anyway.
+    async function catchUp() {
+      const { data, error } = await client.from("player_game_events").select("revision").eq("character_id", characterId!).maybeSingle();
+      if (disposed) return;
+      if (error) { schedule(); return; }
+      queue.event(data?.revision ?? 0);
+      schedule(false);
+    }
     void client.realtime.setAuth().then(() => {
-      if (!disposed) channel.subscribe(status => { if (status === "SUBSCRIBED") schedule(); });
+      if (!disposed) channel.subscribe(status => { if (status === "SUBSCRIBED") void catchUp(); });
     }).catch(() => { if (!disposed) schedule(); });
     const foreground = () => { if (document.visibilityState === "visible") schedule(); };
     const unsubscribeForeground = subscribeToForeground(() => schedule(), true);

@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig } from "@/lib/env";
 import { navigationRedirect } from "@/lib/game-navigation";
+import { directRedirect } from "@/lib/direct-redirects";
 import { withDatabaseRetry } from "@/lib/database-retry";
 import type { Database } from "@/lib/database.types";
 
@@ -9,6 +10,8 @@ export async function proxy(request: NextRequest) {
   // Public clock only; time synchronization must survive gameplay navigation locks.
   if (request.nextUrl.pathname === "/api/world-time") return NextResponse.next();
   let response = NextResponse.next({ request });
+  // Browsers mark full page loads; the proxy cannot see Next's own RSC request headers.
+  const documentLoad = request.headers.get("sec-fetch-dest") === "document";
   const config = getSupabaseConfig();
   if (config) {
     const supabase = createServerClient<Database>(config.url, config.key, {
@@ -38,13 +41,22 @@ export async function proxy(request: NextRequest) {
         response.cookies.getAll().forEach(cookie => unavailable.cookies.set(cookie));
         response = unavailable;
       } else {
-        const destination = navigationRedirect(request.nextUrl.pathname, lock);
+        // A lock wins over a forwarding route; a forwarded destination still honours the lock. Only
+        // document loads are forwarded here: client navigations and Server Actions fetch RSC data,
+        // which follows the page's own redirect without streaming HTML.
+        const locked = navigationRedirect(request.nextUrl.pathname, lock);
+        const forward = locked || !documentLoad ? null : await directRedirect(supabase, request.nextUrl, lock);
+        const destination = locked ?? (forward && (navigationRedirect(new URL(forward.location, request.url).pathname, lock) ?? forward.location));
         if (destination) {
-          const redirect = NextResponse.redirect(new URL(destination, request.url));
+          const redirect = NextResponse.redirect(new URL(destination, request.url), forward?.permanent && destination === forward.location ? 308 : 307);
           response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
           response = redirect;
         }
       }
+    } else if (!data?.claims && request.nextUrl.pathname === "/" && documentLoad && (request.method === "GET" || request.method === "HEAD")) {
+      const redirect = NextResponse.redirect(new URL("/login", request.url));
+      response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
+      response = redirect;
     }
   }
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
