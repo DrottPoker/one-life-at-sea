@@ -1,25 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from "react";
-import { DialogCloseButton } from "@/components/dialog-close-button";
+import { useId, useRef, useState, useTransition, type ReactNode } from "react";
+import { GameDialog } from "@/components/game-dialog";
 import { useNavigationActivity } from "@/components/game-refresh";
 import { moderateForum } from "@/app/forum-actions";
 import { gameplay } from "@/config/public";
 import { forumBanLengths, validModerationReason, type ForumModerationAction } from "@/lib/forums";
 
-export function ForumDialog({ open, title, busy = false, onClose, children }: { open: boolean; title: string; busy?: boolean; onClose: () => void; children: ReactNode }) {
-  const dialog = useRef<HTMLDialogElement>(null), id = useId();
-  useEffect(() => {
-    const element = dialog.current;
-    if (!element) return;
-    if (open && !element.open) element.showModal();
-    else if (!open && element.open) element.close();
-  }, [open]);
-  return <dialog ref={dialog} className="o-item-dialog o-forum-dialog" aria-labelledby={id} onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
-    <DialogCloseButton onClose={onClose} disabled={busy} />
-    <h2 id={id} className="o-dialog-title">{title}</h2>
-    {open && children}
-  </dialog>;
+export function ForumDialog(props: { open: boolean; title: string; busy?: boolean; onClose: () => void; children: ReactNode }) {
+  return <GameDialog {...props} className="o-forum-dialog" />;
 }
 
 export type ForumModerationPrompt = {
