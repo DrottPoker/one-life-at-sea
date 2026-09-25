@@ -27,12 +27,17 @@ function forumNotice(payload: Record<string, unknown>, text: string): Notificati
 // New kinds add a renderer here and call private.emit_notification in their transaction.
 const renderers: Record<string, (payload: Record<string, unknown>) => NotificationContent | null> = {
   "forum.moderation": payload => {
+    if (payload.version === 1 && payload.action === "clear_signature") {
+      return { actors: [], text: "A moderator cleared your forum signature.", href: "/forums/settings", linkLabel: "Open forum settings" };
+    }
     if (payload.version !== 1 || typeof payload.title !== "string" || !payload.title || !isForumId(payload.thread_id)) return null;
     const text = payload.action === "remove_post" ? "A moderator removed your post in" : payload.action === "edit_post" ? "A moderator edited your post in"
-      : payload.action === "remove_thread" ? "A moderator removed your thread" : null;
+      : payload.action === "remove_thread" ? "A moderator removed your thread" : payload.action === "remove_poll" ? "A moderator removed the poll in your thread"
+      : payload.action === "remove_image" ? "A moderator removed your image in" : null;
     if (!text) return null;
-    const href = payload.action === "edit_post" && isForumId(payload.post_id) ? "/forums/posts/" + payload.post_id : null;
-    return { actors: [], text: text + " \u201c" + payload.title + "\u201d", href, linkLabel: "View forum post" };
+    const href = payload.action === "remove_poll" ? "/forums/threads/" + payload.thread_id
+      : ["edit_post", "remove_image"].includes(payload.action as string) && isForumId(payload.post_id) ? "/forums/posts/" + payload.post_id : null;
+    return { actors: [], text: text + " \u201c" + payload.title + "\u201d", href, linkLabel: payload.action === "remove_poll" ? "View thread" : "View forum post" };
   },
   "forum.ban": payload => {
     if (payload.version !== 1 || typeof payload.reason !== "string" || (payload.ends_at !== null && (typeof payload.ends_at !== "string" || Number.isNaN(Date.parse(payload.ends_at))))) return null;

@@ -3,12 +3,16 @@
 export type ForumMarkupNode =
   | { type: "text"; text: string }
   | { type: "bold" | "italic" | "underline" | "strike" | "spoiler"; children: ForumMarkupNode[] }
-  | { type: "link"; href: string; internal: boolean; children: ForumMarkupNode[] };
-type Container = Exclude<ForumMarkupNode, { type: "text" }>["type"];
+  | { type: "link"; href: string; internal: boolean; children: ForumMarkupNode[] }
+  | { type: "image"; id: string; alt: string };
+type Container = Exclude<ForumMarkupNode, { type: "text" | "image" }>["type"];
 type Frame = { tag: string; raw: string; argument: string | undefined; children: ForumMarkupNode[] };
 
 const containers: Record<string, Exclude<Container, "link">> = { b: "bold", i: "italic", u: "underline", s: "strike", spoiler: "spoiler" };
-const tagPattern = /\[(\/?)(b|i|u|s|spoiler|url)(?:=([^\]\n]{1,2048}))?\]/gi;
+const tagPattern = /\[(\/?)(b|i|u|s|spoiler|url|img)(?:=([^\]\n]{1,2048}))?\]/gi;
+// An image tag holds exactly one upload ID: [img]id[/img] or [img=description]id[/img].
+const imageTail = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\[\/img\]/i;
+export const FORUM_IMAGE_ALT_LENGTH = 200;
 const urlPattern = /https?:\/\/[^\s<>[\]"'`]+/gi;
 export const FORUM_MARKUP_DEPTH = 8;
 
@@ -50,7 +54,7 @@ function autolink(nodes: ForumMarkupNode[]): ForumMarkupNode[] {
   const result: ForumMarkupNode[] = [];
   for (const node of nodes) {
     if (node.type === "text") linkify(node.text, result);
-    else if (node.type === "link") result.push(node);
+    else if (node.type === "link" || node.type === "image") result.push(node);
     else result.push({ ...node, children: autolink(node.children) });
   }
   return result;
@@ -66,9 +70,19 @@ export function parseForumMarkup(source: string): ForumMarkupNode[] {
   const unwrap = (frame: Frame, closing = "") => { const nodes = current(); pushText(nodes, frame.raw); append(nodes, frame.children); pushText(nodes, closing); };
   let last = 0;
   for (const match of source.matchAll(tagPattern)) {
+    // The closing tag of an image was consumed with it.
+    if (match.index < last) continue;
     const [raw, closing, name, argument] = match, tag = name.toLowerCase();
     pushText(current(), source.slice(last, match.index));
     last = match.index + raw.length;
+    if (tag === "img") {
+      const image = closing ? null : imageTail.exec(source.slice(last, last + 42));
+      if (image && (argument === undefined || Array.from(argument.trim()).length <= FORUM_IMAGE_ALT_LENGTH)) {
+        current().push({ type: "image", id: image[1].toLowerCase(), alt: argument?.trim() ?? "" });
+        last += image[0].length;
+      } else pushText(current(), raw);
+      continue;
+    }
     if (!closing) {
       const invalid = stack.length >= FORUM_MARKUP_DEPTH || (tag === "url" ? stack.some(frame => frame.tag === "url") : argument !== undefined);
       if (invalid) pushText(current(), raw); else stack.push({ tag, raw, argument, children: [] });
@@ -92,10 +106,10 @@ export function parseForumMarkup(source: string): ForumMarkupNode[] {
   return autolink(root);
 }
 
-// Plain text for excerpts: formatting is dropped and spoilers stay hidden.
+// Plain text for excerpts: formatting is dropped and spoilers and images stay hidden.
 export function plainForumText(source: string) {
   const flatten = (nodes: ForumMarkupNode[]): string => nodes.map(node =>
-    node.type === "text" ? node.text : node.type === "spoiler" ? "[spoiler]" : flatten(node.children)).join("");
+    node.type === "text" ? node.text : node.type === "spoiler" ? "[spoiler]" : node.type === "image" ? "[image]" : flatten(node.children)).join("");
   return flatten(parseForumMarkup(source)).replace(/\s+/g, " ").trim();
 }
 
@@ -107,4 +121,19 @@ export const forumFormats = [
 export function wrapForumSelection(text: string, start: number, end: number, open: string, close: string) {
   const next = text.slice(0, start) + open + text.slice(start, end) + close + text.slice(end);
   return { text: next, start: start + open.length, end: end + open.length };
+}
+// Image tags go on their own line at the cursor.
+export function insertForumImage(text: string, position: number, imageId: string) {
+  const before = text.slice(0, position), after = text.slice(position);
+  const tag = (before && !before.endsWith("\n") ? "\n" : "") + "[img]" + imageId + "[/img]" + (after.startsWith("\n") ? "" : "\n");
+  return { text: before + tag + after, position: before.length + tag.length };
+}
+// Upload IDs a post shows, in order, for the editor's preview and image count.
+export function forumImageIds(source: string) {
+  const ids: string[] = [];
+  const visit = (nodes: ForumMarkupNode[]) => nodes.forEach(node => {
+    if (node.type === "image") { if (!ids.includes(node.id)) ids.push(node.id); } else if (node.type !== "text") visit(node.children);
+  });
+  visit(parseForumMarkup(source));
+  return ids;
 }

@@ -15,7 +15,7 @@ export default async function NewForumThreadPage({ params }: { params: Promise<{
   return <div className="o-forum-content">
     <ForumBreadcrumbs trail={[{ label: data.board.name, href: forumBoardUrl(boardId) }, { label: "New thread" }]} />
     <h2 className="o-forum-page-title">New thread in {data.board.name}</h2>
-    {data.board.can_post ? <ForumEditor characterId={character.id} target={{ kind: "thread", boardId }} />
+    {data.board.can_post ? <ForumEditor characterId={character.id} target={{ kind: "thread", boardId }} canUploadImages={data.board.can_upload_images} />
       : <p className="o-forum-closed">You cannot start threads in this board.</p>}
   </div>;
 }

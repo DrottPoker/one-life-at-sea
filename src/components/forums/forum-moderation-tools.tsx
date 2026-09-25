@@ -14,7 +14,8 @@ const actionLabels: Record<string, string> = {
   pin_thread: "Pinned thread", unpin_thread: "Unpinned thread", lock_thread: "Locked thread", unlock_thread: "Unlocked thread", move_thread: "Moved thread",
   grave_thread: "Moved thread to the graveyard", remove_thread: "Removed thread", restore_thread: "Restored thread", remove_post: "Removed post",
   restore_post: "Restored post", edit_post: "Edited post", dismiss_reports: "Dismissed reports", ban_player: "Banned captain", unban_player: "Lifted ban",
-  grant_moderator: "Appointed moderator", revoke_moderator: "Removed moderator",
+  grant_moderator: "Appointed moderator", revoke_moderator: "Removed moderator", close_poll: "Closed poll", remove_poll: "Removed poll", restore_poll: "Restored poll",
+  remove_image: "Hid image", restore_image: "Restored image", purge_image: "Deleted image file", clear_signature: "Cleared signature",
 };
 const reasonLabel = (reason: string) => forumReportReasons.find(item => item.id === reason)?.label ?? reason;
 const excerpt = (body: string) => { const text = plainForumText(body); return text.length > 280 ? text.slice(0, 280).trimEnd() + "…" : text; };

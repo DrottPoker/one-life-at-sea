@@ -33,6 +33,15 @@ describe("forum moderation notifications", () => {
     expect(notificationContent({ ...base, kind: "forum.moderation", payload: { version: 1, action: "edit_post", thread_id: "5", title: "Harbor news", post_id: "7", post_number: 2 } }).href).toBe("/forums/posts/7");
     expect(notificationContent({ ...base, kind: "forum.moderation", payload: { version: 1, action: "lock_thread", thread_id: "5", title: "Harbor news" } }).text).toBe("You have a new notification.");
   });
+  it("covers polls, images and signatures", () => {
+    expect(notificationContent({ ...base, kind: "forum.moderation", payload: { version: 1, action: "remove_poll", thread_id: "5", title: "Harbor news", post_id: null } }))
+      .toEqual({ actors: [], text: "A moderator removed the poll in your thread “Harbor news”", href: "/forums/threads/5", linkLabel: "View thread" });
+    expect(notificationContent({ ...base, kind: "forum.moderation", payload: { version: 1, action: "remove_image", thread_id: "5", title: "Harbor news", post_id: "7", post_number: 2 } }))
+      .toEqual({ actors: [], text: "A moderator removed your image in “Harbor news”", href: "/forums/posts/7", linkLabel: "View forum post" });
+    expect(notificationContent({ ...base, kind: "forum.moderation", payload: { version: 1, action: "clear_signature" } }))
+      .toEqual({ actors: [], text: "A moderator cleared your forum signature.", href: "/forums/settings", linkLabel: "Open forum settings" });
+    expect(notificationContent({ ...base, kind: "forum.moderation", payload: { version: 2, action: "clear_signature" } }).text).toBe("You have a new notification.");
+  });
   it("states ban length and reason, and role changes", () => {
     expect(notificationContent({ ...base, kind: "forum.ban", payload: { version: 1, ends_at: null, reason: "Spam" } }).text).toBe("You are banned from posting in the forums permanently. Reason: Spam");
     expect(notificationContent({ ...base, kind: "forum.ban", payload: { version: 1, ends_at: "2026-09-26T12:00:00Z", reason: "Spam" } }).text).toContain("until Sat, 26 Sep 2026 12:00:00 GMT");

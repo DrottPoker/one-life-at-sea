@@ -37,7 +37,20 @@
           "searchPageSize": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 },
           "reportsPerHour": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 },
           "karmaMinPostLength": { "type": "number", "integer": true, "minimum": 0, "maximum": 1000 },
-          "karmaPerAuthorPerDay": { "type": "number", "integer": true, "minimum": 1, "maximum": 1000 }
+          "karmaPerAuthorPerDay": { "type": "number", "integer": true, "minimum": 1, "maximum": 1000 },
+          "pollQuestionMaxLength": { "type": "number", "integer": true, "minimum": 1, "maximum": 200 },
+          "pollOptionMaxLength": { "type": "number", "integer": true, "minimum": 1, "maximum": 200 },
+          "pollOptionsMax": { "type": "number", "integer": true, "minimum": 2, "maximum": 20 },
+          "pollMaxDays": { "type": "number", "integer": true, "minimum": 1, "maximum": 365 },
+          "popularThreadsCount": { "type": "number", "integer": true, "minimum": 1, "maximum": 20 },
+          "popularWindowHours": { "type": "number", "integer": true, "minimum": 1, "maximum": 168 },
+          "signatureMaxLength": { "type": "number", "integer": true, "minimum": 1, "maximum": 500 },
+          "signatureMaxLines": { "type": "number", "integer": true, "minimum": 1, "maximum": 10 },
+          "imagesPerPost": { "type": "number", "integer": true, "minimum": 1, "maximum": 20 },
+          "imagesPerHour": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 },
+          "imagesUnusedMax": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 },
+          "imageUploadMaxBytes": { "type": "number", "integer": true, "minimum": 65536, "maximum": 9437184 },
+          "imageMaxDimension": { "type": "number", "integer": true, "minimum": 256, "maximum": 4096 }
         } },
         "presence": {
           "type": "object",

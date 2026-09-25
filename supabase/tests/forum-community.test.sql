@@ -22,7 +22,8 @@ grant execute on function pg_temp.notifications(text,text) to authenticated;
 select ok((select bool_and(relrowsecurity) from pg_class where oid in('private.forum_reactions'::regclass,'private.forum_subscriptions'::regclass)),'Reactions and subscriptions use RLS');
 select ok(not has_table_privilege('authenticated','private.forum_reactions','SELECT'),'Who reacted is private');
 select ok(not has_table_privilege('authenticated','private.forum_subscriptions','SELECT'),'Subscriptions are private');
-select ok(not has_function_privilege('authenticated','private.forum_notify(private.forum_threads,private.forum_posts,public.characters,uuid[],uuid,timestamptz)','EXECUTE'),'Players cannot send forum notifications');
+select ok(not has_function_privilege('authenticated','private.run_forum_notification_jobs(uuid,integer,integer)','EXECUTE'),'Players cannot deliver other captains'' notifications');
+select ok(not has_table_privilege('authenticated','private.forum_notification_jobs','SELECT'),'Waiting notifications are private');
 set local role authenticated;
 
 -- Reactions.
@@ -52,10 +53,17 @@ select is((public.get_forum_thread((select (value->>'thread_id')::bigint from co
 select set_config('request.jwt.claims','{"sub":"f1f00000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 insert into community_results values('reply1',public.create_forum_post((select (value->>'thread_id')::bigint from community_results where key='thread'),'Aye, fair winds.',null,gen_random_uuid()));
 select pg_temp.cool();
+select is(pg_temp.notifications('CommunityOne','forum.reply'),0::bigint,'Reply notices wait until the post has committed');
+select set_config('request.jwt.claims','{"sub":"f1f00000-0000-4000-8000-000000000003","role":"authenticated"}',true);
+do $$ begin perform public.deliver_forum_notifications(); end $$;
+select is(pg_temp.notifications('CommunityOne','forum.reply'),0::bigint,'Captains deliver only their own posts');
+select set_config('request.jwt.claims','{"sub":"f1f00000-0000-4000-8000-000000000002","role":"authenticated"}',true);
+do $$ begin perform public.deliver_forum_notifications(); end $$;
 select is(pg_temp.notifications('CommunityOne','forum.reply'),1::bigint,'A reply notifies the subscribed author');
 select is((public.get_forum_thread((select (value->>'thread_id')::bigint from community_results where key='thread'))#>>'{thread,subscribed}')::boolean,true,'Replying subscribes the replier');
 select public.create_forum_post((select (value->>'thread_id')::bigint from community_results where key='thread'),'And calm waters.',null,gen_random_uuid());
 select pg_temp.cool();
+do $$ begin perform public.deliver_forum_notifications(); end $$;
 select is(pg_temp.notifications('CommunityOne','forum.reply'),1::bigint,'Further replies wait until the thread is read');
 select set_config('request.jwt.claims','{"sub":"f1f00000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select is(public.get_notifications()#>>'{items,0,payload,title}','Fair winds and following seas','The notice names the thread');
@@ -67,9 +75,11 @@ select is((public.get_forum_subscriptions()#>>'{items,0,new_posts}')::integer,0,
 select set_config('request.jwt.claims','{"sub":"f1f00000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 insert into community_results values('reply3',public.create_forum_post((select (value->>'thread_id')::bigint from community_results where key='thread'),'Fresh news from the docks.',null,'f1f00000-0000-4000-8000-0000000000d1'));
 select pg_temp.cool();
+do $$ begin perform public.deliver_forum_notifications(); end $$;
 select is(pg_temp.notifications('CommunityOne','forum.reply'),2::bigint,'After reading, the next reply notifies again');
 select is(public.create_forum_post((select (value->>'thread_id')::bigint from community_results where key='thread'),'Fresh news from the docks.',null,'f1f00000-0000-4000-8000-0000000000d1'),
   (select value from community_results where key='reply3'),'A replayed reply returns its receipt');
+do $$ begin perform public.deliver_forum_notifications(); end $$;
 select is(pg_temp.notifications('CommunityOne','forum.reply'),2::bigint,'A replayed reply sends no second notice');
 select set_config('request.jwt.claims','{"sub":"f1f00000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select public.mark_forum_board_read('general_discussion');
@@ -78,10 +88,12 @@ select is((public.get_forum_thread((select (value->>'thread_id')::bigint from co
 select is(public.get_forum_subscriptions()->>'total','0','Unsubscribed threads leave the list');
 select public.create_forum_post((select (value->>'thread_id')::bigint from community_results where key='thread'),'Still here.',null,gen_random_uuid());
 select pg_temp.cool();
+do $$ begin perform public.deliver_forum_notifications(); end $$;
 select is((public.get_forum_thread((select (value->>'thread_id')::bigint from community_results where key='thread'))#>>'{thread,subscribed}')::boolean,false,'Replying does not undo an unsubscribe');
 select set_config('request.jwt.claims','{"sub":"f1f00000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 select public.create_forum_post((select (value->>'thread_id')::bigint from community_results where key='thread'),'Anyone listening?',null,gen_random_uuid());
 select pg_temp.cool();
+do $$ begin perform public.deliver_forum_notifications(); end $$;
 select is(pg_temp.notifications('CommunityOne','forum.reply'),2::bigint,'Unsubscribed captains get no reply notices');
 
 -- Quotes notify the quoted author, unless they ignore the quoting captain.
@@ -89,6 +101,7 @@ select set_config('request.jwt.claims','{"sub":"f1f00000-0000-4000-8000-00000000
 insert into community_results values('quote',public.create_forum_post((select (value->>'thread_id')::bigint from community_results where key='thread'),'Busy indeed.',
   (select (value->>'post_id')::bigint from community_results where key='thread'),gen_random_uuid()));
 select pg_temp.cool();
+do $$ begin perform public.deliver_forum_notifications(); end $$;
 select is(pg_temp.notifications('CommunityOne','forum.quote'),1::bigint,'Quoting notifies the quoted author');
 select set_config('request.jwt.claims','{"sub":"f1f00000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select public.set_mail_ignored((select player_number from community_fixture where display_name='CommunityThree'),true);
@@ -96,6 +109,7 @@ select set_config('request.jwt.claims','{"sub":"f1f00000-0000-4000-8000-00000000
 select public.create_forum_post((select (value->>'thread_id')::bigint from community_results where key='thread'),'Quoting again.',
   (select (value->>'post_id')::bigint from community_results where key='thread'),gen_random_uuid());
 select pg_temp.cool();
+do $$ begin perform public.deliver_forum_notifications(); end $$;
 select is(pg_temp.notifications('CommunityOne','forum.quote'),1::bigint,'Ignored captains send no quote notices');
 select is(pg_temp.notifications('CommunityThree','forum.quote'),0::bigint,'Quoting yourself or others never notifies the quoter');
 
@@ -140,5 +154,7 @@ select is((select count(*) from private.forum_posts p where p.likes<>(select cou
 select is((select likes from private.forum_posts where id=(select (value->>'post_id')::bigint from community_results where key='thread')),1,'Deleted captains no longer count');
 select is((select count(*) from private.forum_subscriptions s where s.notified_number is not null and exists(select 1 from private.forum_thread_reads r
   where r.character_id=s.character_id and r.thread_id=s.thread_id and r.last_read_number>=s.notified_number)),0::bigint,'Read threads never keep a waiting notice');
+select is((select count(*) from private.forum_notification_jobs j where j.post_id in(select p.id from private.forum_posts p join community_fixture f on f.id=p.author_id)),
+  0::bigint,'Delivered posts leave no waiting job');
 select * from finish();
 rollback;

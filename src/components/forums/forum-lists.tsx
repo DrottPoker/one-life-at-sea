@@ -1,11 +1,11 @@
 import { Fragment } from "react";
 import Form from "next/form";
-import { ChevronRight, Lock, MessagesSquare, Pin, Search } from "lucide-react";
+import { BarChart3, ChevronRight, Flame, Lock, MessagesSquare, Pin, Search } from "lucide-react";
 import { GameLink as Link } from "@/components/game-navigation";
 import { MessageTime } from "@/components/messages/message-time";
 import { ForumPersonLink } from "@/components/forums/forum-person";
 import { gameplay } from "@/config/public";
-import { forumBoardUrl, forumPageCount, forumPermalink, forumThreadUrl, forumUnreadUrl, forumUrl, type ForumBoardSummary, type ForumThreadSummary } from "@/lib/forums";
+import { forumBoardUrl, forumPageCount, forumPermalink, forumThreadUrl, forumUnreadUrl, forumUrl, type ForumBoardSummary, type ForumPopularThread, type ForumThreadSummary } from "@/lib/forums";
 
 export function ForumSearchForm({ query = "", threads = false, board = null }: { query?: string; threads?: boolean; board?: string | null }) {
   return <Form action="/forums/search" className="o-forum-search" role="search" aria-label="Search the forums">
@@ -65,6 +65,7 @@ export function ForumThreadList({ threads }: { threads: ForumThreadSummary[] }) 
       <td className="o-forum-topic"><div><span className="o-forum-marker" aria-hidden="true">{thread.pinned ? <Pin /> : thread.locked ? <Lock /> : <MessagesSquare />}</span>
         <span><Link className="o-forum-title" href={forumThreadUrl(thread.id)}>{thread.title}</Link>
           {thread.pinned && <span className="o-forum-flag">Pinned</span>}{thread.locked && <span className="o-forum-flag">Locked</span>}
+          {thread.poll && <span className="o-forum-flag"><BarChart3 aria-hidden="true" />Poll</span>}
           {thread.unread && <Link className="o-forum-new" href={forumUnreadUrl(thread.id)} prefetch={false} aria-label={"First unread post in " + thread.title}>New</Link>}
           <small>by <ForumPersonLink person={thread.author} />, <MessageTime value={thread.created_at} compact /></small><ThreadPages thread={thread} /></span></div></td>
       <td data-label="Replies">{thread.replies.toLocaleString("en-GB")}</td>
@@ -76,4 +77,19 @@ export function ForumThreadList({ threads }: { threads: ForumThreadSummary[] }) 
       </>}</td>
     </tr>)}</tbody>
   </table>;
+}
+
+// Ranked on a schedule from recent replies, repliers and likes; see docs/FORUMS.md.
+export function ForumPopularList({ threads }: { threads: ForumPopularThread[] }) {
+  if (!threads.length) return null;
+  return <section className="o-forum-popular" aria-labelledby="forum-popular-title">
+    <h2 id="forum-popular-title"><Flame aria-hidden="true" />Popular threads</h2>
+    <ol>{threads.map(thread => <li key={thread.id} data-unread={thread.unread}>
+      <Link className="o-forum-title" href={forumThreadUrl(thread.id)}>{thread.title}</Link>
+      {thread.poll && <span className="o-forum-flag"><BarChart3 aria-hidden="true" />Poll</span>}
+      {thread.unread && <Link className="o-forum-new" href={forumUnreadUrl(thread.id)} prefetch={false} aria-label={"First unread post in " + thread.title}>New</Link>}
+      <small><Link href={forumBoardUrl(thread.board.id)}>{thread.board.name}</Link> · {thread.replies.toLocaleString("en-GB")} {thread.replies === 1 ? "reply" : "replies"}
+        {thread.last_post && <> · <MessageTime value={thread.last_post.posted_at} compact /></>}</small>
+    </li>)}</ol>
+  </section>;
 }

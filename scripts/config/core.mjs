@@ -72,6 +72,7 @@ export function validateConfig(config) {
   // Moderators move retired threads to the single closed board.
   check(forum.boards.filter(board => board.posting === "closed").length === 1 && forum.boards.some(board => board.posting === "closed" && board.active), "The forum requires exactly one active closed board.");
   check(forum.boards.some(board => board.posting === "open" && board.active), "The forum requires an active open board.");
+  check(forum.imagesUnusedMax >= forum.imagesPerPost && forum.imagesPerHour >= forum.imagesPerPost, "Image limits must allow one post with the most images.");
   const sea = g.seaTravel;
   check(sea.departureEnergyCost <= g.resources.energyMax, "Departure costs more than maximum Energy.");
   check(sea.scoutEnergyCost <= g.resources.energyMax, "Scouting costs more than maximum Energy.");

@@ -46,6 +46,8 @@ test("captains react, follow threads through notifications and find posts by aut
     resetForumCooldown([reader.id]);
     const quoted = await reader.api.rpc("create_forum_post", { thread_id: threadId, post_body: "Quoting the question.", quoted_post_id: created.data!.post_id, request_id: crypto.randomUUID() });
     expect(quoted.error).toBeNull();
+    // The app delivers reply notices right after a reply; a direct call does the same step itself.
+    expect((await reader.api.rpc("deliver_forum_notifications")).error).toBeNull();
     await page.goto("/forums/subscriptions");
     const row = page.locator(".o-forum-results li", { hasText: title });
     await expect(row).toContainText("1 new");

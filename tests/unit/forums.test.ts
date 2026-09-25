@@ -1,29 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { gameplay } from "../../src/config/public";
-import { forumModerationUrl, validReportNote, forumBoardUrl, forumDraftKey, forumPostUrl, forumSearchUrl, forumSubscriptionsUrl, forumThreadUrl, isForumBoardId, isForumId, isForumPath, normalizeForumBody,
-  parseForumPage, parseForumSearch, parsePendingForumPost, validForumBody, validForumTitle, validModerationReason } from "../../src/lib/forums";
-import { forumLinkTarget, parseForumMarkup, plainForumText, wrapForumSelection } from "../../src/lib/forum-markup";
+import { forumModerationUrl, validReportNote, forumBoardUrl, forumDraftKey, forumImageUrl, forumPollDurations, forumPostUrl, forumSearchUrl, forumSettingsUrl, forumSubscriptionsUrl, forumThreadUrl,
+  isForumBoardId, isForumId, isForumPath, normalizeForumBody, normalizeForumPoll, parseForumPage, parseForumSearch, parsePendingForumPost, validForumBody, validForumPoll,
+  validForumSignature, validForumTitle, validModerationReason } from "../../src/lib/forums";
+import { forumImageIds, forumLinkTarget, insertForumImage, parseForumMarkup, plainForumText, wrapForumSelection } from "../../src/lib/forum-markup";
 import { isHospitalAccessiblePath } from "../../src/lib/hospital";
 import { isSeaAccessiblePath } from "../../src/lib/sea-travel";
 import { navigationRedirect } from "../../src/lib/game-navigation";
 
-const mocks = vi.hoisted(() => ({ requireCharacter: vi.fn(), createClient: vi.fn(), rpc: vi.fn() }));
+const mocks = vi.hoisted(() => ({ requireCharacter: vi.fn(), createClient: vi.fn(), rpc: vi.fn(), after: vi.fn(), remove: vi.fn() }));
 vi.mock("@/lib/player", () => ({ requireCharacter: mocks.requireCharacter }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-import { editForumPost, markForumThreadRead, moderateForum, reportForumPost, setForumReaction, setForumSubscription, submitForumPost, withdrawForumPost } from "../../src/app/forum-actions";
+vi.mock("next/server", () => ({ after: mocks.after }));
+import { closeForumPoll, editForumPost, markForumThreadRead, moderateForum, reportForumPost, saveForumSettings, setForumReaction, setForumSubscription, submitForumPost, voteForumPoll,
+  withdrawForumPost } from "../../src/app/forum-actions";
 
 const id = "f0f00000-0000-4000-8000-0000000000a1";
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.requireCharacter.mockResolvedValue({ id: "captain" });
-  mocks.createClient.mockResolvedValue({ rpc: mocks.rpc });
+  mocks.createClient.mockResolvedValue({ rpc: mocks.rpc, storage: { from: () => ({ remove: mocks.remove }) } });
 });
 
 describe("forum routes and values", () => {
   it("accepts exact forum paths in Hospital and at sea", () => {
-    for (const path of ["/forums", "/forums/search", "/forums/subscriptions", "/forums/moderation", "/forums/boards/general_discussion", "/forums/boards/trading_post/new", "/forums/threads/9223372036854775807", "/forums/posts/1"]) {
+    for (const path of ["/forums", "/forums/search", "/forums/subscriptions", "/forums/moderation", "/forums/settings", "/forums/boards/general_discussion", "/forums/boards/trading_post/new", "/forums/threads/9223372036854775807", "/forums/posts/1"]) {
       expect(isForumPath(path)).toBe(true);
       expect(isHospitalAccessiblePath(path)).toBe(true);
       expect(isSeaAccessiblePath(path, "at_sea")).toBe(true);
@@ -49,6 +52,8 @@ describe("forum routes and values", () => {
     expect(parseForumSearch("by:" + "x".repeat(41))).toEqual({ text: "", author: null });
     expect(forumSearchUrl("by:100001", { threads: true, page: 1, board: "trading_post" })).toBe("/forums/search?q=by%3A100001&threads=1&board=trading_post&page=2");
     expect(forumSubscriptionsUrl(2)).toBe("/forums/subscriptions?page=3");
+    expect(forumSettingsUrl()).toBe("/forums/settings");
+    expect(forumImageUrl(id)).toBe("/api/forum-images/" + id + ".webp");
   });
   it("links moderation views and checks report notes", () => {
     expect(forumModerationUrl()).toBe("/forums/moderation");
@@ -71,9 +76,14 @@ describe("forum routes and values", () => {
     expect(isForumBoardId("../admin")).toBe(false);
   });
   it("keeps one pending post per target and rejects damaged storage", () => {
-    const thread = { id, kind: "thread", boardId: "general_discussion", title: "Title", body: "Body" };
+    const thread = { id, kind: "thread", boardId: "general_discussion", title: "Title", body: "Body", poll: null };
     const reply = { id, kind: "reply", threadId: "12", body: "Body", quotedPostId: "3" };
+    const poll = { question: "Which ship?", options: ["Sloop", "Brig"], max_choices: 1, days: 3 };
     expect(parsePendingForumPost(JSON.stringify(thread))).toEqual(thread);
+    // Drafts saved before polls existed still load.
+    expect(parsePendingForumPost(JSON.stringify({ ...thread, poll: undefined }))).toEqual(thread);
+    expect(parsePendingForumPost(JSON.stringify({ ...thread, poll }))).toEqual({ ...thread, poll });
+    expect(() => parsePendingForumPost(JSON.stringify({ ...thread, poll: { ...poll, options: ["Only"] } }))).toThrow();
     expect(parsePendingForumPost(JSON.stringify(reply))).toEqual(reply);
     expect(parsePendingForumPost(null)).toBeNull();
     for (const bad of [{ ...thread, title: "" }, { ...reply, threadId: "x" }, { ...reply, quotedPostId: 3 }, { ...thread, kind: "other" }, { ...thread, id: "bad" }]) {
@@ -81,6 +91,23 @@ describe("forum routes and values", () => {
     }
     expect(forumDraftKey("a", { kind: "reply", threadId: "1" })).not.toBe(forumDraftKey("b", { kind: "reply", threadId: "1" }));
     expect(forumDraftKey("a", { kind: "reply", threadId: "1" })).not.toBe(forumDraftKey("a", { kind: "thread", boardId: "general_discussion" }));
+  });
+  it("mirrors the database poll rules", () => {
+    const poll = { question: "Which ship?", options: ["Sloop", "Brig", "Galleon"], max_choices: 2, days: null };
+    expect(validForumPoll(poll)).toBe(true);
+    expect(validForumPoll({ ...poll, days: gameplay.forum.pollMaxDays })).toBe(true);
+    for (const bad of [{ ...poll, options: ["Sloop"] }, { ...poll, options: ["Sloop", "sloop"] }, { ...poll, max_choices: 4 }, { ...poll, max_choices: 0 },
+      { ...poll, max_choices: 1.5 }, { ...poll, days: 0 }, { ...poll, days: gameplay.forum.pollMaxDays + 1 }, { ...poll, question: " Padded" }, { ...poll, question: "" },
+      { ...poll, options: [...poll.options, ""] }, { ...poll, extra: true }, { ...poll, options: Array.from({ length: gameplay.forum.pollOptionsMax + 1 }, (_, index) => "Option " + index) },
+      { ...poll, question: "x".repeat(gameplay.forum.pollQuestionMaxLength + 1) }, null, "poll"]) expect(validForumPoll(bad)).toBe(false);
+    expect(normalizeForumPoll({ question: " Which? ", options: [" A ", "B "], max_choices: 1, days: 3 })).toEqual({ question: "Which?", options: ["A", "B"], max_choices: 1, days: 3 });
+    expect(forumPollDurations.every(days => days <= gameplay.forum.pollMaxDays)).toBe(true);
+  });
+  it("mirrors the database signature rules", () => {
+    expect(validForumSignature("")).toBe(true);
+    expect(validForumSignature("[b]Captain[/b]\nFair winds")).toBe(true);
+    for (const bad of [" padded", "x".repeat(gameplay.forum.signatureMaxLength + 1), Array.from({ length: gameplay.forum.signatureMaxLines + 1 }, () => "line").join("\n"),
+      "bell\u0007", "tab\there", 5]) expect(validForumSignature(bad)).toBe(false);
   });
 });
 
@@ -124,12 +151,33 @@ describe("forum markup", () => {
   it("wraps the selected text for the toolbar", () => {
     expect(wrapForumSelection("Hello world", 6, 11, "[b]", "[/b]")).toEqual({ text: "Hello [b]world[/b]", start: 9, end: 14 });
   });
+  it("shows only well-formed image tags", () => {
+    const other = "f0f00000-0000-4000-8000-0000000000b2";
+    expect(parseForumMarkup("Look [IMG=The harbor]" + id.toUpperCase() + "[/img] here")).toEqual([
+      { type: "text", text: "Look " }, { type: "image", id, alt: "The harbor" }, { type: "text", text: " here" },
+    ]);
+    expect(parseForumMarkup("[spoiler][img]" + id + "[/img][/spoiler]")).toEqual([{ type: "spoiler", children: [{ type: "image", id, alt: "" }] }]);
+    for (const text of ["[img]https://evil.example/x.png[/img]", "[img]" + id + "[/IMG ]", "[img]" + id, "[/img]", "[img=" + "x".repeat(201) + "]" + id + "[/img]"]) {
+      expect(parseForumMarkup(text).some(node => node.type === "image")).toBe(false);
+    }
+    expect(parseForumMarkup("[url][img]" + id + "[/img][/url]").some(node => node.type === "link")).toBe(false);
+    expect(parseForumMarkup("[url=https://example.com][img]" + id + "[/img][/url]")).toEqual([
+      { type: "link", href: "https://example.com/", internal: false, children: [{ type: "image", id, alt: "" }] },
+    ]);
+    expect(forumImageIds("[img]" + id + "[/img] [b][img]" + other + "[/img][/b] [img]" + id + "[/img]")).toEqual([id, other]);
+    expect(plainForumText("Map: [img]" + id + "[/img]")).toBe("Map: [image]");
+  });
+  it("inserts uploaded images on their own line", () => {
+    expect(insertForumImage("Before after", 6, id)).toEqual({ text: "Before\n[img]" + id + "[/img]\n after", position: 7 + 47 + 1 });
+    expect(insertForumImage("", 0, id).text).toBe("[img]" + id + "[/img]\n");
+    expect(insertForumImage("Line\n", 5, id).text).toBe("Line\n[img]" + id + "[/img]\n");
+  });
 });
 
 describe("forum server actions", () => {
   it("refuses stale accounts before touching the database", async () => {
     mocks.requireCharacter.mockResolvedValue({ id: "new-character" });
-    expect(await submitForumPost("old-character", { id, kind: "thread", boardId: "general_discussion", title: "Title", body: "Body" })).toMatchObject({ retry: true });
+    expect(await submitForumPost("old-character", { id, kind: "thread", boardId: "general_discussion", title: "Title", body: "Body", poll: null })).toMatchObject({ retry: true });
     expect((await withdrawForumPost("old-character", "1")).error).toContain("changed");
     expect(await markForumThreadRead("old-character", "1", 1)).toContain("changed");
     expect(mocks.createClient).not.toHaveBeenCalled();
@@ -143,7 +191,9 @@ describe("forum server actions", () => {
     expect(await submitForumPost("captain", { id, kind: "reply", threadId: "5", body: "Hello", quotedPostId: null })).toMatchObject({ retry: true });
   });
   it("rejects invalid input without a database call", async () => {
-    expect((await submitForumPost("captain", { id, kind: "thread", boardId: "Bad board", title: "Title", body: "Body" })).error).toBeTruthy();
+    expect((await submitForumPost("captain", { id, kind: "thread", boardId: "Bad board", title: "Title", body: "Body", poll: null })).error).toBeTruthy();
+    expect((await submitForumPost("captain", { id, kind: "thread", boardId: "general_discussion", title: "Title", body: "Body",
+      poll: { question: "Pick", options: ["A", "a"], max_choices: 1, days: null } })).error).toContain("poll");
     expect((await editForumPost("captain", "1", "Body", null, -1)).error).toBeTruthy();
     expect((await moderateForum("captain", { id, action: "remove_post", payload: { thread_id: "1" }, reason: "Spam" })).error).toBeTruthy();
     expect((await moderateForum("captain", { id, action: "pin_thread", payload: { thread_id: "1" }, reason: "x" })).error).toBeTruthy();
@@ -168,7 +218,7 @@ describe("forum server actions", () => {
     expect((await moderateForum("captain", { id, action: "grant_moderator", payload: { player_number: "100001", hours: "24" }, reason: "Helper" })).error).toBeTruthy();
     expect(mocks.rpc).not.toHaveBeenCalled();
     mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: "FORUM_FORBIDDEN" } });
-    expect((await moderateForum("captain", { id, action: "ban_player", payload: { player_number: "100001", hours: "24" }, reason: "Spam" })).error).toContain("cannot ban");
+    expect((await moderateForum("captain", { id, action: "ban_player", payload: { player_number: "100001", hours: "24" }, reason: "Spam" })).error).toContain("cannot act on");
     mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: "FORUM_BANNED", details: "2026-09-26T12:00:00Z" } });
     expect((await setForumReaction("captain", "1", 1)).error).toBe("You are banned from posting in the forums until Sat, 26 Sep 2026 12:00:00 GMT.");
     mocks.rpc.mockResolvedValueOnce({ data: { report_id: "4", already: false }, error: null });
@@ -179,5 +229,55 @@ describe("forum server actions", () => {
     mocks.rpc.mockResolvedValueOnce({ data: { message: "Post edited.", thread_id: "1", post_id: "2" }, error: null });
     await moderateForum("captain", { id, action: "edit_post", payload: { post_id: "2", body: " Clean \r\n", title: " Title " }, reason: "  Removed details  " });
     expect(mocks.rpc).toHaveBeenCalledWith("moderate_forum", { action: "edit_post", payload: { post_id: "2", body: "Clean", title: "Title" }, request_id: id, reason: "Removed details" });
+  });
+});
+
+describe("forum stage four actions", () => {
+  it("sends trimmed polls and delivers reply notices after the response", async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: { thread_id: "7", post_id: "9", post_number: 1, created_at: "2026-09-25T12:00:00Z" }, error: null });
+    await submitForumPost("captain", { id, kind: "thread", boardId: "general_discussion", title: "Title", body: "Body",
+      poll: { question: " Which ship? ", options: [" Sloop", "Brig "], max_choices: 1, days: 3 } });
+    expect(mocks.rpc).toHaveBeenCalledWith("create_forum_thread", { board_id: "general_discussion", thread_title: "Title", post_body: "Body", request_id: id,
+      poll: { question: "Which ship?", options: ["Sloop", "Brig"], max_choices: 1, days: 3 } });
+    expect(mocks.after).not.toHaveBeenCalled();
+    mocks.rpc.mockResolvedValueOnce({ data: { thread_id: "7", post_id: "10", post_number: 2, created_at: "2026-09-25T12:00:00Z" }, error: null });
+    await submitForumPost("captain", { id, kind: "reply", threadId: "7", body: "Reply", quotedPostId: null });
+    expect(mocks.after).toHaveBeenCalledTimes(1);
+    mocks.rpc.mockResolvedValueOnce({ data: 0, error: null });
+    await mocks.after.mock.calls[0][0]();
+    expect(mocks.rpc).toHaveBeenLastCalledWith("deliver_forum_notifications");
+  });
+  it("validates votes, poll closing and settings before the database", async () => {
+    for (const choices of [[0], [1.5], Array.from({ length: gameplay.forum.pollOptionsMax + 1 }, (_, index) => index + 1), "1" as never]) {
+      expect((await voteForumPoll("captain", "1", choices)).error).toBeTruthy();
+    }
+    expect((await voteForumPoll("captain", "x", [1])).error).toBeTruthy();
+    expect((await closeForumPoll("captain", "0")).error).toBeTruthy();
+    expect((await saveForumSettings("captain", "x".repeat(gameplay.forum.signatureMaxLength + 1), true)).error).toBeTruthy();
+    expect((await saveForumSettings("captain", "", "yes" as never)).error).toBeTruthy();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: "NEW_CHARACTER" } });
+    expect((await voteForumPoll("captain", "1", [2])).error).toBe(`New captains can vote after ${gameplay.forum.newCharacterHours} hours.`);
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: "POLL_CLOSED" } });
+    expect((await voteForumPoll("captain", "1", [2])).error).toBe("This poll is closed.");
+    mocks.rpc.mockResolvedValueOnce({ data: { signature: "Hi", show_signatures: true, ban: null, can_sign: true }, error: null });
+    await saveForumSettings("captain", "  Hi\r\n", true);
+    expect(mocks.rpc).toHaveBeenLastCalledWith("set_forum_settings", { signature: "Hi", show_signatures: true });
+  });
+  it("checks image, poll and signature moderation payloads", async () => {
+    expect((await moderateForum("captain", { id, action: "remove_image", payload: { image_id: "not-a-uuid" }, reason: "Graphic" })).error).toBeTruthy();
+    expect((await moderateForum("captain", { id, action: "close_poll", payload: { post_id: "1" }, reason: "Enough" })).error).toBeTruthy();
+    expect((await moderateForum("captain", { id, action: "clear_signature", payload: { player_number: "12" }, reason: "Advert" })).error).toBeTruthy();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+  it("deletes a purged file after the database logs the purge", async () => {
+    const receipt = { message: "Image file deleted.", thread_id: "1", post_id: "2", image_path: "u/" + id + ".webp" };
+    mocks.rpc.mockResolvedValueOnce({ data: receipt, error: null });
+    mocks.remove.mockResolvedValueOnce({ data: [], error: { message: "offline" } });
+    expect(await moderateForum("captain", { id, action: "purge_image", payload: { image_id: id }, reason: "Illegal content" })).toMatchObject({ retry: true });
+    mocks.rpc.mockResolvedValueOnce({ data: receipt, error: null });
+    mocks.remove.mockResolvedValueOnce({ data: [], error: null });
+    expect(await moderateForum("captain", { id, action: "purge_image", payload: { image_id: id }, reason: "Illegal content" })).toEqual({ receipt });
+    expect(mocks.remove).toHaveBeenLastCalledWith([receipt.image_path]);
   });
 });

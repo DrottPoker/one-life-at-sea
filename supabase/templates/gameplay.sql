@@ -38,6 +38,10 @@
 {{include.mail-read}}
 {{include.mail-actions}}
 {{include.forum-schema}}
+{{include.forum-polls}}
+{{include.forum-images}}
+{{include.forum-profiles}}
+{{include.forum-delivery}}
 {{include.forum-write}}
 {{include.forum-read}}
 {{include.forum-moderation}}

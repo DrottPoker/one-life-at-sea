@@ -43,3 +43,7 @@ export async function loadForumReports(status: "open" | "resolved" | "dismissed"
   const { data, error } = await (await createClient()).rpc("get_forum_reports", { status, page });
   return data && !error ? data : unavailable(error);
 }
+export async function loadForumSettings() {
+  const { data, error } = await (await createClient()).rpc("get_forum_settings");
+  return data && !error ? data : unavailable(error);
+}

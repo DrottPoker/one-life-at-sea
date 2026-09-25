@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useId, useOptimistic, useRef, useState, useTransition } from "react";
-import { Archive, Ban, Bell, BellOff, Flag, History, Lock, LockOpen, MoveRight, Pencil, Pin, PinOff, Quote, RotateCcw, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
+import { Archive, BarChart3, Ban, Bell, BellOff, EyeOff, Flag, History, ImageOff, Lock, LockOpen, MoveRight, Pencil, Pin, PinOff, Quote, RotateCcw, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
 import { GameLink as Link } from "@/components/game-navigation";
 import { useNavigationActivity } from "@/components/game-refresh";
 import { MessageTime } from "@/components/messages/message-time";
 import { Pagination } from "@/components/pagination";
 import { ForumMarkup } from "@/components/forums/forum-markup";
 import { ForumBanNotice, ForumPersonLink } from "@/components/forums/forum-person";
-import { ForumEditor, ForumTextArea, ForumToolbar, type ForumQuoteDraft } from "@/components/forums/forum-editor";
+import { ForumEditor, ForumTextArea, ForumToolbar, useForumImageInsert, type ForumQuoteDraft } from "@/components/forums/forum-editor";
+import { ForumPollView } from "@/components/forums/forum-poll";
 import { ForumDialog, ForumModerationDialog, type ForumModerationPrompt } from "@/components/forums/forum-dialog";
 import { editForumPost, loadForumPostHistory, markForumThreadRead, moderateForum, reportForumPost, setForumReaction, setForumSubscription, withdrawForumPost } from "@/app/forum-actions";
 import { gameplay } from "@/config/public";
@@ -69,9 +70,11 @@ function PostEditor({ characterId, post, thread, asModerator, onDone }: {
   const [body, setBody] = useState(post.body ?? ""), [title, setTitle] = useState(thread.title), [reason, setReason] = useState(""), [preview, setPreview] = useState(false);
   const [error, setError] = useState<string | null>(null), [saving, start] = useTransition(), [retrying, setRetrying] = useState(false);
   const textarea = useRef<HTMLTextAreaElement>(null), request = useRef<string | null>(null), id = useId();
+  const { images, upload, tooMany } = useForumImageInsert(textarea, body, setBody, post.images);
+  const uploads = !asModerator && thread.can_upload_images;
   useNavigationActivity(saving);
   const first = post.number === 1, newTitle = first && title.trim() !== thread.title ? title.trim() : null;
-  const valid = validForumBody(normalizeForumBody(body)) && (newTitle === null || validForumTitle(newTitle)) && (!asModerator || validModerationReason(reason));
+  const valid = validForumBody(normalizeForumBody(body)) && (newTitle === null || validForumTitle(newTitle)) && (!asModerator || validModerationReason(reason)) && !tooMany;
   function save() {
     if (saving || !valid) return;
     start(async () => {
@@ -94,15 +97,20 @@ function PostEditor({ characterId, post, thread, asModerator, onDone }: {
     {first && <div className="o-forum-field"><label htmlFor={id + "-title"}>Title</label>
       <input id={id + "-title"} value={title} readOnly={locked} maxLength={gameplay.forum.threadTitleMaxLength * 2} onChange={event => setTitle(event.target.value)} /></div>}
     <div className="o-forum-field"><label htmlFor={id + "-body"}>Post</label>
-      <ForumToolbar textarea={textarea} value={body} onChange={setBody} disabled={locked} preview={preview} onPreview={() => setPreview(!preview)} />
-      <ForumTextArea id={id + "-body"} textarea={textarea} value={body} onChange={setBody} readOnly={locked} preview={preview} rows={6} describedBy={id + "-limit"} />
+      <ForumToolbar textarea={textarea} value={body} onChange={setBody} disabled={locked} preview={preview} onPreview={() => setPreview(!preview)}
+        onImage={uploads ? upload.open : undefined} imageBusy={upload.uploading} />
+      <ForumTextArea id={id + "-body"} textarea={textarea} value={body} onChange={setBody} readOnly={locked} preview={preview} rows={6} describedBy={id + "-limit"}
+        images={images} onPasteImage={uploads ? file => void upload.upload(file) : undefined} />
+      {upload.picker}
       <small id={id + "-limit"}>{Array.from(body).length} / {gameplay.forum.postMaxLength} characters</small>
+      {tooMany && <p role="alert" className="o-field-error">A post can show at most {gameplay.forum.imagesPerPost} images.</p>}
+      {upload.error && <p role="alert" className="o-field-error">{upload.error}</p>}
     </div>
     {asModerator && <div className="o-forum-field"><label htmlFor={id + "-reason"}>Reason (visible to moderators)</label>
       <input id={id + "-reason"} value={reason} readOnly={locked} maxLength={500} onChange={event => setReason(event.target.value)} /></div>}
     <div className="o-forum-inline-actions">
       <button type="button" className="o-text-button" disabled={saving} onClick={() => onDone()}>Cancel</button>
-      <button type="button" className="o-primary" disabled={saving || !valid} onClick={save}>{saving ? "Saving..." : retrying ? "Retry" : "Save post"}</button>
+      <button type="button" className="o-primary" disabled={saving || !valid || upload.uploading} onClick={save}>{saving ? "Saving..." : retrying ? "Retry" : "Save post"}</button>
     </div>
     {error && <p role="alert" className="o-field-error">{error}</p>}
   </div>;
@@ -155,8 +163,34 @@ function ReportDialog({ characterId, post, open, onClose }: { characterId: strin
   </ForumDialog>;
 }
 
-function PostCard({ characterId, post, thread, fresh, onQuote, onModerate, onHistory, onNotice }: {
-  characterId: string; post: ForumPost; thread: ForumThread; fresh: boolean; onQuote: () => void;
+// Moderators act on each image a post shows; only administrators delete files for good.
+function ImageModeration({ post, thread, onModerate }: { post: ForumPost; thread: ForumThread; onModerate: (prompt: ForumModerationPrompt) => void }) {
+  const images = Object.entries(post.images ?? {});
+  if (!thread.can_moderate || !images.length) return null;
+  return <ul className="o-forum-image-tools" aria-label={"Images in post #" + post.number}>{images.map(([imageId, image], index) => <li key={imageId}>
+    <span>Image {index + 1}{image.purged ? " (file deleted)" : image.removed ? " (hidden from players)" : ""}</span>
+    {!image.removed && <button type="button" onClick={() => onModerate({ action: "remove_image", payload: { image_id: imageId }, title: "Hide image " + (index + 1) + " in post #" + post.number + "?",
+      description: "Players see that a moderator removed the image. Moderators can still view and restore it.", confirm: "Hide image" })}><EyeOff aria-hidden="true" />Hide image</button>}
+    {image.removed && !image.purged && <button type="button" onClick={() => onModerate({ action: "restore_image", payload: { image_id: imageId }, title: "Restore image " + (index + 1) + "?",
+      description: "The image becomes visible to every player again.", confirm: "Restore image" })}><RotateCcw aria-hidden="true" />Restore image</button>}
+    {thread.can_purge_images && !image.purged && <button type="button" onClick={() => onModerate({ action: "purge_image", payload: { image_id: imageId },
+      title: "Delete image " + (index + 1) + " permanently?", description: "The file is deleted for everyone, including moderators. Use this for illegal content. This cannot be undone.",
+      confirm: "Delete file" })}><ImageOff aria-hidden="true" />Delete file</button>}
+  </li>)}</ul>;
+}
+
+function Signature({ post, signature, thread, onModerate }: { post: ForumPost; signature: string; thread: ForumThread; onModerate: (prompt: ForumModerationPrompt) => void }) {
+  const author = post.author;
+  return <div className="o-forum-signature">
+    <ForumMarkup source={signature} className="o-forum-body o-forum-signature-body" />
+    {thread.can_moderate && author && !post.own && <button type="button" className="o-text-button" onClick={() => onModerate({ action: "clear_signature",
+      payload: { player_number: String(author.player_number) }, title: "Clear " + author.display_name + "'s signature?",
+      description: "The signature is removed everywhere. The captain is told, and can write a new one.", confirm: "Clear signature" })}>Clear signature</button>}
+  </div>;
+}
+
+function PostCard({ characterId, post, thread, fresh, signature, onQuote, onModerate, onHistory, onNotice }: {
+  characterId: string; post: ForumPost; thread: ForumThread; fresh: boolean; signature: string | null; onQuote: () => void;
   onModerate: (prompt: ForumModerationPrompt) => void; onHistory: () => void; onNotice: (message: string) => void;
 }) {
   const [editing, setEditing] = useState<"author" | "moderator" | null>(null), [confirming, setConfirming] = useState(false);
@@ -199,8 +233,11 @@ function PostCard({ characterId, post, thread, fresh, onQuote, onModerate, onHis
       </blockquote>}
       {editing ? <PostEditor characterId={characterId} post={post} thread={thread} asModerator={editing === "moderator"} onDone={message => { setEditing(null); if (message) onNotice(message); }} />
         : post.removed ? <div className="o-forum-removed"><p>{post.removed.by === "author" ? "This post was deleted by its author." : "This post was removed by a moderator."}</p>
-          {post.body !== null && <><small>Hidden from players. Only moderators can read it.</small><ForumMarkup source={post.body} className="o-forum-body o-forum-removed-body" /></>}</div>
-        : post.body !== null && <ForumMarkup source={post.body} />}
+          {post.body !== null && <><small>Hidden from players. Only moderators can read it.</small>
+            <ForumMarkup source={post.body} className="o-forum-body o-forum-removed-body" images={post.images} moderator={thread.can_moderate} /></>}</div>
+        : post.body !== null && <ForumMarkup source={post.body} images={post.images} moderator={thread.can_moderate} />}
+      {!editing && <ImageModeration post={post} thread={thread} onModerate={onModerate} />}
+      {signature && !editing && !post.removed && <Signature post={post} signature={signature} thread={thread} onModerate={onModerate} />}
       {post.edited && !editing && <p className="o-forum-edited">Last edited by {post.edited.by ?? "a former captain"}{post.edited.moderator && " (moderator)"} on <MessageTime value={post.edited.at} /></p>}
       {!editing && <footer className="o-forum-post-actions">
         <Reactions characterId={characterId} post={post} onError={setError} />
@@ -236,7 +273,7 @@ function ThreadModeration({ thread, onModerate }: { thread: ForumThread; onModer
     return <div className="o-forum-moderation" role="group" aria-label="Moderation">
       <button type="button" onClick={() => act("restore_thread", "Restore this thread?", "The thread returns to its board for every player.", "Restore thread")}><RotateCcw aria-hidden="true" />Restore thread</button></div>;
   }
-  const closed = thread.board.posting === "closed";
+  const closed = thread.board.posting === "closed", poll = thread.poll && "options" in thread.poll ? thread.poll : null;
   return <div className="o-forum-moderation" role="group" aria-label="Moderation">
     {!closed && (thread.pinned ? <button type="button" onClick={() => act("unpin_thread", "Unpin this thread?", "The thread is sorted by its latest post again.", "Unpin")}><PinOff aria-hidden="true" />Unpin</button>
       : <button type="button" onClick={() => act("pin_thread", "Pin this thread?", "Pinned threads stay at the top of the board.", "Pin")}><Pin aria-hidden="true" />Pin</button>)}
@@ -245,6 +282,9 @@ function ThreadModeration({ thread, onModerate }: { thread: ForumThread; onModer
     <button type="button" onClick={() => act("move_thread", "Move this thread?", "Choose the board that should hold this thread.", "Move thread")}><MoveRight aria-hidden="true" />Move</button>
     {!closed && <button type="button" onClick={() => act("grave_thread", "Move this thread to the graveyard?", "The thread is locked, unpinned and moved to the closed board. It stays readable.", "Move to graveyard")}><Archive aria-hidden="true" />Graveyard</button>}
     <button type="button" onClick={() => act("remove_thread", "Remove this thread?", "Players can no longer find or open the thread. Moderators can restore it.", "Remove thread")}><Trash2 aria-hidden="true" />Remove</button>
+    {poll && !poll.closed && <button type="button" onClick={() => act("close_poll", "Close this poll?", "Nobody can vote after this, and everyone sees the results.", "Close poll")}><BarChart3 aria-hidden="true" />Close poll</button>}
+    {poll && (poll.removed ? <button type="button" onClick={() => act("restore_poll", "Restore this poll?", "The poll becomes visible to every player again.", "Restore poll")}><RotateCcw aria-hidden="true" />Restore poll</button>
+      : <button type="button" onClick={() => act("remove_poll", "Remove this poll?", "Players see that a moderator removed the poll and can no longer vote. Moderators can restore it.", "Remove poll")}><Trash2 aria-hidden="true" />Remove poll</button>)}
   </div>;
 }
 
@@ -257,6 +297,14 @@ export function ForumThreadView({ characterId, data }: { characterId: string; da
   const editor = useRef<HTMLTextAreaElement>(null), replySection = useRef<HTMLElement>(null);
   const highest = posts.reduce((value, post) => Math.max(value, post.number), 0);
   useReadMarker(characterId, thread.id, highest, thread.last_read_number);
+  // A signature appears once per page, under the author's first visible post, instead of under every post.
+  const signed = new Set<string>();
+  const signatures = new Map(posts.map(post => {
+    const number = post.author ? String(post.author.player_number) : null;
+    const signature = number && !post.removed && !post.ignored && !signed.has(number) ? data.signatures[number] ?? null : null;
+    if (signature && number) signed.add(number);
+    return [post.id, signature] as const;
+  }));
   function quotePost(post: ForumPost) {
     setQuote({ postId: post.id, number: post.number, author: post.author?.display_name ?? "[deleted]" });
     replySection.current?.scrollIntoView({ block: "center" });
@@ -275,12 +323,15 @@ export function ForumThreadView({ characterId, data }: { characterId: string; da
     </header>
     {data.ban && <ForumBanNotice ban={data.ban} />}
     {notice && <p className="o-forum-notice" role="status">{notice}</p>}
+    {thread.poll && <ForumPollView characterId={characterId} threadId={thread.id} poll={thread.poll} />}
     {pages}
     <ol className="o-forum-posts">{posts.map(post => <PostCard key={post.id} characterId={characterId} post={post} thread={thread} fresh={post.number > readBefore && !post.own}
+      signature={signatures.get(post.id) ?? null}
       onQuote={() => quotePost(post)} onModerate={setPrompt} onHistory={() => setHistory(post)} onNotice={setNotice} />)}</ol>
     {pages}
     {thread.can_reply ? <section className="o-forum-reply" ref={replySection} aria-label="Reply to this thread">
-      <ForumEditor characterId={characterId} target={{ kind: "reply", threadId: thread.id }} quote={quote} onClearQuote={() => setQuote(null)} textarea={editor} />
+      <ForumEditor characterId={characterId} target={{ kind: "reply", threadId: thread.id }} quote={quote} onClearQuote={() => setQuote(null)} textarea={editor}
+        canUploadImages={thread.can_upload_images} />
     </section> : closedReason && <p className="o-forum-closed">{closedReason}</p>}
     <ForumModerationDialog characterId={characterId} prompt={prompt} onClose={message => { setPrompt(null); if (message) setNotice(message); }} />
     <PostHistory characterId={characterId} post={history} onClose={() => setHistory(null)} />

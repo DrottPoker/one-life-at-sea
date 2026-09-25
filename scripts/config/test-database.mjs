@@ -47,7 +47,9 @@ Object.assign(config.gameplay.seaTravel, { scoutEnergyCost: 9, scoutPageSize: 2,
 Object.assign(config.gameplay.marketplace, { feeBps: 1000, popularityHours: 6, valueWindowHours: 2, pageSize: 2, listingsPageSize: 1, maxBatchSize: 2 });
 config.gameplay.inventory.items.find(item => item.id === "brass_compass").tradable = false;
 Object.assign(config.gameplay.forum, { threadTitleMaxLength: 10, postMaxLength: 50, threadsPageSize: 1, postsPageSize: 2, postCooldownSeconds: 0, threadsPerHour: 2,
-  reactionsPerMinute: 1, newCharacterHours: 0, searchPageSize: 1, reportsPerHour: 1, karmaMinPostLength: 0, karmaPerAuthorPerDay: 1 });
+  reactionsPerMinute: 1, newCharacterHours: 0, searchPageSize: 1, reportsPerHour: 1, karmaMinPostLength: 0, karmaPerAuthorPerDay: 1,
+  pollQuestionMaxLength: 5, pollOptionMaxLength: 3, pollOptionsMax: 2, pollMaxDays: 2, popularThreadsCount: 1, signatureMaxLength: 5, signatureMaxLines: 1,
+  imagesPerPost: 1, imagesPerHour: 1, imagesUnusedMax: 1, imageMaxDimension: 256 });
 config.gameplay.forum.boards.find(board => board.id === "off_topic").karma = false;
 config.gameplay.forum.boards.find(board => board.id === "general_discussion").name = "Captain's $forum$ Deck";
 config.gameplay.forum.boards.find(board => board.id === "fun_games").active = false;
@@ -268,7 +270,20 @@ checks.push(
 "select is((select karma from private.forum_posts where id=(select (value->>'post_id')::bigint from forum_config_thread)),-1,'Karma minimum length follows configuration');",
 "select is((select karma from private.forum_boards where id='off_topic'),false,'Board karma follows configuration');",
 "select is(public.report_forum_post((select (value->>'post_id')::bigint from forum_config_thread),'spam','')->>'already','false','Captains report with the configured age limit');",
-"select throws_ok($forum_test$select public.report_forum_post((select id from private.forum_posts where thread_id=(select (value->>'thread_id')::bigint from forum_config_thread) and post_number=2),'spam','')$forum_test$,'P0001','FORUM_RATE_LIMIT','Report rate follows configuration');"
+"select throws_ok($forum_test$select public.report_forum_post((select id from private.forum_posts where thread_id=(select (value->>'thread_id')::bigint from forum_config_thread) and post_number=2),'spam','')$forum_test$,'P0001','FORUM_RATE_LIMIT','Report rate follows configuration');",
+"select throws_ok($forum_test$select public.create_forum_thread('general_discussion','Vote','Body',gen_random_uuid(),'{\"question\":\"Ship?\",\"options\":[\"Aye\",\"Nay\",\"Hm\"],\"max_choices\":1}')$forum_test$,'22023','INVALID_POLL','Poll option count follows configuration');",
+"select throws_ok($forum_test$select public.create_forum_thread('general_discussion','Vote','Body',gen_random_uuid(),'{\"question\":\"Ship?\",\"options\":[\"Aye\",\"Nay\"],\"max_choices\":1,\"days\":3}')$forum_test$,'22023','INVALID_POLL','Poll duration follows configuration');",
+"select throws_ok($forum_test$select public.create_forum_thread('general_discussion','Vote','Body',gen_random_uuid(),'{\"question\":\"Ships?\",\"options\":[\"Aye\",\"Nay\"],\"max_choices\":1}')$forum_test$,'22023','INVALID_POLL','Poll question length follows configuration');",
+"create temporary table forum_config_poll as select public.create_forum_thread('general_discussion','Vote','Body',gen_random_uuid(),'{\"question\":\"Ship?\",\"options\":[\"Aye\",\"Nay\"],\"max_choices\":1,\"days\":2}') value;",
+"select is(jsonb_array_length(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_config_poll))#>'{thread,poll,options}'),2,'Polls within the configured limits open');",
+"select throws_ok($forum_test$select public.set_forum_settings('Ahoy!!',true)$forum_test$,'22023','INVALID_SIGNATURE','Signature length follows configuration');",
+"select throws_ok($forum_test$select public.set_forum_settings('a'||chr(10)||'b',true)$forum_test$,'22023','INVALID_SIGNATURE','Signature lines follow configuration');",
+"select is(public.set_forum_settings('Ahoy',true)->>'signature','Ahoy','Signatures within the configured limits save');",
+"select throws_ok($forum_test$select public.reserve_forum_image(gen_random_uuid(),100,257,100)$forum_test$,'22023','INVALID_IMAGE','Image size follows configuration');",
+"select ok(public.reserve_forum_image(gen_random_uuid(),100,256,100) ? 'image_id','Images within the configured size are reserved');",
+"select throws_ok($forum_test$select public.reserve_forum_image(gen_random_uuid(),100,100,100)$forum_test$,'P0001','IMAGE_RATE_LIMIT','Upload rate follows configuration');",
+"select private.refresh_forum_popular();",
+"select ok((select count(*) from private.forum_popular_threads) between 1 and 1,'Popular thread count follows configuration');"
 );
 const sql = "begin;\ncreate extension if not exists pgtap with schema extensions;\nset local search_path=public,extensions;\n" +
   "create temporary table old_training_user as select gen_random_uuid() id;\n" +

@@ -256,6 +256,12 @@ create or replace function private.forum_valid_title(value text)
 returns boolean language sql immutable security invoker set search_path='' as $$
   select value is not null and value=btrim(value) and length(value) between 1 and {{gameplay.forum.threadTitleMaxLength}} and value !~ '[[:cntrl:]]';
 $$;
+-- One trimmed line of text without control characters, for poll questions and options.
+create or replace function private.forum_valid_line(value text,max_length integer)
+returns boolean language sql immutable security invoker set search_path='' as $$
+  select value is not null and value=btrim(value) and length(value) between 1 and max_length and value !~ '[[:cntrl:]]';
+$$;
+revoke all on function private.forum_valid_line(text,integer) from public,anon,authenticated;
 -- Current name for living authors, the saved snapshot after deletion.
 create or replace function private.forum_person(character_id uuid,snapshot_name text,snapshot_number bigint)
 returns jsonb language sql stable security invoker set search_path='' as $$

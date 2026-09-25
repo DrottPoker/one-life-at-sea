@@ -13,6 +13,8 @@ async function startThread(account: Account, boardId: string, title: string, bod
 async function reply(account: Account, threadId: string, body: string) {
   const result = await account.api.rpc("create_forum_post", { thread_id: threadId, post_body: body, quoted_post_id: null, request_id: crypto.randomUUID() });
   expect(result.error).toBeNull();
+  // Like the app, deliver reply notices once the reply is saved.
+  expect((await account.api.rpc("deliver_forum_notifications")).error).toBeNull();
   resetForumCooldown([account.id]);
   return result.data!;
 }

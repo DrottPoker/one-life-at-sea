@@ -22,6 +22,7 @@ returns jsonb language sql stable security invoker set search_path='' as $$
     'author',private.forum_visible_person(thread.author_id,thread.author_name,thread.author_player_number,opening.removed_by,moderator),'created_at',thread.created_at,
     'replies',thread.post_count-case when opening.removed_at is null then 1 else 0 end,'views',thread.reader_count,'post_seq',thread.post_seq,
     'pinned',thread.pinned_at is not null,'locked',thread.locked_at is not null,
+    'poll',exists(select 1 from private.forum_polls p where p.thread_id=thread.id and (p.removed_at is null or moderator)),
     'rating',case when opening.removed_at is null then opening.likes-opening.dislikes end,
     'last_post',(select jsonb_build_object('post_id',p.id::text,'post_number',p.post_number,'posted_at',p.created_at,
       'author',private.forum_visible_person(p.author_id,p.author_name,p.author_player_number,p.removed_by,moderator)) from private.forum_posts p where p.id=thread.last_post_id),
@@ -39,6 +40,7 @@ returns jsonb language sql stable security invoker set search_path='' as $$
     'author',case when post.removed_by='author' and not moderator then null else private.forum_author(post.author_id,post.author_name,post.author_player_number) end,
     'created_at',post.created_at,
     'body',case when post.removed_at is null or moderator then post.body end,'format_version',post.format_version,
+    'images',case when post.removed_at is null or moderator then private.forum_post_images_json(post.id) end,
     'edited',case when post.edit_count>0 then jsonb_build_object('at',post.edited_at,'by',post.editor_name,'moderator',post.edited_by_moderator,'count',post.edit_count) end,
     'edit_count',post.edit_count,
     'removed',case when post.removed_at is not null then jsonb_build_object('by',post.removed_by,'at',post.removed_at) end,
@@ -66,6 +68,13 @@ begin
   select created_at into joined from public.characters where id=viewer_id;
   return jsonb_build_object('can_moderate',moderator,'ban',private.forum_active_ban(viewer_id),
     'open_reports',case when moderator then (select count(distinct r.post_id) from private.forum_reports r where r.status='open') end,
+    -- The ranking is refreshed on a schedule; visibility is checked now.
+    'popular',coalesce((select jsonb_agg(private.forum_thread_json(t,r.last_read_number,greatest(joined,coalesce(br.read_through,'-infinity')),moderator)
+        ||jsonb_build_object('board',jsonb_build_object('id',b.id,'name',b.name)) order by pt.rank)
+      from private.forum_popular_threads pt join private.forum_threads t on t.id=pt.thread_id join private.forum_boards b on b.id=t.board_id
+        left join private.forum_thread_reads r on r.character_id=viewer_id and r.thread_id=t.id
+        left join private.forum_board_reads br on br.character_id=viewer_id and br.board_id=b.id
+      where t.removed_at is null and (b.active or moderator)),'[]'::jsonb),
     'boards',coalesce((select jsonb_agg(jsonb_build_object(
     'id',b.id,'section',b.section,'name',b.name,'description',b.description,'posting',b.posting,'active',b.active,
     'thread_count',b.thread_count,'post_count',b.post_count,
@@ -97,7 +106,9 @@ begin
       order by x.pinned_at is not null desc,x.last_post_at desc,x.id desc limit {{gameplay.forum.threadsPageSize}} offset current_page*{{gameplay.forum.threadsPageSize}}) t
     left join private.forum_thread_reads r on r.character_id=viewer_id and r.thread_id=t.id;
   return jsonb_build_object('board',jsonb_build_object('id',board.id,'section',board.section,'name',board.name,'description',board.description,
-      'posting',board.posting,'active',board.active,'can_post',board.active and private.forum_can_post(board.posting,moderator) and private.forum_active_ban(viewer_id) is null),
+      'posting',board.posting,'active',board.active,'can_post',board.active and private.forum_can_post(board.posting,moderator) and private.forum_active_ban(viewer_id) is null,
+      'can_upload_images',board.active and private.forum_can_post(board.posting,moderator) and private.forum_active_ban(viewer_id) is null
+        and (select c.created_at<=statement_timestamp()-make_interval(hours=>{{gameplay.forum.newCharacterHours}}) from public.characters c where c.id=viewer_id)),
     'items',items,'total',board.thread_count,'page',current_page,'page_size',{{gameplay.forum.threadsPageSize}},'can_moderate',moderator,'ban',private.forum_active_ban(viewer_id));
 end;
 $$;
@@ -106,7 +117,7 @@ create or replace function private.get_forum_thread(thread_id bigint,page intege
 returns jsonb language plpgsql stable security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); moderator boolean:=private.forum_is_moderator(); thread private.forum_threads%rowtype;
   board private.forum_boards%rowtype; page_count integer; current_page integer; read_number integer; writable boolean; posts jsonb;
-  reactable boolean; may_dislike boolean; may_report boolean; subscribed boolean; ban jsonb:=private.forum_active_ban(viewer_id);
+  reactable boolean; may_dislike boolean; may_report boolean; subscribed boolean; ban jsonb:=private.forum_active_ban(viewer_id); signatures jsonb;
 begin
   if get_forum_thread.thread_id is null or page is null or page<0 then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
   select * into thread from private.forum_threads t where t.id=get_forum_thread.thread_id;
@@ -124,6 +135,12 @@ begin
   select coalesce(jsonb_agg(private.forum_post_json(p,viewer_id,moderator,writable,reactable,may_dislike,may_report) order by p.post_number),'[]'::jsonb) into posts
     from private.forum_posts p where p.thread_id=thread.id
       and p.post_number between current_page*{{gameplay.forum.postsPageSize}}+1 and (current_page+1)*{{gameplay.forum.postsPageSize}};
+  -- Signatures of authors with a visible post on this page, unless the reader hides them.
+  if coalesce((select f.show_signatures from private.forum_profiles f where f.character_id=viewer_id),true) then
+    select jsonb_object_agg(c.player_number::text,f.signature) into signatures from public.characters c join private.forum_profiles f on f.character_id=c.id
+      where f.signature<>'' and c.id in(select p.author_id from private.forum_posts p where p.thread_id=thread.id and p.removed_at is null
+        and p.post_number between current_page*{{gameplay.forum.postsPageSize}}+1 and (current_page+1)*{{gameplay.forum.postsPageSize}});
+  end if;
   return jsonb_build_object('thread',jsonb_build_object('id',thread.id::text,'title',thread.title,
       'board',jsonb_build_object('id',board.id,'name',board.name,'section',board.section,'posting',board.posting),
       'author',private.forum_visible_person(thread.author_id,thread.author_name,thread.author_player_number,
@@ -131,8 +148,9 @@ begin
       'pinned',thread.pinned_at is not null,'locked',thread.locked_at is not null,
       'removed',case when thread.removed_at is not null then jsonb_build_object('by',thread.removed_by,'at',thread.removed_at) end,
       'post_count',thread.post_count,'post_seq',thread.post_seq,'views',thread.reader_count,'last_read_number',read_number,
-      'can_reply',writable,'can_moderate',moderator,'subscribed',coalesce(subscribed,false)),
-    'posts',posts,'page',current_page,'page_count',page_count,'page_size',{{gameplay.forum.postsPageSize}},'ban',ban);
+      'can_reply',writable,'can_moderate',moderator,'subscribed',coalesce(subscribed,false),'can_upload_images',writable and may_dislike,'can_purge_images',moderator and private.is_admin(),
+      'poll',private.forum_poll_json(thread,board,viewer_id,moderator,ban is null and may_dislike and board.active and thread.removed_at is null)),
+    'posts',posts,'signatures',coalesce(signatures,'{}'::jsonb),'page',current_page,'page_count',page_count,'page_size',{{gameplay.forum.postsPageSize}},'ban',ban);
 end;
 $$;
 

@@ -92,7 +92,7 @@ export type Database = {
       get_forum_thread: { Args: { thread_id: string; page?: number }; Returns: import("@/lib/forums").ForumThreadPage };
       locate_forum_post: { Args: { post_id?: string; thread_id?: string }; Returns: import("@/lib/forums").ForumLocation };
       get_forum_post_history: { Args: { post_id: string }; Returns: import("@/lib/forums").ForumPostHistory };
-      create_forum_thread: { Args: { board_id: string; thread_title: string; post_body: string; request_id: string }; Returns: import("@/lib/forums").ForumReceipt };
+      create_forum_thread: { Args: { board_id: string; thread_title: string; post_body: string; request_id: string; poll?: import("@/lib/forums").ForumPollInput | null }; Returns: import("@/lib/forums").ForumReceipt };
       create_forum_post: { Args: { thread_id: string; post_body: string; quoted_post_id: string | null; request_id: string }; Returns: import("@/lib/forums").ForumReceipt };
       edit_forum_post: { Args: { post_id: string; post_body: string; thread_title: string | null; expected_edit_count: number }; Returns: import("@/lib/forums").ForumEditReceipt };
       withdraw_forum_post: { Args: { post_id: string }; Returns: import("@/lib/forums").ForumWithdrawReceipt };
@@ -107,6 +107,15 @@ export type Database = {
       get_forum_reports: { Args: { status?: "open" | "resolved" | "dismissed"; page?: number }; Returns: import("@/lib/forums").ForumReportPage };
       get_forum_moderation: { Args: { page?: number }; Returns: import("@/lib/forums").ForumModerationOverview };
       moderate_forum: { Args: { action: import("@/lib/forums").ForumModerationAction; payload: Record<string, string>; request_id: string; reason: string }; Returns: import("@/lib/forums").ForumModerationReceipt };
+      vote_forum_poll: { Args: { thread_id: string; choices: number[] }; Returns: import("@/lib/forums").ForumPoll };
+      close_forum_poll: { Args: { thread_id: string }; Returns: import("@/lib/forums").ForumPoll };
+      get_forum_settings: { Args: Record<string, never>; Returns: import("@/lib/forums").ForumSettings };
+      set_forum_settings: { Args: { signature: string; show_signatures: boolean }; Returns: import("@/lib/forums").ForumSettings };
+      reserve_forum_image: { Args: { request_id: string; byte_size: number; width: number; height: number }; Returns: import("@/lib/forums").ForumImageReservation };
+      get_forum_image: { Args: { image_id: string }; Returns: { path: string } };
+      list_stale_forum_images: { Args: Record<string, never>; Returns: { image_id: string; path: string }[] };
+      discard_forum_images: { Args: { image_ids: string[] }; Returns: number };
+      deliver_forum_notifications: { Args: Record<string, never>; Returns: number };
       mark_notification_read: { Args: { notification_id: string }; Returns: undefined };
       mark_all_notifications_read: { Args: { through_id: string }; Returns: undefined };
       list_crafting_recipes: { Args: Record<string, never>; Returns: import("@/lib/crafting").CraftingRecipe[] };

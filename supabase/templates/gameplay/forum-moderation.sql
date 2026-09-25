@@ -7,6 +7,14 @@ insert into private.admin_resources(name,schema_name,table_name,editable,deletab
 ('forum_reports','private','forum_reports','{}',false,'Player reports. Handle them in the forum moderation queue.'),
 ('forum_bans','private','forum_bans','{}',false,'Forum bans. Ban and lift them in the forum moderation tools.'),
 ('forum_moderators','private','forum_moderators','{}',false,'Player forum moderators. Appointed by administrators in the forum moderation tools.') on conflict(name) do nothing;
+-- Poll votes stay out of the browser so that voting remains anonymous in the tools.
+insert into private.admin_resources(name,schema_name,table_name,editable,deletable,note) values
+('forum_polls','private','forum_polls','{}',false,'Thread polls with their deadline, state and number of voters. Moderate them from the thread page.'),
+('forum_poll_options','private','forum_poll_options','{}',false,'Poll options with their vote totals.'),
+('forum_images','private','forum_images','{}',false,'Uploaded forum images. Hide and purge them from the thread page.'),
+('forum_post_images','private','forum_post_images','{}',false,'Which images each post currently shows.'),
+('forum_profiles','private','forum_profiles','{}',false,'Forum signatures and signature display settings. Moderators clear signatures from the thread page.'),
+('forum_notification_jobs','private','forum_notification_jobs','{}',false,'Reply and quote notifications waiting for delivery.') on conflict(name) do nothing;
 
 -- Tells an author what a moderator did to their content. The reason stays with the moderators.
 create or replace function private.forum_notify_moderation(recipient uuid,moderator_id uuid,event_action text,thread private.forum_threads,post private.forum_posts,request_id uuid,observed timestamptz)
@@ -36,7 +44,8 @@ create or replace function private.moderate_forum(action text,payload jsonb,requ
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); observed timestamptz:=clock_timestamp(); note text:=btrim(reason);
   actor public.characters%rowtype; previous private.forum_moderation_log%rowtype; target bigint; person public.characters%rowtype; admin boolean;
-  thread private.forum_threads%rowtype; post private.forum_posts%rowtype; destination private.forum_boards%rowtype;
+  thread private.forum_threads%rowtype; post private.forum_posts%rowtype; destination private.forum_boards%rowtype; board private.forum_boards%rowtype;
+  poll private.forum_polls%rowtype; image private.forum_images%rowtype;
   before_state jsonb; after_state jsonb; message text; new_body text; new_title text; result jsonb; ends timestamptz;
 begin
   perform private.forum_require_moderator();
@@ -50,13 +59,26 @@ begin
     return previous.result;
   end if;
   select * into actor from public.characters where id=viewer_id;
-  if action in('pin_thread','unpin_thread','lock_thread','unlock_thread','move_thread','grave_thread','remove_thread','restore_thread') then
+  if action in('pin_thread','unpin_thread','lock_thread','unlock_thread','move_thread','grave_thread','remove_thread','restore_thread','close_poll','remove_poll','restore_poll') then
     if coalesce(payload->>'thread_id','') !~ '^[1-9][0-9]{0,18}$' then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
     select * into thread from private.forum_threads t where t.id=(payload->>'thread_id')::bigint for no key update;
     if not found then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
-    before_state:=jsonb_build_object('board_id',thread.board_id,'pinned',thread.pinned_at is not null,'locked',thread.locked_at is not null,'removed_by',thread.removed_by);
+    select * into board from private.forum_boards b where b.id=thread.board_id;
+    select * into poll from private.forum_polls p where p.thread_id=thread.id for no key update;
+    before_state:=jsonb_build_object('board_id',thread.board_id,'pinned',thread.pinned_at is not null,'locked',thread.locked_at is not null,'removed_by',thread.removed_by,
+      'poll',case when poll.thread_id is not null then jsonb_build_object('closed_by',poll.closed_by,'removed',poll.removed_at is not null) end);
     if thread.removed_at is not null and action<>'restore_thread' then raise exception 'THREAD_REMOVED' using errcode='P0001'; end if;
-    if action='pin_thread' then
+    if action in('close_poll','remove_poll','restore_poll') and poll.thread_id is null then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
+    if action='close_poll' then
+      if private.forum_poll_closed(poll,thread,board) then raise exception 'FORUM_NO_CHANGE' using errcode='P0001'; end if;
+      update private.forum_polls set closed_at=observed,closed_by='moderator' where thread_id=thread.id; message:='Poll closed.';
+    elsif action='remove_poll' then
+      if poll.removed_at is not null then raise exception 'FORUM_NO_CHANGE' using errcode='P0001'; end if;
+      update private.forum_polls set removed_at=observed where thread_id=thread.id; message:='Poll removed.';
+    elsif action='restore_poll' then
+      if poll.removed_at is null then raise exception 'FORUM_NO_CHANGE' using errcode='P0001'; end if;
+      update private.forum_polls set removed_at=null where thread_id=thread.id; message:='Poll restored.';
+    elsif action='pin_thread' then
       if thread.pinned_at is not null then raise exception 'FORUM_NO_CHANGE' using errcode='P0001'; end if;
       update private.forum_threads set pinned_at=observed where id=thread.id; message:='Thread pinned.';
     elsif action='unpin_thread' then
@@ -101,8 +123,10 @@ begin
         where p.thread_id=thread.id and p.author_id is not null order by 1) authors;
     end if;
     select * into thread from private.forum_threads t where t.id=thread.id;
-    after_state:=jsonb_build_object('board_id',thread.board_id,'pinned',thread.pinned_at is not null,'locked',thread.locked_at is not null,'removed_by',thread.removed_by);
-    if action='remove_thread' then perform private.forum_notify_moderation(thread.author_id,viewer_id,action,thread,post,moderate_forum.request_id,observed); end if;
+    select * into poll from private.forum_polls p where p.thread_id=thread.id;
+    after_state:=jsonb_build_object('board_id',thread.board_id,'pinned',thread.pinned_at is not null,'locked',thread.locked_at is not null,'removed_by',thread.removed_by,
+      'poll',case when poll.thread_id is not null then jsonb_build_object('closed_by',poll.closed_by,'removed',poll.removed_at is not null) end);
+    if action in('remove_thread','remove_poll') then perform private.forum_notify_moderation(thread.author_id,viewer_id,action,thread,post,moderate_forum.request_id,observed); end if;
   elsif action in('remove_post','restore_post','edit_post','dismiss_reports') then
     if coalesce(payload->>'post_id','') !~ '^[1-9][0-9]{0,18}$' then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
     select p.thread_id into target from private.forum_posts p where p.id=(payload->>'post_id')::bigint;
@@ -148,6 +172,7 @@ begin
         values(post.id,post.edit_count,case when post.post_number=1 then thread.title end,post.body,observed,viewer_id);
       update private.forum_posts set body=new_body,edit_count=edit_count+1,edited_at=observed,editor_id=viewer_id,editor_name=actor.display_name,edited_by_moderator=true
         where id=post.id;
+      perform private.forum_attach_images(post.id,post.author_id,new_body,observed);
       if new_title is not null and new_title<>thread.title then update private.forum_threads set title=new_title where id=thread.id; end if;
       message:='Post edited.';
     end if;
@@ -156,16 +181,48 @@ begin
     select * into thread from private.forum_threads t where t.id=thread.id;
     after_state:=jsonb_build_object('removed_by',post.removed_by,'edit_count',post.edit_count);
     if action in('remove_post','edit_post') then perform private.forum_notify_moderation(post.author_id,viewer_id,action,thread,post,moderate_forum.request_id,observed); end if;
-  elsif action in('ban_player','unban_player','grant_moderator','revoke_moderator') then
+  elsif action in('remove_image','restore_image','purge_image') then
+    -- Hiding an image works like removing a post: players stop seeing it and moderators keep it.
+    -- Purging, for administrators, deletes the file for good after this action is logged.
+    if coalesce(payload->>'image_id','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
+    if action='purge_image' then perform private.require_admin(); end if;
+    select * into image from private.forum_images i where i.id=(payload->>'image_id')::uuid for no key update;
+    if not found or image.discarded_at is not null then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
+    select p.* into post from private.forum_post_images pi join private.forum_posts p on p.id=pi.post_id where pi.image_id=image.id order by p.id limit 1;
+    select * into thread from private.forum_threads t where t.id=post.thread_id;
+    before_state:=jsonb_build_object('removed',image.removed_at is not null,'purged',image.purged_at is not null);
+    if action='remove_image' then
+      if image.removed_at is not null then raise exception 'FORUM_NO_CHANGE' using errcode='P0001'; end if;
+      update private.forum_images set removed_at=observed,removed_by='moderator' where id=image.id; message:='Image hidden from players.';
+    elsif action='restore_image' then
+      if image.removed_at is null then raise exception 'FORUM_NO_CHANGE' using errcode='P0001'; end if;
+      if image.purged_at is not null then raise exception 'CANNOT_RESTORE' using errcode='P0001'; end if;
+      update private.forum_images set removed_at=null,removed_by=null where id=image.id; message:='Image restored.';
+    else
+      if image.purged_at is not null then raise exception 'FORUM_NO_CHANGE' using errcode='P0001'; end if;
+      update private.forum_images set removed_at=coalesce(removed_at,observed),removed_by='moderator',purged_at=observed where id=image.id; message:='Image file deleted.';
+    end if;
+    after_state:=jsonb_build_object('removed',action<>'restore_image','purged',action='purge_image' or image.purged_at is not null);
+    if action<>'restore_image' and image.removed_at is null and thread.id is not null then
+      perform private.forum_notify_moderation(image.owner_id,viewer_id,'remove_image',thread,post,moderate_forum.request_id,observed); end if;
+  elsif action in('ban_player','unban_player','grant_moderator','revoke_moderator','clear_signature') then
     if coalesce(payload->>'player_number','') !~ '^[1-9][0-9]{0,15}$' then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
     if action in('grant_moderator','revoke_moderator') then perform private.require_admin(); end if;
     select * into person from public.characters c where c.player_number=(payload->>'player_number')::bigint;
     if person.id is null then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
-    before_state:=jsonb_build_object('ban',private.forum_active_ban(person.id),'moderator',exists(select 1 from private.forum_moderators m where m.character_id=person.id));
-    if action='ban_player' then
+    before_state:=jsonb_build_object('ban',private.forum_active_ban(person.id),'moderator',exists(select 1 from private.forum_moderators m where m.character_id=person.id),
+      'signature',(select f.signature from private.forum_profiles f where f.character_id=person.id));
+    if action in('ban_player','clear_signature') then
       if person.id=viewer_id or exists(select 1 from private.admin_members m where m.user_id=person.user_id)
         or (not admin and exists(select 1 from private.forum_moderators m where m.character_id=person.id)) then
         raise exception 'FORUM_FORBIDDEN' using errcode='42501'; end if;
+    end if;
+    if action='clear_signature' then
+      update private.forum_profiles set signature='',signature_updated_at=observed where character_id=person.id and signature<>'';
+      if not found then raise exception 'FORUM_NO_CHANGE' using errcode='P0001'; end if;
+      perform private.emit_notification(person.id,'forum.moderation',moderate_forum.request_id::text,jsonb_build_object('version',1,'action','clear_signature'),observed);
+      message:=person.display_name||'''s signature was cleared.';
+    elsif action='ban_player' then
       if payload ? 'hours' and coalesce(payload->>'hours','') !~ '^[1-9][0-9]{0,3}$' then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
       ends:=case when payload ? 'hours' then observed+make_interval(hours=>least((payload->>'hours')::integer,8760)) end;
       update private.forum_bans set lifted_at=observed,lifted_by=viewer_id where character_id=person.id and lifted_at is null;
@@ -189,11 +246,13 @@ begin
       perform private.emit_notification(person.id,'forum.role',moderate_forum.request_id::text,jsonb_build_object('version',1,'moderator',false),observed);
       message:=person.display_name||' is no longer a forum moderator.';
     end if;
-    after_state:=jsonb_build_object('ban',private.forum_active_ban(person.id),'moderator',exists(select 1 from private.forum_moderators m where m.character_id=person.id));
+    after_state:=jsonb_build_object('ban',private.forum_active_ban(person.id),'moderator',exists(select 1 from private.forum_moderators m where m.character_id=person.id),
+      'signature',(select f.signature from private.forum_profiles f where f.character_id=person.id));
   else
     raise exception 'INVALID_REQUEST' using errcode='22023';
   end if;
-  result:=jsonb_build_object('message',message,'thread_id',thread.id::text,'post_id',post.id::text);
+  result:=jsonb_build_object('message',message,'thread_id',thread.id::text,'post_id',post.id::text)
+    ||case when action='purge_image' then jsonb_build_object('image_path',image.storage_path) else '{}'::jsonb end;
   insert into private.forum_moderation_log(actor_id,actor_name,request_id,action,payload,reason,thread_id,post_id,before,after,result,created_at)
     values(viewer_id,actor.display_name,moderate_forum.request_id,action,payload,note,thread.id,post.id,before_state,after_state,result,observed);
   return result;

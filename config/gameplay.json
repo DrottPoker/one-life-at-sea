@@ -26,7 +26,20 @@
     "searchPageSize": 20,
     "reportsPerHour": 10,
     "karmaMinPostLength": 30,
-    "karmaPerAuthorPerDay": 5
+    "karmaPerAuthorPerDay": 5,
+    "pollQuestionMaxLength": 150,
+    "pollOptionMaxLength": 80,
+    "pollOptionsMax": 10,
+    "pollMaxDays": 30,
+    "popularThreadsCount": 5,
+    "popularWindowHours": 24,
+    "signatureMaxLength": 200,
+    "signatureMaxLines": 3,
+    "imagesPerPost": 4,
+    "imagesPerHour": 10,
+    "imagesUnusedMax": 10,
+    "imageUploadMaxBytes": 8388608,
+    "imageMaxDimension": 1600
   },
   "presence": { "idleSeconds": 300, "unfocusedSeconds": 120, "leaseSeconds": 90 },
   "resources": {
