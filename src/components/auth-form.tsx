@@ -58,7 +58,7 @@ export function AuthForm({ mode, initialEmail = "" }: { mode: Mode; initialEmail
             aria-invalid={!!state.errors?.confirmPassword} aria-describedby={state.errors?.confirmPassword ? "confirm-error" : undefined} />
           {state.errors?.confirmPassword && <small className="o-field-error" id="confirm-error" role="alert">{state.errors.confirmPassword}</small>}
         </label>}
-        {mode === "register" && <div className="o-name-proof" aria-live="polite"><small>Your name will appear as</small><span>Captain {normalizeCharacterName(name) || "Your name"}</span></div>}
+        {mode === "register" && <div className="o-name-proof" aria-live="polite"><small>Your name will appear as</small><span>{normalizeCharacterName(name) || "Your name"}</span></div>}
         <div className="o-form-actions"><button type="submit" className="o-primary" disabled={pending || remaining > 0}>{pending ? "Please wait..." : remaining > 0 ? `Try again in ${remaining}s` : labels[mode]}</button>
           {mode === "login" && <Link href="/forgot-password" className="o-text-button">Forgot password?</Link>}
         </div>

@@ -16,7 +16,7 @@ export function CharacterForm() {
       <small className="o-form-hint" id="name-hint">No numbers or spaces. Choose an available name.</small>
       <small className="o-field-error" id="name-error" role="alert">{nameError}</small>
     </label>
-    <div className="o-name-proof" aria-live="polite"><small>Your name will appear as</small><span>Captain {normalizeCharacterName(name) || "Your name"}</span></div>
+    <div className="o-name-proof" aria-live="polite"><small>Your name will appear as</small><span>{normalizeCharacterName(name) || "Your name"}</span></div>
     <button type="submit" className="o-primary" disabled={pending}>{pending ? "Stepping ashore..." : "Enter the harbor"}</button>
   </form>;
 }
