@@ -1,9 +1,8 @@
-import { Fish, Axe, CookingPot, Hammer, Swords, Ship, Leaf, HeartPulse } from "lucide-react";
+import { HeartPulse } from "lucide-react";
 import { gameplay, frontend } from "@/config/public";
 import { BATTLING_HEALTH, MAX_SKILL_LEVEL, battlingHealthBonus, skillProgress, type SkillProgress } from "@/lib/skills";
+import { skillIcon } from "@/components/skill-icons";
 
-const icons = { fishing: Fish, logging: Axe, cooking: CookingPot, crafting: Hammer,
-  crew_battling: Swords, ship_battling: Ship, foraging: Leaf };
 const formatNumber = new Intl.NumberFormat(frontend.site.locale);
 
 export function ProfileSkills({ progress }: { progress: SkillProgress }) {
@@ -12,7 +11,7 @@ export function ProfileSkills({ progress }: { progress: SkillProgress }) {
     <div className="o-skills-grid">{progress.skills.map(skill => {
       const definition = gameplay.skills.catalog.find(entry => entry.id === skill.id);
       if (!definition) return null;
-      const Icon = icons[skill.id as keyof typeof icons] ?? Hammer;
+      const Icon = skillIcon(skill.id);
       const current = skillProgress(skill.xp), health = BATTLING_HEALTH[skill.id];
       return <article className="o-skill" key={skill.id} aria-label={definition.name}>
         <div className="o-skill-heading"><h3><Icon aria-hidden="true" />{definition.name}</h3>

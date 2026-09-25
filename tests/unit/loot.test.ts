@@ -44,11 +44,11 @@ describe("loot probabilities", () => {
     expect(lootValidation([entry("fish", { quantity: 1.2 })])).toMatch(/whole number/);
     expect(lootValidation([entry("fish", { weight_end: Infinity })])).toMatch(/valid numbers/);
   });
-  it("reports saved catch or failure with XP and preserves older receipt messages", () => {
+  it("reports saved catch or failure and preserves older receipt messages", () => {
     const receipt = { skill_id: "fishing", xp_awarded: 10, stamina_cost: 1, level: 1, previous_level: 1 } as ActivityReceipt;
     const loot = { caught: true, table_id: "shore", table_version: "v", skill_level: 1, success_chance: 70, name: "Sardine", quantity: 1 };
-    expect(activityMessage({ ...receipt, loot })).toBe("Caught 1 × Sardine. +10 Fishing XP. Spent 1 Stamina.");
-    expect(activityMessage({ ...receipt, loot: { ...loot, caught: false } })).toBe("Nothing caught. +10 Fishing XP. Spent 1 Stamina.");
-    expect(activityMessage(receipt)).toBe("+10 Fishing XP. Spent 1 Stamina.");
+    expect(activityMessage({ ...receipt, loot })).toBe("Caught 1 × Sardine. Spent 1 Stamina.");
+    expect(activityMessage({ ...receipt, loot: { ...loot, caught: false } })).toBe("Nothing caught. Spent 1 Stamina.");
+    expect(activityMessage(receipt)).toBe("Spent 1 Stamina.");
   });
 });

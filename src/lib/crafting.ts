@@ -13,10 +13,8 @@ export function parseCraftingForm(form: FormData) {
   return { recipe_id: recipe, expected_version: version };
 }
 
+// Awarded XP and level-ups show in the shared XP drop.
 export function craftingMessage(receipt: CraftingReceipt) {
-  const progress = receipt.progression;
-  const xp = progress ? " +" + progress.xp_awarded + " Crafting XP." +
-    (progress.level > progress.previous_level ? " Crafting reached level " + progress.level + "!" : "") : "";
   return "Crafted " + receipt.output.quantity + " × " + receipt.recipe_name + ". Used " +
-    receipt.consumed.map(item => item.quantity + " × " + item.name).join(", ") + "." + xp;
+    receipt.consumed.map(item => item.quantity + " × " + item.name).join(", ") + ".";
 }

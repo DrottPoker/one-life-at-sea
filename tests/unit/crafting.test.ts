@@ -13,11 +13,11 @@ describe("crafting requests", () => {
   it.each([{ recipe_id: "" }, { recipe_id: "x".repeat(49) }, { recipe_id: "Oak Plank" }, { expected_version: "old" }, { expected_version: "g".repeat(64) }])("rejects malformed offers %j", change => {
     expect(parseCraftingForm(requestForm({ ...fields, ...change }))).toBeNull();
   });
-  it("includes awarded Crafting XP and level-up while retaining legacy receipt support", () => {
+  it("leaves awarded Crafting XP and level-ups to the XP drop", () => {
     expect(craftingMessage({ recipe_id: "oak_plank", recipe_name: "Oak Plank", output: { item_id: "oak_planks", name: "Oak Planks", quantity: 1 },
       consumed: [{ item_id: "oak_logs", name: "Oak Logs", quantity: 5 }],
       progression: { xp_awarded: 10, xp: 200, previous_level: 1, level: 2, character_level: 8 } }))
-      .toBe("Crafted 1 × Oak Plank. Used 5 × Oak Logs. +10 Crafting XP. Crafting reached level 2!");
+      .toBe("Crafted 1 × Oak Plank. Used 5 × Oak Logs.");
   });
   it("formats the confirmed output and all consumed materials", () => {
     expect(craftingMessage({ recipe_id: "oak_plank", recipe_name: "Oak Plank", output: { item_id: "oak_planks", name: "Oak Planks", quantity: 1 },

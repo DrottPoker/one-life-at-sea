@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { CheckCircle2, CircleAlert, Coins, X } from "lucide-react";
 import { ItemImage } from "@/components/inventory/item-image";
-import { activityOutcome, activityProgressMessage, activityRewards, type ActivityItemReward, type ActivityResult } from "@/lib/activities";
+import { activityCostMessage, activityOutcome, activityRewards, type ActivityItemReward, type ActivityResult } from "@/lib/activities";
 import { formatGold } from "@/lib/bank";
 import { formatItemCount } from "@/lib/inventory";
 
@@ -108,6 +108,6 @@ function ActivityOutcome({ result, activityName, onClose }: { result: ActivityRe
         {rewards.gold_coins > 0 && <li className="o-activity-gold"><Coins aria-hidden="true" /><span>{formatGold(rewards.gold_coins)} Gold Coins</span></li>}
       </ul>}
     </div>
-    <p>{receipt ? (outcome === "failure" ? "Nothing found. " : "") + activityProgressMessage(receipt) : result.message}</p>
+    <p>{receipt ? (outcome === "failure" ? "Nothing found. " : "") + activityCostMessage(receipt) : result.message}</p>
   </section>;
 }

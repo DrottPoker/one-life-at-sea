@@ -4,8 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Anchor, Swords } from "lucide-react";
-import { roundXpText, type CombatEvent } from "@/lib/combat";
-import type { SkillProgress } from "@/lib/skills";
+import type { CombatEvent } from "@/lib/combat";
 import { SCENE_ART, SCENE_SIZE, type ScenePoint } from "@/lib/combat-scene-anchors";
 import { latestOwnRound, markTone, roundStrikes, roundSummary, sceneDuration, sceneHistory, scenePercent, seededRandom, strikePopup, strikeResult,
   type SceneScar, type SceneStrike } from "@/lib/combat-scene";
@@ -17,7 +16,7 @@ const art = {
 const sizes = "(max-width: 800px) 100vw, (max-width: 1400px) 45vw, 600px";
 // The pause after the final round's effects fade before the result of the fight appears.
 export const FINALE_DELAY = 500;
-export type SceneFinale = { title: string; text: string; xp?: string | null; href: string };
+export type SceneFinale = { title: string; text: string; href: string };
 // Effects are drawn in the artwork's pixels. Particles stay a few art pixels wide to match its detail, while
 // distances are scaled up because the scene is shown at well under half the artwork's width.
 const SPREAD = 2.5;
@@ -200,18 +199,16 @@ function Finale({ finale }: { finale: SceneFinale }) {
     <section className="o-scene-finale-box" aria-labelledby={id + "-title"}>
       <h2 id={id + "-title"}>{finale.title}</h2>
       <p id={id + "-text"}>{finale.text}</p>
-      {finale.xp && <p id={id + "-xp"} className="o-scene-finale-xp">{finale.xp}</p>}
-      <Link ref={leave} href={finale.href} replace className="o-scene-leave" aria-describedby={id + "-title " + id + "-text" + (finale.xp ? " " + id + "-xp" : "")}>Leave</Link>
+      <Link ref={leave} href={finale.href} replace className="o-scene-leave" aria-describedby={id + "-title " + id + "-text"}>Leave</Link>
     </section>
   </div>;
 }
 
 // The VS artwork doubles as the hit display: the latest own round plays on it, then its marks stay until the next round.
-export function CombatScene({ phase, events = [], attackerId, defenderName, skills, finale }: {
-  phase: "sea" | "boarding"; events?: CombatEvent[]; attackerId: string; defenderName: string; skills?: SkillProgress | null; finale?: SceneFinale;
+export function CombatScene({ phase, events = [], attackerId, defenderName, finale }: {
+  phase: "sea" | "boarding"; events?: CombatEvent[]; attackerId: string; defenderName: string; finale?: SceneFinale;
 }) {
   const round = latestOwnRound(events, attackerId);
-  const xp = round ? roundXpText(round, skills) : null;
   const [initial] = useState(round?.sequence ?? 0);
   const [finaleShown, setFinaleShown] = useState(false);
   const fresh = !!round && round.sequence > initial, strikes = round ? roundStrikes(round) : [];
@@ -239,7 +236,7 @@ export function CombatScene({ phase, events = [], attackerId, defenderName, skil
       <span className="o-combat-versus" aria-hidden="true">VS</span>
       {finale && finaleShown && <Finale finale={finale} />}
     </div>
-    <figcaption aria-live="polite">{round ? <span className="o-scene-summary">{roundSummary(round, defenderName)}{xp && <> <span className="o-scene-xp">{xp}</span></>}</span>
+    <figcaption aria-live="polite">{round ? <span className="o-scene-summary">{roundSummary(round, defenderName)}</span>
       : <><Icon aria-hidden="true" /><span>{tagline}</span></>}</figcaption>
   </figure>;
 }

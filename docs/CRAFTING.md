@@ -11,7 +11,8 @@ immediately and places the output in Inventory. There is no job or waiting timer
   **1 Oak Plank**, using the existing `oak_planks` item definition and stack.
 - The only cost is the listed ingredients. No Gold Coins, Energy or Stamina is
   charged. Each successful craft grants **10 Crafting XP**, regardless of its output
-  quantity. The confirmed result shows the XP award and any Crafting level-up.
+  quantity. The confirmed result lists the output and materials; the XP award and any Crafting level-up
+  show in the shared [XP drop](SKILLS.md#xp-drop).
 - Oak Logs is a new stackable, tradable material. Existing plank holdings retain
   their IDs and quantities. The log image uses the standard inventory placeholder.
 - Logging uses the Woodland Logging loot table and awards one Oak Log per successful

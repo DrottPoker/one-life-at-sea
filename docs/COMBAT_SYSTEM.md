@@ -147,10 +147,8 @@ i rundan där angriparen drar sig tillbaka eller når tidsgränsen.
 XP delas ut i samma transaktion som rundan. Ett återförsök med samma begärans-ID ger den sparade
 rundan utan ny XP. Rundornas händelser och combat log innehåller ingen XP.
 
-Attackvyn visar XP:n direkt. Rubrikraden visar fasens Battling-skill med nivå och total XP från
-spelarens egen serverdata, som hämtas om efter varje runda. Rundtexten under stridsbilden anger
-XP:n för den egna attacken och, när attacken gav en ny nivå, att hälsobonusen gäller efter striden.
-Resultatrutan summerar XP från spelarens egna anfallsordrar.
+XP:n syns direkt i den gemensamma XP-rutan nere till höger, även i attackvyn och för en
+försvarare som är inloggad i en annan vy. Se [Skills](SKILLS.md#xp-drop).
 
 Crew Battling höjer maximal Crew Health och Ship Battling höjer maximal Ship Health, se
 [Skills](SKILLS.md#combat-xp-and-battling-health). En ny nivå läker inte. Stridens ögonblicksbild

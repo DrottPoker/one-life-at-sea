@@ -11,15 +11,16 @@ fixed items second, then weighted fish. Both catches and misses cost 1 Stamina a
 10 XP. Logging uses Woodland Logging and grants one Oak Log per successful attempt,
 with the same 70%-90% success curve. Foraging remains XP-only until a table is assigned. Energy, Gold Coins
 and training XP are unaffected. See [Loot tables](LOOT_TABLES.md). The
-activity row shows its skill level, XP progress, reward and cost. Results and level-ups
-appear in an expandable result panel below the activity, with no modal. Stamina and skill progression refresh when a completed receipt is confirmed.
+activity row shows its skill level, XP progress, reward and cost. Results appear in an
+expandable result panel below the activity, with no modal. The awarded XP and level-ups show
+in the shared [XP drop](SKILLS.md#xp-drop). Stamina and skill progression refresh when a completed receipt is confirmed.
 The profile reflects the same XP and public Character Level.
 
 ## Activity result panel
 
 A confirmed receipt opens a compact panel below the activity. Successful catches show
 Success and their item thumbnails/quantities. Misses show Failure while retaining the
-actual XP gain and Stamina cost. Activities with XP only show Success without an empty
+Stamina cost; their XP shows in the XP drop like any other gain. Activities with XP only show Success without an empty
 reward row. Pending or rejected requests are not labelled as a failed catch: uncertain
 responses show Unconfirmed, while known errors explain why the action could not complete.
 

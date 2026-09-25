@@ -40,7 +40,8 @@ test("hideout crafting instantly consumes logs, shows inventory and updates acro
       await otherTab.goto("/hideout/crafting");
       await expect(otherTab.getByLabel("Oak Logs owned", { exact: true })).toHaveText("9");
       await craft.click();
-      await expect(main.getByRole("status").filter({ hasText: "Crafted 1" })).toHaveText("Crafted 1 × Oak Plank. Used 5 × Oak Logs. +10 Crafting XP.");
+      await expect(main.getByRole("status").filter({ hasText: "Crafted 1" })).toHaveText("Crafted 1 × Oak Plank. Used 5 × Oak Logs.");
+      await expect(page.getByRole("region", { name: "Crafting XP gained", exact: true })).toContainText("+10 XP");
       await expect(main.getByLabel("Oak Logs owned", { exact: true })).toHaveText("4");
       await expect(main.getByLabel("Oak Planks owned", { exact: true })).toHaveText("1");
       await expect(craft).toBeDisabled();

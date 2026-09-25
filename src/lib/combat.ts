@@ -1,7 +1,6 @@
-import { gameplay, frontend } from "@/config/public";
+import { gameplay } from "@/config/public";
 import type { Stat } from "@/lib/game";
 import type { CombatEffects, CombatLoadout } from "@/lib/equipment";
-import { skillProgress, type SkillProgress } from "@/lib/skills";
 
 export const COMBAT_COST = gameplay.combat.energyCost;
 export const MAX_ROUNDS = gameplay.combat.maxRounds;
@@ -93,36 +92,4 @@ export function attackUrl(targetId: string | number) {
 }
 export function isCombatOrder(value: unknown): value is CombatOrder {
   return typeof value === "string" && ORDERS.some(order => order === value);
-}
-export type BattlingSkill = "ship_battling" | "crew_battling";
-// Every attacking order trains the battling skill of its phase, hit or miss. The server awards it; these helpers only describe it.
-const ORDER_SKILLS: Partial<Record<CombatOrder, BattlingSkill>> = {
-  fire: "ship_battling", fire_chain: "ship_battling", fire_grape: "ship_battling",
-  crew_shoot: "crew_battling", crew_throw: "crew_battling", crew_attack: "crew_battling",
-};
-export const PHASE_SKILLS: Record<"sea" | "boarding", BattlingSkill> = { sea: "ship_battling", boarding: "crew_battling" };
-export const skillName = (id: string) => gameplay.skills.catalog.find(skill => skill.id === id)?.name ?? id;
-const formatXp = new Intl.NumberFormat(frontend.site.locale);
-// The XP one own round earned. A level-up is read from skill progress loaded right after that round.
-export function roundXpText(event: CombatEvent, skills: SkillProgress | null | undefined) {
-  const skill = event.kind === "round" ? ORDER_SKILLS[event.attacker_order] : undefined;
-  if (!skill) return null;
-  const total = skills?.skills.find(entry => entry.id === skill)?.xp;
-  const level = total === undefined ? 0 : skillProgress(total).level;
-  const levelUp = total !== undefined && level > skillProgress(Math.max(0, total - gameplay.combat.xpGain)).level;
-  return "+" + formatXp.format(gameplay.combat.xpGain) + " " + skillName(skill) + " XP." +
-    (levelUp ? " " + skillName(skill) + " reached level " + level + "; its health bonus applies after the fight." : "");
-}
-export function combatXp(events: CombatEvent[], attackerId: string) {
-  const earned = { ship_battling: 0, crew_battling: 0 };
-  for (const event of events) {
-    const skill = event.kind === "round" && event.actor_id === attackerId ? ORDER_SKILLS[event.attacker_order] : undefined;
-    if (skill) earned[skill] += gameplay.combat.xpGain;
-  }
-  return earned;
-}
-export function combatXpLabel(events: CombatEvent[], attackerId: string) {
-  const earned = combatXp(events, attackerId);
-  return (["ship_battling", "crew_battling"] as const).filter(skill => earned[skill] > 0)
-    .map(skill => "+" + formatXp.format(earned[skill]) + " " + skillName(skill) + " XP").join(" · ") || null;
 }

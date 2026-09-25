@@ -469,10 +469,11 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await expect(log.getByText(/^Sails and rigging · \d+ ship damage · Ship slowed$/)).toBeVisible();
     await expect(main.getByRole("list", { name: "Opponent active effects", exact: true })).toContainText("Slowed: Ship Speed x0.8 for 3 more rounds");
     const scene = main.locator(".o-combat-scene");
-    // XP arrives with the round, while the new level's health waits for the end of the fight.
-    await expect(page.getByLabel("Ship Battling XP", { exact: true })).toHaveText("205");
-    await expect(page.locator(".o-combat-header-xp")).toContainText("Ship Battling · Level 2");
-    await expect(scene.locator("figcaption")).toContainText("+10 Ship Battling XP. Ship Battling reached level 2; its health bonus applies after the fight.");
+    // XP arrives in the shared drop with the round, while the new level's health waits for the end of the fight.
+    const xpDrop = page.getByRole("region", { name: "Ship Battling XP gained", exact: true });
+    await expect(xpDrop).toContainText("+10 XP");
+    await expect(xpDrop).toContainText("205 XP");
+    await expect(xpDrop).toContainText("Level up! Now level 2.");
     await expect(main.getByRole("progressbar", { name: "Your Ship Health", exact: true })).toHaveAttribute("aria-valuemax", "100");
     await expect(scene.locator('.o-scene-overlay[data-animate="true"]')).toHaveCount(1);
     await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical )?Sails and rigging \d+$/);
@@ -482,8 +483,8 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await ammo.getByText("Grape Shot", { exact: true }).click();
     await main.getByRole("button", { name: /^Fire cannons 1 salvo of Grape Shot/ }).click();
     await expect(main.getByText("Round 2 / 25", { exact: true })).toBeVisible();
-    await expect(page.getByLabel("Ship Battling XP", { exact: true })).toHaveText("215");
-    await expect(scene.locator("figcaption")).toContainText(/\+10 Ship Battling XP\.$/);
+    await expect(xpDrop).toContainText("215 XP");
+    await expect(xpDrop).not.toContainText("Level up!");
     await expect(log.getByText("Fire cannons · Basic cannons · Grape Shot", { exact: true })).toBeVisible();
     await expect(log.getByText(/^(Head|Body|Legs|Feet) · \d+ crew damage/)).toBeVisible();
     await expect(main.getByRole("progressbar", { name: "Opponent Crew Health", exact: true })).not.toHaveAttribute("aria-valuenow", "100");
@@ -515,7 +516,6 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await expect(scene.getByRole("heading", { name: "You withdrew", exact: true })).toBeVisible();
     await expect(scene.getByText("The attackers withdrew.", { exact: true })).toBeVisible();
     // Both salvos train Ship Battling; the defender's three automatic salvos train it too, although they all miss.
-    await expect(scene.getByText("+20 Ship Battling XP", { exact: true })).toBeVisible();
     expect(sql("select string_agg(xp::text,',' order by character_id='" + a.id + "' desc) from private.character_skills where character_id in('" + a.id + "','" + d.id + "') and skill_id='ship_battling'").trim()).toBe("215,30");
     await expect(scene.locator(".o-combat-versus")).toHaveCSS("opacity", "0");
     await page.waitForTimeout(1500);

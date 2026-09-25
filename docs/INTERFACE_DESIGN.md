@@ -132,17 +132,13 @@ game navigation during combat.
   rise just after and above the impact so the blast stays visible.
 - The round that ends the encounter plays out in full. 0.5 seconds after its effects fade
   (`FINALE_DELAY` in `combat-scene.tsx`) the artwork darkens, the VS badge fades out and a
-  centered box shows the outcome (Victory, Defeat, You withdrew or Draw) and the battling XP
-  from the player's own attacks, with a Leave button that takes focus. A captain who leaves while
-  other attackers fight on sees the same XP line. The combat log opens only when the player chooses Leave; the order panel
+  centered box shows the outcome (Victory, Defeat, You withdrew or Draw) with a Leave button
+  that takes focus. The combat log opens only when the player chooses Leave; the order panel
   and the heading's back link are gone meanwhile. When the final round is not new to this
   view, such as another attacker's final blow, the box follows after the same short pause.
 - The caption under the artwork states the round in words, for example "Round 3: You hit
   their sails and rigging for 12 and slowed their ship. Bo missed.", and is announced
-  politely to screen readers. An own attack adds its XP in gold, such as "+10 Ship Battling
-  XP.", and a level reached by it notes that the health bonus applies after the fight.
-- The heading shows the current phase's battling skill beside Energy and the order clock:
-  level and total XP, updated after every round. On narrow screens it takes its own row. With reduced motion, marks and labels appear without effects.
+  politely to screen readers. XP from the round shows in the shared XP drop, described below. With reduced motion, marks and labels appear without effects.
   The VS badge sits in the sky at the top center, clear of the effects.
 - Hit areas (one or more ellipses per zone, deck, splash and landing spot) and anchor points
   for guns, hands and labels live in `src/lib/combat-scene-anchors.ts`, in the artwork's own
@@ -194,6 +190,14 @@ Skills section: seven compact cards with level, XP and progress to the next leve
 columns on desktop and one on mobile. Maxed skills display Maximum level. Crew Battling and
 Ship Battling add a row with their maximum health bonus and what the next level adds. Other players
 receive neither these cards nor their underlying private data.
+
+The XP drop is a RuneScape-like card at the bottom right: a brown stone panel with a dark rim
+and a light bevel, the skill icon in a round badge, the skill name in orange, the gain in large
+yellow text with a short pop, a green bar on dark red, and the level, total XP and XP to the
+next level in white with a one-pixel black shadow. A level-up adds a yellow line and a pulsing
+badge. The card slides in, stays for five seconds and fades; a new gain replaces it. It ignores
+the pointer, and reduced motion keeps only the fade. Its colours are the `--o-xp-*` tokens in
+`theme.css`. See [Skills](SKILLS.md#xp-drop) for when it appears.
 
 Activities is a sidebar destination and a harbor directory entry. Three rows show a themed
 icon, description, skill level/XP progress, reward and action button. Desktop uses a three-column

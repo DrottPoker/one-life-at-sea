@@ -10,11 +10,13 @@ import { LogoutButton } from "@/components/logout-button";
 import { GameStateProvider } from "@/components/game-state";
 import { EconomyRequests } from "@/components/economy-requests";
 import { ResourceBars } from "@/components/resource-bars";
+import { XpDrop } from "@/components/xp-drop";
+import { ownSkillProgress } from "@/lib/skills-server";
 import { logOut } from "@/app/actions";
 
 export default async function GameLayout({ children }: { children: ReactNode }) {
   const character = await requireCharacter({ allowHospital: true, allowSea: true });
-  const state = await gameStateForPlayer();
+  const [state, skills] = await Promise.all([gameStateForPlayer(), ownSkillProgress()]);
   const created = new Intl.DateTimeFormat(frontend.site.locale, { day: "numeric", month: "short", year: "numeric", timeZone: frontend.site.logTimeZone }).format(new Date(character.created_at));
   return <GameStateProvider state={state}><GameNavigationProvider key={character.id}><div className="o-workspace">
     <aside className="o-sidebar" aria-label="Character and harbor navigation">
@@ -33,5 +35,5 @@ export default async function GameLayout({ children }: { children: ReactNode }) 
       <section className="o-side-module o-navigation-module"><h2 className="o-side-title">Navigation</h2><HarborNav /></section>
       <section className="o-side-module o-account-module"><h2 className="o-side-title">Account</h2><form action={logOut}><LogoutButton /></form></section>
     </aside><main id="main" className="o-main"><EconomyRequests key={character.id} characterId={character.id}><GameContent>{children}</GameContent></EconomyRequests></main>
-  </div><div className="mobile-account"><form action={logOut}><LogoutButton compact /></form></div></GameNavigationProvider></GameStateProvider>;
+  </div><div className="mobile-account"><form action={logOut}><LogoutButton compact /></form></div><XpDrop skills={skills} /></GameNavigationProvider></GameStateProvider>;
 }

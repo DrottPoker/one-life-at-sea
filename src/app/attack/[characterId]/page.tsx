@@ -6,6 +6,7 @@ import { attackUrl, type Battle, type CombatPreview } from "@/lib/combat";
 import { findPlayerProfile } from "@/lib/player-profile";
 import { AttackSession } from "@/components/combat/attack-session";
 import { ownSkillProgress } from "@/lib/skills-server";
+import { XpDrop } from "@/components/xp-drop";
 import { GameStateProvider } from "@/components/game-state";
 
 export const metadata = { title: "Attacking" };
@@ -44,7 +45,7 @@ export default async function AttackPage({ params }: { params: Promise<{ charact
     preview = data;
   }
   return <GameStateProvider state={state}><main id="main" className="o-attack-main">
-    <AttackSession battle={battle} preview={preview} skills={skills} key={characterId} hospital={hospital}
+    <AttackSession battle={battle} preview={preview} key={characterId} hospital={hospital}
       heading={{ energy: state.energy, backUrl, backLabel, canLeave: !state.active_attack && !hospital }} />
-  </main></GameStateProvider>;
+  </main><XpDrop skills={skills} /></GameStateProvider>;
 }

@@ -1,4 +1,3 @@
-import { gameplay } from "@/config/public";
 import { DEFAULT_ITEM_IMAGE } from "@/lib/loot";
 import { formatGold } from "@/lib/bank";
 
@@ -37,10 +36,9 @@ export function activityRewards(receipt: ActivityReceipt): ActivityRewards {
   }] : [], gold_coins: 0 };
 }
 
-export function activityProgressMessage(receipt: ActivityReceipt) {
-  const skill = gameplay.skills.catalog.find(entry => entry.id === receipt.skill_id)?.name ?? "Skill";
-  return "+" + receipt.xp_awarded + " " + skill + " XP. Spent " + receipt.stamina_cost + " Stamina." +
-    (receipt.level > receipt.previous_level ? " " + skill + " reached level " + receipt.level + "!" : "");
+// Awarded XP and level-ups show in the shared XP drop; the result keeps the activity's own cost.
+export function activityCostMessage(receipt: ActivityReceipt) {
+  return "Spent " + receipt.stamina_cost + " Stamina.";
 }
 
 export function activityMessage(receipt: ActivityReceipt) {
@@ -48,5 +46,5 @@ export function activityMessage(receipt: ActivityReceipt) {
   const items = rewards.items.map(item => item.quantity + " × " + item.name).join(", ");
   const loot = activityOutcome(receipt) === "failure" ? "Nothing caught. " : items ? (receipt.rewards ? "Received " : "Caught ") + items + ". " : "";
   const gold = rewards.gold_coins > 0 ? "+" + formatGold(rewards.gold_coins) + " Gold Coins. " : "";
-  return loot + gold + activityProgressMessage(receipt);
+  return loot + gold + activityCostMessage(receipt);
 }

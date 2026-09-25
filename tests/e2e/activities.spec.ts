@@ -1,8 +1,15 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { createTestAccount, cleanupTestAccounts, loginTestAccount, testSql } from "../support/accounts";
 import { economyJournalKey } from "../../src/lib/economy-journal";
 
 const offer = { activity_id: "shore_fishing", expected_stamina_cost: 1, expected_xp_gain: 10 };
+// Captures the XP drop one second into its display for visual review.
+async function xpDropShot(page: Page, path: string) {
+  const card = page.locator(".o-xp-drop");
+  await card.evaluate(element => { for (const animation of element.getAnimations({ subtree: true })) { animation.pause(); animation.currentTime = 1000; } });
+  await page.screenshot({ path });
+  await card.evaluate(element => { for (const animation of element.getAnimations({ subtree: true })) animation.play(); });
+}
 
 test("activities spend Stamina, advance the right skills and persist on the profile", async ({ page }) => {
   const own = await createTestAccount("activities");
@@ -20,10 +27,27 @@ test("activities spend Stamina, advance the right skills and persist on the prof
       await expect(stamina).toHaveAttribute("aria-valuenow", String(50 - count));
       await expect(page.getByLabel("Shore Fishing XP", { exact: true })).toHaveText(String(10 * count));
     }
-    await expect(page.getByRole("region", { name: "Shore Fishing", exact: true })).toContainText("Fishing reached level 2!");
+    // Every XP gain shows in the shared drop at the bottom right; a new gain replaces it and it fades after five seconds.
+    const fishingDrop = page.getByRole("region", { name: "Fishing XP gained", exact: true });
+    await expect(fishingDrop).toContainText("+10 XP");
+    await expect(fishingDrop).toContainText("Level up! Now level 2.");
+    await expect(fishingDrop.getByRole("progressbar", { name: "Fishing progress to next level", exact: true })).toHaveAttribute("aria-valuetext", "216 XP to level 3");
+    await expect(page.getByRole("region", { name: "Shore Fishing", exact: true })).not.toContainText("XP.");
+    // The page reserves a scrollbar gutter, which fixed positioning measures from.
+    expect(await page.locator(".o-xp-drop-region").evaluate(element => {
+      const box = element.getBoundingClientRect(), root = document.documentElement;
+      return Math.max(root.getBoundingClientRect().right - box.right, root.clientHeight - box.bottom);
+    })).toBeLessThanOrEqual(20);
+    await xpDropShot(page, ".local/xp-drop-desktop.png");
+    await page.setViewportSize({ width: 375, height: 812 });
     await page.getByRole("button", { name: "Forage for 1 Stamina", exact: true }).click();
     await expect(stamina).toHaveAttribute("aria-valuenow", "29");
     await expect(page.getByLabel("Foraging XP", { exact: true })).toHaveText("10");
+    await expect(page.getByRole("region", { name: "Foraging XP gained", exact: true })).toContainText("+10 XP");
+    await expect(fishingDrop).toHaveCount(0);
+    await xpDropShot(page, ".local/xp-drop-mobile.png");
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await expect(page.locator(".o-xp-drop")).toHaveCount(0, { timeout: 8000 });
     const foragingResult = page.getByRole("region", { name: "Foraging result", exact: true });
     await expect(foragingResult.getByRole("heading", { name: "Success", exact: true })).toBeVisible();
     await expect(foragingResult.getByRole("list", { name: "Activity rewards" })).toHaveCount(0);
@@ -114,7 +138,9 @@ test("activity result expands for misses, item rewards and future Gold Coins", a
     fixture({ loot: { caught: false } });
     await button.click();
     await expect(result.getByRole("heading", { name: "Failure", exact: true })).toBeVisible();
-    await expect(result).toContainText("+10 Fishing XP");
+    await expect(result).toContainText("Spent 1 Stamina.");
+    // A replayed receipt awards nothing new, so no XP drop appears.
+    await expect(page.locator(".o-xp-drop")).toHaveCount(0);
     await expect(result.getByRole("list", { name: "Activity rewards" })).toHaveCount(0);
     await page.screenshot({ path: ".local/activity-failure.png", fullPage: true, animations: "disabled" });
     const items = [

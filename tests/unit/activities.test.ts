@@ -13,10 +13,10 @@ describe("activity requests", () => {
     expect(parseActivityForm(requestForm({ ...fields, xp_gain: value }))).toBeNull();
     expect(parseActivityForm(requestForm({ ...fields, stamina_cost: value }))).toBeNull();
   });
-  it("reports the actual XP award and level-up", () => {
+  it("leaves XP and level-ups to the XP drop and reports the Stamina cost", () => {
     const receipt = { skill_id: "fishing", xp_awarded: 10, stamina_cost: 1, level: 2, previous_level: 1 } as ActivityReceipt;
-    expect(activityMessage(receipt)).toBe("+10 Fishing XP. Spent 1 Stamina. Fishing reached level 2!");
-    expect(activityMessage({ ...receipt, level: 1 })).toBe("+10 Fishing XP. Spent 1 Stamina.");
+    expect(activityMessage(receipt)).toBe("Spent 1 Stamina.");
+    expect(activityMessage({ ...receipt, level: 1 })).toBe("Spent 1 Stamina.");
   });
 });
 
@@ -28,12 +28,12 @@ describe("activity reward presentation", () => {
     const caught = { ...receipt, loot: { caught: true, item_id: fish.item_id, name: fish.name, quantity: fish.quantity } } as ActivityReceipt;
     expect(activityRewards(caught)).toEqual({ items: [fish], gold_coins: 0 });
     expect(activityOutcome(caught)).toBe("success");
-    expect(activityMessage(caught)).toBe("Caught 2 × Silver Fish. +10 Fishing XP. Spent 1 Stamina.");
+    expect(activityMessage(caught)).toBe("Caught 2 × Silver Fish. Spent 1 Stamina.");
   });
   it("supports several rewards and coins without also rendering legacy loot", () => {
     const multiple = { ...receipt, loot: { caught: true, ...fish }, rewards: { items: [fish, ring], gold_coins: 1251 } } as ActivityReceipt;
     expect(activityRewards(multiple)).toEqual({ items: [fish, ring], gold_coins: 1251 });
-    expect(activityMessage(multiple)).toBe("Received 2 × Silver Fish, 1 × Golden Ring. +1,251 Gold Coins. +10 Fishing XP. Spent 1 Stamina.");
+    expect(activityMessage(multiple)).toBe("Received 2 × Silver Fish, 1 × Golden Ring. +1,251 Gold Coins. Spent 1 Stamina.");
   });
   it("supports coin-only and XP-only successes", () => {
     expect(activityRewards({ ...receipt, rewards: { gold_coins: 251 } })).toEqual({ items: [], gold_coins: 251 });
@@ -45,6 +45,6 @@ describe("activity reward presentation", () => {
     expect(activityOutcome(missed)).toBe("failure");
     expect(activityRewards(missed)).toEqual({ items: [], gold_coins: 0 });
     expect(activityRewards({ ...receipt, outcome: "failure", rewards: { items: [fish], gold_coins: 10 } })).toEqual({ items: [], gold_coins: 0 });
-    expect(activityMessage(missed)).toBe("Nothing caught. +10 Fishing XP. Spent 1 Stamina.");
+    expect(activityMessage(missed)).toBe("Nothing caught. Spent 1 Stamina.");
   });
 });

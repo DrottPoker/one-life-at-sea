@@ -76,6 +76,22 @@ progress/remaining XP to the next level. The Crew Battling and Ship Battling car
 their health bonus and what the next level adds. Other players see only Character Level.
 Opponents and public combat logs still show maximum health, as they did before these bonuses,
 so the battling health bonus of a fighter can be inferred there.
+
+## XP drop
+
+Every XP gain shows in one shared card at the bottom right of the game frame and the attack
+view, in a RuneScape-like style. It names the skill and shows the XP gained, the level, the
+total XP and a bar with the XP left to the next level, and marks a level-up. The card stays for
+five seconds (`XP_DROP_MS` in `xp-drop.tsx`); a new gain replaces it and starts the time over.
+Several skills that grew in the same update share one card.
+
+The card has one source: the owner's skill progress in the player snapshot. The client compares
+each new snapshot with the previous one and shows every skill whose XP grew, whatever awarded
+it: activities, crafting, combat, including a defender's automatic replies, and administrative
+corrections. The first snapshot after a page load is the baseline, so a reload shows no card, a
+replayed receipt that awards nothing shows none, and lower XP is never shown as a gain. Activity
+and crafting results and the attack view no longer repeat the awarded XP; reward previews such
+as "+10 Fishing XP" on actions remain.
 Existing registered-player profile access rules remain in effect: public here means
 visible to other registered players, not anonymous visitors.
 

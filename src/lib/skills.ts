@@ -4,8 +4,11 @@ export type SkillProgress = {
   character_level: number;
   skills: { id: string; xp: number; level: number }[];
 };
+export type SkillGain = { id: string; name: string; gained: number; xp: number; level: number; levelUp: boolean;
+  nextXp: number | null; remaining: number; percent: number };
 export const MAX_SKILL_LEVEL = gameplay.skills.xpThresholds.length;
 export const MAX_CHARACTER_LEVEL = MAX_SKILL_LEVEL * gameplay.skills.catalog.length;
+export const skillName = (id: string) => gameplay.skills.catalog.find(skill => skill.id === id)?.name ?? id;
 // Each battling skill raises the maximum of its own health.
 export const BATTLING_HEALTH: Readonly<Record<string, string>> = { crew_battling: "Crew Health", ship_battling: "Ship Health" };
 
@@ -29,4 +32,15 @@ export function skillProgress(experience: number) {
   const earned = experience - thresholds[low];
   return { level: low + 1, nextXp, remaining: nextXp === null ? 0 : nextXp - experience,
     percent: nextXp === null ? 100 : earned / (nextXp - thresholds[low]) * 100 };
+}
+
+// XP that grew between two snapshots of the own skills, whatever awarded it. Lower XP, such as a correction, is no gain.
+export function skillGains(previous: SkillProgress, next: SkillProgress): SkillGain[] {
+  return next.skills.flatMap(skill => {
+    const before = previous.skills.find(entry => entry.id === skill.id)?.xp;
+    if (before === undefined || skill.xp <= before) return [];
+    const now = skillProgress(skill.xp);
+    return [{ id: skill.id, name: skillName(skill.id), gained: skill.xp - before, xp: skill.xp, level: now.level,
+      levelUp: now.level > skillProgress(before).level, nextXp: now.nextXp, remaining: now.remaining, percent: now.percent }];
+  });
 }
