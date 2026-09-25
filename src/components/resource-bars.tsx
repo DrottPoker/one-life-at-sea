@@ -46,7 +46,7 @@ export function ResourceBars() {
         " training gains. Moves " + gameplay.morale.recoveryAmount + " towards 0 every " + durationLabel(gameplay.morale.recoverySeconds) + "." },
   ];
   return <section className="o-side-module o-condition-card" aria-labelledby="resources-title">
-    <div className="o-gold-coins"><span><Coins aria-hidden="true" />Gold Coins</span><output aria-label="Gold Coins on character">{formatGold(state.gold_coins)}</output></div>
+    <div className="o-gold-coins"><Coins aria-hidden="true" /><div><span>Gold Coins</span><output aria-label="Gold Coins on character">{formatGold(state.gold_coins)}</output></div></div>
     <h2 className="o-side-title" id="resources-title">Condition</h2>
     <div className="o-resources" ref={resourcesRef}>{resources.map(resource => {
       const morale = resource.key === "morale", hintId = "resource-hint-" + resource.key;

@@ -1,11 +1,9 @@
 import { frontend } from "@/config/public";
 import { GameLink as Link } from "@/components/game-navigation";
 import { notFound } from "next/navigation";
-import { Anchor } from "lucide-react";
-import { Panel } from "@/components/shell";
 import { ownSkillProgress } from "@/lib/skills-server";
 import { ProfileSkills } from "@/components/profile-skills";
-import { ProfileDetails } from "@/components/profile-details";
+import { ProfileOverview } from "@/components/profile-overview";
 import { DefenceOrders } from "@/components/combat/defence-orders";
 import { requireCharacter, gameStateForPlayer } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
@@ -33,22 +31,13 @@ export default async function CharacterProfilePage({ params }: { params: Promise
   const skills = ownProfile ? await ownSkillProgress() : null;
   const created = new Date(profile.created_at);
   const joined = new Intl.DateTimeFormat(frontend.site.locale, { day: "numeric", month: "long", year: "numeric", timeZone: frontend.site.logTimeZone }).format(created);
-  const days = Math.max(0, Math.floor((Date.now() - created.getTime()) / 86_400_000));
-  const age = days === 0 ? "Less than a day" : days === 1 ? "1 day" : days + " days";
+  const ageDays = Math.max(0, Math.floor((Date.now() - created.getTime()) / 86_400_000));
   const backUrl = state.hospital_until ? "/harbor/hospital" : state.sea.state !== "in_harbor" ? "/sea" : "/harbor";
   const backLabel = state.hospital_until ? "Hospital" : state.sea.state !== "in_harbor" ? "At Sea" : "The Harbor";
 
-  return <>
-    <Panel title="Profile" detail={ownProfile ? "Your character" : "Captain"}>
-      <div className="o-profile">
-        <div className="o-profile-portrait" aria-hidden="true"><Anchor /><span>{frontend.site.name.toUpperCase()}</span></div>
-        <div className="o-profile-info">
-          <ProfileDetails key={profile.character_id} profile={profile} initialStatus={hospital} joined={joined} age={age} ownProfile={ownProfile} forum={forum} />
-        </div>
-      </div>
-      {skills && <ProfileSkills progress={skills} />}
-      {ownProfile && <DefenceOrders />}
-      <div className="o-panel-foot"><Link href={backUrl}>Back to {backLabel}</Link></div>
-    </Panel>
-  </>;
+  return <div className="o-profile-page">
+    <ProfileOverview key={profile.character_id} profile={profile} initialStatus={hospital} joined={joined} ageDays={ageDays} ownProfile={ownProfile} forum={forum}
+      skills={skills && <ProfileSkills progress={skills} />} defence={ownProfile && <DefenceOrders />} />
+    <p className="o-profile-back"><Link href={backUrl}>Back to {backLabel}</Link></p>
+  </div>;
 }

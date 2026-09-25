@@ -1,15 +1,13 @@
-import { frontend } from "@/config/public";
-import { GameLink as Link, GameNavigationProvider, GameContent } from "@/components/game-navigation";
+import { GameNavigationProvider, GameContent } from "@/components/game-navigation";
 import { playerProfileUrl } from "@/lib/player-identity";
-import { seaLocationLabel } from "@/lib/sea-travel";
 import type { ReactNode } from "react";
-import { Anchor } from "lucide-react";
 import { requireCharacter, gameStateForPlayer } from "@/lib/player";
 import { HarborNav } from "@/components/harbor-nav";
 import { LogoutButton } from "@/components/logout-button";
 import { GameStateProvider } from "@/components/game-state";
 import { EconomyRequests } from "@/components/economy-requests";
 import { ResourceBars } from "@/components/resource-bars";
+import { CaptainIdentity } from "@/components/captain-identity";
 import { XpDrop } from "@/components/xp-drop";
 import { ownSkillProgress } from "@/lib/skills-server";
 import { logOut } from "@/app/actions";
@@ -17,19 +15,10 @@ import { logOut } from "@/app/actions";
 export default async function GameLayout({ children }: { children: ReactNode }) {
   const character = await requireCharacter({ allowHospital: true, allowSea: true });
   const [state, skills] = await Promise.all([gameStateForPlayer(), ownSkillProgress()]);
-  const created = new Intl.DateTimeFormat(frontend.site.locale, { day: "numeric", month: "short", year: "numeric", timeZone: frontend.site.logTimeZone }).format(new Date(character.created_at));
   return <GameStateProvider state={state}><GameNavigationProvider key={character.id}><div className="o-workspace">
     <aside className="o-sidebar" aria-label="Character and harbor navigation">
       <section className="o-side-module o-captain-card" aria-label="Your captain">
-        <div className="o-character">
-          <div className="o-character-identity">
-            <span className="o-captain-emblem" aria-hidden="true"><Anchor /></span>
-            <div><span className="o-captain-label">Captain</span><span className="o-character-name">{character.display_name}</span>
-              <div className="o-character-caption"><Link href={playerProfileUrl(character.player_number)}>My Profile</Link></div>
-            </div>
-          </div>
-          <dl className="o-side-data"><div><dt>Player ID</dt><dd>{character.player_number}</dd></div><div><dt>Location</dt><dd>{state.hospital_until ? "Hospital" : seaLocationLabel(state.sea)}</dd></div><div><dt>Member since</dt><dd>{created}</dd></div></dl>
-        </div>
+        <CaptainIdentity name={character.display_name} profileUrl={playerProfileUrl(character.player_number)} />
         <ResourceBars />
       </section>
       <section className="o-side-module o-navigation-module"><h2 className="o-side-title">Navigation</h2><HarborNav /></section>

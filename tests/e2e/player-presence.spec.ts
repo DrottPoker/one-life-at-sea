@@ -21,17 +21,17 @@ test("profile presence and last action refresh for another player without naviga
     const main = page.getByRole("main"), status = main.getByRole("img", { name: /^Player status:/ });
     const lastAction = main.getByLabel("Last action", { exact: true });
     await expect(main.getByRole("heading", { name: actor.name + " [" + actor.playerNumber + "]", exact: true })).toBeVisible();
-    const headingPresence = main.locator(".o-profile-heading-presence");
+    const profilePresence = main.locator(".o-profile-presence");
     await expect(main.locator("dt").filter({ hasText: /^Player status$/ })).toHaveCount(0);
-    await expect(headingPresence.locator(".o-presence-dot")).toHaveCSS("width", "12px");
-    await expect(headingPresence.locator(".o-presence-dot")).toHaveCSS("height", "12px");
+    await expect(profilePresence.locator(".o-presence-dot")).toHaveCSS("width", "12px");
+    await expect(profilePresence.locator(".o-presence-dot")).toHaveCSS("height", "12px");
     await expect(status).toHaveAttribute("aria-label", "Player status: Offline");
-    await expect(headingPresence).toHaveAttribute("data-presence", "offline");
+    await expect(profilePresence).toHaveAttribute("data-presence", "offline");
     await expect(lastAction).toHaveText("Not recorded yet");
     const tab = randomUUID();
     expect((await actor.api.rpc("record_player_presence", { tab_id: tab, is_active: true, page_action: true })).error).toBeNull();
     await expect(status).toHaveAttribute("aria-label", "Player status: Online", { timeout: 25000 });
-    await expect(headingPresence).toHaveAttribute("data-presence", "online");
+    await expect(profilePresence).toHaveAttribute("data-presence", "online");
     await expect(lastAction).toHaveText("Just now");
     testSql(`update private.character_actions set last_action_at=statement_timestamp()-interval '65 seconds' where character_id='${actor.id}'`);
     await expect(lastAction).toHaveText("1 minute ago", { timeout: 25000 });
@@ -40,7 +40,7 @@ test("profile presence and last action refresh for another player without naviga
     const actionAt = (await presenceFor(actor)).last_action_at;
     expect((await actor.api.rpc("record_player_presence", { tab_id: tab, is_active: false })).error).toBeNull();
     await expect(status).toHaveAttribute("aria-label", "Player status: Idle", { timeout: 25000 });
-    await expect(headingPresence).toHaveAttribute("data-presence", "idle");
+    await expect(profilePresence).toHaveAttribute("data-presence", "idle");
     expect((await presenceFor(actor)).last_action_at).toBe(actionAt);
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.screenshot({ path: ".local/presence-desktop.png", fullPage: true });
@@ -53,7 +53,7 @@ test("profile presence and last action refresh for another player without naviga
     }
     await page.route("**/rest/v1/rpc/get_character_status", route => route.abort());
     await expect(status).toHaveAttribute("aria-label", "Player status: Unavailable", { timeout: 25000 });
-    await expect(headingPresence).toHaveAttribute("data-presence", "unknown");
+    await expect(profilePresence).toHaveAttribute("data-presence", "unknown");
     await expect(lastAction).toContainText("last known");
     await page.unroute("**/rest/v1/rpc/get_character_status");
     await main.getByRole("button", { name: "Retry status" }).click();
