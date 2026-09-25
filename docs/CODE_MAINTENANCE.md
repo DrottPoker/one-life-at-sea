@@ -52,10 +52,11 @@ serverfel: bara GET-renderingen avbryts och inget sparas. React rapporterar avbr
 `Error`, medan Next bara tystar `AbortError` och `ResponseAborted`
 ([vercel/next.js#96704](https://github.com/vercel/next.js/issues/96704)). Rättningen
 ([#96715](https://github.com/vercel/next.js/pull/96715)) finns i canary men inte i 16.3.6. Ta bort
-noteringen efter uppgradering till en version med rättningen. I webbläsartesterna syns raden nästan
-en gång per test: när realtidskanalen ansluter efter inloggningen begär `app-frame.tsx` en
-uppdatering för att fånga missade ändringar, och testets nästa `page.goto` avbryter den. Playwright
-kan inte pålitligt vänta ut den uppdateringen, så testerna gör det inte.
+noteringen efter uppgradering till en version med rättningen. De två vanligaste källorna är
+borta sedan 2026-09-25: sidor som bara omdirigerar besvaras av proxyn med en riktig omdirigering, och
+`app-frame.tsx` uppdaterar inte längre vid varje anslutning av realtidskanalen utan bara när den
+lagrade revisionen har ändrats. Raden kan fortfarande synas när ett test byter sida mitt i en
+pågående uppdatering eller prefetch.
 
 ## Dokumentation
 

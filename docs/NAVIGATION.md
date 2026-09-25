@@ -13,6 +13,17 @@ usable. The previous page is hidden and inert while the content loader is visibl
 - `src/components/game-refresh.tsx` / `app-frame.tsx`: defer background updates
   while navigation, a loading boundary or a gameplay action is active. Realtime
   events already covered by the current snapshot revision need no extra refresh.
+  When the realtime channel connects, the frame reads the stored event revision
+  and refreshes only if something changed after the server render; a failed read
+  refreshes anyway. It used to refresh on every connect, which cost one full server
+  render per page load.
+- `src/proxy.ts` / `src/lib/direct-redirects.ts`: full page loads of routes that
+  only forward (`/`, legacy `/characters/<uuid>` and `/attack/<uuid>`,
+  `/messages/<number>`, `/combat/prepare/<id>`, `/forums/posts/<id>` and
+  `/forums/threads/<id>?unread=1`) get a real HTTP redirect before rendering. A
+  redirect from inside a page would first stream its loading state. Client
+  navigations and Server Actions, which fetch RSC data, still follow the page's own
+  redirect, and the pages remain the fallback that shows "not found".
 - `(game)/layout.tsx`: keeps the sidebar, resources and economy request journal
   mounted across game views.
 - `src/lib/supabase/server.ts`: shares one authenticated client within a server
@@ -27,7 +38,7 @@ can still record their result. The durable economy journal also survives navigat
 ## Player identities
 
 Profiles use `/players/<player-number>` and attacks use `/attack/<player-number>`.
-Legacy UUID links resolve to those routes on the server. Hospital and sea navigation
+Legacy UUID links resolve to those routes on the server, as HTTP 308 redirects for full page loads. Hospital and sea navigation
 allow the directory and numeric profiles under the same rules as existing profiles.
 Battle locks carry both the internal target UUID and the public number, so an old
 attack link can reach its canonical redirect without a navigation loop.

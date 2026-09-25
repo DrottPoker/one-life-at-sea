@@ -17,7 +17,6 @@ Detta dokument samlar kvarstående riktning. Det är inte en beskrivning av leve
 Forumets etapp 1-4 finns, se [Forum](FORUMS.md): tavlor, reaktioner, karma, prenumerationer, rapporter, avstängning, spelarmoderatorer, omröstningar, populära trådar, signaturer, bilder och notiser som delas ut i bakgrunden. Ägaren godkände 2026-09-25 att forumet byggs i etapper: Torns styrkor tas med och Torns svagheter får egna lösningar.
 
 - Kvar: besättningsforum när fraktioner finns, modererade av besättningens ledare. Det kräver fraktionsmedlemskap och behörigheter, som ännu inte finns.
-- Före offentlig drift behöver bildhinken en regelbunden rensning av oanvända uppladdningar från spelare som aldrig laddar upp igen; i dag sker rensningen vid spelarens nästa uppladdning.
 
 ## Beslut som ska bevaras
 
@@ -31,6 +30,6 @@ Hunger och andra offlineberoende system behöver fortfarande avgöranden om temp
 
 ## Före offentlig drift
 
-Hosted miljö, produktionsmejl, redirectinställningar, driftsövervakning och belastning måste kvalificeras i den verkliga målmiljön. Lokala godkända tester är inte en produktionsverifiering.
+Hosted miljö, produktionsmejl, redirectinställningar, driftsövervakning och belastning måste kvalificeras i den verkliga målmiljön. Forumets bildrensning behöver Vault-hemligheterna som beskrivs i [Forum](FORUMS.md#lagring-och-behörighet). Lokala godkända tester är inte en produktionsverifiering.
 
 Se [arkiverade planer](archive/README.md) och [träningsresearch](research/TRAINING_BALANCE_RESEARCH.md) för beslutsbakgrund. Funktionsdokument och aktuell kod gäller framför ersatta förslag.

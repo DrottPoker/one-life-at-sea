@@ -101,7 +101,7 @@ npm run db:start
 ```
 
 Använd inte reset eller `--no-backup`. Port- eller projektbyte kräver rätt anslutning i `.env.local` och motsvarande `SITE_URL`.
-`setup:local` skapar bara en saknad miljöfil.
+`setup:local` skapar bara en saknad miljöfil. Efter `db:start` skriver `db:sweep-secrets` forumets bildrensning till den lokala databasens Vault, se [Forum](FORUMS.md#lagring-och-behörighet).
 Nytt Supabase-projekt-ID betyder separat lokal databas.
 Lokala TOML-inställningar konfigurerar inte en hosted miljö.
 
