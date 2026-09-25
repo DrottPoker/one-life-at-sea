@@ -23,15 +23,6 @@ function alreadyStored(error: unknown) {
   return !!error && typeof error === "object" && "statusCode" in error && error.statusCode === "409";
 }
 
-// A player's uploads that no post used within a day are deleted before a new one is reserved.
-// Only rows whose file is gone are discarded, so a failed deletion is retried next time.
-async function removeStaleUploads(client: Awaited<ReturnType<typeof createClient>>) {
-  const { data } = await client.rpc("list_stale_forum_images");
-  if (!data?.length) return;
-  const { error } = await client.storage.from(FORUM_IMAGE_BUCKET).remove(data.map(item => item.path));
-  if (!error) await client.rpc("discard_forum_images", { image_ids: data.map(item => item.image_id) });
-}
-
 // Uploads use a route instead of a Server Action so the size is checked before the body is read.
 // The file is re-encoded here; the database reserves it under the player's limits, and the
 // player's own session stores it, so storage policies check the reservation again.
@@ -52,7 +43,6 @@ export async function POST(request: Request) {
     if (error instanceof ForumImageError) return reply(422, { error: error.message });
     throw error;
   }
-  await removeStaleUploads(client).catch(() => undefined);
   const { data: reservation, error } = await withDatabaseRetry(() => client.rpc("reserve_forum_image", {
     request_id: requestId, byte_size: image.size, width: image.width, height: image.height,
   }));

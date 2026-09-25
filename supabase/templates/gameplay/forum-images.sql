@@ -5,8 +5,8 @@ values('forum-images','forum-images',false,5242880,array['image/webp'])
 on conflict(id) do update set public=false,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
 
 -- An upload is reserved before its file is stored and becomes attached when a post first uses it.
--- Moderators hide images from players; an administrator can purge the file for good. Unused uploads
--- are discarded after a day, once their file is gone.
+-- Moderators hide images from players; an administrator can purge the file for good. An upload must
+-- be used within a day; a scheduled sweep deletes its file an hour later and then discards the row.
 create table if not exists private.forum_images (
   id uuid primary key,
   owner_id uuid references public.characters(id) on delete set null,
@@ -50,11 +50,10 @@ returns boolean language sql stable security definer set search_path='' as $$
   select exists(select 1 from private.forum_images i where i.storage_path=object_name and i.owner_user_id=auth.uid()
     and i.attached_at is null and i.discarded_at is null and i.removed_at is null);
 $$;
--- Owners remove uploads no post uses; administrators remove purged files.
+-- Administrators remove purged files; the scheduled sweep removes the rest with a service key.
 create or replace function private.forum_image_deletable(object_name text)
 returns boolean language sql stable security definer set search_path='' as $$
-  select exists(select 1 from private.forum_images i where i.storage_path=object_name
-    and ((i.purged_at is not null and private.is_admin()) or (i.owner_user_id=auth.uid() and i.attached_at is null)));
+  select exists(select 1 from private.forum_images i where i.storage_path=object_name and i.purged_at is not null and private.is_admin());
 $$;
 revoke all on function private.forum_image_readable(text),private.forum_image_uploadable(text),private.forum_image_deletable(text) from public,anon,authenticated;
 grant execute on function private.forum_image_readable(text),private.forum_image_uploadable(text),private.forum_image_deletable(text) to authenticated;
@@ -78,9 +77,9 @@ returns uuid[] language sql immutable security invoker set search_path='' as $$
   select coalesce(array_agg(distinct lower(m[1])::uuid),'{}'::uuid[]) from regexp_matches(body,
     '\[img(?:=[^]\n]*)?\]([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\[/img\]','gi') m;
 $$;
--- Links the images a post's text names. A post may show the author's own stored uploads and
--- keep images it already showed, even ones a moderator has since hidden. Callers hold the thread
--- lock; image rows are locked after it, in ID order.
+-- Links the images a post's text names. A post may show the author's own stored uploads, while
+-- an unused upload is younger than a day, and keep images it already showed, even ones a moderator
+-- has since hidden. Callers hold the thread lock; image rows are locked after it, in ID order.
 create or replace function private.forum_attach_images(target_post bigint,author uuid,body text,observed timestamptz)
 returns void language plpgsql volatile security invoker set search_path='' as $$
 declare wanted uuid[]:=private.forum_image_ids(body);
@@ -90,6 +89,7 @@ begin
   if (select count(*) from private.forum_images i where i.id=any(wanted)
     and (exists(select 1 from private.forum_post_images pi where pi.post_id=target_post and pi.image_id=i.id)
       or (i.owner_id=author and i.removed_at is null and i.discarded_at is null and i.purged_at is null
+        and (i.attached_at is not null or i.created_at>observed-interval '1 day')
         and exists(select 1 from storage.objects o where o.bucket_id='forum-images' and o.name=i.storage_path))))<>cardinality(wanted) then
     raise exception 'INVALID_IMAGE' using errcode='22023'; end if;
   delete from private.forum_post_images pi where pi.post_id=target_post and pi.image_id<>all(wanted);
@@ -131,7 +131,9 @@ begin
     raise exception 'INVALID_IMAGE' using errcode='22023'; end if;
   if (select count(*) from private.forum_images i where i.owner_id=viewer_id and i.created_at>observed-interval '1 hour')>={{gameplay.forum.imagesPerHour}} then
     raise exception 'IMAGE_RATE_LIMIT' using errcode='P0001'; end if;
-  if (select count(*) from private.forum_images i where i.owner_id=viewer_id and i.attached_at is null and i.discarded_at is null and i.removed_at is null)>={{gameplay.forum.imagesUnusedMax}} then
+  -- Uploads older than a day can no longer be used, so they do not count.
+  if (select count(*) from private.forum_images i where i.owner_id=viewer_id and i.attached_at is null and i.discarded_at is null and i.removed_at is null
+    and i.created_at>observed-interval '1 day')>={{gameplay.forum.imagesUnusedMax}} then
     raise exception 'IMAGE_UNUSED_LIMIT' using errcode='P0001'; end if;
   insert into private.forum_images(id,owner_id,owner_user_id,owner_name,owner_player_number,request_id,storage_path,byte_size,width,height,created_at)
     values(new_id,viewer_id,actor.user_id,actor.display_name,actor.player_number,reserve_forum_image.request_id,actor.user_id::text||'/'||new_id::text||'.webp',
@@ -150,37 +152,46 @@ begin
   return jsonb_build_object('path',path);
 end;
 $$;
--- Uploads no post used within a day. The app deletes their files, then discards the rows whose
--- file is gone, so a failed deletion is simply retried later.
-create or replace function private.list_stale_forum_images()
-returns jsonb language sql stable security definer set search_path='' as $$
-  select coalesce(jsonb_agg(jsonb_build_object('image_id',s.id,'path',s.storage_path) order by s.created_at),'[]'::jsonb) from (
-    select i.id,i.storage_path,i.created_at from private.forum_images i where i.owner_id=private.combat_captain() and i.attached_at is null
-      and i.discarded_at is null and i.created_at<statement_timestamp()-interval '1 day' order by i.created_at limit 20) s;
-$$;
-create or replace function private.discard_forum_images(image_ids uuid[])
-returns integer language plpgsql volatile security definer set search_path='' as $$
-declare viewer_id uuid:=private.combat_captain(); discarded integer;
-begin
-  if image_ids is null or cardinality(image_ids)>20 then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
-  update private.forum_images i set discarded_at=clock_timestamp()
-    where i.id=any(image_ids) and i.owner_id=viewer_id and i.attached_at is null and i.discarded_at is null
-      and not exists(select 1 from storage.objects o where o.bucket_id='forum-images' and o.name=i.storage_path);
-  get diagnostics discarded=row_count;
-  return discarded;
-end;
-$$;
+-- Cleanup moved to the scheduled sweep below.
+drop function if exists public.list_stale_forum_images();
+drop function if exists private.list_stale_forum_images();
+drop function if exists public.discard_forum_images(uuid[]);
+drop function if exists private.discard_forum_images(uuid[]);
 create or replace function public.reserve_forum_image(request_id uuid,byte_size integer,width integer,height integer)
 returns jsonb language sql volatile security invoker set search_path='' as $$ select private.reserve_forum_image(request_id,byte_size,width,height); $$;
 create or replace function public.get_forum_image(image_id uuid)
 returns jsonb language sql stable security invoker set search_path='' as $$ select private.get_forum_image(image_id); $$;
-create or replace function public.list_stale_forum_images()
-returns jsonb language sql stable security invoker set search_path='' as $$ select private.list_stale_forum_images(); $$;
-create or replace function public.discard_forum_images(image_ids uuid[])
-returns integer language sql volatile security invoker set search_path='' as $$ select private.discard_forum_images(image_ids); $$;
 revoke all on function private.reserve_forum_image(uuid,integer,integer,integer),public.reserve_forum_image(uuid,integer,integer,integer),
-  private.get_forum_image(uuid),public.get_forum_image(uuid),private.list_stale_forum_images(),public.list_stale_forum_images(),
-  private.discard_forum_images(uuid[]),public.discard_forum_images(uuid[]) from public,anon,authenticated;
+  private.get_forum_image(uuid),public.get_forum_image(uuid) from public,anon,authenticated;
 grant execute on function private.reserve_forum_image(uuid,integer,integer,integer),public.reserve_forum_image(uuid,integer,integer,integer),
-  private.get_forum_image(uuid),public.get_forum_image(uuid),private.list_stale_forum_images(),public.list_stale_forum_images(),
-  private.discard_forum_images(uuid[]),public.discard_forum_images(uuid[]) to authenticated;
+  private.get_forum_image(uuid),public.get_forum_image(uuid) to authenticated;
+
+-- Files can only leave storage through its API. Every hour this sweep asks the Storage API, with the
+-- service key kept in Vault, to delete the files of uploads unused for 25 hours and of purged
+-- images whose deletion failed. Rows are discarded only once their file is gone, so a request that
+-- failed is simply sent again by the next sweep. Without the Vault secrets forum_storage_url and
+-- forum_storage_key the sweep only discards rows whose file is already gone.
+create extension if not exists pg_net with schema extensions;
+create or replace function private.sweep_forum_images()
+returns integer language plpgsql volatile security definer set search_path='' as $$
+declare storage_url text; storage_key text; paths jsonb;
+begin
+  update private.forum_images i set discarded_at=clock_timestamp()
+    where i.attached_at is null and i.discarded_at is null and i.created_at<clock_timestamp()-interval '25 hours'
+      and not exists(select 1 from storage.objects o where o.bucket_id='forum-images' and o.name=i.storage_path);
+  select s.decrypted_secret into storage_url from vault.decrypted_secrets s where s.name='forum_storage_url';
+  select s.decrypted_secret into storage_key from vault.decrypted_secrets s where s.name='forum_storage_key';
+  select jsonb_agg(swept.storage_path order by swept.created_at) into paths from (
+    select i.storage_path,i.created_at from private.forum_images i
+      where ((i.attached_at is null and i.discarded_at is null and i.created_at<clock_timestamp()-interval '25 hours') or i.purged_at is not null)
+        and exists(select 1 from storage.objects o where o.bucket_id='forum-images' and o.name=i.storage_path)
+      order by i.created_at limit 100) swept;
+  if paths is null or storage_url is null or storage_key is null then return 0; end if;
+  perform net.http_delete(url=>rtrim(storage_url,'/')||'/object/forum-images',
+    headers=>jsonb_build_object('Authorization','Bearer '||storage_key,'apikey',storage_key,'Content-Type','application/json'),
+    body=>jsonb_build_object('prefixes',paths),timeout_milliseconds=>15000);
+  return jsonb_array_length(paths);
+end;
+$$;
+revoke all on function private.sweep_forum_images() from public,anon,authenticated;
+select cron.schedule('forum-image-sweep','17 * * * *','select private.sweep_forum_images()');

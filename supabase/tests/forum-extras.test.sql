@@ -39,7 +39,9 @@ select ok(not has_table_privilege('authenticated','private.forum_images','SELECT
 select ok(not has_table_privilege('authenticated','private.forum_profiles','UPDATE'),'Signatures change only through the RPC');
 select is((select public from storage.buckets where id='forum-images'),false,'The image bucket is private');
 select is((select count(*) from private.admin_resources where name='forum_poll_votes'),0::bigint,'Votes stay out of the admin browser');
-select ok(exists(select 1 from cron.job where jobname='forum-popular-threads') and exists(select 1 from cron.job where jobname='forum-notifications'),'Popular threads and notifications run on a schedule');
+select ok(exists(select 1 from cron.job where jobname='forum-popular-threads') and exists(select 1 from cron.job where jobname='forum-notifications')
+  and exists(select 1 from cron.job where jobname='forum-image-sweep'),'Popular threads, notifications and the image sweep run on a schedule');
+select ok(not has_function_privilege('authenticated','private.sweep_forum_images()','EXECUTE'),'Players cannot run the image sweep');
 set local role authenticated;
 
 -- Polls open with their thread.
@@ -294,27 +296,39 @@ select is((public.get_forum_thread(pg_temp.thread('pictures'))#>>array['posts','
 select ok(public.edit_forum_post(pg_temp.result('pictures','post_id')::bigint,'No pictures now.',null,1) is not null,'Authors remove image tags');
 select is(public.get_forum_thread(pg_temp.thread('pictures'))#>'{posts,0,images}','null'::jsonb,'Edits unlink images the text no longer shows');
 
--- Rate limits and unused uploads.
+-- Rate limits, expiry and the scheduled sweep.
 select pg_temp.as_player('ExtrasOther');
 select count(public.reserve_forum_image(gen_random_uuid(),500,100,100)) from generate_series(1,10);
 select throws_ok($$select public.reserve_forum_image(gen_random_uuid(),500,100,100)$$,'P0001','IMAGE_RATE_LIMIT','Uploads per hour are limited');
 reset role;
-update private.forum_images set created_at=clock_timestamp()-interval '2 days' where owner_id=(select id from extras_fixture where display_name='ExtrasOther');
+update private.forum_images set created_at=clock_timestamp()-interval '2 hours' where owner_id=(select id from extras_fixture where display_name='ExtrasOther');
 set local role authenticated;
 select throws_ok($$select public.reserve_forum_image(gen_random_uuid(),500,100,100)$$,'P0001','IMAGE_UNUSED_LIMIT','Unused uploads are limited');
-select is(jsonb_array_length(public.list_stale_forum_images()),10,'Uploads unused for a day are listed for cleanup');
-select is(private.forum_image_deletable((public.list_stale_forum_images()#>>'{0,path}')),true,'Owners may delete unused files');
 reset role;
-insert into storage.objects(bucket_id,name,owner_id) select 'forum-images',storage_path,owner_user_id from private.forum_images where owner_id=(select id from extras_fixture where display_name='ExtrasOther') order by created_at limit 1;
+update private.forum_images set created_at=clock_timestamp()-interval '2 days' where owner_id=(select id from extras_fixture where display_name='ExtrasOther');
+create temporary table expired_image as select id,storage_path from private.forum_images where owner_id=(select id from extras_fixture where display_name='ExtrasOther') order by id limit 1;
+grant select on expired_image to authenticated;
+insert into storage.objects(bucket_id,name,owner_id) select 'forum-images',storage_path,'f3f00000-0000-4000-8000-000000000003' from expired_image;
 set local role authenticated;
-select is(public.discard_forum_images(array(select (value->>'image_id')::uuid from jsonb_array_elements(public.list_stale_forum_images()))),9,'Only uploads whose file is gone are discarded');
-select is(jsonb_array_length(public.list_stale_forum_images()),1,'The rest waits for its file to be deleted');
+select is(public.reserve_forum_image(gen_random_uuid(),500,100,100) ? 'image_id',true,'Uploads older than a day no longer count as unused');
+select throws_ok(format($$select public.create_forum_thread('general_discussion','Too late','[img]%s[/img]',gen_random_uuid())$$,(select id from expired_image)),
+  '22023','INVALID_IMAGE','Uploads older than a day cannot be used');
+select is(private.forum_image_deletable((select storage_path from expired_image)),false,'Players never delete files directly');
 reset role;
-set local storage.allow_delete_query='true';
-delete from storage.objects where bucket_id='forum-images' and name in(select storage_path from private.forum_images where owner_id=(select id from extras_fixture where display_name='ExtrasOther'));
-set local role authenticated;
-select is(public.discard_forum_images(array(select (value->>'image_id')::uuid from jsonb_array_elements(public.list_stale_forum_images()))),1,'A deleted file lets its row be discarded');
-select is(public.reserve_forum_image(gen_random_uuid(),500,100,100) ? 'image_id',true,'Discarded uploads free the limit');
+delete from vault.secrets where name in('forum_storage_url','forum_storage_key');
+select is(private.sweep_forum_images(),0,'Without its settings the sweep sends nothing');
+select is((select count(*) from private.forum_images where owner_id=(select id from extras_fixture where display_name='ExtrasOther') and discarded_at is not null),9::bigint,
+  'Expired uploads whose file is gone are discarded');
+select is((select discarded_at from private.forum_images where id=(select id from expired_image)),null,'An upload keeps its row while its file exists');
+select vault.create_secret('http://storage.test/storage/v1/','forum_storage_url','Test'),vault.create_secret('test-key','forum_storage_key','Test');
+select ok(private.sweep_forum_images()>=2,'The sweep sends the files it found');
+create temporary table sweep_request as select q.url,q.headers,convert_from(q.body,'utf8')::jsonb body from net.http_request_queue q where q.method='DELETE' order by q.id desc limit 1;
+select is((select url from sweep_request),'http://storage.test/storage/v1/object/forum-images','The sweep calls the Storage API delete endpoint');
+select is((select headers->>'Authorization' from sweep_request),'Bearer test-key','The sweep uses the service key from Vault');
+select ok((select body->'prefixes' ? (select storage_path from expired_image) from sweep_request),'Expired uploads are deleted');
+select ok((select body->'prefixes' ? (select value->>'path' from extras_results where key='image') from sweep_request),'Purged files whose deletion failed are deleted again');
+select ok(not (select body->'prefixes' ? (select storage_path from private.forum_images where owner_id=(select id from extras_fixture where display_name='ExtrasOther')
+  and created_at>clock_timestamp()-interval '1 hour' limit 1) from sweep_request),'Recent uploads are kept');
 
 -- Deleting a voter keeps the poll totals right.
 reset role;

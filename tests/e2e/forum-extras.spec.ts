@@ -144,6 +144,17 @@ test("captains run polls, share images and signatures, and find popular threads"
     await confirm(curator, "Remove poll", "Poll removed.", "Rude options");
     await second.reload();
     await expect(second.getByRole("region", { name: "Poll", exact: true })).toContainText("A moderator removed this poll.");
+
+    // The hourly sweep asks the Storage API to delete files of uploads nobody used.
+    await second.locator("input[data-forum-image-input]").setInputFiles({ name: "unused.png", mimeType: "image/png", buffer: picture });
+    await expect(second.getByLabel("Your reply", { exact: true })).toHaveValue(/\[img\][0-9a-f-]{36}\[\/img\]/);
+    const unused = testSql("select storage_path from private.forum_images where owner_id='" + voter.id + "' and attached_at is null;").trim();
+    expect(unused).toMatch(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.webp$/);
+    testSql("update private.forum_images set created_at=clock_timestamp()-interval '2 days' where storage_path='" + unused + "';");
+    expect(Number(testSql("select private.sweep_forum_images();").trim())).toBeGreaterThanOrEqual(1);
+    await expect.poll(() => testSql("select count(*) from storage.objects where bucket_id='forum-images' and name='" + unused + "';").trim(), { timeout: 20000 }).toBe("0");
+    testSql("select private.sweep_forum_images();");
+    expect(testSql("select discarded_at is not null from private.forum_images where storage_path='" + unused + "';").trim()).toBe("t");
   } finally {
     await Promise.all(contexts.map(context => context.close()));
     await removeForumImages(admin, [author.id, voter.id, rookie.id, admin.id]);

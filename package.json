@@ -17,6 +17,8 @@
     "test:db": "supabase test db",
     "check": "npm run docs:check && npm run lint && npm run typecheck && npm test && npm run build",
     "db:start": "supabase start",
+    "postdb:start": "npm run db:sweep-secrets",
+    "db:sweep-secrets": "node scripts/configure-storage-sweep.mjs",
     "db:stop": "supabase stop",
     "db:migrate": "supabase migration up --local",
     "db:status": "node scripts/local-status.mjs",
