@@ -105,7 +105,8 @@ Karaktär, skepp, besättning, tränade stats och pengar behålls.
 - Överlevande återhämtar båda parallellt, även offline, upp till sitt maxvärde: 100 plus bonusar.
   Utrustad Hull och Ship Battling höjer maximal Ship Health; Crew Battling höjer maximal Crew Health.
   Sjukhuspatienter får full hälsa enligt aktuell utrustning och aktuella nivåer vid utskrivning.
-- Hälsa återhämtas inte för aktiva deltagare. En tillbakadragen angripare kan börja återhämta sig medan mötet fortsätter.
+- Hälsa återhämtas inte för aktiva deltagare: tick som passeras under striden räknas inte, och återhämtningen börjar
+  vid första ticket efter att deltagaren lämnat striden. En tillbakadragen angripare kan börja återhämta sig medan mötet fortsätter.
 - Energy: +5 vid fasta femminutersticks i hamnen och Hospital, samt vid fasta
   tiominutersticks till havs och under resor. Högst 100, alltid heltal. Se [Energy](ENERGY_RECOVERY.md).
 - Fem minuters skydd mot inkommande attacker efter deltagarens avslut.

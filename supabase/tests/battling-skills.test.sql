@@ -121,8 +121,23 @@ set local role authenticated;
 select public.submit_combat_order((value#>>'{battle,id}')::uuid,2,'board',gen_random_uuid()) from battler_results where name='start';
 select is((select public.get_combat((value#>>'{battle,id}')::uuid)->>'phase' from battler_results where name='start'),'boarding','The attacker boards');
 select public.submit_combat_order((value#>>'{battle,id}')::uuid,3,'crew_attack',gen_random_uuid()) from battler_results where name='start';
+-- The fight lasts past two five-minute recovery ticks; none of them may count.
+reset role;
+update public.characters set ship_recovery_at=clock_timestamp()-interval '12 minutes',crew_recovery_at=clock_timestamp()-interval '12 minutes'
+  where id in(select a from battlers union all select d from battlers);
+set local role authenticated;
 select public.submit_combat_order((value#>>'{battle,id}')::uuid,4,'retreat',gen_random_uuid()) from battler_results where name='start';
 reset role;
+select is((select array[ship_health,crew_health] from public.characters where id=(select a from battlers)),
+  (select array[(snapshot->>'ship_health')::integer,(snapshot->>'crew_health')::integer] from private.combat_participants
+    where combat_id=(select (value#>>'{battle,id}')::uuid from battler_results where name='start') and character_id=(select a from battlers)),
+  'Time in battle gives the attacker no recovery ticks');
+select is((select array[ship_health,crew_health] from public.characters where id=(select d from battlers)),
+  (select array[(state#>>'{defender,ship_health}')::integer,(state#>>'{defender,crew_health}')::integer] from private.combats
+    where id=(select (value#>>'{battle,id}')::uuid from battler_results where name='start')),
+  'Time in battle gives the defender no recovery ticks');
+select ok((select bool_and(ship_recovery_at>clock_timestamp()-interval '1 minute' and crew_recovery_at>clock_timestamp()-interval '1 minute')
+  from public.characters where id in(select a from battlers union all select d from battlers)),'Recovery starts from the end of the battle');
 select is((select xp from private.character_skills where character_id=(select a from battlers) and skill_id='ship_battling'),20::bigint,'Boarding trains nothing');
 select is((select xp from private.character_skills where character_id=(select a from battlers) and skill_id='crew_battling'),10::bigint,'A melee attack trains Crew Battling while retreat does not');
 select is((select xp from private.character_skills where character_id=(select d from battlers) and skill_id='ship_battling'),30::bigint,'The defender''s salvo against a boarding attempt trains it');

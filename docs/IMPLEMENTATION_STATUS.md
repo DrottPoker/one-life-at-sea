@@ -23,7 +23,7 @@ Exakta regler finns i [dokumentindexet](README.md). Helhetsgranskningen rättar 
 | --- | --- |
 | `npm run check` | Godkänd dokumentkontroll, lint utan varningar, typkontroll och produktionsbygge |
 | Enhetstester | 481 godkända i 34 filer |
-| `npm run test:db` | 2 108 godkända påståenden i 42 filer |
+| `npm run test:db` | 2 111 godkända påståenden i 42 filer |
 | `npm run test:config:db` | 128 godkända påståenden; alternativ config rullades tillbaka |
 | Hela webbläsarsviten | 123 godkända och 1 överhoppad, Edge mot produktionsbygget. Den överhoppade är den opt-in-styrda prestandamätningen, som inte kördes |
 | SQL-lint | Inga varningar eller fel |
