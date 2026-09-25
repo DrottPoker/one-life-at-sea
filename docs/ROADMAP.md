@@ -14,7 +14,8 @@ Detta dokument samlar kvarstående riktning. Det är inte en beskrivning av leve
 ## Beslut som ska bevaras
 
 Permanent karaktärsdöd har ersatts av [Hospital](HOSPITAL.md); historiska dödsförslag ska inte återinföras som om de vore aktuella.
-Framtida HP-progression ska bedömas separat från nuvarande fasta hälsogränser.
+HP-progression finns genom Crew Battling och Ship Battling, se [Skills](SKILLS.md#combat-xp-and-battling-health).
+Återhämtningen är fortfarande en fast mängd per tick och behöver bedömas mot de högre maxvärdena.
 Guldbyte från PvP, särskilt boarding, är en framtida mekanik och finns inte i nuvarande stridsutfall.
 
 Hunger och andra offlineberoende system behöver fortfarande avgöranden om tempo och frånvaro.
