@@ -204,7 +204,7 @@ select public.moderate_forum('restore_thread',jsonb_build_object('thread_id',(se
 select is(public.get_forum_board('general_discussion')->>'total','1','Restored threads return to their board');
 reset role;
 select is((select count(*) from private.forum_moderation_log where actor_id=(select id from forum_fixture where display_name='ForumAdmin')),10::bigint,'Every moderator action is logged once');
-select is((select reason from private.forum_moderation_log where action='remove_thread'),'Spam thread','The log keeps the reason');
+select is((select reason from private.forum_moderation_log where action='remove_thread' and actor_id=(select id from forum_fixture where display_name='ForumAdmin')),'Spam thread','The log keeps the reason');
 update private.forum_author_stats set last_post_at=null;
 set local role authenticated;
 
