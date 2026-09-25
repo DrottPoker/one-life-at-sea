@@ -121,8 +121,9 @@ select set_config('request.jwt.claims','{"sub":"f0f00000-0000-4000-8000-00000000
 select throws_ok($$select public.edit_forum_post((select (value->>'post_id')::bigint from forum_results where key='reply'),'Reply',E'Title',0)$$,'22023','INVALID_POST','Only the opening post carries the title');
 
 -- Withdrawing posts.
-select is((public.withdraw_forum_post((select (value->>'post_id')::bigint from forum_results where key='reply'))->>'thread_removed')::boolean,false,'Authors withdraw replies');
-select is((public.withdraw_forum_post((select (value->>'post_id')::bigint from forum_results where key='reply'))->>'thread_removed')::boolean,false,'Withdrawing twice changes nothing');
+select is(public.withdraw_forum_post((select (value->>'post_id')::bigint from forum_results where key='reply'))->>'post_id',(select value->>'post_id' from forum_results where key='reply'),'Authors delete replies');
+select is(public.withdraw_forum_post((select (value->>'post_id')::bigint from forum_results where key='reply'))->>'post_id',(select value->>'post_id' from forum_results where key='reply'),'Deleting twice changes nothing');
+select is(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_results where key='thread'))#>'{posts,1,author}','null'::jsonb,'Players see a deleted post as [deleted]');
 select is(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_results where key='thread'))#>>'{posts,1,removed,by}','author','The withdrawn post leaves a placeholder');
 select is(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_results where key='thread'))#>'{posts,1,body}','null'::jsonb,'Withdrawn text is hidden');
 select is((public.get_forum_board('general_discussion')#>>'{items,0,replies}')::integer,0,'Withdrawn replies are not counted');
@@ -168,8 +169,10 @@ select throws_ok($$select public.edit_forum_post((select (value->>'post_id')::bi
 select set_config('request.jwt.claims','{"sub":"f0f00000-0000-4000-8000-000000000004","role":"authenticated"}',true);
 insert into forum_results values('staff',public.create_forum_post((select (value->>'thread_id')::bigint from forum_results where key='thread'),'Please keep it civil.',null,gen_random_uuid()));
 select is((select value->>'post_number' from forum_results where key='staff'),'3','Moderators reply in locked threads');
-select throws_ok($$select public.moderate_forum('remove_post',jsonb_build_object('post_id',(select value->>'post_id' from forum_results where key='other')),gen_random_uuid(),'Only post')$$,
-  'P0001','LAST_VISIBLE_POST','The last visible post is removed with its thread');
+select public.moderate_forum('remove_post',jsonb_build_object('post_id',(select value->>'post_id' from forum_results where key='other')),gen_random_uuid(),'Only post');
+select is(public.get_forum_board('general_discussion')->>'total','2','Removing the last visible post keeps the thread');
+select is(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_results where key='thread'))#>>'{posts,1,body}','I agree with this.','Moderators still read posts that authors deleted');
+select is(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_results where key='thread'))#>>'{posts,1,author,display_name}','ForumTwo','Moderators still see who deleted a post');
 select public.moderate_forum('remove_post',jsonb_build_object('post_id',(select value->>'post_id' from forum_results where key='staff')),gen_random_uuid(),'Duplicate notice');
 select is(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_results where key='thread'))#>>'{posts,2,body}','Please keep it civil.','Moderators still read removed text');
 select set_config('request.jwt.claims','{"sub":"f0f00000-0000-4000-8000-000000000002","role":"authenticated"}',true);
@@ -200,7 +203,7 @@ select set_config('request.jwt.claims','{"sub":"f0f00000-0000-4000-8000-00000000
 select public.moderate_forum('restore_thread',jsonb_build_object('thread_id',(select value->>'thread_id' from forum_results where key='thread')),gen_random_uuid(),'Removed by mistake');
 select is(public.get_forum_board('general_discussion')->>'total','1','Restored threads return to their board');
 reset role;
-select is((select count(*) from private.forum_moderation_log where actor_id=(select id from forum_fixture where display_name='ForumAdmin')),9::bigint,'Every moderator action is logged once');
+select is((select count(*) from private.forum_moderation_log where actor_id=(select id from forum_fixture where display_name='ForumAdmin')),10::bigint,'Every moderator action is logged once');
 select is((select reason from private.forum_moderation_log where action='remove_thread'),'Spam thread','The log keeps the reason');
 update private.forum_author_stats set last_post_at=null;
 set local role authenticated;
@@ -211,14 +214,23 @@ select set_config('request.jwt.claims','{"sub":"f0f00000-0000-4000-8000-00000000
 select throws_ok($$select public.create_forum_post((select (value->>'thread_id')::bigint from forum_results where key='announcement'),'Nice!',null,gen_random_uuid())$$,'42501','FORUM_READ_ONLY','Players cannot reply to announcements');
 select is(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_results where key='announcement'))#>>'{posts,0,author,role}','admin','Staff posts show their role');
 
--- The author withdrawing the only visible post removes the thread.
+-- Authors delete content, never the thread; the deletion hides it only from players.
 select set_config('request.jwt.claims','{"sub":"f0f00000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 insert into forum_results values('solo',public.create_forum_thread('questions_answers','Quick question','How do I sail?',gen_random_uuid()));
-select is((public.withdraw_forum_post((select (value->>'post_id')::bigint from forum_results where key='solo'))->>'thread_removed')::boolean,true,'Withdrawing the only post removes the thread');
-select is(public.get_forum_board('questions_answers')->>'total','0','The withdrawn thread leaves its board');
+select is(public.withdraw_forum_post((select (value->>'post_id')::bigint from forum_results where key='solo'))->>'post_id',(select value->>'post_id' from forum_results where key='solo'),'Authors delete their only post');
+select is(public.get_forum_board('questions_answers')->>'total','1','The thread stays on its board');
+select is(public.get_forum_board('questions_answers')#>>'{items,0,title}','Quick question','The thread keeps its title');
+select is(public.get_forum_board('questions_answers')#>'{items,0,author}','null'::jsonb,'Lists show the deleted opening post as [deleted]');
+select is((public.get_forum_board('questions_answers')#>>'{items,0,replies}')::integer,0,'A deleted opening post is not a reply');
+select is(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_results where key='solo'))#>'{thread,author}','null'::jsonb,'The thread header hides the deleted author');
+select is(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_results where key='solo'))#>>'{posts,0,removed,by}','author','The opening post keeps a placeholder');
+select is(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_results where key='solo'))#>'{posts,0,body}','null'::jsonb,'Players cannot read the deleted text');
 select set_config('request.jwt.claims','{"sub":"f0f00000-0000-4000-8000-000000000004","role":"authenticated"}',true);
-select throws_ok($$select public.moderate_forum('restore_thread',jsonb_build_object('thread_id',(select value->>'thread_id' from forum_results where key='solo')),gen_random_uuid(),'Restore it')$$,
-  'P0001','CANNOT_RESTORE','Author removals cannot be restored by moderators');
+select is(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_results where key='solo'))#>>'{posts,0,body}','How do I sail?','Moderators read the deleted text');
+select is(public.get_forum_board('questions_answers')#>>'{items,0,author,display_name}','ForumTwo','Moderator lists still name the author');
+select is(public.get_forum_thread((select (value->>'thread_id')::bigint from forum_results where key='solo'))#>>'{thread,author,display_name}','ForumTwo','The moderator thread header names the author');
+select throws_ok($$select public.moderate_forum('restore_post',jsonb_build_object('post_id',(select value->>'post_id' from forum_results where key='solo')),gen_random_uuid(),'Restore it')$$,
+  'P0001','CANNOT_RESTORE','Author deletions cannot be restored by moderators');
 
 -- Limits.
 reset role;

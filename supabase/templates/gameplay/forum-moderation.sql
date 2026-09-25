@@ -64,7 +64,6 @@ begin
       update private.forum_threads set removed_at=observed,removed_by='moderator' where id=thread.id; message:='Thread removed.';
     else
       if thread.removed_at is null then raise exception 'FORUM_NO_CHANGE' using errcode='P0001'; end if;
-      if thread.removed_by<>'moderator' then raise exception 'CANNOT_RESTORE' using errcode='P0001'; end if;
       update private.forum_threads set removed_at=null,removed_by=null where id=thread.id;
       perform private.forum_count_thread(thread.id,1); message:='Thread restored.';
     end if;
@@ -79,7 +78,6 @@ begin
     before_state:=jsonb_build_object('removed_by',post.removed_by,'edit_count',post.edit_count);
     if action='remove_post' then
       if post.removed_at is not null then raise exception 'FORUM_NO_CHANGE' using errcode='P0001'; end if;
-      if thread.removed_at is null and thread.post_count=1 then raise exception 'LAST_VISIBLE_POST' using errcode='P0001'; end if;
       update private.forum_posts set removed_at=observed,removed_by='moderator' where id=post.id;
       update private.forum_threads set post_count=post_count-1 where id=thread.id;
       if post.id=thread.last_post_id then perform private.forum_refresh_last_post(thread.id); end if;

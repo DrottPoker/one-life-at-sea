@@ -173,7 +173,8 @@ begin
 end;
 $$;
 
--- Authors may withdraw their posts at any time. Withdrawing the last visible post removes the thread.
+-- Authors may delete their posts at any time. Like Reddit, the post keeps its number and time
+-- behind a placeholder, and the thread stays even when no visible post is left.
 create or replace function private.withdraw_forum_post(post_id bigint)
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); moderator boolean:=private.forum_is_moderator(); observed timestamptz:=clock_timestamp();
@@ -190,22 +191,14 @@ begin
     if (thread.removed_at is not null or not board.active) and not moderator then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
     raise exception 'FORUM_FORBIDDEN' using errcode='42501';
   end if;
-  if post.removed_at is not null or thread.removed_at is not null then
-    return jsonb_build_object('post_id',post.id::text,'thread_removed',thread.removed_at is not null);
-  end if;
-  if thread.post_count=1 then
-    perform private.forum_count_thread(thread.id,-1);
-    update private.forum_posts set removed_at=observed,removed_by='author' where id=post.id;
-    update private.forum_threads set post_count=0,removed_at=observed,removed_by='author' where id=thread.id;
-  else
-    update private.forum_posts set removed_at=observed,removed_by='author' where id=post.id;
-    update private.forum_threads set post_count=post_count-1 where id=thread.id;
-    if post.id=thread.last_post_id then perform private.forum_refresh_last_post(thread.id); end if;
-    update private.forum_boards set post_count=post_count-1 where id=board.id;
-    update private.forum_author_stats set post_count=post_count-1 where character_id=viewer_id;
-  end if;
+  if post.removed_at is not null or thread.removed_at is not null then return jsonb_build_object('post_id',post.id::text); end if;
+  update private.forum_posts set removed_at=observed,removed_by='author' where id=post.id;
+  update private.forum_threads set post_count=post_count-1 where id=thread.id;
+  if post.id=thread.last_post_id then perform private.forum_refresh_last_post(thread.id); end if;
+  update private.forum_boards set post_count=post_count-1 where id=board.id;
+  update private.forum_author_stats set post_count=post_count-1 where character_id=viewer_id;
   perform private.record_character_action(viewer_id);
-  return jsonb_build_object('post_id',post.id::text,'thread_removed',thread.post_count=1);
+  return jsonb_build_object('post_id',post.id::text);
 end;
 $$;
 

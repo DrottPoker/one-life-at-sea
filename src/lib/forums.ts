@@ -4,36 +4,37 @@ import { isUuid } from "@/lib/validation";
 export type ForumPosting = "open" | "moderators" | "closed";
 export type ForumPerson = { display_name: string; player_number: number; deleted: boolean };
 export type ForumAuthor = ForumPerson & { level: number | null; posts: number | null; joined_at: string | null; role: "admin" | null };
-export type ForumLastPost = { post_id: string; post_number: number; posted_at: string; author: ForumPerson };
+// A null person is a post its author deleted, shown to players as [deleted].
+export type ForumLastPost = { post_id: string; post_number: number; posted_at: string; author: ForumPerson | null };
 export type ForumBoardSummary = {
   id: string; section: string; name: string; description: string; posting: ForumPosting; active: boolean; thread_count: number; post_count: number;
   last_post: (ForumLastPost & { thread_id: string; title: string }) | null; unread: boolean;
 };
 export type ForumIndex = { boards: ForumBoardSummary[]; can_moderate: boolean };
 export type ForumThreadSummary = {
-  id: string; title: string; board_id: string; author: ForumPerson; created_at: string; replies: number; views: number; post_seq: number;
+  id: string; title: string; board_id: string; author: ForumPerson | null; created_at: string; replies: number; views: number; post_seq: number;
   pinned: boolean; locked: boolean; last_post: ForumLastPost | null; last_read_number: number | null; unread: boolean;
 };
 export type ForumBoardPage = {
   board: { id: string; section: string; name: string; description: string; posting: ForumPosting; active: boolean; can_post: boolean };
   items: ForumThreadSummary[]; total: number; page: number; page_size: number; can_moderate: boolean;
 };
-export type ForumQuote = { post_id: string; number: number; author: ForumPerson; body: string | null; removed: boolean; edited_after: boolean };
+export type ForumQuote = { post_id: string; number: number; author: ForumPerson | null; body: string | null; removed: boolean; edited_after: boolean };
 export type ForumPost = {
-  id: string; number: number; author: ForumAuthor; created_at: string; body: string | null; format_version: number; edit_count: number;
+  id: string; number: number; author: ForumAuthor | null; created_at: string; body: string | null; format_version: number; edit_count: number;
   edited: { at: string; by: string | null; moderator: boolean; count: number } | null;
   removed: { by: "author" | "moderator"; at: string } | null; quote: ForumQuote | null; own: boolean; can_edit: boolean; can_withdraw: boolean;
 };
 export type ForumThread = {
-  id: string; title: string; board: { id: string; name: string; section: string; posting: ForumPosting }; author: ForumPerson; created_at: string;
-  pinned: boolean; locked: boolean; removed: { by: "author" | "moderator"; at: string } | null; post_count: number; post_seq: number; views: number;
+  id: string; title: string; board: { id: string; name: string; section: string; posting: ForumPosting }; author: ForumPerson | null; created_at: string;
+  pinned: boolean; locked: boolean; removed: { by: "moderator"; at: string } | null; post_count: number; post_seq: number; views: number;
   last_read_number: number | null; can_reply: boolean; can_moderate: boolean;
 };
 export type ForumThreadPage = { thread: ForumThread; posts: ForumPost[]; page: number; page_count: number; page_size: number };
 export type ForumLocation = { thread_id: string; post_number: number; page: number };
 export type ForumReceipt = { thread_id: string; post_id: string; post_number: number; created_at: string };
 export type ForumEditReceipt = { post_id: string; edit_count: number };
-export type ForumWithdrawReceipt = { post_id: string; thread_removed: boolean };
+export type ForumWithdrawReceipt = { post_id: string };
 export type ForumRevision = { revision: number; title: string | null; body: string; replaced_at: string; editor: string | null };
 export type ForumPostHistory = { post_id: string; revisions: ForumRevision[] };
 export type ForumModerationAction = "pin_thread" | "unpin_thread" | "lock_thread" | "unlock_thread" | "move_thread" | "grave_thread" |

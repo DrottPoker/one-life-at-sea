@@ -8,35 +8,43 @@ returns jsonb language sql stable security invoker set search_path='' as $$
     left join private.forum_author_stats s on s.character_id=c.id where c.id=forum_author.character_id),
     jsonb_build_object('level',null,'posts',null,'joined_at',null,'role',null));
 $$;
+-- Deletion hides a post only from players, like Reddit's [deleted]. Moderators keep seeing who wrote it.
+create or replace function private.forum_visible_person(character_id uuid,snapshot_name text,snapshot_number bigint,removed_by text,moderator boolean)
+returns jsonb language sql stable security invoker set search_path='' as $$
+  select case when removed_by='author' and not moderator then null else private.forum_person(character_id,snapshot_name,snapshot_number) end;
+$$;
 -- A thread is unread when a visible post is newer than the reader's position and baseline.
-create or replace function private.forum_thread_json(thread private.forum_threads,read_number integer,baseline timestamptz)
+drop function if exists private.forum_thread_json(private.forum_threads,integer,timestamptz);
+create or replace function private.forum_thread_json(thread private.forum_threads,read_number integer,baseline timestamptz,moderator boolean)
 returns jsonb language sql stable security invoker set search_path='' as $$
   select jsonb_build_object('id',thread.id::text,'title',thread.title,'board_id',thread.board_id,
-    'author',private.forum_person(thread.author_id,thread.author_name,thread.author_player_number),'created_at',thread.created_at,
-    'replies',greatest(thread.post_count-1,0),'views',thread.reader_count,'post_seq',thread.post_seq,
+    'author',private.forum_visible_person(thread.author_id,thread.author_name,thread.author_player_number,opening.removed_by,moderator),'created_at',thread.created_at,
+    'replies',thread.post_count-case when opening.removed_at is null then 1 else 0 end,'views',thread.reader_count,'post_seq',thread.post_seq,
     'pinned',thread.pinned_at is not null,'locked',thread.locked_at is not null,
     'last_post',(select jsonb_build_object('post_id',p.id::text,'post_number',p.post_number,'posted_at',p.created_at,
-      'author',private.forum_person(p.author_id,p.author_name,p.author_player_number)) from private.forum_posts p where p.id=thread.last_post_id),
+      'author',private.forum_visible_person(p.author_id,p.author_name,p.author_player_number,p.removed_by,moderator)) from private.forum_posts p where p.id=thread.last_post_id),
     'last_read_number',read_number,
-    'unread',thread.removed_at is null and thread.last_post_at>baseline and thread.last_post_number>coalesce(read_number,0));
+    'unread',thread.removed_at is null and thread.last_post_at>baseline and thread.last_post_number>coalesce(read_number,0))
+  from (select p.removed_at,p.removed_by from private.forum_posts p where p.thread_id=thread.id and p.post_number=1) opening;
 $$;
 -- Moderators see removed text so they can review and restore it.
 create or replace function private.forum_post_json(post private.forum_posts,viewer_id uuid,moderator boolean,writable boolean)
 returns jsonb language sql stable security invoker set search_path='' as $$
   select jsonb_build_object('id',post.id::text,'number',post.post_number,
-    'author',private.forum_author(post.author_id,post.author_name,post.author_player_number),'created_at',post.created_at,
+    'author',case when post.removed_by='author' and not moderator then null else private.forum_author(post.author_id,post.author_name,post.author_player_number) end,
+    'created_at',post.created_at,
     'body',case when post.removed_at is null or moderator then post.body end,'format_version',post.format_version,
     'edited',case when post.edit_count>0 then jsonb_build_object('at',post.edited_at,'by',post.editor_name,'moderator',post.edited_by_moderator,'count',post.edit_count) end,
     'edit_count',post.edit_count,
     'removed',case when post.removed_at is not null then jsonb_build_object('by',post.removed_by,'at',post.removed_at) end,
-    'quote',(select jsonb_build_object('post_id',q.id::text,'number',q.post_number,'author',private.forum_person(q.author_id,q.author_name,q.author_player_number),
-      'body',case when q.removed_at is null then q.body end,'removed',q.removed_at is not null,'edited_after',coalesce(q.edited_at>post.created_at,false))
+    'quote',(select jsonb_build_object('post_id',q.id::text,'number',q.post_number,'author',private.forum_visible_person(q.author_id,q.author_name,q.author_player_number,q.removed_by,moderator),
+      'body',case when q.removed_at is null or moderator then q.body end,'removed',q.removed_at is not null,'edited_after',coalesce(q.edited_at>post.created_at,false))
       from private.forum_posts q where q.id=post.quoted_post_id),
     'own',post.author_id is not distinct from viewer_id,
     'can_edit',post.author_id is not distinct from viewer_id and post.removed_at is null and writable,
     'can_withdraw',post.author_id is not distinct from viewer_id and post.removed_at is null);
 $$;
-revoke all on function private.forum_author(uuid,text,bigint),private.forum_thread_json(private.forum_threads,integer,timestamptz),
+revoke all on function private.forum_author(uuid,text,bigint),private.forum_visible_person(uuid,text,bigint,text,boolean),private.forum_thread_json(private.forum_threads,integer,timestamptz,boolean),
   private.forum_post_json(private.forum_posts,uuid,boolean,boolean) from public,anon,authenticated;
 
 create or replace function private.get_forum_index()
@@ -48,7 +56,7 @@ begin
     'id',b.id,'section',b.section,'name',b.name,'description',b.description,'posting',b.posting,'active',b.active,
     'thread_count',b.thread_count,'post_count',b.post_count,
     'last_post',(select jsonb_build_object('thread_id',t.id::text,'title',t.title,'post_id',p.id::text,'post_number',p.post_number,'posted_at',p.created_at,
-        'author',private.forum_person(p.author_id,p.author_name,p.author_player_number))
+        'author',private.forum_visible_person(p.author_id,p.author_name,p.author_player_number,p.removed_by,moderator))
       from private.forum_threads t join private.forum_posts p on p.id=t.last_post_id
       where t.board_id=b.id and t.removed_at is null order by t.last_post_at desc,t.id desc limit 1),
     'unread',exists(select 1 from private.forum_threads t left join private.forum_thread_reads r on r.character_id=viewer_id and r.thread_id=t.id
@@ -70,7 +78,7 @@ begin
   select greatest(c.created_at,coalesce(br.read_through,'-infinity')) into baseline from public.characters c
     left join private.forum_board_reads br on br.character_id=c.id and br.board_id=board.id where c.id=viewer_id;
   current_page:=least(page,greatest(0,(board.thread_count-1)/{{gameplay.forum.threadsPageSize}}));
-  select coalesce(jsonb_agg(private.forum_thread_json(t,r.last_read_number,baseline) order by t.pinned_at is not null desc,t.last_post_at desc,t.id desc),'[]'::jsonb) into items
+  select coalesce(jsonb_agg(private.forum_thread_json(t,r.last_read_number,baseline,moderator) order by t.pinned_at is not null desc,t.last_post_at desc,t.id desc),'[]'::jsonb) into items
     from (select * from private.forum_threads x where x.board_id=board.id and x.removed_at is null
       order by x.pinned_at is not null desc,x.last_post_at desc,x.id desc limit {{gameplay.forum.threadsPageSize}} offset current_page*{{gameplay.forum.threadsPageSize}}) t
     left join private.forum_thread_reads r on r.character_id=viewer_id and r.thread_id=t.id;
@@ -98,7 +106,8 @@ begin
       and p.post_number between current_page*{{gameplay.forum.postsPageSize}}+1 and (current_page+1)*{{gameplay.forum.postsPageSize}};
   return jsonb_build_object('thread',jsonb_build_object('id',thread.id::text,'title',thread.title,
       'board',jsonb_build_object('id',board.id,'name',board.name,'section',board.section,'posting',board.posting),
-      'author',private.forum_person(thread.author_id,thread.author_name,thread.author_player_number),'created_at',thread.created_at,
+      'author',private.forum_visible_person(thread.author_id,thread.author_name,thread.author_player_number,
+        (select p.removed_by from private.forum_posts p where p.thread_id=thread.id and p.post_number=1),moderator),'created_at',thread.created_at,
       'pinned',thread.pinned_at is not null,'locked',thread.locked_at is not null,
       'removed',case when thread.removed_at is not null then jsonb_build_object('by',thread.removed_by,'at',thread.removed_at) end,
       'post_count',thread.post_count,'post_seq',thread.post_seq,'views',thread.reader_count,'last_read_number',read_number,

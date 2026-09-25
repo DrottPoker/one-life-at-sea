@@ -83,6 +83,10 @@ test("captains start threads, quote, edit and delete posts, and follow unread po
     await expect(second.getByText("Your post was deleted.", { exact: true })).toBeVisible();
     await expect(second.locator("#post-2")).toContainText("This post was deleted by its author.");
     await expect(second.locator("#post-2")).not.toContainText("Aye, fair winds indeed.");
+    await expect(second.locator("#post-2 .o-forum-author")).toHaveText("[deleted]");
+    await page.reload();
+    await expect(page.locator("#post-2 .o-forum-author")).toHaveText("[deleted]");
+    await expect(page.locator("#post-2")).not.toContainText(reader.name);
 
     resetForumCooldown([author.id]);
     let last = null as Awaited<ReturnType<typeof reply>> | null;
@@ -153,7 +157,7 @@ test("moderators pin, lock, edit, move, retire, remove and restore with logged r
   const title = "Idea " + player.name;
   try {
     const thread = await startThread(player, "suggestions", title, "More ships please.");
-    await reply(player, thread.thread_id, "And bigger cannons.");
+    const answer = await reply(player, thread.thread_id, "And bigger cannons.");
     await loginTestAccount(page, admin);
     await page.goto("/forums/threads/" + thread.thread_id);
     const confirmWith = async (button: string, notice: string, board?: string) => {
@@ -185,6 +189,17 @@ test("moderators pin, lock, edit, move, retire, remove and restore with logged r
     await expect(playing.locator("#post-2")).not.toContainText("And bigger cannons.");
     await page.locator("#post-2").getByRole("button", { name: "Restore", exact: true }).click();
     await confirmWith("Restore post", "Post restored.");
+
+    expect((await player.api.rpc("withdraw_forum_post", { post_id: answer.post_id })).error).toBeNull();
+    await playing.reload();
+    await expect(playing.locator("#post-2")).toContainText("This post was deleted by its author.");
+    await expect(playing.locator("#post-2 .o-forum-author")).toHaveText("[deleted]");
+    await expect(playing.locator("#post-2")).not.toContainText("And bigger cannons.");
+    await page.reload();
+    await expect(page.locator("#post-2")).toContainText("Hidden from players. Only moderators can read it.");
+    await expect(page.locator("#post-2 .o-forum-removed-body")).toHaveText("And bigger cannons.");
+    await expect(page.locator("#post-2 .o-forum-author")).toContainText(player.name);
+    await expect(page.locator("#post-2").getByRole("button", { name: "Restore", exact: true })).toHaveCount(0);
 
     await page.locator("#post-1").getByRole("button", { name: "Moderator edit", exact: true }).click();
     await page.locator("#post-1").getByLabel("Post", { exact: true }).fill("More ships, please.");

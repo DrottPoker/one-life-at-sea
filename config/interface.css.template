@@ -1765,6 +1765,7 @@ a.o-forum-new:hover { color:var(--o-bg); background:var(--o-palette-f5e5be); }
 .o-forum-quote header { margin-bottom:5px; color:var(--o-muted); font-size:11px; }
 .o-forum-quote-body { max-height:220px; overflow:auto; font-size:12px; }
 .o-forum-removed p { margin:0; color:var(--o-muted); font-style:italic; }
+.o-forum-removed small { display:block; margin-top:6px; color:var(--o-palette-ffcfb7); font-size:11px; }
 .o-forum-removed-body { margin-top:8px; padding:8px; border:1px dashed var(--o-palette-edb397); opacity:.75; }
 .o-forum-edited { margin:0; color:var(--o-muted); font-size:11px; font-style:italic; }
 .o-forum-deleted-person { color:var(--o-muted); }

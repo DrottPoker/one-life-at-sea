@@ -22,7 +22,7 @@ create table if not exists private.forum_threads (
   reader_count integer not null default 0 check(reader_count>=0),
   last_post_id bigint, last_post_number integer not null default 0, last_post_at timestamptz not null default clock_timestamp(),
   pinned_at timestamptz, locked_at timestamptz,
-  removed_at timestamptz, removed_by text check(removed_by in('author','moderator')),
+  removed_at timestamptz, removed_by text check(removed_by='moderator'),
   constraint forum_threads_request unique(author_id,request_id),
   constraint forum_threads_removed check((removed_at is null)=(removed_by is null))
 );
@@ -172,3 +172,7 @@ $$;
 revoke all on function private.forum_is_moderator(),private.forum_can_post(text,boolean),private.forum_normalize(text),private.forum_valid_body(text),
   private.forum_valid_title(text),private.forum_person(uuid,text,bigint),private.forum_refresh_last_post(bigint),private.forum_count_thread(bigint,integer)
   from public,anon,authenticated;
+
+-- Authors delete the content of posts, never whole threads; only moderators remove threads.
+alter table private.forum_threads drop constraint if exists forum_threads_removed_by_check;
+alter table private.forum_threads add constraint forum_threads_removed_by_check check(removed_by='moderator');
