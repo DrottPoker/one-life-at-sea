@@ -1,7 +1,7 @@
 # Admin panel
 
 Open `/admin`, or use **Admin panel** in the header. The workspace has eight sections:
-Overview, Economy, Players, Items, Loot tables, Activities, Database and Audit log. Overview links
+Overview, Economy, Players, Items, Loot tables, Activities, Database and Audit log. A ninth link, **Forum**, opens the forum moderation tools. Overview links
 to the primary workflows, live game totals and recent administrative changes. Ludorex
 is the first authorized local administrator.
 
@@ -186,7 +186,7 @@ page also exposes Stamina, Crew Morale and private skill XP corrections.
 
 ## Forum moderation
 
-Administrators moderate the forum from each thread page: pin, lock, move, retire to the Graveyard, remove or restore threads and posts, and edit posts with a required reason. The database browser has a Forum group with read-only boards, threads, posts, revisions and the moderation log. See [Forum](FORUMS.md#moderering).
+Administrators always moderate the forum and appoint or remove player moderators. Moderation happens in the forum itself: thread pages carry pin, lock, move, graveyard, remove, restore, edit and ban controls, and `/forums/moderation` (linked as **Forum** in the admin navigation) holds the report queue, bans, moderators and the moderation log. Every action needs a reason. The database browser has a Forum group with read-only boards, threads, posts, revisions, reports, bans, moderators and the moderation log. See [Forum](FORUMS.md#moderering).
 
 ## Account-bound saved requests
 

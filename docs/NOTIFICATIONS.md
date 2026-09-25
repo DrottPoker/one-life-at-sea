@@ -35,6 +35,13 @@ link opens `/forums/posts/<post-id>`. A subscriber has at most one waiting reply
 and players on the recipient's mail ignore list send neither kind. The post ID is the event key, so a replayed post never
 notifies twice. See [Forum](FORUMS.md#prenumerationer-och-notiser).
 
+## Forum moderation
+
+`forum.moderation` tells an author that a moderator removed or edited their post or removed their thread; the payload
+holds the action, thread and post but not the moderator's private reason. `forum.ban` states when a forum ban ends (or
+that it is permanent) and its reason, and `forum.unban` says a ban was lifted. `forum.role` tells a player they were
+appointed or removed as a forum moderator. The moderator request ID is the event key.
+
 ## Storage, delivery and privacy
 
 - `private.player_notifications` owns the recipient, kind, stable event key, versioned

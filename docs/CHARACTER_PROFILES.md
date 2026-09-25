@@ -56,4 +56,4 @@ Profilen visar Character Level från [Skills](SKILLS.md) och separat [närvarost
 
 ## Forum
 
-Profilen visar **Forum posts** med antal synliga foruminlägg och trådar. Siffrorna länkar till en forumsökning på spelarens inlägg respektive trådar. Raderat och borttaget räknas inte. Se [Forum](FORUMS.md#sök-och-profiler).
+Profilen visar **Forum posts** med antal synliga foruminlägg och trådar samt **Forum karma**. Siffrorna länkar till en forumsökning på spelarens inlägg respektive trådar. Raderat och borttaget räknas inte. Se [Forum](FORUMS.md#sök-och-profiler).

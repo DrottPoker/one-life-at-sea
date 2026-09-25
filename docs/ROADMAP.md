@@ -14,10 +14,8 @@ Detta dokument samlar kvarstående riktning. Det är inte en beskrivning av leve
 
 ## Forum
 
-Forumets första och andra etapp finns, se [Forum](FORUMS.md). Ägaren godkände 2026-09-25 att resten byggs i etapper: Torns styrkor tas med och Torns svagheter får egna lösningar.
+Forumets etapp 1-3 finns, se [Forum](FORUMS.md), inklusive rapporter, avstängning, spelarmoderatorer och karma som krävdes före offentlig drift. Ägaren godkände 2026-09-25 att resten byggs i etapper: Torns styrkor tas med och Torns svagheter får egna lösningar.
 
-- Etapp 3, trygghet och karma, krävs före offentlig drift: rapportknapp med moderatorskö, forumavstängning med tidsgräns, notisen `forum.moderation`, spelarmoderatorer som admin utser och ihopfällda inlägg från spelare på ignore-listan. Karma följer Torn: minsta inläggslängd, ingen karma i låsta trådar, Graveyard eller Trading Post, nya karaktärers röster räknas inte, ett tak per författare och dygn och aldrig under noll. Nya karaktärer kan inte rapportera under sina första 24 timmar.
-- Karma vid radering (ägarens beslut 2026-09-25): ett raderat inlägg räknas som en helhet. Låg det totalt på minus står minuset kvar; låg det på plus försvinner plusset. Raderingen tar bara bort innehållet för spelare, så moderatorer kan fortfarande granska inlägget.
 - Etapp 4, senare: besättningsforum när fraktioner finns, modererade av besättningens ledare. Omröstningar, "Popular threads", signaturer, bilder via Storage med moderering och notiser som delas ut i bakgrunden om prenumerationerna växer.
 
 ## Beslut som ska bevaras
