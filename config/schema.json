@@ -22,6 +22,7 @@
             "name": { "type": "string" },
             "description": { "type": "string" },
             "posting": { "type": "string" },
+            "karma": { "type": "boolean" },
             "active": { "type": "boolean" }
           } } },
           "threadTitleMaxLength": { "type": "number", "integer": true, "minimum": 1, "maximum": 200 },
@@ -33,7 +34,10 @@
           "duplicateWindowMinutes": { "type": "number", "integer": true, "minimum": 0, "maximum": 1440 },
           "reactionsPerMinute": { "type": "number", "integer": true, "minimum": 1, "maximum": 600 },
           "newCharacterHours": { "type": "number", "integer": true, "minimum": 0, "maximum": 720 },
-          "searchPageSize": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 }
+          "searchPageSize": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 },
+          "reportsPerHour": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 },
+          "karmaMinPostLength": { "type": "number", "integer": true, "minimum": 0, "maximum": 1000 },
+          "karmaPerAuthorPerDay": { "type": "number", "integer": true, "minimum": 1, "maximum": 1000 }
         } },
         "presence": {
           "type": "object",

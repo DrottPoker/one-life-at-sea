@@ -2,11 +2,12 @@
 create or replace function private.forum_author(character_id uuid,snapshot_name text,snapshot_number bigint)
 returns jsonb language sql stable security invoker set search_path='' as $$
   select private.forum_person(character_id,snapshot_name,snapshot_number)||coalesce((select jsonb_build_object(
-    'level',p.character_level,'posts',coalesce(s.post_count,0),'joined_at',c.created_at,
-    'role',case when exists(select 1 from private.admin_members m where m.user_id=c.user_id) then 'admin' end)
+    'level',p.character_level,'posts',coalesce(s.post_count,0),'karma',coalesce(s.karma,0),'joined_at',c.created_at,
+    'role',case when exists(select 1 from private.admin_members m where m.user_id=c.user_id) then 'admin'
+      when exists(select 1 from private.forum_moderators m where m.character_id=c.id) then 'moderator' end)
     from public.characters c left join public.character_profiles p on p.character_id=c.id
     left join private.forum_author_stats s on s.character_id=c.id where c.id=forum_author.character_id),
-    jsonb_build_object('level',null,'posts',null,'joined_at',null,'role',null));
+    jsonb_build_object('level',null,'posts',null,'karma',null,'joined_at',null,'role',null));
 $$;
 -- Deletion hides a post only from players, like Reddit's [deleted]. Moderators keep seeing who wrote it.
 create or replace function private.forum_visible_person(character_id uuid,snapshot_name text,snapshot_number bigint,removed_by text,moderator boolean)
@@ -31,7 +32,8 @@ $$;
 -- Moderators see removed text so they can review and restore it. Players see no reactions on
 -- removed posts; the rows stay for karma.
 drop function if exists private.forum_post_json(private.forum_posts,uuid,boolean,boolean);
-create or replace function private.forum_post_json(post private.forum_posts,viewer_id uuid,moderator boolean,writable boolean,reactable boolean,may_dislike boolean)
+drop function if exists private.forum_post_json(private.forum_posts,uuid,boolean,boolean,boolean,boolean);
+create or replace function private.forum_post_json(post private.forum_posts,viewer_id uuid,moderator boolean,writable boolean,reactable boolean,may_dislike boolean,may_report boolean)
 returns jsonb language sql stable security invoker set search_path='' as $$
   select jsonb_build_object('id',post.id::text,'number',post.post_number,
     'author',case when post.removed_by='author' and not moderator then null else private.forum_author(post.author_id,post.author_name,post.author_player_number) end,
@@ -46,20 +48,25 @@ returns jsonb language sql stable security invoker set search_path='' as $$
     'own',post.author_id is not distinct from viewer_id,
     'likes',case when post.removed_at is null or moderator then post.likes end,'dislikes',case when post.removed_at is null or moderator then post.dislikes end,
     'my_reaction',coalesce((select r.value from private.forum_reactions r where r.post_id=post.id and r.character_id=viewer_id),0),
+    'ignored',exists(select 1 from private.mail_ignored i where i.character_id=viewer_id and i.ignored_id=post.author_id),
+    'reported',exists(select 1 from private.forum_reports r where r.post_id=post.id and r.reporter_id=viewer_id and r.status='open'),
+    'can_report',may_report and post.removed_at is null and post.author_id is distinct from viewer_id,
     'can_react',reactable and post.removed_at is null and post.author_id is distinct from viewer_id,
     'can_dislike',reactable and may_dislike and post.removed_at is null and post.author_id is distinct from viewer_id,
     'can_edit',post.author_id is not distinct from viewer_id and post.removed_at is null and writable,
     'can_withdraw',post.author_id is not distinct from viewer_id and post.removed_at is null);
 $$;
 revoke all on function private.forum_author(uuid,text,bigint),private.forum_visible_person(uuid,text,bigint,text,boolean),private.forum_thread_json(private.forum_threads,integer,timestamptz,boolean),
-  private.forum_post_json(private.forum_posts,uuid,boolean,boolean,boolean,boolean) from public,anon,authenticated;
+  private.forum_post_json(private.forum_posts,uuid,boolean,boolean,boolean,boolean,boolean) from public,anon,authenticated;
 
 create or replace function private.get_forum_index()
 returns jsonb language plpgsql stable security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); moderator boolean:=private.forum_is_moderator(); joined timestamptz;
 begin
   select created_at into joined from public.characters where id=viewer_id;
-  return jsonb_build_object('can_moderate',moderator,'boards',coalesce((select jsonb_agg(jsonb_build_object(
+  return jsonb_build_object('can_moderate',moderator,'ban',private.forum_active_ban(viewer_id),
+    'open_reports',case when moderator then (select count(distinct r.post_id) from private.forum_reports r where r.status='open') end,
+    'boards',coalesce((select jsonb_agg(jsonb_build_object(
     'id',b.id,'section',b.section,'name',b.name,'description',b.description,'posting',b.posting,'active',b.active,
     'thread_count',b.thread_count,'post_count',b.post_count,
     'last_post',(select jsonb_build_object('thread_id',t.id::text,'title',t.title,'post_id',p.id::text,'post_number',p.post_number,'posted_at',p.created_at,
@@ -90,8 +97,8 @@ begin
       order by x.pinned_at is not null desc,x.last_post_at desc,x.id desc limit {{gameplay.forum.threadsPageSize}} offset current_page*{{gameplay.forum.threadsPageSize}}) t
     left join private.forum_thread_reads r on r.character_id=viewer_id and r.thread_id=t.id;
   return jsonb_build_object('board',jsonb_build_object('id',board.id,'section',board.section,'name',board.name,'description',board.description,
-      'posting',board.posting,'active',board.active,'can_post',board.active and private.forum_can_post(board.posting,moderator)),
-    'items',items,'total',board.thread_count,'page',current_page,'page_size',{{gameplay.forum.threadsPageSize}},'can_moderate',moderator);
+      'posting',board.posting,'active',board.active,'can_post',board.active and private.forum_can_post(board.posting,moderator) and private.forum_active_ban(viewer_id) is null),
+    'items',items,'total',board.thread_count,'page',current_page,'page_size',{{gameplay.forum.threadsPageSize}},'can_moderate',moderator,'ban',private.forum_active_ban(viewer_id));
 end;
 $$;
 
@@ -99,7 +106,7 @@ create or replace function private.get_forum_thread(thread_id bigint,page intege
 returns jsonb language plpgsql stable security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); moderator boolean:=private.forum_is_moderator(); thread private.forum_threads%rowtype;
   board private.forum_boards%rowtype; page_count integer; current_page integer; read_number integer; writable boolean; posts jsonb;
-  reactable boolean; may_dislike boolean; subscribed boolean;
+  reactable boolean; may_dislike boolean; may_report boolean; subscribed boolean; ban jsonb:=private.forum_active_ban(viewer_id);
 begin
   if get_forum_thread.thread_id is null or page is null or page<0 then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
   select * into thread from private.forum_threads t where t.id=get_forum_thread.thread_id;
@@ -108,11 +115,13 @@ begin
   page_count:=greatest(1,ceil(thread.post_seq::numeric/{{gameplay.forum.postsPageSize}})::integer);
   current_page:=least(page,page_count-1);
   select r.last_read_number into read_number from private.forum_thread_reads r where r.character_id=viewer_id and r.thread_id=thread.id;
-  writable:=thread.removed_at is null and board.active and private.forum_can_post(board.posting,moderator) and (thread.locked_at is null or moderator);
-  reactable:=thread.removed_at is null and board.active and board.posting='open' and thread.locked_at is null;
+  -- A banned captain keeps reading, deleting and subscribing, but cannot write, react or report.
+  writable:=ban is null and thread.removed_at is null and board.active and private.forum_can_post(board.posting,moderator) and (thread.locked_at is null or moderator);
+  reactable:=ban is null and thread.removed_at is null and board.active and board.posting='open' and thread.locked_at is null;
   select c.created_at<=statement_timestamp()-make_interval(hours=>{{gameplay.forum.newCharacterHours}}) into may_dislike from public.characters c where c.id=viewer_id;
+  may_report:=ban is null and may_dislike and thread.removed_at is null;
   select s.subscribed into subscribed from private.forum_subscriptions s where s.character_id=viewer_id and s.thread_id=thread.id;
-  select coalesce(jsonb_agg(private.forum_post_json(p,viewer_id,moderator,writable,reactable,may_dislike) order by p.post_number),'[]'::jsonb) into posts
+  select coalesce(jsonb_agg(private.forum_post_json(p,viewer_id,moderator,writable,reactable,may_dislike,may_report) order by p.post_number),'[]'::jsonb) into posts
     from private.forum_posts p where p.thread_id=thread.id
       and p.post_number between current_page*{{gameplay.forum.postsPageSize}}+1 and (current_page+1)*{{gameplay.forum.postsPageSize}};
   return jsonb_build_object('thread',jsonb_build_object('id',thread.id::text,'title',thread.title,
@@ -123,7 +132,7 @@ begin
       'removed',case when thread.removed_at is not null then jsonb_build_object('by',thread.removed_by,'at',thread.removed_at) end,
       'post_count',thread.post_count,'post_seq',thread.post_seq,'views',thread.reader_count,'last_read_number',read_number,
       'can_reply',writable,'can_moderate',moderator,'subscribed',coalesce(subscribed,false)),
-    'posts',posts,'page',current_page,'page_count',page_count,'page_size',{{gameplay.forum.postsPageSize}});
+    'posts',posts,'page',current_page,'page_count',page_count,'page_size',{{gameplay.forum.postsPageSize}},'ban',ban);
 end;
 $$;
 
@@ -233,8 +242,8 @@ begin
   perform private.combat_captain();
   select c.id into target from public.characters c where c.player_number=get_forum_author_stats.player_number;
   if target is null then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
-  return coalesce((select jsonb_build_object('post_count',s.post_count,'thread_count',s.thread_count) from private.forum_author_stats s where s.character_id=target),
-    jsonb_build_object('post_count',0,'thread_count',0));
+  return coalesce((select jsonb_build_object('post_count',s.post_count,'thread_count',s.thread_count,'karma',s.karma) from private.forum_author_stats s where s.character_id=target),
+    jsonb_build_object('post_count',0,'thread_count',0,'karma',0));
 end;
 $$;
 

@@ -3,16 +3,16 @@
   "notifications": { "pageSize": 20 },
   "forum": {
     "boards": [
-      { "id": "announcements", "section": "Official", "name": "Announcements", "description": "Official news, updates and changes from the game team.", "posting": "moderators", "active": true },
-      { "id": "general_discussion", "section": "Game", "name": "General Discussion", "description": "Discuss anything related to the game.", "posting": "open", "active": true },
-      { "id": "questions_answers", "section": "Game", "name": "Questions & Answers", "description": "Ask questions and help other players.", "posting": "open", "active": true },
-      { "id": "tutorials_guides", "section": "Game", "name": "Tutorials & Guides", "description": "Guides, tips and tutorials written by players.", "posting": "open", "active": true },
-      { "id": "suggestions", "section": "Game", "name": "Suggestions", "description": "Share ideas and feedback to improve the game.", "posting": "open", "active": true },
-      { "id": "bugs_issues", "section": "Game", "name": "Bugs & Issues", "description": "Report bugs, errors and unexpected behavior.", "posting": "open", "active": true },
-      { "id": "trading_post", "section": "Trading", "name": "Trading Post", "description": "Buy, sell and trade items and services.", "posting": "open", "active": true },
-      { "id": "off_topic", "section": "Community", "name": "Off Topic", "description": "Conversations about anything not related to the game.", "posting": "open", "active": true },
-      { "id": "fun_games", "section": "Community", "name": "Fun & Games", "description": "Forum games, contests and lighthearted threads.", "posting": "open", "active": true },
-      { "id": "graveyard", "section": "Archive", "name": "Graveyard", "description": "Closed threads kept for reference.", "posting": "closed", "active": true }
+      { "id": "announcements", "section": "Official", "name": "Announcements", "description": "Official news, updates and changes from the game team.", "posting": "moderators", "karma": false, "active": true },
+      { "id": "general_discussion", "section": "Game", "name": "General Discussion", "description": "Discuss anything related to the game.", "posting": "open", "karma": true, "active": true },
+      { "id": "questions_answers", "section": "Game", "name": "Questions & Answers", "description": "Ask questions and help other players.", "posting": "open", "karma": true, "active": true },
+      { "id": "tutorials_guides", "section": "Game", "name": "Tutorials & Guides", "description": "Guides, tips and tutorials written by players.", "posting": "open", "karma": true, "active": true },
+      { "id": "suggestions", "section": "Game", "name": "Suggestions", "description": "Share ideas and feedback to improve the game.", "posting": "open", "karma": true, "active": true },
+      { "id": "bugs_issues", "section": "Game", "name": "Bugs & Issues", "description": "Report bugs, errors and unexpected behavior.", "posting": "open", "karma": true, "active": true },
+      { "id": "trading_post", "section": "Trading", "name": "Trading Post", "description": "Buy, sell and trade items and services.", "posting": "open", "karma": false, "active": true },
+      { "id": "off_topic", "section": "Community", "name": "Off Topic", "description": "Conversations about anything not related to the game.", "posting": "open", "karma": true, "active": true },
+      { "id": "fun_games", "section": "Community", "name": "Fun & Games", "description": "Forum games, contests and lighthearted threads.", "posting": "open", "karma": true, "active": true },
+      { "id": "graveyard", "section": "Archive", "name": "Graveyard", "description": "Closed threads kept for reference.", "posting": "closed", "karma": false, "active": true }
     ],
     "threadTitleMaxLength": 100,
     "postMaxLength": 10000,
@@ -23,7 +23,10 @@
     "duplicateWindowMinutes": 10,
     "reactionsPerMinute": 30,
     "newCharacterHours": 24,
-    "searchPageSize": 20
+    "searchPageSize": 20,
+    "reportsPerHour": 10,
+    "karmaMinPostLength": 30,
+    "karmaPerAuthorPerDay": 5
   },
   "presence": { "idleSeconds": 300, "unfocusedSeconds": 120, "leaseSeconds": 90 },
   "resources": {

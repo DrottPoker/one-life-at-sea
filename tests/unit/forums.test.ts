@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { gameplay } from "../../src/config/public";
-import { forumBoardUrl, forumDraftKey, forumPostUrl, forumSearchUrl, forumSubscriptionsUrl, forumThreadUrl, isForumBoardId, isForumId, isForumPath, normalizeForumBody,
+import { forumModerationUrl, validReportNote, forumBoardUrl, forumDraftKey, forumPostUrl, forumSearchUrl, forumSubscriptionsUrl, forumThreadUrl, isForumBoardId, isForumId, isForumPath, normalizeForumBody,
   parseForumPage, parseForumSearch, parsePendingForumPost, validForumBody, validForumTitle, validModerationReason } from "../../src/lib/forums";
 import { forumLinkTarget, parseForumMarkup, plainForumText, wrapForumSelection } from "../../src/lib/forum-markup";
 import { isHospitalAccessiblePath } from "../../src/lib/hospital";
@@ -12,7 +12,7 @@ vi.mock("@/lib/player", () => ({ requireCharacter: mocks.requireCharacter }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-import { editForumPost, markForumThreadRead, moderateForum, setForumReaction, setForumSubscription, submitForumPost, withdrawForumPost } from "../../src/app/forum-actions";
+import { editForumPost, markForumThreadRead, moderateForum, reportForumPost, setForumReaction, setForumSubscription, submitForumPost, withdrawForumPost } from "../../src/app/forum-actions";
 
 const id = "f0f00000-0000-4000-8000-0000000000a1";
 beforeEach(() => {
@@ -23,7 +23,7 @@ beforeEach(() => {
 
 describe("forum routes and values", () => {
   it("accepts exact forum paths in Hospital and at sea", () => {
-    for (const path of ["/forums", "/forums/search", "/forums/subscriptions", "/forums/boards/general_discussion", "/forums/boards/trading_post/new", "/forums/threads/9223372036854775807", "/forums/posts/1"]) {
+    for (const path of ["/forums", "/forums/search", "/forums/subscriptions", "/forums/moderation", "/forums/boards/general_discussion", "/forums/boards/trading_post/new", "/forums/threads/9223372036854775807", "/forums/posts/1"]) {
       expect(isForumPath(path)).toBe(true);
       expect(isHospitalAccessiblePath(path)).toBe(true);
       expect(isSeaAccessiblePath(path, "at_sea")).toBe(true);
@@ -49,6 +49,13 @@ describe("forum routes and values", () => {
     expect(parseForumSearch("by:" + "x".repeat(41))).toEqual({ text: "", author: null });
     expect(forumSearchUrl("by:100001", { threads: true, page: 1, board: "trading_post" })).toBe("/forums/search?q=by%3A100001&threads=1&board=trading_post&page=2");
     expect(forumSubscriptionsUrl(2)).toBe("/forums/subscriptions?page=3");
+  });
+  it("links moderation views and checks report notes", () => {
+    expect(forumModerationUrl()).toBe("/forums/moderation");
+    expect(forumModerationUrl("log", 2)).toBe("/forums/moderation?view=log&page=3");
+    expect(validReportNote("")).toBe(true);
+    expect(validReportNote("Line one\nline two")).toBe(true);
+    for (const value of ["x".repeat(501), "\u0000", 5]) expect(validReportNote(value)).toBe(false);
   });
   it("mirrors the database text rules", () => {
     expect(normalizeForumBody("  Hello\r\nCaptain \r")).toBe("Hello\nCaptain");
@@ -152,6 +159,21 @@ describe("forum server actions", () => {
     expect((await setForumReaction("captain", "1", -1)).error).toContain("hours");
     mocks.rpc.mockResolvedValueOnce({ data: { post_id: "1", likes: 1, dislikes: 0, reaction: 1 }, error: null });
     expect((await setForumReaction("captain", "1", 1)).receipt?.likes).toBe(1);
+  });
+  it("validates reports, bans and moderator roles before the database", async () => {
+    expect((await reportForumPost("captain", "1", "bribery" as never, "")).error).toBeTruthy();
+    expect((await reportForumPost("captain", "1", "spam", "x".repeat(501))).error).toBeTruthy();
+    expect((await moderateForum("captain", { id, action: "ban_player", payload: { player_number: "100001", hours: "5" }, reason: "Spam" })).error).toBeTruthy();
+    expect((await moderateForum("captain", { id, action: "ban_player", payload: { player_number: "12" }, reason: "Spam" })).error).toBeTruthy();
+    expect((await moderateForum("captain", { id, action: "grant_moderator", payload: { player_number: "100001", hours: "24" }, reason: "Helper" })).error).toBeTruthy();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: "FORUM_FORBIDDEN" } });
+    expect((await moderateForum("captain", { id, action: "ban_player", payload: { player_number: "100001", hours: "24" }, reason: "Spam" })).error).toContain("cannot ban");
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: "FORUM_BANNED", details: "2026-09-26T12:00:00Z" } });
+    expect((await setForumReaction("captain", "1", 1)).error).toBe("You are banned from posting in the forums until Sat, 26 Sep 2026 12:00:00 GMT.");
+    mocks.rpc.mockResolvedValueOnce({ data: { report_id: "4", already: false }, error: null });
+    await reportForumPost("captain", "1", "spam", "  Repeats  ");
+    expect(mocks.rpc).toHaveBeenLastCalledWith("report_forum_post", { post_id: "1", reason: "spam", note: "Repeats" });
   });
   it("trims moderator edits and reasons", async () => {
     mocks.rpc.mockResolvedValueOnce({ data: { message: "Post edited.", thread_id: "1", post_id: "2" }, error: null });

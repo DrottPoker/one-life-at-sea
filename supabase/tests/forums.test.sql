@@ -139,7 +139,7 @@ insert into forum_results values('other',public.create_forum_thread('off_topic',
 select throws_ok($$select public.create_forum_post((select (value->>'thread_id')::bigint from forum_results where key='thread'),'Quoting across threads',(select (value->>'post_id')::bigint from forum_results where key='other'),gen_random_uuid())$$,
   '22023','INVALID_QUOTE','Quotes stay within their thread');
 select throws_ok($$select public.moderate_forum('pin_thread',jsonb_build_object('thread_id',(select value->>'thread_id' from forum_results where key='thread')),gen_random_uuid(),'Pin it')$$,
-  '42501','ADMIN_REQUIRED','Players cannot moderate');
+  '42501','MODERATOR_REQUIRED','Players cannot moderate');
 select throws_ok($$select public.get_forum_post_history((select (value->>'post_id')::bigint from forum_results where key='thread'))$$,'42501','FORUM_FORBIDDEN','Players cannot read revisions');
 select set_config('request.jwt.claims','{"sub":"f0f00000-0000-4000-8000-000000000004","role":"authenticated"}',true);
 select is((public.get_forum_index()->>'can_moderate')::boolean,true,'Administrators moderate the forum');

@@ -13,8 +13,10 @@ export function cleanupForumThreads(characterIds: string[]) {
   if (!characterIds.every(isUuid)) throw new Error("Invalid forum cleanup ID.");
   const ids = "array[" + characterIds.map(id => "'" + id + "'::uuid").join(",") + "]";
   testSql("do $$ declare doomed bigint[]; begin " +
+    "delete from private.forum_moderation_log where actor_id=any(" + ids + "); " +
     "select array_agg(id) into doomed from private.forum_threads where author_id=any(" + ids + "); " +
     "if doomed is null then return; end if; " +
+    "delete from private.forum_reports where post_id in(select id from private.forum_posts where thread_id=any(doomed)); " +
     "delete from private.forum_moderation_log where thread_id=any(doomed) or post_id in(select id from private.forum_posts where thread_id=any(doomed)); " +
     "delete from private.forum_thread_reads where thread_id=any(doomed); " +
     "delete from private.forum_subscriptions where thread_id=any(doomed); " +

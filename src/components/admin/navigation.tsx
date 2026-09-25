@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Package, Dices, Compass, Database, History, ChartNoAxesCombined } from "lucide-react";
+import { LayoutDashboard, Users, Package, Dices, Compass, Database, History, ChartNoAxesCombined, MessagesSquare } from "lucide-react";
 
 const links = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -12,6 +12,8 @@ const links = [
   { href: "/admin/activities", label: "Activities", icon: Compass },
   { href: "/admin/database/characters", label: "Database", icon: Database },
   { href: "/admin/database/admin_audit", label: "Audit log", icon: History },
+  // Forum moderation lives in the game so player moderators share the same tools.
+  { href: "/forums/moderation", label: "Forum", icon: MessagesSquare },
 ];
 export function AdminNavigation() {
   const path = usePathname();

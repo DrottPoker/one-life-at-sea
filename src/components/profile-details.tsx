@@ -69,6 +69,7 @@ export function ProfileDetails({ profile, initialStatus, joined, age, ownProfile
       <div><dt>Character age</dt><dd>{age}</dd></div>
       <div><dt>Forum posts</dt><dd><Link href={forumSearchUrl("by:" + profile.player_number)} prefetch={false} aria-label={"Forum posts: " + forum.post_count}>{forum.post_count.toLocaleString("en-GB")}</Link>
         {forum.thread_count > 0 && <> (<Link href={forumSearchUrl("by:" + profile.player_number, { threads: true })} prefetch={false}>{forum.thread_count} {forum.thread_count === 1 ? "thread" : "threads"}</Link>)</>}</dd></div>
+      <div><dt>Forum karma</dt><dd><output aria-label="Forum karma">{forum.karma.toLocaleString("en-GB")}</output></dd></div>
     </ProfilePresence>
     {error && <p className="o-feedback" role="status">Character status could not be refreshed. <button className="o-text-button" onClick={() => setAttempt(a => a + 1)}>Retry status</button></p>}
     {!ownProfile && <div className="o-profile-actions">

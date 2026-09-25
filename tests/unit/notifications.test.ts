@@ -25,6 +25,24 @@ describe("forum notifications", () => {
   });
 });
 
+describe("forum moderation notifications", () => {
+  const base = { id: "3", created_at: "2026-09-25T12:00:00Z", read_at: null };
+  it("explains moderator actions without their private reason", () => {
+    expect(notificationContent({ ...base, kind: "forum.moderation", payload: { version: 1, action: "remove_post", thread_id: "5", title: "Harbor news", post_id: "7", post_number: 2 } }))
+      .toEqual({ actors: [], text: "A moderator removed your post in “Harbor news”", href: null, linkLabel: "View forum post" });
+    expect(notificationContent({ ...base, kind: "forum.moderation", payload: { version: 1, action: "edit_post", thread_id: "5", title: "Harbor news", post_id: "7", post_number: 2 } }).href).toBe("/forums/posts/7");
+    expect(notificationContent({ ...base, kind: "forum.moderation", payload: { version: 1, action: "lock_thread", thread_id: "5", title: "Harbor news" } }).text).toBe("You have a new notification.");
+  });
+  it("states ban length and reason, and role changes", () => {
+    expect(notificationContent({ ...base, kind: "forum.ban", payload: { version: 1, ends_at: null, reason: "Spam" } }).text).toBe("You are banned from posting in the forums permanently. Reason: Spam");
+    expect(notificationContent({ ...base, kind: "forum.ban", payload: { version: 1, ends_at: "2026-09-26T12:00:00Z", reason: "Spam" } }).text).toContain("until Sat, 26 Sep 2026 12:00:00 GMT");
+    expect(notificationContent({ ...base, kind: "forum.ban", payload: { version: 1, ends_at: "soon", reason: "Spam" } }).text).toBe("You have a new notification.");
+    expect(notificationContent({ ...base, kind: "forum.unban", payload: { version: 1 } }).text).toBe("Your forum ban was lifted. You can post again.");
+    expect(notificationContent({ ...base, kind: "forum.role", payload: { version: 1, moderator: true } }).href).toBe("/forums/moderation");
+    expect(notificationContent({ ...base, kind: "forum.role", payload: { version: 1, moderator: false } }).href).toBeNull();
+  });
+});
+
 describe("notifications", () => {
   it("links every attacker and the completed combat log", () => {
     expect(notificationContent(notification)).toEqual({ actors: [

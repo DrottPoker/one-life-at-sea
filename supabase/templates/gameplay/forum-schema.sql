@@ -7,6 +7,7 @@ create table if not exists private.forum_boards (
   thread_count integer not null default 0 check(thread_count>=0),
   post_count bigint not null default 0 check(post_count>=0)
 );
+alter table private.forum_boards add column if not exists karma boolean not null default true;
 {{forum.catalogSql}}
 -- Authors keep a name/number snapshot so content survives character deletion.
 create table if not exists private.forum_threads (
@@ -124,19 +125,35 @@ create table if not exists private.forum_reactions (
 create index if not exists forum_reactions_character_idx on private.forum_reactions(character_id,updated_at desc);
 alter table private.forum_posts add column if not exists likes integer not null default 0 check(likes>=0),
   add column if not exists dislikes integer not null default 0 check(dislikes>=0);
+-- Whether a reaction earns karma is decided once, when it is first given.
+alter table private.forum_reactions add column if not exists counts boolean not null default false;
+alter table private.forum_posts add column if not exists karma integer not null default 0;
+alter table private.forum_author_stats add column if not exists karma integer not null default 0 check(karma>=0);
+-- Karma is the sum of counted reactions on an author's posts. A removed or deleted post keeps its
+-- minus but loses its plus, and the total never drops below zero.
+create or replace function private.forum_refresh_karma(author uuid)
+returns void language sql volatile security invoker set search_path='' as $$
+  update private.forum_author_stats s set karma=greatest(0,coalesce((select sum(case when p.removed_at is null and t.removed_at is null then p.karma else least(p.karma,0) end)
+    from private.forum_posts p join private.forum_threads t on t.id=p.thread_id where p.author_id=author),0))::integer
+  where s.character_id=author;
+$$;
 create or replace function private.count_forum_reaction()
 returns trigger language plpgsql volatile security invoker set search_path='' as $$
+declare author uuid;
 begin
   if tg_op in('UPDATE','DELETE') then
-    update private.forum_posts set likes=likes-(old.value=1)::integer,dislikes=dislikes-(old.value=-1)::integer where id=old.post_id;
+    update private.forum_posts set likes=likes-(old.value=1)::integer,dislikes=dislikes-(old.value=-1)::integer,karma=karma-case when old.counts then old.value else 0 end
+      where id=old.post_id returning author_id into author;
   end if;
   if tg_op in('INSERT','UPDATE') then
-    update private.forum_posts set likes=likes+(new.value=1)::integer,dislikes=dislikes+(new.value=-1)::integer where id=new.post_id;
+    update private.forum_posts set likes=likes+(new.value=1)::integer,dislikes=dislikes+(new.value=-1)::integer,karma=karma+case when new.counts then new.value else 0 end
+      where id=new.post_id returning author_id into author;
   end if;
+  if author is not null then perform private.forum_refresh_karma(author); end if;
   return null;
 end;
 $$;
-revoke all on function private.count_forum_reaction() from public,anon,authenticated;
+revoke all on function private.forum_refresh_karma(uuid),private.count_forum_reaction() from public,anon,authenticated;
 drop trigger if exists count_forum_reaction on private.forum_reactions;
 create trigger count_forum_reaction after insert or update of value or delete on private.forum_reactions
   for each row execute function private.count_forum_reaction();
@@ -159,9 +176,69 @@ alter table private.forum_reactions enable row level security;
 alter table private.forum_subscriptions enable row level security;
 revoke all on private.forum_reactions,private.forum_subscriptions from public,anon,authenticated;
 
--- Administrators moderate the forum; separate player moderators are a later addition.
+-- Player moderators appointed by administrators; administrators always moderate.
+create table if not exists private.forum_moderators (
+  character_id uuid primary key references public.characters(id) on delete cascade,
+  granted_by uuid references public.characters(id) on delete set null,
+  granted_at timestamptz not null default clock_timestamp()
+);
+-- A ban stops posting, editing, reactions and reports until it ends or is lifted. Reading and
+-- deleting your own posts stay open. At most one ban per captain is unlifted at a time.
+create table if not exists private.forum_bans (
+  id bigint generated always as identity primary key,
+  character_id uuid not null references public.characters(id) on delete cascade,
+  starts_at timestamptz not null, ends_at timestamptz, reason text not null check(length(reason) between 3 and 500),
+  created_by uuid references public.characters(id) on delete set null, created_by_name text not null,
+  lifted_at timestamptz, lifted_by uuid references public.characters(id) on delete set null,
+  constraint forum_bans_period check(ends_at is null or ends_at>starts_at)
+);
+create unique index if not exists forum_bans_open_idx on private.forum_bans(character_id) where lifted_at is null;
+-- One open report per captain and post. Moderators settle every open report on a post together.
+create table if not exists private.forum_reports (
+  id bigint generated always as identity primary key,
+  post_id bigint not null references private.forum_posts(id),
+  reporter_id uuid references public.characters(id) on delete set null, reporter_name text not null,
+  reason text not null check(reason in('spam','harassment','offensive','rules','other')),
+  note text not null default '' check(length(note)<=500),
+  created_at timestamptz not null default clock_timestamp(),
+  status text not null default 'open' check(status in('open','resolved','dismissed')),
+  handled_at timestamptz, handled_by uuid references public.characters(id) on delete set null, handled_by_name text,
+  constraint forum_reports_handled check((status='open')=(handled_at is null))
+);
+create unique index if not exists forum_reports_open_idx on private.forum_reports(post_id,reporter_id) where status='open';
+create index if not exists forum_reports_status_idx on private.forum_reports(status,created_at desc);
+create index if not exists forum_reports_reporter_idx on private.forum_reports(reporter_id,created_at desc);
+alter table private.forum_moderators enable row level security;
+alter table private.forum_bans enable row level security;
+alter table private.forum_reports enable row level security;
+revoke all on private.forum_moderators,private.forum_bans,private.forum_reports from public,anon,authenticated;
+revoke all on sequence private.forum_bans_id_seq,private.forum_reports_id_seq from public,anon,authenticated;
+
 create or replace function private.forum_is_moderator()
-returns boolean language sql stable security definer set search_path='' as $$ select private.is_admin(); $$;
+returns boolean language sql stable security definer set search_path='' as $$
+  select private.is_admin() or exists(select 1 from private.forum_moderators m join public.characters c on c.id=m.character_id where c.user_id=auth.uid());
+$$;
+-- A share lock lets a revocation wait for an action that is already running, like require_admin.
+create or replace function private.forum_require_moderator()
+returns void language plpgsql volatile security definer set search_path='' as $$
+begin
+  if private.is_admin() then perform private.require_admin(); return; end if;
+  perform 1 from private.forum_moderators m join public.characters c on c.id=m.character_id where c.user_id=auth.uid() for share of m;
+  if not found then raise exception 'MODERATOR_REQUIRED' using errcode='42501'; end if;
+end;
+$$;
+create or replace function private.forum_active_ban(target uuid)
+returns jsonb language sql stable security invoker set search_path='' as $$
+  select jsonb_build_object('ends_at',b.ends_at,'reason',b.reason) from private.forum_bans b
+    where b.character_id=target and b.lifted_at is null and (b.ends_at is null or b.ends_at>statement_timestamp());
+$$;
+create or replace function private.forum_require_unbanned(target uuid)
+returns void language plpgsql stable security invoker set search_path='' as $$
+declare ban jsonb:=private.forum_active_ban(target);
+begin
+  if ban is not null then raise exception 'FORUM_BANNED' using errcode='42501',detail=coalesce(ban->>'ends_at','permanent'); end if;
+end;
+$$;
 create or replace function private.forum_can_post(posting text,moderator boolean)
 returns boolean language sql immutable security invoker set search_path='' as $$
   select posting='open' or (posting='moderators' and moderator);
@@ -217,7 +294,7 @@ begin
     where s.character_id=a.character_id;
 end;
 $$;
-revoke all on function private.forum_is_moderator(),private.forum_can_post(text,boolean),private.forum_normalize(text),private.forum_valid_body(text),
+revoke all on function private.forum_is_moderator(),private.forum_require_moderator(),private.forum_active_ban(uuid),private.forum_require_unbanned(uuid),private.forum_can_post(text,boolean),private.forum_normalize(text),private.forum_valid_body(text),
   private.forum_valid_title(text),private.forum_person(uuid,text,bigint),private.forum_refresh_last_post(bigint),private.forum_count_thread(bigint,integer)
   from public,anon,authenticated;
 

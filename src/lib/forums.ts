@@ -3,21 +3,22 @@ import { isUuid } from "@/lib/validation";
 
 export type ForumPosting = "open" | "moderators" | "closed";
 export type ForumPerson = { display_name: string; player_number: number; deleted: boolean };
-export type ForumAuthor = ForumPerson & { level: number | null; posts: number | null; joined_at: string | null; role: "admin" | null };
+export type ForumAuthor = ForumPerson & { level: number | null; posts: number | null; karma: number | null; joined_at: string | null; role: "admin" | "moderator" | null };
+export type ForumBan = { ends_at: string | null; reason: string };
 // A null person is a post its author deleted, shown to players as [deleted].
 export type ForumLastPost = { post_id: string; post_number: number; posted_at: string; author: ForumPerson | null };
 export type ForumBoardSummary = {
   id: string; section: string; name: string; description: string; posting: ForumPosting; active: boolean; thread_count: number; post_count: number;
   last_post: (ForumLastPost & { thread_id: string; title: string }) | null; unread: boolean;
 };
-export type ForumIndex = { boards: ForumBoardSummary[]; can_moderate: boolean };
+export type ForumIndex = { boards: ForumBoardSummary[]; can_moderate: boolean; ban: ForumBan | null; open_reports: number | null };
 export type ForumThreadSummary = {
   id: string; title: string; board_id: string; author: ForumPerson | null; created_at: string; replies: number; views: number; post_seq: number;
   pinned: boolean; locked: boolean; rating: number | null; last_post: ForumLastPost | null; last_read_number: number | null; unread: boolean;
 };
 export type ForumBoardPage = {
   board: { id: string; section: string; name: string; description: string; posting: ForumPosting; active: boolean; can_post: boolean };
-  items: ForumThreadSummary[]; total: number; page: number; page_size: number; can_moderate: boolean;
+  items: ForumThreadSummary[]; total: number; page: number; page_size: number; can_moderate: boolean; ban: ForumBan | null;
 };
 export type ForumQuote = { post_id: string; number: number; author: ForumPerson | null; body: string | null; removed: boolean; edited_after: boolean };
 export type ForumPost = {
@@ -25,13 +26,14 @@ export type ForumPost = {
   edited: { at: string; by: string | null; moderator: boolean; count: number } | null;
   removed: { by: "author" | "moderator"; at: string } | null; quote: ForumQuote | null; own: boolean; can_edit: boolean; can_withdraw: boolean;
   likes: number | null; dislikes: number | null; my_reaction: ForumReaction; can_react: boolean; can_dislike: boolean;
+  ignored: boolean; reported: boolean; can_report: boolean;
 };
 export type ForumThread = {
   id: string; title: string; board: { id: string; name: string; section: string; posting: ForumPosting }; author: ForumPerson | null; created_at: string;
   pinned: boolean; locked: boolean; removed: { by: "moderator"; at: string } | null; post_count: number; post_seq: number; views: number;
   last_read_number: number | null; can_reply: boolean; can_moderate: boolean; subscribed: boolean;
 };
-export type ForumThreadPage = { thread: ForumThread; posts: ForumPost[]; page: number; page_count: number; page_size: number };
+export type ForumThreadPage = { thread: ForumThread; posts: ForumPost[]; page: number; page_count: number; page_size: number; ban: ForumBan | null };
 export type ForumLocation = { thread_id: string; post_number: number; page: number };
 export type ForumReceipt = { thread_id: string; post_id: string; post_number: number; created_at: string };
 export type ForumEditReceipt = { post_id: string; edit_count: number };
@@ -45,11 +47,12 @@ export type ForumSearchItem = {
 export type ForumSearchPage = { items: ForumSearchItem[]; total: number; page: number; page_size: number };
 export type ForumSubscription = ForumThreadSummary & { board: { id: string; name: string }; new_posts: number };
 export type ForumSubscriptionPage = { items: ForumSubscription[]; total: number; page: number; page_size: number };
-export type ForumAuthorStats = { post_count: number; thread_count: number };
+export type ForumAuthorStats = { post_count: number; thread_count: number; karma: number };
 export type ForumRevision = { revision: number; title: string | null; body: string; replaced_at: string; editor: string | null };
 export type ForumPostHistory = { post_id: string; revisions: ForumRevision[] };
 export type ForumModerationAction = "pin_thread" | "unpin_thread" | "lock_thread" | "unlock_thread" | "move_thread" | "grave_thread" |
-  "remove_thread" | "restore_thread" | "remove_post" | "restore_post" | "edit_post";
+  "remove_thread" | "restore_thread" | "remove_post" | "restore_post" | "edit_post" | "dismiss_reports" |
+  "ban_player" | "unban_player" | "grant_moderator" | "revoke_moderator";
 export type ForumModerationReceipt = { message: string; thread_id: string | null; post_id: string | null };
 export type ForumModerationRequest = { id: string; action: ForumModerationAction; payload: Record<string, string>; reason: string };
 export type PendingForumPost = { id: string; kind: "thread"; boardId: string; title: string; body: string } |
@@ -57,7 +60,31 @@ export type PendingForumPost = { id: string; kind: "thread"; boardId: string; ti
 export type ForumPostResult = { error?: string; retry?: boolean; receipt?: ForumReceipt };
 
 export const forumModerationActions: readonly ForumModerationAction[] = ["pin_thread", "unpin_thread", "lock_thread", "unlock_thread", "move_thread",
-  "grave_thread", "remove_thread", "restore_thread", "remove_post", "restore_post", "edit_post"];
+  "grave_thread", "remove_thread", "restore_thread", "remove_post", "restore_post", "edit_post", "dismiss_reports",
+  "ban_player", "unban_player", "grant_moderator", "revoke_moderator"];
+export const forumReportReasons = [
+  { id: "spam", label: "Spam or advertising" }, { id: "harassment", label: "Harassment or threats" }, { id: "offensive", label: "Offensive content" },
+  { id: "rules", label: "Breaks the forum rules" }, { id: "other", label: "Something else" },
+] as const;
+export type ForumReportReason = (typeof forumReportReasons)[number]["id"];
+// Ban lengths offered to moderators; no length means a permanent ban.
+export const forumBanLengths = [
+  { hours: "1", label: "1 hour" }, { hours: "24", label: "1 day" }, { hours: "168", label: "7 days" }, { hours: "720", label: "30 days" }, { hours: null, label: "Permanent" },
+] as const;
+export type ForumReportReceipt = { report_id: string; already: boolean };
+export type ForumReportEntry = {
+  post: { id: string; number: number; excerpt: string; removed: "author" | "moderator" | null; author: ForumPerson };
+  thread: { id: string; title: string; removed: boolean }; board: { id: string; name: string };
+  reports: { id: string; reason: ForumReportReason; note: string; created_at: string; status: "open" | "resolved" | "dismissed"; reporter: ForumPerson; handled_by: string | null; handled_at: string | null }[];
+};
+export type ForumReportPage = { items: ForumReportEntry[]; total: number; page: number; page_size: number };
+export type ForumModerationOverview = {
+  can_manage_moderators: boolean; open_reports: number;
+  bans: { player: ForumPerson; starts_at: string; ends_at: string | null; reason: string; banned_by: string }[];
+  moderators: { player: ForumPerson; granted_at: string; granted_by: string | null }[];
+  log: { id: string; action: ForumModerationAction; actor: string; reason: string; created_at: string; payload: Record<string, string>; thread: { id: string; title: string } | null; post_id: string | null }[];
+  log_total: number; page: number; page_size: number;
+};
 
 export function isForumId(value: unknown): value is string {
   return typeof value === "string" && /^[1-9][0-9]{0,18}$/.test(value) && BigInt(value) <= 9223372036854775807n;
@@ -127,9 +154,20 @@ export function forumSearchUrl(query: string, options: { page?: number; threads?
   return "/forums/search?" + params.toString();
 }
 export function forumSubscriptionsUrl(page = 0) { return withPage("/forums/subscriptions", page); }
+export function forumModerationUrl(view: "reports" | "resolved" | "dismissed" | "people" | "log" = "reports", page = 0) {
+  const params = new URLSearchParams();
+  if (view !== "reports") params.set("view", view);
+  if (page > 0) params.set("page", String(page + 1));
+  return "/forums/moderation" + (params.size ? "?" + params.toString() : "");
+}
+export function validReportNote(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const characters = Array.from(value.trim());
+  return characters.length <= 500 && !characters.some(character => { const code = character.charCodeAt(0); return (code < 32 && code !== 9 && code !== 10) || code === 127; });
+}
 
 export function isForumPath(pathname: string) {
-  if (pathname === "/forums" || pathname === "/forums/search" || pathname === "/forums/subscriptions") return true;
+  if (["/forums", "/forums/search", "/forums/subscriptions", "/forums/moderation"].includes(pathname)) return true;
   const parts = pathname.split("/");
   if (parts.length === 4 && parts[2] === "boards") return isForumBoardId(parts[3]);
   if (parts.length === 5 && parts[2] === "boards" && parts[4] === "new") return isForumBoardId(parts[3]);

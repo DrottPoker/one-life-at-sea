@@ -26,6 +26,22 @@ function forumNotice(payload: Record<string, unknown>, text: string): Notificati
 
 // New kinds add a renderer here and call private.emit_notification in their transaction.
 const renderers: Record<string, (payload: Record<string, unknown>) => NotificationContent | null> = {
+  "forum.moderation": payload => {
+    if (payload.version !== 1 || typeof payload.title !== "string" || !payload.title || !isForumId(payload.thread_id)) return null;
+    const text = payload.action === "remove_post" ? "A moderator removed your post in" : payload.action === "edit_post" ? "A moderator edited your post in"
+      : payload.action === "remove_thread" ? "A moderator removed your thread" : null;
+    if (!text) return null;
+    const href = payload.action === "edit_post" && isForumId(payload.post_id) ? "/forums/posts/" + payload.post_id : null;
+    return { actors: [], text: text + " \u201c" + payload.title + "\u201d", href, linkLabel: "View forum post" };
+  },
+  "forum.ban": payload => {
+    if (payload.version !== 1 || typeof payload.reason !== "string" || (payload.ends_at !== null && (typeof payload.ends_at !== "string" || Number.isNaN(Date.parse(payload.ends_at))))) return null;
+    const until = payload.ends_at === null ? "permanently" : "until " + new Date(payload.ends_at as string).toUTCString();
+    return { actors: [], text: "You are banned from posting in the forums " + until + ". Reason: " + payload.reason, href: null };
+  },
+  "forum.unban": payload => payload.version === 1 ? { actors: [], text: "Your forum ban was lifted. You can post again.", href: null } : null,
+  "forum.role": payload => payload.version === 1 && typeof payload.moderator === "boolean"
+    ? { actors: [], text: payload.moderator ? "You are now a forum moderator." : "You are no longer a forum moderator.", href: payload.moderator ? "/forums/moderation" : null, linkLabel: "Open moderation" } : null,
   "forum.reply": payload => forumNotice(payload, "replied in"),
   "forum.quote": payload => forumNotice(payload, "quoted your post in"),
   "combat.attacked": payload => {

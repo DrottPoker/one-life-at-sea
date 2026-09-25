@@ -6,34 +6,41 @@ import { createClient } from "@/lib/supabase/server";
 import { withDatabaseRetry } from "@/lib/database-retry";
 import { isUuid } from "@/lib/validation";
 import { gameplay } from "@/config/public";
-import { forumModerationActions, isForumBoardId, isForumId, normalizeForumBody, validForumBody, validForumTitle, validModerationReason,
+import { forumBanLengths, forumModerationActions, forumReportReasons, isForumBoardId, isForumId, normalizeForumBody, validForumBody, validForumTitle, validModerationReason, validReportNote,
   type ForumEditReceipt, type ForumModerationReceipt, type ForumModerationRequest, type ForumPostHistory, type ForumPostResult,
-  type ForumReaction, type ForumReactionReceipt, type ForumWithdrawReceipt, type PendingForumPost } from "@/lib/forums";
+  type ForumReaction, type ForumReactionReceipt, type ForumReportReason, type ForumReportReceipt, type ForumWithdrawReceipt, type PendingForumPost } from "@/lib/forums";
+import { isPlayerNumber } from "@/lib/player-identity";
 
 const changedAccount = "Your signed-in character changed. Reload the forum.";
 const messages: Record<string, string> = {
   FORUM_NOT_FOUND: "This forum, thread or post is no longer available.",
   FORUM_READ_ONLY: "You cannot post here.",
   THREAD_LOCKED: "This thread is locked.",
-  FORUM_FORBIDDEN: "You can only change your own posts.",
   INVALID_POST: "Check the title and post and keep them within the character limits.",
   INVALID_QUOTE: "The quoted post is no longer available. Remove the quote and try again.",
   DUPLICATE_POST: "You already posted this. Write something new.",
   FORUM_THREAD_LIMIT: `You can start at most ${gameplay.forum.threadsPerHour} threads per hour.`,
   EDIT_CONFLICT: "This post changed after you opened it. Reload to see the latest version.",
   POST_REMOVED: "This post has been removed.",
-  ADMIN_REQUIRED: "Moderator access is required.",
+  ADMIN_REQUIRED: "Only administrators can do this.",
+  MODERATOR_REQUIRED: "Moderator access is required.",
+  SELF_REPORT: "You cannot report your own post.",
   FORUM_NO_CHANGE: "Nothing changed because this was already done. Reload the page.",
+  FORUM_FORBIDDEN: "You can only change your own posts.",
   LAST_VISIBLE_POST: "This is the last visible post. Remove the whole thread instead.",
   CANNOT_RESTORE: "Content withdrawn by its author cannot be restored.",
   THREAD_REMOVED: "Restore the thread first.",
   SELF_REACTION: "You cannot react to your own post.",
-  NEW_CHARACTER: `New captains can dislike posts after ${gameplay.forum.newCharacterHours} hours.`,
+  NEW_CHARACTER: `New captains can dislike and report posts after ${gameplay.forum.newCharacterHours} hours.`,
   FORUM_RATE_LIMIT: "You are reacting too quickly. Please wait a minute.",
   REQUEST_MISMATCH: "This saved request does not match the original. Reload the page.",
 };
 type RpcError = { message: string; details?: string | null } | null;
 function knownError(error: RpcError) {
+  if (error?.message === "FORUM_BANNED") {
+    const until = Date.parse(error.details ?? "");
+    return Number.isNaN(until) ? "You are banned from posting in the forums." : "You are banned from posting in the forums until " + new Date(until).toUTCString() + ".";
+  }
   if (error?.message === "FORUM_COOLDOWN") {
     const seconds = Number(error.details);
     return Number.isSafeInteger(seconds) && seconds > 0 ? `Please wait ${seconds} ${seconds === 1 ? "second" : "seconds"} before posting again.` : "Please wait before posting again.";
@@ -113,11 +120,16 @@ function validModerationPayload(request: ForumModerationRequest) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload) || Object.values(payload).some(value => typeof value !== "string")) return false;
   const keys = Object.keys(payload).sort().join(",");
   if (request.action === "move_thread") return keys === "board_id,thread_id" && isForumId(payload.thread_id) && isForumBoardId(payload.board_id);
+  if (request.action === "ban_player") {
+    return (keys === "player_number" || keys === "hours,player_number") && isPlayerNumber(payload.player_number) &&
+      (payload.hours === undefined || forumBanLengths.some(length => length.hours === payload.hours));
+  }
+  if (["unban_player", "grant_moderator", "revoke_moderator"].includes(request.action)) return keys === "player_number" && isPlayerNumber(payload.player_number);
   if (request.action === "edit_post") {
     return (keys === "body,post_id" || keys === "body,post_id,title") && isForumId(payload.post_id) && validForumBody(normalizeForumBody(payload.body)) &&
       (payload.title === undefined || validForumTitle(payload.title.trim()));
   }
-  return request.action.endsWith("_post") ? keys === "post_id" && isForumId(payload.post_id) : keys === "thread_id" && isForumId(payload.thread_id);
+  return request.action.endsWith("_post") || request.action === "dismiss_reports" ? keys === "post_id" && isForumId(payload.post_id) : keys === "thread_id" && isForumId(payload.thread_id);
 }
 
 export async function moderateForum(characterId: string, request: ForumModerationRequest): Promise<{ error?: string; retry?: boolean; receipt?: ForumModerationReceipt }> {
@@ -131,7 +143,7 @@ export async function moderateForum(characterId: string, request: ForumModeratio
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("moderate_forum", { action: request.action, payload, request_id: request.id, reason: request.reason.trim() }));
   if (error || !data) {
-    const known = knownError(error);
+    const known = error?.message === "FORUM_FORBIDDEN" ? "You cannot ban yourself, an administrator or, unless you are an administrator, another moderator." : knownError(error);
     return { error: known ?? "The action could not be confirmed. Retry to check the same request.", retry: !known };
   }
   revalidatePath("/forums", "layout");
@@ -143,7 +155,7 @@ export async function loadForumPostHistory(characterId: string, postId: string):
   if (!isForumId(postId)) return { error: messages.FORUM_NOT_FOUND };
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("get_forum_post_history", { post_id: postId }));
-  if (error || !data) return { error: error?.message === "FORUM_FORBIDDEN" ? messages.ADMIN_REQUIRED : knownError(error) ?? "The history could not be loaded." };
+  if (error || !data) return { error: error?.message === "FORUM_FORBIDDEN" ? messages.MODERATOR_REQUIRED : knownError(error) ?? "The history could not be loaded." };
   return { history: data };
 }
 
@@ -166,4 +178,15 @@ export async function setForumSubscription(characterId: string, threadId: string
   if (error) return knownError(error) ?? "Your subscription could not be changed. Please try again.";
   revalidatePath("/forums", "layout");
   return null;
+}
+
+// One open report per captain and post, so a repeated report is harmless.
+export async function reportForumPost(characterId: string, postId: string, reason: ForumReportReason, note: string): Promise<{ error?: string; receipt?: ForumReportReceipt }> {
+  if (!await currentCharacter(characterId)) return { error: changedAccount };
+  if (!isForumId(postId) || !forumReportReasons.some(item => item.id === reason) || !validReportNote(note)) return { error: "Choose a reason and keep the note under 500 characters." };
+  const client = await createClient();
+  const { data, error } = await withDatabaseRetry(() => client.rpc("report_forum_post", { post_id: postId, reason, note: note.trim() }));
+  if (error || !data) return { error: knownError(error) ?? "The report could not be sent. Please try again." };
+  revalidatePath("/forums", "layout");
+  return { receipt: data };
 }

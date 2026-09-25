@@ -114,6 +114,7 @@ begin
     if original->>'title'<>new_title or original->>'body'<>new_body then raise exception 'REQUEST_MISMATCH' using errcode='22023'; end if;
     return private.forum_post_receipt(post);
   end if;
+  perform private.forum_require_unbanned(viewer_id);
   if not private.forum_valid_title(new_title) or not private.forum_valid_body(new_body) then raise exception 'INVALID_POST' using errcode='22023'; end if;
   select * into board from private.forum_boards b where b.id=create_forum_thread.board_id;
   if not found or not (board.active or moderator) then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
@@ -161,6 +162,7 @@ begin
       or private.forum_original(post)->>'body'<>new_body then raise exception 'REQUEST_MISMATCH' using errcode='22023'; end if;
     return private.forum_post_receipt(post);
   end if;
+  perform private.forum_require_unbanned(viewer_id);
   if not private.forum_valid_body(new_body) then raise exception 'INVALID_POST' using errcode='22023'; end if;
   select * into thread from private.forum_threads t where t.id=create_forum_post.thread_id for no key update;
   if not found then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
@@ -212,6 +214,7 @@ begin
   if (thread.removed_at is not null or not board.active) and not moderator then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
   if post.author_id is distinct from viewer_id then raise exception 'FORUM_FORBIDDEN' using errcode='42501'; end if;
   if post.removed_at is not null then raise exception 'POST_REMOVED' using errcode='P0001'; end if;
+  perform private.forum_require_unbanned(viewer_id);
   if thread.removed_at is not null or not private.forum_can_post(board.posting,moderator) or (thread.locked_at is not null and not moderator) then
     raise exception 'THREAD_LOCKED' using errcode='42501'; end if;
   if (new_title is not null and post.post_number<>1) or not private.forum_valid_body(new_body) or (new_title is not null and not private.forum_valid_title(new_title)) then
@@ -256,6 +259,7 @@ begin
   if post.id=thread.last_post_id then perform private.forum_refresh_last_post(thread.id); end if;
   update private.forum_boards set post_count=post_count-1 where id=board.id;
   update private.forum_author_stats set post_count=post_count-1 where character_id=viewer_id;
+  perform private.forum_refresh_karma(viewer_id);
   perform private.record_character_action(viewer_id);
   return jsonb_build_object('post_id',post.id::text);
 end;
@@ -291,11 +295,12 @@ $$;
 
 -- Likes and dislikes set a state, so repeating a request changes nothing. They follow Torn: no
 -- reactions on your own posts, in closed or staff boards, or in locked threads, and new captains
--- cannot dislike.
+-- cannot dislike. Karma is decided when a reaction is first given: short posts, boards without
+-- karma, new captains and more than the daily number of counted reactions to one author earn none.
 create or replace function private.set_forum_reaction(post_id bigint,reaction integer)
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); moderator boolean:=private.forum_is_moderator(); observed timestamptz:=clock_timestamp();
-  joined timestamptz; current_value smallint; post private.forum_posts%rowtype; thread private.forum_threads%rowtype; board private.forum_boards%rowtype;
+  joined timestamptz; current_value smallint; counted boolean; post private.forum_posts%rowtype; thread private.forum_threads%rowtype; board private.forum_boards%rowtype;
 begin
   if set_forum_reaction.post_id is null or reaction is null or reaction not in(-1,0,1) then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
   select c.created_at into joined from public.characters c where c.id=viewer_id for no key update;
@@ -307,19 +312,49 @@ begin
   if thread.removed_at is not null or board.posting<>'open' then raise exception 'FORUM_READ_ONLY' using errcode='42501'; end if;
   if thread.locked_at is not null then raise exception 'THREAD_LOCKED' using errcode='42501'; end if;
   if post.author_id=viewer_id then raise exception 'SELF_REACTION' using errcode='22023'; end if;
+  perform private.forum_require_unbanned(viewer_id);
   select r.value into current_value from private.forum_reactions r where r.post_id=post.id and r.character_id=viewer_id;
   if current_value is distinct from nullif(reaction,0)::smallint then
     if reaction=-1 and joined>observed-make_interval(hours=>{{gameplay.forum.newCharacterHours}}) then raise exception 'NEW_CHARACTER' using errcode='P0001'; end if;
     if (select count(*) from private.forum_reactions r where r.character_id=viewer_id and r.updated_at>observed-interval '1 minute')>={{gameplay.forum.reactionsPerMinute}} then
       raise exception 'FORUM_RATE_LIMIT' using errcode='P0001'; end if;
+    counted:=joined<=observed-make_interval(hours=>{{gameplay.forum.newCharacterHours}}) and length(post.body)>={{gameplay.forum.karmaMinPostLength}} and board.karma
+      and (select count(*) from private.forum_reactions r join private.forum_posts q on q.id=r.post_id
+        where r.character_id=viewer_id and r.counts and q.author_id=post.author_id and r.created_at>observed-interval '1 day')<{{gameplay.forum.karmaPerAuthorPerDay}};
     if reaction=0 then
       delete from private.forum_reactions r where r.post_id=post.id and r.character_id=viewer_id;
     else
-      insert into private.forum_reactions(post_id,character_id,value,created_at,updated_at) values(post.id,viewer_id,reaction,observed,observed)
+      insert into private.forum_reactions(post_id,character_id,value,counts,created_at,updated_at) values(post.id,viewer_id,reaction,counted,observed,observed)
         on conflict on constraint forum_reactions_pkey do update set value=excluded.value,updated_at=excluded.updated_at;
     end if;
   end if;
   return (select jsonb_build_object('post_id',p.id::text,'likes',p.likes,'dislikes',p.dislikes,'reaction',reaction) from private.forum_posts p where p.id=post.id);
+end;
+$$;
+
+-- Reports need a captain older than the new-captain limit, and a repeated report is harmless.
+create or replace function private.report_forum_post(post_id bigint,reason text,note text)
+returns jsonb language plpgsql volatile security definer set search_path='' as $$
+declare viewer_id uuid:=private.combat_captain(); moderator boolean:=private.forum_is_moderator(); observed timestamptz:=clock_timestamp(); new_note text:=btrim(note);
+  actor public.characters%rowtype; post private.forum_posts%rowtype; thread private.forum_threads%rowtype; board private.forum_boards%rowtype; existing bigint; saved bigint;
+begin
+  if report_forum_post.post_id is null or reason is null or reason not in('spam','harassment','offensive','rules','other') or new_note is null
+    or length(new_note)>500 or translate(new_note,E'\t\n','') ~ '[[:cntrl:]]' then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
+  select * into actor from public.characters c where c.id=viewer_id for no key update;
+  select * into post from private.forum_posts p where p.id=report_forum_post.post_id;
+  select * into thread from private.forum_threads t where t.id=post.thread_id;
+  select * into board from private.forum_boards b where b.id=thread.board_id;
+  if post.id is null or ((thread.removed_at is not null or not board.active) and not moderator) then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
+  if post.removed_at is not null then raise exception 'POST_REMOVED' using errcode='P0001'; end if;
+  if post.author_id=viewer_id then raise exception 'SELF_REPORT' using errcode='22023'; end if;
+  perform private.forum_require_unbanned(viewer_id);
+  if actor.created_at>observed-make_interval(hours=>{{gameplay.forum.newCharacterHours}}) then raise exception 'NEW_CHARACTER' using errcode='P0001'; end if;
+  select r.id into existing from private.forum_reports r where r.post_id=post.id and r.reporter_id=viewer_id and r.status='open';
+  if existing is not null then return jsonb_build_object('report_id',existing::text,'already',true); end if;
+  if (select count(*) from private.forum_reports r where r.reporter_id=viewer_id and r.created_at>observed-interval '1 hour')>={{gameplay.forum.reportsPerHour}} then
+    raise exception 'FORUM_RATE_LIMIT' using errcode='P0001'; end if;
+  insert into private.forum_reports(post_id,reporter_id,reporter_name,reason,note,created_at) values(post.id,viewer_id,actor.display_name,reason,new_note,observed) returning id into saved;
+  return jsonb_build_object('report_id',saved::text,'already',false);
 end;
 $$;
 
@@ -354,17 +389,21 @@ create or replace function public.set_forum_reaction(post_id bigint,reaction int
 returns jsonb language sql volatile security invoker set search_path='' as $$ select private.set_forum_reaction(post_id,reaction); $$;
 create or replace function public.set_forum_subscription(thread_id bigint,subscribed boolean)
 returns void language sql volatile security invoker set search_path='' as $$ select private.set_forum_subscription(thread_id,subscribed); $$;
+create or replace function public.report_forum_post(post_id bigint,reason text,note text)
+returns jsonb language sql volatile security invoker set search_path='' as $$ select private.report_forum_post(post_id,reason,note); $$;
 revoke all on function private.create_forum_thread(text,text,text,uuid),public.create_forum_thread(text,text,text,uuid),
   private.create_forum_post(bigint,text,bigint,uuid),public.create_forum_post(bigint,text,bigint,uuid),
   private.edit_forum_post(bigint,text,text,integer),public.edit_forum_post(bigint,text,text,integer),
   private.withdraw_forum_post(bigint),public.withdraw_forum_post(bigint),
   private.mark_forum_thread_read(bigint,integer),public.mark_forum_thread_read(bigint,integer),
   private.mark_forum_board_read(text),public.mark_forum_board_read(text),private.set_forum_reaction(bigint,integer),public.set_forum_reaction(bigint,integer),
-  private.set_forum_subscription(bigint,boolean),public.set_forum_subscription(bigint,boolean) from public,anon,authenticated;
+  private.set_forum_subscription(bigint,boolean),public.set_forum_subscription(bigint,boolean),private.report_forum_post(bigint,text,text),public.report_forum_post(bigint,text,text)
+  from public,anon,authenticated;
 grant execute on function private.create_forum_thread(text,text,text,uuid),public.create_forum_thread(text,text,text,uuid),
   private.create_forum_post(bigint,text,bigint,uuid),public.create_forum_post(bigint,text,bigint,uuid),
   private.edit_forum_post(bigint,text,text,integer),public.edit_forum_post(bigint,text,text,integer),
   private.withdraw_forum_post(bigint),public.withdraw_forum_post(bigint),
   private.mark_forum_thread_read(bigint,integer),public.mark_forum_thread_read(bigint,integer),
   private.mark_forum_board_read(text),public.mark_forum_board_read(text),private.set_forum_reaction(bigint,integer),public.set_forum_reaction(bigint,integer),
-  private.set_forum_subscription(bigint,boolean),public.set_forum_subscription(bigint,boolean) to authenticated;
+  private.set_forum_subscription(bigint,boolean),public.set_forum_subscription(bigint,boolean),private.report_forum_post(bigint,text,text),public.report_forum_post(bigint,text,text)
+  to authenticated;

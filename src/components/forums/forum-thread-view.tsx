@@ -1,20 +1,20 @@
 "use client";
 
 import { useEffect, useId, useOptimistic, useRef, useState, useTransition } from "react";
-import { Archive, Bell, BellOff, History, Lock, LockOpen, MoveRight, Pencil, Pin, PinOff, Quote, RotateCcw, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
+import { Archive, Ban, Bell, BellOff, Flag, History, Lock, LockOpen, MoveRight, Pencil, Pin, PinOff, Quote, RotateCcw, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
 import { GameLink as Link } from "@/components/game-navigation";
 import { useNavigationActivity } from "@/components/game-refresh";
 import { MessageTime } from "@/components/messages/message-time";
 import { Pagination } from "@/components/pagination";
 import { ForumMarkup } from "@/components/forums/forum-markup";
-import { ForumPersonLink } from "@/components/forums/forum-person";
+import { ForumBanNotice, ForumPersonLink } from "@/components/forums/forum-person";
 import { ForumEditor, ForumTextArea, ForumToolbar, type ForumQuoteDraft } from "@/components/forums/forum-editor";
 import { ForumDialog, ForumModerationDialog, type ForumModerationPrompt } from "@/components/forums/forum-dialog";
-import { editForumPost, loadForumPostHistory, markForumThreadRead, moderateForum, setForumReaction, setForumSubscription, withdrawForumPost } from "@/app/forum-actions";
+import { editForumPost, loadForumPostHistory, markForumThreadRead, moderateForum, reportForumPost, setForumReaction, setForumSubscription, withdrawForumPost } from "@/app/forum-actions";
 import { gameplay } from "@/config/public";
 import { subscribeToForeground } from "@/lib/browser-events";
-import { forumPermalink, forumThreadUrl, normalizeForumBody, validForumBody, validForumTitle, validModerationReason,
-  type ForumPost, type ForumReaction, type ForumRevision, type ForumThread, type ForumThreadPage } from "@/lib/forums";
+import { forumPermalink, forumReportReasons, forumThreadUrl, normalizeForumBody, validForumBody, validForumTitle, validModerationReason, validReportNote,
+  type ForumPost, type ForumReaction, type ForumReportReason, type ForumRevision, type ForumThread, type ForumThreadPage } from "@/lib/forums";
 
 // Only a mounted, visible thread acknowledges reading, and only up to the posts it shows.
 function useReadMarker(characterId: string, threadId: string, highest: number, lastRead: number | null) {
@@ -127,11 +127,40 @@ function PostHistory({ characterId, post, onClose }: { characterId: string; post
   </ForumDialog>;
 }
 
+function ReportDialog({ characterId, post, open, onClose }: { characterId: string; post: ForumPost; open: boolean; onClose: (message?: string) => void }) {
+  const [reason, setReason] = useState<ForumReportReason>("spam"), [note, setNote] = useState(""), [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition(), id = useId();
+  useNavigationActivity(pending);
+  function send() {
+    if (pending || !validReportNote(note)) return;
+    start(async () => {
+      try {
+        const result = await reportForumPost(characterId, post.id, reason, note);
+        if (result.receipt) { setNote(""); setError(null); onClose(result.receipt.already ? "You have already reported this post." : "Thank you. The moderators will review this post."); }
+        else setError(result.error ?? "The report could not be sent.");
+      } catch { setError("The report could not be sent. Please try again."); }
+    });
+  }
+  return <ForumDialog open={open} title={"Report post #" + post.number + "?"} busy={pending} onClose={() => onClose()}>
+    <p>Moderators see your report and your name. The author does not.</p>
+    <div className="o-forum-field"><label htmlFor={id + "-reason"}>Reason</label>
+      <select id={id + "-reason"} value={reason} disabled={pending} onChange={event => setReason(event.target.value as ForumReportReason)}>
+        {forumReportReasons.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+      </select></div>
+    <div className="o-forum-field"><label htmlFor={id + "-note"}>Details (optional)</label>
+      <textarea id={id + "-note"} rows={3} maxLength={500} value={note} readOnly={pending} onChange={event => setNote(event.target.value)} /></div>
+    <div className="o-item-dialog-actions"><button type="button" className="o-text-button" disabled={pending} onClick={() => onClose()}>Cancel</button>
+      <button type="button" className="o-primary" disabled={pending || !validReportNote(note)} onClick={send}>{pending ? "Sending..." : "Send report"}</button></div>
+    {error && <p role="alert" className="o-field-error">{error}</p>}
+  </ForumDialog>;
+}
+
 function PostCard({ characterId, post, thread, fresh, onQuote, onModerate, onHistory, onNotice }: {
   characterId: string; post: ForumPost; thread: ForumThread; fresh: boolean; onQuote: () => void;
   onModerate: (prompt: ForumModerationPrompt) => void; onHistory: () => void; onNotice: (message: string) => void;
 }) {
   const [editing, setEditing] = useState<"author" | "moderator" | null>(null), [confirming, setConfirming] = useState(false);
+  const [reporting, setReporting] = useState(false), [showIgnored, setShowIgnored] = useState(false);
   const [error, setError] = useState<string | null>(null), [deleting, startDeleting] = useTransition();
   useNavigationActivity(deleting);
   const author = post.author;
@@ -146,11 +175,18 @@ function PostCard({ characterId, post, thread, fresh, onQuote, onModerate, onHis
   }
   const moderate = (action: ForumModerationPrompt["action"], title: string, description: string, confirm: string) =>
     onModerate({ action, payload: { post_id: post.id }, title, description, confirm });
+  // Posts by captains on the reader's ignore list stay folded until the reader opens one.
+  if (post.ignored && !showIgnored) {
+    return <li id={"post-" + post.number} className="o-forum-post o-forum-post-ignored">
+      <p>Post #{post.number} by {author?.display_name ?? "[deleted]"}, whom you ignore. <button type="button" className="o-text-button" onClick={() => setShowIgnored(true)}>Show post</button></p>
+    </li>;
+  }
   return <li id={"post-" + post.number} className="o-forum-post" data-removed={!!post.removed} data-new={fresh}>
     <aside className="o-forum-author" aria-label={"Posted by " + (author?.display_name ?? "a deleted post")}>
       <span className="o-forum-author-name"><ForumPersonLink person={author} />{author && <> <span className="o-forum-author-id">[{author.player_number}]</span></>}</span>
-      {author?.role === "admin" && <span className="o-forum-role">Admin</span>}
-      {author && !author.deleted && <dl><div><dt>Level</dt><dd>{author.level ?? "-"}</dd></div><div><dt>Posts</dt><dd>{author.posts ?? 0}</dd></div></dl>}
+      {author?.role && <span className="o-forum-role">{author.role === "admin" ? "Admin" : "Moderator"}</span>}
+      {author && !author.deleted && <dl><div><dt>Level</dt><dd>{author.level ?? "-"}</dd></div><div><dt>Posts</dt><dd>{author.posts ?? 0}</dd></div>
+        <div><dt>Karma</dt><dd>{author.karma ?? 0}</dd></div></dl>}
     </aside>
     <article className="o-forum-post-main" aria-label={"Post #" + post.number}>
       <header className="o-forum-post-head"><Link href={forumPermalink(post.id)} prefetch={false} className="o-forum-post-number" title="Link to this post">#{post.number}</Link>
@@ -175,9 +211,15 @@ function PostCard({ characterId, post, thread, fresh, onQuote, onModerate, onHis
         {thread.can_moderate && !post.removed && <button type="button" onClick={() => moderate("remove_post", "Remove post #" + post.number + "?", "Players will see that a moderator removed this post. Moderators can still read and restore it.", "Remove post")}><Trash2 aria-hidden="true" />Remove</button>}
         {thread.can_moderate && post.removed?.by === "moderator" && <button type="button" onClick={() => moderate("restore_post", "Restore post #" + post.number + "?", "The post becomes visible to every player again.", "Restore post")}><RotateCcw aria-hidden="true" />Restore</button>}
         {thread.can_moderate && post.edited && <button type="button" onClick={onHistory}><History aria-hidden="true" />History</button>}
+        {thread.can_moderate && author && !author.deleted && !post.own && <button type="button" onClick={() => onModerate({ action: "ban_player", payload: { player_number: String(author.player_number) },
+          title: "Ban " + author.display_name + " from posting?", description: "The captain can still read the forums and delete their own posts. Choose how long the ban lasts.",
+          confirm: "Ban", banLength: true, reasonLabel: "Reason (shown to the player)" })}><Ban aria-hidden="true" />Ban author</button>}
+        {post.reported ? <button type="button" disabled><Flag aria-hidden="true" />Reported</button>
+          : post.can_report && <button type="button" onClick={() => setReporting(true)}><Flag aria-hidden="true" />Report</button>}
       </footer>}
       {error && <p role="alert" className="o-field-error">{error}</p>}
     </article>
+    <ReportDialog characterId={characterId} post={post} open={reporting} onClose={message => { setReporting(false); if (message) onNotice(message); }} />
     <ForumDialog open={confirming} title={"Delete post #" + post.number + "?"} busy={deleting} onClose={() => setConfirming(false)}>
       <p>Players will see that a post was deleted here, but not what it said or who wrote it. The thread stays. This cannot be undone.</p>
       <div className="o-item-dialog-actions"><button type="button" className="o-text-button" disabled={deleting} onClick={() => setConfirming(false)}>Cancel</button>
@@ -221,7 +263,7 @@ export function ForumThreadView({ characterId, data }: { characterId: string; da
     editor.current?.focus();
   }
   const pages = data.page_count > 1 && <Pagination page={data.page} pages={data.page_count} href={page => forumThreadUrl(thread.id, page)} label="Thread pages" />;
-  const closedReason = thread.removed ? null : thread.board.posting === "closed" ? "This thread is closed." : thread.locked ? "This thread is locked. Only moderators can reply."
+  const closedReason = thread.removed || data.ban ? null : thread.board.posting === "closed" ? "This thread is closed." : thread.locked ? "This thread is locked. Only moderators can reply."
     : thread.board.posting === "moderators" ? "Only moderators can reply in this board." : null;
   return <div className="o-forum-thread">
     <header className="o-forum-thread-head">
@@ -231,6 +273,7 @@ export function ForumThreadView({ characterId, data }: { characterId: string; da
       {thread.removed && <p className="o-forum-warning" role="status">A moderator removed this thread. Only moderators can open it.</p>}
       {thread.can_moderate && <ThreadModeration thread={thread} onModerate={setPrompt} />}
     </header>
+    {data.ban && <ForumBanNotice ban={data.ban} />}
     {notice && <p className="o-forum-notice" role="status">{notice}</p>}
     {pages}
     <ol className="o-forum-posts">{posts.map(post => <PostCard key={post.id} characterId={characterId} post={post} thread={thread} fresh={post.number > readBefore && !post.own}

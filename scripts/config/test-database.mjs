@@ -47,10 +47,11 @@ Object.assign(config.gameplay.seaTravel, { scoutEnergyCost: 9, scoutPageSize: 2,
 Object.assign(config.gameplay.marketplace, { feeBps: 1000, popularityHours: 6, valueWindowHours: 2, pageSize: 2, listingsPageSize: 1, maxBatchSize: 2 });
 config.gameplay.inventory.items.find(item => item.id === "brass_compass").tradable = false;
 Object.assign(config.gameplay.forum, { threadTitleMaxLength: 10, postMaxLength: 50, threadsPageSize: 1, postsPageSize: 2, postCooldownSeconds: 0, threadsPerHour: 2,
-  reactionsPerMinute: 1, newCharacterHours: 0, searchPageSize: 1 });
+  reactionsPerMinute: 1, newCharacterHours: 0, searchPageSize: 1, reportsPerHour: 1, karmaMinPostLength: 0, karmaPerAuthorPerDay: 1 });
+config.gameplay.forum.boards.find(board => board.id === "off_topic").karma = false;
 config.gameplay.forum.boards.find(board => board.id === "general_discussion").name = "Captain's $forum$ Deck";
 config.gameplay.forum.boards.find(board => board.id === "fun_games").active = false;
-config.gameplay.forum.boards.push({ id: "config_new_board", section: "Game", name: "New board", description: "Added by configuration.", posting: "open", active: true });
+config.gameplay.forum.boards.push({ id: "config_new_board", section: "Game", name: "New board", description: "Added by configuration.", posting: "open", karma: true, active: true });
 validateConfig(config);
 const removedItem = structuredClone(config), changedKind = structuredClone(config), removedBoard = structuredClone(config);
 removedBoard.gameplay.forum.boards = removedBoard.gameplay.forum.boards.filter(board => board.id !== "config_new_board" && board.id !== "off_topic");
@@ -263,7 +264,11 @@ checks.push(
 "insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','ForumReactor'||translate(id::text,'0123456789','ghijklmnop')) from forum_reactor_user;",
 "select set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from forum_reactor_user;",
 "select is(public.set_forum_reaction((select (value->>'post_id')::bigint from forum_config_thread),-1)->>'dislikes','1','New-captain dislike limit follows configuration');",
-"select throws_ok($forum_test$select public.set_forum_reaction((select (value->>'post_id')::bigint from forum_config_thread),1)$forum_test$,'P0001','FORUM_RATE_LIMIT','Reaction rate follows configuration');"
+"select throws_ok($forum_test$select public.set_forum_reaction((select (value->>'post_id')::bigint from forum_config_thread),1)$forum_test$,'P0001','FORUM_RATE_LIMIT','Reaction rate follows configuration');",
+"select is((select karma from private.forum_posts where id=(select (value->>'post_id')::bigint from forum_config_thread)),-1,'Karma minimum length follows configuration');",
+"select is((select karma from private.forum_boards where id='off_topic'),false,'Board karma follows configuration');",
+"select is(public.report_forum_post((select (value->>'post_id')::bigint from forum_config_thread),'spam','')->>'already','false','Captains report with the configured age limit');",
+"select throws_ok($forum_test$select public.report_forum_post((select id from private.forum_posts where thread_id=(select (value->>'thread_id')::bigint from forum_config_thread) and post_number=2),'spam','')$forum_test$,'P0001','FORUM_RATE_LIMIT','Report rate follows configuration');"
 );
 const sql = "begin;\ncreate extension if not exists pgtap with schema extensions;\nset local search_path=public,extensions;\n" +
   "create temporary table old_training_user as select gen_random_uuid() id;\n" +

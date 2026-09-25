@@ -103,6 +103,9 @@ export type Database = {
       search_forums: { Args: { query: string; author?: string | null; board_id?: string | null; threads_only?: boolean; page?: number }; Returns: import("@/lib/forums").ForumSearchPage };
       get_forum_subscriptions: { Args: { page?: number }; Returns: import("@/lib/forums").ForumSubscriptionPage };
       get_forum_author_stats: { Args: { player_number: number }; Returns: import("@/lib/forums").ForumAuthorStats };
+      report_forum_post: { Args: { post_id: string; reason: import("@/lib/forums").ForumReportReason; note: string }; Returns: import("@/lib/forums").ForumReportReceipt };
+      get_forum_reports: { Args: { status?: "open" | "resolved" | "dismissed"; page?: number }; Returns: import("@/lib/forums").ForumReportPage };
+      get_forum_moderation: { Args: { page?: number }; Returns: import("@/lib/forums").ForumModerationOverview };
       moderate_forum: { Args: { action: import("@/lib/forums").ForumModerationAction; payload: Record<string, string>; request_id: string; reason: string }; Returns: import("@/lib/forums").ForumModerationReceipt };
       mark_notification_read: { Args: { notification_id: string }; Returns: undefined };
       mark_all_notifications_read: { Args: { through_id: string }; Returns: undefined };

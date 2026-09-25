@@ -324,15 +324,15 @@ export function seaTravelCatalogSql(config) {
 export function forumCatalogSql(config) {
   const quote = value => "'" + value.replaceAll("'", "''") + "'";
   const rows = config.gameplay.forum.boards.map((board, i) => "(" + [quote(board.id), quote(board.section), quote(board.name),
-    quote(board.description), quote(board.posting), board.active, i].join(",") + ")").join(",\n");
+    quote(board.description), quote(board.posting), board.karma, board.active, i].join(",") + ")").join(",\n");
   let delimiter = "$forum$";
   while (rows.includes(delimiter)) delimiter = delimiter.slice(0, -1) + "_$";
   return "do " + delimiter + " begin if exists(select 1 from private.forum_boards old left join (values\n" + rows +
-    "\n) incoming(id,section,name,description,posting,active,position) using(id) where incoming.id is null) " +
+    "\n) incoming(id,section,name,description,posting,karma,active,position) using(id) where incoming.id is null) " +
     "then raise exception 'Existing forum board IDs must be preserved'; end if; end " + delimiter + ";\n" +
-    "insert into private.forum_boards(id,section,name,description,posting,active,position) values\n" + rows +
+    "insert into private.forum_boards(id,section,name,description,posting,karma,active,position) values\n" + rows +
     "\non conflict(id) do update set section=excluded.section,name=excluded.name,description=excluded.description," +
-    "posting=excluded.posting,active=excluded.active,position=excluded.position;\n";
+    "posting=excluded.posting,karma=excluded.karma,active=excluded.active,position=excluded.position;\n";
 }
 
 export function skillCatalogSql(config) {
