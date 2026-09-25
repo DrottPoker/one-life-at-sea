@@ -23,7 +23,7 @@ Domänfunktioner äger sina egna regler. Karaktärslås och gemensam låsordning
 
 Ekonomins delade klientjournal sparar begäran före nätverksanrop. Web Locks samordnar flikar; en pågående åtgärd visas inte som misslyckad bara för att en annan flik öppnas. Vid ett förlorat svar återanvänds samma id och innehåll. Bekräftat historiskt utfall får inte räknas om med nya regler. Se [ekonomiintegritet](ECONOMY_AUDIT.md).
 
-Admin och brevpost har egna journaler med sina egna behörighets- och återhämtningsregler. Visuellt liknande formulär innebär inte att dessa regler ska slås ihop.
+Admin, brevpost och forum har egna journaler med sina egna behörighets- och återhämtningsregler. Visuellt liknande formulär innebär inte att dessa regler ska slås ihop.
 
 ## Projektioner, tid och uppdateringar
 
@@ -50,7 +50,7 @@ Gränssnittet delar tema, modaler, responsiva regler och resurskomponenter.
 `config/` äger justerbara värden. `src/config/public.ts` exporterar webbläsarsäkra värden och en separat server-only-modul exporterar driftinställningar. SQL-delarna under `supabase/templates/gameplay/` genereras till nya, oföränderliga migrationer. En gameplayrevision upptäcker skillnader mellan app och databas. CSS och Supabase-TOML genereras från sina källor. Se [Konfiguration](CONFIGURATION.md).
 
 Katalog-ID:n och historiska kvitton är beständiga. Adminhanterade items och loot bevaras vid configsync.
-Privat post använder det nuvarande brevsystemet. Gamla konversationstabeller behålls för idempotent import; deras ersatta RPC:er är borttagna.
+Privat post använder det nuvarande brevsystemet. Forumets tavlor kommer från konfigurationen, medan trådar, inlägg och räknare ägs av databasen, se [Forum](FORUMS.md). Gamla konversationstabeller behålls för idempotent import; deras ersatta RPC:er är borttagna.
 
 Supabase kör lokalt som ett separat Docker-projekt med beständiga volymer.
 Omstart görs utan återställning av data. Molnanslutning, Auth-inställningar, produktionsmejl och publicering är separata driftssteg. Aktuell verifiering och kvarstående begränsningar finns i [Status](IMPLEMENTATION_STATUS.md).

@@ -25,7 +25,7 @@ Detta index leder till de aktuella beskrivningarna. Balansvärden ägs av [confi
 | Progression | [Träning](TRAINING_FOUNDATION.md), [Skills](SKILLS.md), [Activities](ACTIVITIES.md), [Hideout](HIDEOUT.md), [Crafting](CRAFTING.md) |
 | Resa och strid | [Havsresor](SEA_TRAVEL.md), [Scouting](SEA_SCOUTING.md), [Combat](COMBAT_SYSTEM.md), [Utrustning](EQUIPMENT.md) |
 | Ekonomi och föremål | [Gold/Bank](GOLD_COINS_AND_BANK.md), [Inventory](INVENTORY.md), [Marketplace](MARKETPLACE.md), [cirkulation](ITEM_CIRCULATION.md), [marknadsvärde](ITEM_MARKET_VALUE.md) |
-| Kommunikation | [Brevpost](MESSAGES.md), [Notiser](NOTIFICATIONS.md) |
+| Kommunikation | [Brevpost](MESSAGES.md), [Forum](FORUMS.md), [Notiser](NOTIFICATIONS.md) |
 | Administration | [Adminpanel](ADMIN_PANEL.md), [Loot](LOOT_TABLES.md), [ekonomiövervakning](ECONOMY_MONITORING.md), [spelarstatistik](PLAYER_STATISTICS.md) |
 | Ekonomiintegritet | [Kvitton, återförsök och integritetskontroll](ECONOMY_AUDIT.md) |
 

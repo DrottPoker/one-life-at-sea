@@ -184,6 +184,10 @@ page also exposes Stamina, Crew Morale and private skill XP corrections.
 
 `/admin/economy` monitors Gold Coins (carried and banked), item circulation and market valuation, unpriced stock, trade turnover and fees. Independent wealth leaderboards link to player tools. Searchable item totals include market escrow exactly once. Charts record actual observations every five minutes through a private pg_cron job, independently of admin visits. Access is checked on every read; all totals preserve integer precision. See [Economy monitoring](ECONOMY_MONITORING.md) for definitions, limits and operations.
 
+## Forum moderation
+
+Administrators moderate the forum from each thread page: pin, lock, move, retire to the Graveyard, remove or restore threads and posts, and edit posts with a required reason. The database browser has a Forum group with read-only boards, threads, posts, revisions and the moderation log. See [Forum](FORUMS.md#moderering).
+
 ## Account-bound saved requests
 
 The browser journal validates stored request IDs, actions, reasons and JSON payloads before rendering or sending. Invalid storage remains intact and produces a recoverable warning. The Server Action checks that the signed-in user still matches the request owner before calling the database; switching to another administrator cannot execute an old form. A temporarily unavailable session or revoked membership keeps the request for confirmation after access is restored.

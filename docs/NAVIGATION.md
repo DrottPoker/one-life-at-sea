@@ -64,6 +64,13 @@ The lightweight navigation RPC still settles due combat, hospital and travel und
 the existing locks, without loading full resources, training or combat history.
 See [server performance](PERFORMANCE.md) for the broader audit and repeatable measurements.
 
+## Forums
+
+The sidebar **Forums** link and every forum route (`/forums`, `/forums/boards/<id>`, `/forums/boards/<id>/new`,
+`/forums/threads/<id>` and `/forums/posts/<id>`) are available in Hospital, at sea and while traveling. The
+active-attacker navigation lock still applies. Forum pages are dynamic server renders refreshed by the normal
+game refresh; reading a thread is acknowledged only by the mounted, visible page. See [Forum](FORUMS.md).
+
 ## Player messages
 
 `/messages` and its compose, mail and ignore routes are available in Hospital, at sea

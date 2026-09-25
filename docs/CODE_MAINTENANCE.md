@@ -6,7 +6,7 @@
 | --- | --- |
 | Rutter, siddata och Server Actions | `src/app/` |
 | Gemensam spelram och presentation | `src/components/` |
-| Funktionskomponenter | `src/components/admin/`, `combat/`, `inventory/`, `marketplace/`, `messages/`, `training/` |
+| Funktionskomponenter | `src/components/admin/`, `combat/`, `forums/`, `inventory/`, `marketplace/`, `messages/`, `training/` |
 | React-livscykler | `src/hooks/` |
 | Domäntyper, validering, dataåtkomst och rena beräkningar | `src/lib/` |
 | Browser-safe respektive server-only configadaptrar | `src/config/` |
@@ -29,6 +29,7 @@ Använd befintliga hjälpare för validering, formatering, tid, nedräkning och 
 `subscribeToForeground` äger webbläsarens fokus-/onlinehändelser.
 `game-refresh.tsx` samordnar sidbyten och bakgrundsuppdatering.
 `ItemHistoryChart` visar både cirkulations- och marknadsvärdeshistorik.
+`Pagination` ger numrerade sidlänkar åt brevposten och forumet.
 
 Ekonomins journal delar lagring och samordning mellan flikar. Serverhandlingar och databaskvitton behåller domänens egna regler. Adminjournalen validerar lagrat innehåll och binder begäran till kontot. Refaktorering måste bevara låsordning, behörighet, atomiska utfall och historiska kvitton.
 

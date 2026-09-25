@@ -80,6 +80,7 @@ Ekonomiövervakningens namngivna cronjobb uppdateras utan att observationshistor
 | `inventory`, `marketplace`, `economy` | [Inventory](INVENTORY.md), [Marketplace](MARKETPLACE.md), [värde](ITEM_MARKET_VALUE.md), [cirkulation](ITEM_CIRCULATION.md), [Bank](GOLD_COINS_AND_BANK.md) |
 | `seaTravel`, scouting | [Resor](SEA_TRAVEL.md), [Scouting](SEA_SCOUTING.md) |
 | `messages`, `notifications`, `presence` | [Brevpost](MESSAGES.md), [Notiser](NOTIFICATIONS.md), [Närvaro](PLAYER_PRESENCE.md) |
+| `forum` | [Forum](FORUMS.md) |
 
 Återhämtningsgräns och lagringsgräns är olika: överfyllda resurser bevaras tills de används.
 Materialkostnader och skeppsarbetets slider följer faktisk lagrad Energy.

@@ -12,6 +12,15 @@ Detta dokument samlar kvarstående riktning. Det är inte en beskrivning av leve
 - Shipyard är en platshållare. Fler aktiviteter på havsplatser, PvE och intjäningssystem behöver design.
 - Fraktionsmedlemskap, behörigheter och utskick till hela fraktionen är inte implementerade. Kraven på beständiga batchade utskick finns i [Brevpost](MESSAGES.md).
 
+## Forum
+
+Forumets första etapp finns, se [Forum](FORUMS.md). Ägaren godkände 2026-09-25 att resten byggs i etapper: Torns styrkor tas med och Torns svagheter får egna lösningar.
+
+- Etapp 2, gemenskap: like och dislike med synliga räknare. Trådens betyg är reaktionerna på första inlägget, och nya karaktärer kan inte ge dislike under sina första 24 timmar. Prenumerationer med notisen `forum.reply` (högst en oläst notis per tråd), notisen `forum.quote`, sök med `by:`, en spelares trådar och inlägg samt "Forum posts" på profilen. Reaktioner ger inga notiser.
+- Etapp 3, trygghet och karma, krävs före offentlig drift: rapportknapp med moderatorskö, forumavstängning med tidsgräns, notisen `forum.moderation`, spelarmoderatorer som admin utser och ihopfällda inlägg från spelare på ignore-listan. Karma följer Torn: minsta inläggslängd, ingen karma i låsta trådar, Graveyard eller Trading Post, nya karaktärers röster räknas inte, ett tak per författare och dygn och aldrig under noll. Nya karaktärer kan inte rapportera under sina första 24 timmar.
+- Karma vid radering (ägarens beslut 2026-09-25): när ett inlägg tas bort försvinner dess positiva karma men den negativa står kvar, så att ogillade inlägg inte kan raderas bort.
+- Etapp 4, senare: besättningsforum när fraktioner finns, modererade av besättningens ledare. Omröstningar, "Popular threads", signaturer, bilder via Storage med moderering och notiser som delas ut i bakgrunden om prenumerationerna växer.
+
 ## Beslut som ska bevaras
 
 Permanent karaktärsdöd har ersatts av [Hospital](HOSPITAL.md); historiska dödsförslag ska inte återinföras som om de vore aktuella.
