@@ -30,6 +30,8 @@ test("admin authors items and loot, uploads artwork, links fishing and receives 
     expect(testSql("select image_path from private.item_definitions where id='" + itemId + "'").trim()).toBe("/images/items/placeholder.svg");
     expect(await page.evaluate(() => (window as unknown as { adminFlashes: number }).adminFlashes)).toBe(0);
     await page.goto("/admin/items/" + itemId);
+    // The input is enabled once hydrated; a file chosen earlier would be dropped.
+    await expect(page.getByLabel("Upload image", { exact: true })).toBeEnabled();
     await page.getByLabel("Upload image", { exact: true }).setInputFiles("public/images/items/cutlass.png");
     await expect(page.locator('.admin-image-preview img')).toHaveAttribute("src", /\/api\/item-images\//);
     await expect.poll(() => page.locator('.admin-image-preview img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);

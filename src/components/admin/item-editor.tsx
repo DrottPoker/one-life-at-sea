@@ -7,6 +7,7 @@ import { DEFAULT_ITEM_IMAGE, itemIdentifier } from "@/lib/loot";
 import type { AdminRow } from "@/lib/admin";
 import { ItemImage } from "@/components/inventory/item-image";
 import { MutationForm } from "@/components/admin/mutation-form";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { CREW_SLOTS, EQUIPMENT_SLOTS, SLOT_LABELS, SLOT_STATS, STAT_NAMES, isEquipmentSlot, type StatKey } from "@/lib/equipment";
 import type { AdminJson, AdminValues } from "@/lib/admin";
 
@@ -25,6 +26,7 @@ export function ItemEditor({ row }: { row?: AdminRow }) {
     active: initial?.active !== "false", tradable: initial?.tradable !== "false" });
   const [stats, setStats] = useState(() => initialStats(initial));
   const [uploading, setUploading] = useState(false), [imageError, setImageError] = useState("");
+  const hydrated = useHydrated();
   const statKeys = values.kind === "equipment" && isEquipmentSlot(values.slot) ? SLOT_STATS[values.slot] : [];
   const statPayload: AdminJson = values.kind === "equipment" ? Object.fromEntries(statKeys.map(key =>
     [key, key === "shots" ? Number(stats.shots) : { min: Number(stats[key].min), max: Number(stats[key].max) }])) : null;
@@ -77,7 +79,7 @@ export function ItemEditor({ row }: { row?: AdminRow }) {
       <details><summary>Item identifier</summary><label>Item ID<input required pattern="(?!new$)[a-z][a-z0-9_]{0,47}" maxLength={48} readOnly={!!row} value={values.id} onChange={event => field("id", event.target.value)} /></label><small>A permanent identifier, created from the name. The type and equipment slot are also permanent after creation.</small></details>
     </section><aside className="admin-card"><h2>Item image</h2><div className="admin-image-preview"><ItemImage key={values.image_path} item={{ name: values.name || "New item", image_path: values.image_path }} large /></div>
       <p>{values.image_path === DEFAULT_ITEM_IMAGE ? "Using the shared default image." : "This image will be shown in the inventory and marketplace."}</p>
-      <label>Upload image<input type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading} onChange={event => { const file = event.target.files?.[0]; if (file) void upload(file); event.target.value = ""; }} /></label>
+      <label>Upload image<input type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading || !hydrated} onChange={event => { const file = event.target.files?.[0]; if (file) void upload(file); event.target.value = ""; }} /></label>
       <small>PNG, JPG or WebP. Up to 4 MB.</small>
       <button type="button" className="admin-secondary" disabled={uploading || values.image_path === DEFAULT_ITEM_IMAGE} onClick={() => field("image_path", DEFAULT_ITEM_IMAGE)}>Use default image</button>
       {uploading && <p role="status">Uploading image...</p>}{imageError && <p role="alert" className="admin-error">{imageError}</p>}

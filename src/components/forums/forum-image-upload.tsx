@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ChangeEvent } from "react";
 import { useNavigationActivity } from "@/components/game-refresh";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { gameplay } from "@/config/public";
 import type { ForumImageInfo } from "@/lib/forums";
 
@@ -12,7 +13,7 @@ type Uploaded = { image_id: string; width: number; height: number };
 // same reservation instead of spending another upload.
 export function useForumImageUpload(onUploaded: (imageId: string, info: ForumImageInfo) => void) {
   const [uploading, setUploading] = useState(false), [error, setError] = useState<string | null>(null);
-  const input = useRef<HTMLInputElement>(null);
+  const input = useRef<HTMLInputElement>(null), hydrated = useHydrated();
   useNavigationActivity(uploading);
   async function upload(file: File) {
     if (uploading) return;
@@ -45,6 +46,6 @@ export function useForumImageUpload(onUploaded: (imageId: string, info: ForumIma
     event.target.value = "";
     if (file) void upload(file);
   }
-  const picker = <input ref={input} type="file" accept={forumImageTypes} hidden onChange={choose} aria-hidden="true" tabIndex={-1} data-forum-image-input />;
+  const picker = <input ref={input} type="file" accept={forumImageTypes} hidden disabled={!hydrated} onChange={choose} aria-hidden="true" tabIndex={-1} data-forum-image-input />;
   return { uploading, error, clearError: () => setError(null), open: () => input.current?.click(), upload, picker };
 }

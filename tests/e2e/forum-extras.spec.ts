@@ -33,6 +33,7 @@ test("captains run polls, share images and signatures, and find popular threads"
     await page.getByLabel("Title", { exact: true }).fill(title);
     await page.getByLabel("Opening post", { exact: true }).fill("Which ship should the harbor build next? Here is the yard:");
     const picture = await sharp({ create: { width: 2400, height: 1200, channels: 3, background: "#1b4965" } }).png().toBuffer();
+    await expect(page.locator("input[data-forum-image-input]")).toBeEnabled();
     await page.locator("input[data-forum-image-input]").setInputFiles({ name: "yard.png", mimeType: "image/png", buffer: picture });
     await expect(page.getByLabel("Opening post", { exact: true })).toHaveValue(/\[img\][0-9a-f-]{36}\[\/img\]/);
     await page.getByRole("button", { name: "Preview", exact: true }).click();
@@ -146,6 +147,7 @@ test("captains run polls, share images and signatures, and find popular threads"
     await expect(second.getByRole("region", { name: "Poll", exact: true })).toContainText("A moderator removed this poll.");
 
     // The hourly sweep asks the Storage API to delete files of uploads nobody used.
+    await expect(second.locator("input[data-forum-image-input]")).toBeEnabled();
     await second.locator("input[data-forum-image-input]").setInputFiles({ name: "unused.png", mimeType: "image/png", buffer: picture });
     await expect(second.getByLabel("Your reply", { exact: true })).toHaveValue(/\[img\][0-9a-f-]{36}\[\/img\]/);
     const unused = testSql("select storage_path from private.forum_images where owner_id='" + voter.id + "' and attached_at is null;").trim();
