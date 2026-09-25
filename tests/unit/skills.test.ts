@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { gameplay } from "../../src/config/public";
+import { ProfileSkills } from "../../src/components/profile-skills";
 import { MAX_CHARACTER_LEVEL, MAX_SKILL_LEVEL, battlingHealthBonus, skillProgress } from "../../src/lib/skills";
 
 describe("rebalanced skill progression", () => {
@@ -27,13 +30,29 @@ describe("rebalanced skill progression", () => {
 });
 
 describe("battling health bonus", () => {
-  it.each([[1, 0], [2, 2], [3, 3], [4, 4], [10, 10], [100, 100]])("level %i adds %i maximum health", (level, bonus) => {
-    expect(battlingHealthBonus(level)).toBe(bonus * gameplay.skills.battlingHealthPerLevel);
+  it.each([[1, 0], [2, 5], [3, 10], [4, 15], [10, 45], [99, 490], [100, 750]])("level %i adds %i maximum health", (level, bonus) => {
+    expect(battlingHealthBonus(level)).toBe(bonus);
   });
-  it("equals the level from level two without stacking earlier levels", () => {
-    for (let level = 2; level <= MAX_SKILL_LEVEL; level++) expect(battlingHealthBonus(level)).toBe(level * gameplay.skills.battlingHealthPerLevel);
+  it("adds one step per level below the top level, which jumps to its own bonus", () => {
+    const { perLevel, maxLevelBonus } = gameplay.skills.battlingHealth;
+    for (let level = 2; level < MAX_SKILL_LEVEL; level++) expect(battlingHealthBonus(level) - battlingHealthBonus(level - 1)).toBe(perLevel);
+    expect(battlingHealthBonus(MAX_SKILL_LEVEL)).toBe(maxLevelBonus);
   });
   it.each([0, 101, 1.5, NaN])("rejects invalid level %s", level => {
     expect(() => battlingHealthBonus(level)).toThrow(RangeError);
+  });
+});
+
+describe("profile battling bonus", () => {
+  const render = (xp: number) => renderToStaticMarkup(createElement(ProfileSkills, { progress: { character_level: 7, skills: [
+    { id: "crew_battling", xp, level: 1 }, { id: "fishing", xp: 0, level: 1 }] } }));
+  it("shows the jump to the top level and no further step at the top", () => {
+    const below = render(gameplay.skills.xpThresholds[98]);
+    expect(below).toContain('aria-label="Crew Battling health bonus">+490</output>');
+    expect(below).toContain("+260 at level 100");
+    expect(below.match(/health bonus/g)).toHaveLength(1);
+    const top = render(gameplay.skills.xpThresholds[99]);
+    expect(top).toContain('aria-label="Crew Battling health bonus">+750</output>');
+    expect(top).not.toContain(" at level ");
   });
 });

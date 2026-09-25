@@ -26,11 +26,11 @@ test("profiles show private skills only to their owner and publish a live Charac
     // Battling levels raise the matching health maximum; other skills show no bonus.
     await expect(skills.getByLabel("Crew Battling health bonus", { exact: true })).toHaveText("+0");
     testSql("select private.award_skill_xp('" + own.id + "','crew_battling',416);");
-    await expect(skills.getByLabel("Crew Battling health bonus", { exact: true })).toHaveText("+3");
-    await expect(skills.getByRole("article", { name: "Crew Battling", exact: true })).toContainText("+1 at level 4");
+    await expect(skills.getByLabel("Crew Battling health bonus", { exact: true })).toHaveText("+10");
+    await expect(skills.getByRole("article", { name: "Crew Battling", exact: true })).toContainText("+5 at level 4");
     await expect(skills.getByLabel("Ship Battling health bonus", { exact: true })).toHaveText("+0");
     await expect(skills.getByLabel("Fishing health bonus", { exact: true })).toHaveCount(0);
-    await expect(page.getByRole("progressbar", { name: "Crew Health", exact: true })).toHaveAttribute("aria-valuemax", "103");
+    await expect(page.getByRole("progressbar", { name: "Crew Health", exact: true })).toHaveAttribute("aria-valuemax", "110");
     await expect(page.getByLabel("Character Level", { exact: true })).toHaveText("11");
     for (const width of [1440, 375, 320]) {
       await page.setViewportSize({ width, height: 1100 });

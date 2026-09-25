@@ -6,12 +6,13 @@ select no_plan();
 create or replace function private.combat_roll() returns double precision language sql volatile security invoker set search_path='' as $$ select 0.3::double precision $$;
 
 select is(private.battling_health_bonus(1),0,'Level one adds no health');
-select is(private.battling_health_bonus(2),2,'Level two adds two health');
-select is(private.battling_health_bonus(3),3,'Level three gives three health');
-select is(private.battling_health_bonus(4),4,'Level four gives four health');
-select is(private.battling_health_bonus(10),10,'The bonus does not stack across levels');
-select is(private.battling_health_bonus(100),100,'Level one hundred gives the largest bonus');
-select ok(not exists(select 1 from private.skill_levels where level>1 and private.battling_health_bonus(level)<>level),'From level two the bonus equals the level');
+select is(private.battling_health_bonus(2),5,'Level two adds one step of five');
+select is(private.battling_health_bonus(3),10,'Level three adds two steps');
+select is(private.battling_health_bonus(10),45,'Steps do not stack beyond one per level');
+select is(private.battling_health_bonus(99),490,'Level ninety-nine adds ninety-eight steps');
+select is(private.battling_health_bonus(100),750,'Level one hundred jumps to its own bonus');
+select ok(not exists(select 1 from private.skill_levels where level between 2 and 99 and private.battling_health_bonus(level)-private.battling_health_bonus(level-1)<>5),
+  'Every level below one hundred adds one step of five');
 select is(private.combat_order_skill('fire'),'ship_battling','Cannon salvos train Ship Battling');
 select is(private.combat_order_skill('fire_grape'),'ship_battling','Grape Shot is still a cannon salvo');
 select is(private.combat_order_skill('crew_shoot'),'crew_battling','Firearm shots train Crew Battling');
@@ -36,44 +37,44 @@ update public.characters set ship_attack=10,ship_defense=10,ship_speed=10,ship_a
 select is(private.crew_health_max(p),100,'New captains have the base Crew Health maximum') from battlers;
 select is(private.ship_health_max(p),100,'New captains have the base Ship Health maximum') from battlers;
 select private.award_skill_xp(p,'crew_battling',200),private.award_skill_xp(p,'ship_battling',649) from battlers;
-select is(private.crew_health_max(p),102,'Crew Battling level two raises maximum Crew Health') from battlers;
-select is(private.ship_health_max(p),104,'Ship Battling level four raises maximum Ship Health') from battlers;
+select is(private.crew_health_max(p),105,'Crew Battling level two raises maximum Crew Health') from battlers;
+select is(private.ship_health_max(p),115,'Ship Battling level four raises maximum Ship Health') from battlers;
 insert into private.item_instances(character_id,item_id,quality) select p,'oak_sheathing',100 from battlers;
 insert into private.character_equipment(character_id,slot,instance_id) select character_id,'hull',id from private.item_instances where character_id=(select p from battlers);
-select is(private.ship_health_max(p),129,'Hull health and the Ship Battling bonus add together') from battlers;
-select is(private.crew_health_max(p),102,'Hull health does not change the Crew Health maximum') from battlers;
-select lives_ok($$update public.characters set crew_health=200 where id=(select p from battlers)$$,'Crew Health may reach the top battling maximum');
-select throws_ok($$update public.characters set crew_health=201 where id=(select p from battlers)$$,'23514',null,'Crew Health cannot exceed the top battling maximum');
-select lives_ok($$update public.characters set ship_health=300 where id=(select p from battlers)$$,'Ship Health may reach the top hull and battling maximum');
-select throws_ok($$update public.characters set ship_health=301 where id=(select p from battlers)$$,'23514',null,'Ship Health cannot exceed the top hull and battling maximum');
+select is(private.ship_health_max(p),140,'Hull health and the Ship Battling bonus add together') from battlers;
+select is(private.crew_health_max(p),105,'Hull health does not change the Crew Health maximum') from battlers;
+select lives_ok($$update public.characters set crew_health=850 where id=(select p from battlers)$$,'Crew Health may reach the top battling maximum');
+select throws_ok($$update public.characters set crew_health=851 where id=(select p from battlers)$$,'23514',null,'Crew Health cannot exceed the top battling maximum');
+select lives_ok($$update public.characters set ship_health=950 where id=(select p from battlers)$$,'Ship Health may reach the top hull and battling maximum');
+select throws_ok($$update public.characters set ship_health=951 where id=(select p from battlers)$$,'23514',null,'Ship Health cannot exceed the top hull and battling maximum');
 
 update public.characters set ship_health=100,crew_health=100,ship_recovery_at=clock_timestamp(),crew_recovery_at=clock_timestamp() where id=(select p from battlers);
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"b7000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
 select throws_ok($$select private.crew_health_max(p) from battlers$$,'42501',null,'Clients cannot call the private health helpers');
-select is((public.get_game_state()->>'crew_health_max')::integer,102,'Game state reports the raised Crew Health maximum');
-select is((public.get_game_state()->>'ship_health_max')::integer,129,'Game state reports the raised Ship Health maximum');
+select is((public.get_game_state()->>'crew_health_max')::integer,105,'Game state reports the raised Crew Health maximum');
+select is((public.get_game_state()->>'ship_health_max')::integer,140,'Game state reports the raised Ship Health maximum');
 select is((public.get_game_state()->>'crew_health')::integer,100,'A level does not heal');
 select ok((public.get_game_state()->>'health_next_at') is not null,'Recovery continues towards the raised maximum');
 reset role;
 update public.characters set ship_recovery_at=clock_timestamp()-interval '1 day',crew_recovery_at=clock_timestamp()-interval '1 day' where id=(select p from battlers);
 set local role authenticated;
-select is((public.get_game_state()->>'crew_health')::integer,102,'Crew recovery stops at the raised maximum');
-select is((public.get_game_state()->>'ship_health')::integer,129,'Ship recovery stops at the raised maximum');
+select is((public.get_game_state()->>'crew_health')::integer,105,'Crew recovery stops at the raised maximum');
+select is((public.get_game_state()->>'ship_health')::integer,140,'Ship recovery stops at the raised maximum');
 select is((public.get_game_state()->>'health_next_at'),null::text,'Full health at the raised maxima needs no recovery');
 
 -- An administrative level change keeps recovery so far at the previous maximum.
 reset role;
 insert into private.admin_members(user_id) values('b7000000-0000-4000-8000-000000000002');
-update public.characters set crew_health=102,crew_recovery_at=clock_timestamp()-interval '1 day' where id=(select p from battlers);
+update public.characters set crew_health=105,crew_recovery_at=clock_timestamp()-interval '1 day' where id=(select p from battlers);
 select set_config('request.jwt.claims','{"sub":"b7000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 select lives_ok($$select public.admin_mutate('update',jsonb_build_object('resource','character_skills','key',jsonb_build_object('character_id',s.character_id::text,'skill_id',s.skill_id),
   'version',md5(to_jsonb(s)::text),'changes',jsonb_build_object('xp','416')),gen_random_uuid(),'Verify battling level correction')
   from private.character_skills s where character_id=(select p from battlers) and skill_id='crew_battling'$$,'Administrators can correct battling XP');
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"b7000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
-select is((public.get_game_state()->>'crew_health_max')::integer,103,'A corrected level applies its new maximum');
-select is((public.get_game_state()->>'crew_health')::integer,102,'A corrected level grants no free health');
+select is((public.get_game_state()->>'crew_health_max')::integer,110,'A corrected level applies its new maximum');
+select is((public.get_game_state()->>'crew_health')::integer,105,'A corrected level grants no free health');
 reset role;
 select set_config('request.jwt.claims','{"sub":"b7000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 select lives_ok($$select public.admin_mutate('update',jsonb_build_object('resource','character_skills','key',jsonb_build_object('character_id',s.character_id::text,'skill_id',s.skill_id),
@@ -86,13 +87,13 @@ select private.award_skill_xp(p,'crew_battling',200) from battlers;
 update public.characters set crew_health=0 where id=(select p from battlers);
 update public.characters set hospital_started_at=clock_timestamp()-interval '10 minutes',hospital_until=clock_timestamp()-interval '5 minutes' where id=(select p from battlers);
 select private.settle_hospital(p,clock_timestamp()) from battlers;
-select is((select crew_health from public.characters where id=(select p from battlers)),102,'Discharge restores the raised Crew Health maximum');
-select is((select ship_health from public.characters where id=(select p from battlers)),129,'Discharge restores the raised Ship Health maximum');
+select is((select crew_health from public.characters where id=(select p from battlers)),105,'Discharge restores the raised Crew Health maximum');
+select is((select ship_health from public.characters where id=(select p from battlers)),140,'Discharge restores the raised Ship Health maximum');
 update public.characters set crew_health=0 where id=(select p from battlers);
 select lives_ok($$select public.admin_mutate('release_hospital',jsonb_build_object('character_id',c.id,'version',md5(to_jsonb(c)::text)),gen_random_uuid(),'Verify hospital release')
   from public.characters c where c.id=(select p from battlers)$$,'Administrators can release a patient');
-select is((select crew_health from public.characters where id=(select p from battlers)),102,'Administrative release restores the raised Crew Health maximum');
-select is((select ship_health from public.characters where id=(select p from battlers)),129,'Administrative release restores the raised Ship Health maximum');
+select is((select crew_health from public.characters where id=(select p from battlers)),105,'Administrative release restores the raised Crew Health maximum');
+select is((select ship_health from public.characters where id=(select p from battlers)),140,'Administrative release restores the raised Ship Health maximum');
 select is((select hospital_until from public.characters where id=(select p from battlers)),null::timestamptz,'Administrative release ends the stay');
 select throws_ok($$select public.admin_mutate('release_hospital',jsonb_build_object('character_id',c.id,'version',md5(to_jsonb(c)::text)),gen_random_uuid(),'Verify second release')
   from public.characters c where c.id=(select p from battlers)$$,'P0001','ROW_NOT_FOUND','Only patients can be released');

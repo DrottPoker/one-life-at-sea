@@ -687,7 +687,10 @@
     "storageMaximum": 200
   },
   "skills": {
-    "battlingHealthPerLevel": 1,
+    "battlingHealth": {
+      "perLevel": 5,
+      "maxLevelBonus": 750
+    },
     "catalog": [
       {
         "id": "fishing",

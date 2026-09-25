@@ -857,11 +857,22 @@
         "skills": {
           "type": "object",
           "properties": {
-            "battlingHealthPerLevel": {
-              "type": "number",
-              "integer": true,
-              "minimum": 0,
-              "maximum": 10000
+            "battlingHealth": {
+              "type": "object",
+              "properties": {
+                "perLevel": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "maxLevelBonus": {
+                  "type": "number",
+                  "integer": true,
+                  "minimum": 0,
+                  "maximum": 1000000
+                }
+              }
             },
             "catalog": {
               "type": "array",

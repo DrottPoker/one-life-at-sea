@@ -58,9 +58,10 @@ thrown temporaries and melee attacks train Crew Battling. The defender's automat
 the defender the same way. Board, Disengage and Retreat award nothing.
 
 Crew Battling raises maximum Crew Health and Ship Battling raises maximum Ship Health. Level 1
-adds nothing. From level 2 the bonus is the level times `skills.battlingHealthPerLevel` (1). It
-does not stack: level 2 gives +2, level 3 gives +3 and level 100 gives +100 in total.
-Maximum Ship Health also includes the equipped Hull, see [equipment](EQUIPMENT.md#ship-health-från-hull).
+adds nothing. Each later level up to 99 adds one step of `skills.battlingHealth.perLevel` (5), so
+level 2 gives +5, level 3 +10 and level 99 +490 in total. Level 100 jumps to
+`skills.battlingHealth.maxLevelBonus` (+750). Configuration rejects a level-100 bonus below the
+level-99 bonus. Maximum Ship Health also includes the equipped Hull, see [equipment](EQUIPMENT.md#ship-health-från-hull).
 A new level raises only the maximum: current health keeps its value and recovers at the normal
 rate, while Hospital discharge restores the raised maxima. A combat snapshot keeps the maxima
 from the start of the encounter, so a level gained during a fight applies afterwards. An

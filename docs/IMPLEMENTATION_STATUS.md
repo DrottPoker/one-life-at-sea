@@ -22,17 +22,17 @@ Exakta regler finns i [dokumentindexet](README.md). Helhetsgranskningen rättar 
 | Kontroll | Resultat |
 | --- | --- |
 | `npm run check` | Godkänd dokumentkontroll, lint utan varningar, typkontroll och produktionsbygge |
-| Enhetstester | 473 godkända i 33 filer |
+| Enhetstester | 476 godkända i 33 filer |
 | `npm run test:db` | 2 102 godkända påståenden i 42 filer |
-| `npm run test:config:db` | 126 godkända påståenden; alternativ config rullades tillbaka |
-| Hela webbläsarsviten | 123 godkända och 1 överhoppad, Edge mot produktionsbygget, före ändringen till icke-staplande Battling-hälsa. Den överhoppade är den opt-in-styrda prestandamätningen, som inte kördes. Efter ändringen gick skills- och combat-specarna igenom (9 tester) |
+| `npm run test:config:db` | 127 godkända påståenden; alternativ config rullades tillbaka |
+| Hela webbläsarsviten | 123 godkända och 1 överhoppad, Edge mot produktionsbygget, före de två senare ändringarna av Battling-hälsans formel. Den överhoppade är den opt-in-styrda prestandamätningen, som inte kördes. Efter den senaste ändringen gick skills- och combat-specarna igenom (9 tester) |
 | SQL-lint | Inga varningar eller fel |
 | Databasens säkerhets-/prestandarådgivare | Inga fynd på varnings- eller felnivå (2026-09-23, inte omkörd) |
 | `npm audit` | 0 kända sårbarheter |
 | RPC-avtal | Alla 67 typade funktioner finns med rätt parameterlistor |
 | Ekonomins integritet efter alla tester | 0 avvikelser i samtliga 8 kontroller |
 
-De tre nya SQL-migrationerna är applicerade lokalt. Next.js 16.3.6, Supabase JS 2.117.1 och Vitest 5.0.1 ingår i verifieringen.
+De fyra nya SQL-migrationerna är applicerade lokalt. Next.js 16.3.6, Supabase JS 2.117.1 och Vitest 5.0.1 ingår i verifieringen.
 [Granskningsrapporten](PROJECT_AUDIT.md) beskriver fynd, rättningar och kontrollernas omfattning.
 [Prestanda](PERFORMANCE.md) innehåller faktiska lokala mätvärden.
 

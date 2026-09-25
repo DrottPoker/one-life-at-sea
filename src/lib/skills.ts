@@ -9,10 +9,11 @@ export const MAX_CHARACTER_LEVEL = MAX_SKILL_LEVEL * gameplay.skills.catalog.len
 // Each battling skill raises the maximum of its own health.
 export const BATTLING_HEALTH: Readonly<Record<string, string>> = { crew_battling: "Crew Health", ship_battling: "Ship Health" };
 
-// From level two the bonus equals the level; level one gives none. The server owns the value.
+// Each level after the first adds one step; the top level jumps to its own bonus. The server owns the value.
 export function battlingHealthBonus(level: number) {
   if (!Number.isInteger(level) || level < 1 || level > MAX_SKILL_LEVEL) throw new RangeError("Invalid skill level.");
-  return level > 1 ? gameplay.skills.battlingHealthPerLevel * level : 0;
+  const { perLevel, maxLevelBonus } = gameplay.skills.battlingHealth;
+  return level === MAX_SKILL_LEVEL ? maxLevelBonus : perLevel * (level - 1);
 }
 
 export function skillProgress(experience: number) {

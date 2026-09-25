@@ -51,8 +51,9 @@ export function validateConfig(config) {
   check(g.skills.xpThresholds.every((xp, i, rows) => i === 0 || xp > rows[i - 1]), "Skill XP thresholds must strictly increase.");
   check(["crew_battling", "ship_battling"].every(id => g.skills.catalog.some(skill => skill.id === id)), "Combat requires the Crew Battling and Ship Battling skills.");
   // The top battling level gives the largest health bonus; health is a 32-bit integer.
-  check(g.resources.healthMax + g.equipment.limits.maxShipHealth + g.skills.battlingHealthPerLevel * g.skills.xpThresholds.length <= 2147483647,
-    "Maximum health exceeds the integer limit.");
+  const battling = g.skills.battlingHealth;
+  check(battling.maxLevelBonus >= battling.perLevel * (g.skills.xpThresholds.length - 2), "The top battling level cannot lower the health bonus.");
+  check(g.resources.healthMax + g.equipment.limits.maxShipHealth + battling.maxLevelBonus <= 2147483647, "Maximum health exceeds the integer limit.");
   check(g.activities.catalog.length <= 100, "At most 100 activities are supported.");
   check(new Set(g.activities.catalog.map(activity => activity.id)).size === g.activities.catalog.length, "Activity IDs must be unique.");
   for (const activity of g.activities.catalog) {
