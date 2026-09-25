@@ -66,7 +66,7 @@ See [server performance](PERFORMANCE.md) for the broader audit and repeatable me
 
 ## Forums
 
-The sidebar **Forums** link and every forum route (`/forums`, `/forums/search`, `/forums/subscriptions`, `/forums/moderation`, `/forums/boards/<id>`,
+The sidebar **Forums** link and every forum route (`/forums`, `/forums/search`, `/forums/subscriptions`, `/forums/moderation`, `/forums/settings`, `/forums/boards/<id>`,
 `/forums/boards/<id>/new`, `/forums/threads/<id>` and `/forums/posts/<id>`) are available in Hospital, at sea and while traveling. The
 active-attacker navigation lock still applies. Forum pages are dynamic server renders refreshed by the normal
 game refresh; reading a thread is acknowledged only by the mounted, visible page. See [Forum](FORUMS.md).

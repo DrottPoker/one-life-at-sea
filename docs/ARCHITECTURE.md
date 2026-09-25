@@ -50,7 +50,7 @@ Gränssnittet delar tema, modaler, responsiva regler och resurskomponenter.
 `config/` äger justerbara värden. `src/config/public.ts` exporterar webbläsarsäkra värden och en separat server-only-modul exporterar driftinställningar. SQL-delarna under `supabase/templates/gameplay/` genereras till nya, oföränderliga migrationer. En gameplayrevision upptäcker skillnader mellan app och databas. CSS och Supabase-TOML genereras från sina källor. Se [Konfiguration](CONFIGURATION.md).
 
 Katalog-ID:n och historiska kvitton är beständiga. Adminhanterade items och loot bevaras vid configsync.
-Privat post använder det nuvarande brevsystemet. Forumets tavlor kommer från konfigurationen, medan trådar, inlägg och räknare ägs av databasen, se [Forum](FORUMS.md). Gamla konversationstabeller behålls för idempotent import; deras ersatta RPC:er är borttagna.
+Privat post använder det nuvarande brevsystemet. Forumets tavlor kommer från konfigurationen, medan trådar, inlägg och räknare ägs av databasen, se [Forum](FORUMS.md). Forumbilder ligger i den privata Storage-hinken `forum-images` och går in och ut genom appens egna routes, som kodar om uppladdningar med `sharp` och frågar databasen vid varje visning. Privata pg_cron-jobb rangordnar populära trådar och delar ut forumnotiser som inte redan levererats. Gamla konversationstabeller behålls för idempotent import; deras ersatta RPC:er är borttagna.
 
 Supabase kör lokalt som ett separat Docker-projekt med beständiga volymer.
 Omstart görs utan återställning av data. Molnanslutning, Auth-inställningar, produktionsmejl och publicering är separata driftssteg. Aktuell verifiering och kvarstående begränsningar finns i [Status](IMPLEMENTATION_STATUS.md).

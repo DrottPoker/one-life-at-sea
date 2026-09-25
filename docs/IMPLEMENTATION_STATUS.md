@@ -11,7 +11,7 @@ Verifierat lokalt 2026-09-25. Tidigare leveransnoteringar finns i [arkivet](arch
 | Resa och PvP | Offlinebeständiga resor, scouting, gemensamma strider med utrustning och träffzoner, Hospital och offentliga combat logs |
 | Ekonomi | Gold/Bank, Inventory med Equip, Marketplace, kvitton och pris-/cirkulationshistorik |
 | Aktiviteter och hem | Aktiviteter med loot, Hideout och Crafting |
-| Kommunikation | Privat brevpost med Inbox/Outbox/Saved, ignore, beständiga återförsök och notiser. Forum med tavlor, trådar, citat, redigering, radering, olästa trådar, reaktioner, karma, prenumerationer med notiser, sök, rapporter, avstängning och spelarmoderatorer |
+| Kommunikation | Privat brevpost med Inbox/Outbox/Saved, ignore, beständiga återförsök och notiser. Forum med tavlor, trådar, citat, redigering, radering, olästa trådar, reaktioner, karma, prenumerationer med notiser som delas ut i bakgrunden, sök, rapporter, avstängning, spelarmoderatorer, omröstningar, populära trådar, signaturer och bilder |
 | Administration | Spelarverktyg, innehåll, loot, revision, ekonomiövervakning och spelarstatistik |
 | Presentation | Responsiv spelram, navigation, serverankrade nedräkningar och UTC-baserad dag/natt |
 
@@ -22,14 +22,14 @@ Exakta regler finns i [dokumentindexet](README.md). Helhetsgranskningen rättar 
 | Kontroll | Resultat |
 | --- | --- |
 | `npm run check` | Godkänd dokumentkontroll, lint utan varningar, typkontroll och produktionsbygge |
-| Enhetstester | 513 godkända i 35 filer |
-| `npm run test:db` | 2 395 godkända påståenden i 45 filer |
-| `npm run test:config:db` | 146 godkända påståenden; alternativ config rullades tillbaka. 20 körningar i rad utan fel efter rättningen av klockberoendet |
-| Hela webbläsarsviten | 128 godkända och 1 överhoppad, Edge mot produktionsbygget. Den överhoppade är den opt-in-styrda prestandamätningen, som inte kördes |
+| Enhetstester | 526 godkända i 36 filer |
+| `npm run test:db` | 2 528 godkända påståenden i 46 filer |
+| `npm run test:config:db` | 157 godkända påståenden; alternativ config rullades tillbaka. 20 körningar i rad utan fel efter rättningen av klockberoendet |
+| Hela webbläsarsviten | 129 godkända och 1 överhoppad, Edge mot produktionsbygget. Den överhoppade är den opt-in-styrda prestandamätningen, som inte kördes |
 | SQL-lint | Inga varningar eller fel |
 | Databasens säkerhets-/prestandarådgivare | Inga fynd på varnings- eller felnivå (2026-09-23, inte omkörd) |
 | `npm audit` | 0 kända sårbarheter |
-| RPC-avtal | Alla 87 typade funktioner finns med rätt parameterlistor |
+| RPC-avtal | Alla 96 typade funktioner finns med rätt parameterlistor |
 | Ekonomins integritet efter alla tester | 0 avvikelser i samtliga 8 kontroller |
 
 Alla SQL-migrationer, även forumets, är applicerade lokalt. Next.js 16.3.6, Supabase JS 2.117.1 och Vitest 5.0.1 ingår i verifieringen.
@@ -40,7 +40,7 @@ Alla SQL-migrationer, även forumets, är applicerade lokalt. Next.js 16.3.6, Su
 
 Next.js loggar fortfarande streamfel vid vissa avbrutna sidladdningar och en Gzip-varning om listeners. Detta redovisas i granskningsrapporten och har inte dolts genom loggfilter.
 
-Use och aktiva föremålseffekter, källor för munition, matlagning, hemuppgraderingar, Shipyard, fler platsaktiviteter, PvE och fraktionssystem är inte färdiga. Forumets besättningsforum och omröstningar är en senare etapp.
+Use och aktiva föremålseffekter, källor för munition, matlagning, hemuppgraderingar, Shipyard, fler platsaktiviteter, PvE och fraktionssystem är inte färdiga. Forumets besättningsforum väntar på fraktioner.
 Se [Roadmap](ROADMAP.md) för fortsatt riktning och öppna beslut.
 
 Lokal verifiering bekräftar inte hosted miljö, produktionsmejl, backupåterställning eller kapacitet vid större samtidig last.

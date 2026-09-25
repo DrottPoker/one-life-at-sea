@@ -33,12 +33,15 @@ reads, after which the same completion trigger creates the notification.
 payloads (version 1) hold the thread ID and title, the post ID and number and the author's name and player number; the
 link opens `/forums/posts/<post-id>`. A subscriber has at most one waiting reply notice per thread until they read past it,
 and players on the recipient's mail ignore list send neither kind. The post ID is the event key, so a replayed post never
-notifies twice. See [Forum](FORUMS.md#prenumerationer-och-notiser).
+notifies twice. These two kinds are delivered after the reply commits, in batches: the app delivers right after the
+reply and the `forum-notifications` pg_cron job picks up the rest every minute. Recipients are decided at delivery, so a
+reply deleted before then notifies nobody. See [Forum](FORUMS.md#prenumerationer-och-notiser).
 
 ## Forum moderation
 
-`forum.moderation` tells an author that a moderator removed or edited their post or removed their thread; the payload
-holds the action, thread and post but not the moderator's private reason. `forum.ban` states when a forum ban ends (or
+`forum.moderation` tells an author that a moderator removed or edited their post, removed their thread or its poll, hid
+their image or cleared their signature; the payload holds the action and, except for signatures, the thread and post but
+not the moderator's private reason. `forum.ban` states when a forum ban ends (or
 that it is permanent) and its reason, and `forum.unban` says a ban was lifted. `forum.role` tells a player they were
 appointed or removed as a forum moderator. The moderator request ID is the event key.
 

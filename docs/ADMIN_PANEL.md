@@ -186,7 +186,7 @@ page also exposes Stamina, Crew Morale and private skill XP corrections.
 
 ## Forum moderation
 
-Administrators always moderate the forum and appoint or remove player moderators. Moderation happens in the forum itself: thread pages carry pin, lock, move, graveyard, remove, restore, edit and ban controls, and `/forums/moderation` (linked as **Forum** in the admin navigation) holds the report queue, bans, moderators and the moderation log. Every action needs a reason. The database browser has a Forum group with read-only boards, threads, posts, revisions, reports, bans, moderators and the moderation log. See [Forum](FORUMS.md#moderering).
+Administrators always moderate the forum and appoint or remove player moderators. Moderation happens in the forum itself: thread pages carry pin, lock, move, graveyard, remove, restore, edit and ban controls, and `/forums/moderation` (linked as **Forum** in the admin navigation) holds the report queue, bans, moderators and the moderation log. Every action needs a reason. Thread pages also close, remove and restore polls, hide and restore images and clear signatures; only administrators delete image files for good. The database browser has a Forum group with read-only boards, threads, posts, revisions, reports, bans, moderators, the moderation log, polls and their options, images and their posts, signatures and waiting notifications. Individual votes are left out so that voting stays anonymous. See [Forum](FORUMS.md#moderering).
 
 ## Account-bound saved requests
 

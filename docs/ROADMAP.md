@@ -14,9 +14,10 @@ Detta dokument samlar kvarstående riktning. Det är inte en beskrivning av leve
 
 ## Forum
 
-Forumets etapp 1-3 finns, se [Forum](FORUMS.md), inklusive rapporter, avstängning, spelarmoderatorer och karma som krävdes före offentlig drift. Ägaren godkände 2026-09-25 att resten byggs i etapper: Torns styrkor tas med och Torns svagheter får egna lösningar.
+Forumets etapp 1-4 finns, se [Forum](FORUMS.md): tavlor, reaktioner, karma, prenumerationer, rapporter, avstängning, spelarmoderatorer, omröstningar, populära trådar, signaturer, bilder och notiser som delas ut i bakgrunden. Ägaren godkände 2026-09-25 att forumet byggs i etapper: Torns styrkor tas med och Torns svagheter får egna lösningar.
 
-- Etapp 4, senare: besättningsforum när fraktioner finns, modererade av besättningens ledare. Omröstningar, "Popular threads", signaturer, bilder via Storage med moderering och notiser som delas ut i bakgrunden om prenumerationerna växer.
+- Kvar: besättningsforum när fraktioner finns, modererade av besättningens ledare. Det kräver fraktionsmedlemskap och behörigheter, som ännu inte finns.
+- Före offentlig drift behöver bildhinken en regelbunden rensning av oanvända uppladdningar från spelare som aldrig laddar upp igen; i dag sker rensningen vid spelarens nästa uppladdning.
 
 ## Beslut som ska bevaras
 
