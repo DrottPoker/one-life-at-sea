@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { loadConfig, migrationSql, revision, validateConfig, inventoryCatalogSql, forumCatalogSql } from "./core.mjs";
+import { loadConfig, migrationSql, revision, validateConfig, inventoryCatalogSql, forumCatalogSql, portraitCatalogSql } from "./core.mjs";
 
 const config = loadConfig();
 const originalRevision = revision(config);
@@ -54,8 +54,11 @@ config.gameplay.forum.boards.find(board => board.id === "off_topic").karma = fal
 config.gameplay.forum.boards.find(board => board.id === "general_discussion").name = "Captain's $forum$ Deck";
 config.gameplay.forum.boards.find(board => board.id === "fun_games").active = false;
 config.gameplay.forum.boards.push({ id: "config_new_board", section: "Game", name: "New board", description: "Added by configuration.", posting: "open", karma: true, active: true });
+config.gameplay.portraits.catalog.push({ id: "config_portrait", name: "Config portrait", image: "/images/portraits/old-salt.webp" });
+config.gameplay.portraits.defaultId = "red_corsair";
 validateConfig(config);
-const removedItem = structuredClone(config), changedKind = structuredClone(config), removedBoard = structuredClone(config);
+const removedItem = structuredClone(config), changedKind = structuredClone(config), removedBoard = structuredClone(config), removedPortrait = structuredClone(config);
+removedPortrait.gameplay.portraits.catalog = removedPortrait.gameplay.portraits.catalog.filter(portrait => portrait.id !== "old_salt");
 removedBoard.gameplay.forum.boards = removedBoard.gameplay.forum.boards.filter(board => board.id !== "config_new_board" && board.id !== "off_topic");
 removedItem.gameplay.inventory.items.pop();
 Object.assign(changedKind.gameplay.inventory.items[0], { kind: "consumable", slot: "none" });
@@ -109,12 +112,18 @@ const checks = [
 "select is((select ship_attack from public.characters where id=(select a from config_captains)),12::numeric,'Creation uses changed starting stats');",
 "select is((select ship_health from public.characters where id=(select a from config_captains)),120,'Creation uses changed ship health');",
 "select is((select crew_health from public.characters where id=(select a from config_captains)),110,'Creation uses changed crew health');",
+"select is((select portrait_id from public.characters where id=(select a from config_captains)),'red_corsair','Creation uses the configured default portrait');",
+"select is((select portrait_id from public.characters where id=(select captain from old_training_fixture)),'harbor_rover','A new default portrait leaves existing choices alone');",
+"select is((select position from private.portrait_definitions where id='config_portrait'),3,'Configuration adds portraits');",
+"select throws_ok($guard$" + portraitCatalogSql(removedPortrait) + "$guard$,'P0001','Existing portrait IDs must be preserved','Config sync cannot remove a portrait');",
 "select is((select private.crew_health_max(a) from config_captains),150,'Health cap is configurable');",
 "select private.award_skill_xp(a,'crew_battling',400) from config_captains;",
 "select is((select private.crew_health_max(a) from config_captains),153,'Configured thresholds and health per level set the Crew Health maximum');",
 "select set_config('request.jwt.claims',jsonb_build_object('sub',a,'role','authenticated')::text,true) from config_users;",
 "select is((public.get_game_state()->>\'gold_coins\')::bigint,77::bigint,\'Configured starting Gold Coins are used\');",
 "select is((public.get_game_state()->>\'bank_gold_coins\')::bigint,0::bigint,\'Bank still starts empty\');",
+"select is(public.set_portrait('config_portrait')->>'portrait_id','config_portrait','Players can choose a portrait added by configuration');",
+"select is(public.get_game_state()->>'portrait_id','config_portrait','The game state reports the chosen portrait');",
 "select public.transfer_gold(\'deposit\',17,gen_random_uuid());",
 "select is((public.get_game_state()->>\'gold_coins\')::bigint,60::bigint,\'Bank uses carried coins with alternative config\');",
 "select public.train_crew('attack','crew_1',gen_random_uuid());",

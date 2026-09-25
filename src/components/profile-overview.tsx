@@ -12,8 +12,11 @@ import type { CharacterStatus } from "@/lib/sea-travel";
 import { forumSearchUrl, type ForumAuthorStats } from "@/lib/forums";
 import { useGameState } from "@/components/game-state";
 import { HospitalCountdown } from "@/components/hospital-countdown";
-import { CaptainPortrait, PROFILE_HEADER } from "@/components/captain-portrait";
+import { CaptainPortrait } from "@/components/captain-portrait";
+import { PortraitPicker } from "@/components/portrait-picker";
 import { usePresenceClock } from "@/hooks/use-presence-clock";
+
+const PROFILE_HEADER = "/images/headers/profile-harbor-dusk.webp";
 
 // Hero and details follow the live character status; skills and defence orders are owner-only slots.
 export function ProfileOverview({ profile, initialStatus, joined, ageDays, ownProfile, forum, skills, defence }: {
@@ -63,7 +66,8 @@ export function ProfileOverview({ profile, initialStatus, joined, ageDays, ownPr
   return <>
     <header className="o-profile-hero">
       <Image className="o-profile-hero-image" src={PROFILE_HEADER} alt="" fill sizes="(max-width: 600px) 100vw, 960px" preload />
-      <div className="o-profile-portrait"><CaptainPortrait sizes="(max-width: 600px) 104px, 152px" /></div>
+      <div className="o-profile-portrait"><CaptainPortrait portraitId={hospital.portrait_id} sizes="(max-width: 600px) 104px, 152px" eager />
+        {ownProfile && <PortraitPicker current={hospital.portrait_id} />}</div>
       <div className="o-profile-heading">
         <h1 aria-label={profile.display_name + " [" + profile.player_number + "]"}>
           <span className="o-profile-name">{profile.display_name}</span> <span className="o-profile-number">[<output aria-label="Player ID">{profile.player_number}</output>]</span>

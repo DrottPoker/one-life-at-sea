@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -54,6 +54,14 @@ export function validateConfig(config) {
   const battling = g.skills.battlingHealth;
   check(battling.maxLevelBonus >= battling.perLevel * (g.skills.xpThresholds.length - 2), "The top battling level cannot lower the health bonus.");
   check(g.resources.healthMax + g.equipment.limits.maxShipHealth + battling.maxLevelBonus <= 2147483647, "Maximum health exceeds the integer limit.");
+  const portraits = g.portraits;
+  check(portraits.catalog.length <= 100, "At most 100 portraits are supported.");
+  check(new Set(portraits.catalog.map(portrait => portrait.id)).size === portraits.catalog.length, "Portrait IDs must be unique.");
+  for (const portrait of portraits.catalog) {
+    check(/^[a-z][a-z0-9_]{0,47}$/.test(portrait.id) && portrait.name.length <= 60 && /^\/images\/portraits\/[a-z0-9-]+\.webp$/.test(portrait.image) &&
+      existsSync(resolve(root, "public" + portrait.image)), "Invalid portrait definition: " + portrait.id + ".");
+  }
+  check(portraits.catalog.some(portrait => portrait.id === portraits.defaultId), "The default portrait must be in the catalog.");
   check(g.activities.catalog.length <= 100, "At most 100 activities are supported.");
   check(new Set(g.activities.catalog.map(activity => activity.id)).size === g.activities.catalog.length, "Activity IDs must be unique.");
   for (const activity of g.activities.catalog) {
@@ -240,6 +248,7 @@ export function gameplaySql(config) {
     .replace("{{activities.catalogSql}}", () => activityCatalogSql(config))
     .replace("{{crafting.catalogSql}}", () => craftingCatalogSql(config))
     .replace("{{skills.catalogSql}}", () => skillCatalogSql(config))
+    .replace("{{portraits.catalogSql}}", () => portraitCatalogSql(config))
     .replace("{{training.catalogSql}}", () => trainingCatalogSql(config))
     .replaceAll("{{training.materialsSql}}", () => config.gameplay.training.shipMaterials.map(item =>
       "('" + item.itemId.replaceAll("'", "''") + "'," + item.quantity + "::bigint)").join(","))
@@ -334,6 +343,14 @@ export function forumCatalogSql(config) {
     "insert into private.forum_boards(id,section,name,description,posting,karma,active,position) values\n" + rows +
     "\non conflict(id) do update set section=excluded.section,name=excluded.name,description=excluded.description," +
     "posting=excluded.posting,karma=excluded.karma,active=excluded.active,position=excluded.position;\n";
+}
+
+// Portrait IDs are validated by pattern, so they need no dollar-quote search.
+export function portraitCatalogSql(config) {
+  const rows = config.gameplay.portraits.catalog.map((portrait, i) => "('" + portrait.id + "'," + i + ")").join(",");
+  return "do $portraits$ begin if exists(select 1 from private.portrait_definitions old left join (values " + rows +
+    ") incoming(id,position) using(id) where incoming.id is null) then raise exception 'Existing portrait IDs must be preserved'; end if; end $portraits$;\n" +
+    "insert into private.portrait_definitions(id,position) values " + rows + " on conflict(id) do update set position=excluded.position;\n";
 }
 
 export function skillCatalogSql(config) {

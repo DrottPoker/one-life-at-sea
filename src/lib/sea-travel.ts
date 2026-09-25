@@ -21,6 +21,7 @@ export type CharacterStatus = {
   character_level: number;
   max_sea_distance: number;
   can_attack_here: boolean;
+  portrait_id: string;
   location: "the_harbor" | "open_sea" | "traveling";
   arrives_at: string | null; hospital_until: string | null; observed_at: string;
 };

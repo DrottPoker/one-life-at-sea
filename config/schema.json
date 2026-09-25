@@ -15,6 +15,14 @@
         "notifications": { "type": "object", "properties": {
           "pageSize": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 }
         } },
+        "portraits": { "type": "object", "properties": {
+          "defaultId": { "type": "string" },
+          "catalog": { "type": "array", "items": { "type": "object", "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "image": { "type": "string" }
+          } } }
+        } },
         "forum": { "type": "object", "properties": {
           "boards": { "type": "array", "items": { "type": "object", "properties": {
             "id": { "type": "string" },

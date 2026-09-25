@@ -1,3 +1,4 @@
+{{include.portraits}}
 {{include.skills}}
 {{include.stamina}}
 {{include.morale}}

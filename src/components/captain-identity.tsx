@@ -10,7 +10,7 @@ export function CaptainIdentity({ name, profileUrl }: { name: string; profileUrl
   const state = useGameState();
   return <div className="o-character">
     {/* The text link below is the accessible route; the portrait is a pointer shortcut. */}
-    <Link href={profileUrl} className="o-captain-portrait" tabIndex={-1} aria-hidden="true"><CaptainPortrait sizes="64px" /></Link>
+    <Link href={profileUrl} className="o-captain-portrait" tabIndex={-1} aria-hidden="true"><CaptainPortrait portraitId={state.portrait_id} sizes="64px" eager /></Link>
     <div className="o-character-summary">
       <span className="o-character-name">{name}</span>
       <span className="o-character-location"><MapPin aria-hidden="true" />{state.hospital_until ? "Hospital" : seaLocationLabel(state.sea)}</span>

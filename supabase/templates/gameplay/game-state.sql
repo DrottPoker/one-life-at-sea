@@ -45,7 +45,7 @@ begin
     'active_combat_id',active.id,'combat_next_at',active.deadline,'last_combat_id',last_id,
     'active_attack',case when engagement.role='attacker' then jsonb_build_object('battle_id',active.id,'target_id',active.defender_id,
       'target_player_number',(select player_number from public.characters where id=active.defender_id)) end,
-    'defence_order',c.defence_order,'protected_until',case when c.protected_until>observed_at then c.protected_until end,
+    'defence_order',c.defence_order,'portrait_id',c.portrait_id,'protected_until',case when c.protected_until>observed_at then c.protected_until end,
     'ship_attack',c.ship_attack,'ship_defense',c.ship_defense,'ship_speed',c.ship_speed,'ship_accuracy',c.ship_accuracy,
     'crew_attack',c.crew_attack,'crew_defense',c.crew_defense,'crew_speed',c.crew_speed,'crew_accuracy',c.crew_accuracy);
 end;

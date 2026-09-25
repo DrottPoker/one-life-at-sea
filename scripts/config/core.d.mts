@@ -19,6 +19,7 @@ export function latestConfigMigration(): string | undefined;
 export function generatedFiles(config: Configuration): Record<string, string>;
 export function inventoryCatalogSql(config: Configuration): string;
 export function forumCatalogSql(config: Configuration): string;
+export function portraitCatalogSql(config: Configuration): string;
 export function equipmentZonesSql(config: Configuration): string;
 export function equipmentTemporariesSql(config: Configuration): string;
 export const equipmentSlotStats: Record<string, string[]>;

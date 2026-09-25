@@ -1,6 +1,14 @@
 {
   "messages": { "maxRecipients": 10, "subjectMaxLength": 120, "pageSize": 10, "conversationPageSize": 50, "maxLength": 5000, "perMinute": 30 },
   "notifications": { "pageSize": 20 },
+  "portraits": {
+    "defaultId": "harbor_rover",
+    "catalog": [
+      { "id": "harbor_rover", "name": "Harbor Rover", "image": "/images/portraits/harbor-rover.webp" },
+      { "id": "old_salt", "name": "Old Salt", "image": "/images/portraits/old-salt.webp" },
+      { "id": "red_corsair", "name": "Red Corsair", "image": "/images/portraits/red-corsair.webp" }
+    ]
+  },
   "forum": {
     "boards": [
       { "id": "announcements", "section": "Official", "name": "Announcements", "description": "Official news, updates and changes from the game team.", "posting": "moderators", "karma": false, "active": true },

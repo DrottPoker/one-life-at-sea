@@ -206,19 +206,19 @@ create or replace function private.sync_character_profile()
 returns trigger language plpgsql security definer set search_path='' as $$
 begin
   insert into public.character_profiles(character_id,player_number,display_name,location,created_at,arrives_at,arrival_location,
-    max_sea_distance,arrival_max_sea_distance)
+    max_sea_distance,arrival_max_sea_distance,portrait_id)
     values(new.id,new.player_number,new.display_name,new.location,new.created_at,new.travel_arrives_at,
       case when new.location='traveling' then case when new.travel_kind='return' then 'the_harbor' else 'open_sea' end end,
       new.max_sea_distance,case when new.travel_kind in ('depart','onward')
-        and new.travel_target_step>new.max_sea_distance then new.travel_target_step end)
+        and new.travel_target_step>new.max_sea_distance then new.travel_target_step end,new.portrait_id)
     on conflict(character_id) do update set display_name=excluded.display_name,location=excluded.location,
       created_at=excluded.created_at,arrives_at=excluded.arrives_at,arrival_location=excluded.arrival_location,
-      max_sea_distance=excluded.max_sea_distance,arrival_max_sea_distance=excluded.arrival_max_sea_distance
+      max_sea_distance=excluded.max_sea_distance,arrival_max_sea_distance=excluded.arrival_max_sea_distance,portrait_id=excluded.portrait_id
     where (character_profiles.display_name,character_profiles.location,character_profiles.created_at,
       character_profiles.arrives_at,character_profiles.arrival_location,
-      character_profiles.max_sea_distance,character_profiles.arrival_max_sea_distance) is distinct from
+      character_profiles.max_sea_distance,character_profiles.arrival_max_sea_distance,character_profiles.portrait_id) is distinct from
       (excluded.display_name,excluded.location,excluded.created_at,excluded.arrives_at,excluded.arrival_location,
-      excluded.max_sea_distance,excluded.arrival_max_sea_distance);
+      excluded.max_sea_distance,excluded.arrival_max_sea_distance,excluded.portrait_id);
   return new;
 end;
 $$;

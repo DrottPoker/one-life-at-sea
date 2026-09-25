@@ -4,7 +4,7 @@ set local search_path = public, extensions;
 select no_plan();
 
 select is((select count(*)::int from public.character_profiles), (select count(*)::int from public.characters), 'Existing characters have profiles');
-select columns_are('public', 'character_profiles', array['character_id','display_name','location','created_at','arrives_at','arrival_location','max_sea_distance','arrival_max_sea_distance','player_number','character_level'], 'Profiles expose identity, travel timing and distance records');
+select columns_are('public', 'character_profiles', array['character_id','display_name','location','created_at','arrives_at','arrival_location','max_sea_distance','arrival_max_sea_distance','player_number','character_level','portrait_id'], 'Profiles expose identity, portrait, travel timing and distance records');
 select ok((select relrowsecurity from pg_class where oid='public.character_profiles'::regclass), 'Profile row-level security is enabled');
 select ok(exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='character_profiles'), 'Coarse profile changes are published for travel updates');
 

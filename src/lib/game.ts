@@ -30,6 +30,7 @@ export type GameState = Record<`${TrainingGroup}_${Stat}`, number> & {
   last_combat_id: string | null;
   combat_next_at: string | null;
   defence_order: "cannon" | "boarding";
+  portrait_id: string;
   protected_until: string | null;
 };
 

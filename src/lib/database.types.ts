@@ -53,6 +53,7 @@ export type Character = {
   ship_health: number;
   crew_health: number;
   defence_order: DefenceOrder;
+  portrait_id: string;
   protected_until: string | null;
 } & Record<`${TrainingGroup}_${Stat}`, number>;
 
@@ -64,7 +65,7 @@ export type Database = {
       market_item_events: { Row: { item_id: string; revision: number }; Insert: never; Update: never; Relationships: [] };
       hospital_patients: { Row: Omit<HospitalPatient, "player_number">; Insert: never; Update: never; Relationships: [] };
       player_game_events: { Row: { character_id: string; revision: number }; Insert: never; Update: never; Relationships: [] };
-      character_profiles: { Row: CharacterProfile & { max_sea_distance: number; arrival_max_sea_distance: number | null; arrives_at: string | null; arrival_location: "the_harbor" | "open_sea" | null }; Insert: never; Update: never; Relationships: [] };
+      character_profiles: { Row: CharacterProfile & { max_sea_distance: number; arrival_max_sea_distance: number | null; arrives_at: string | null; arrival_location: "the_harbor" | "open_sea" | null; portrait_id: string }; Insert: never; Update: never; Relationships: [] };
       harbor_players: { Row: Omit<HarborPlayer, "player_number"> & { arrives_at: string | null }; Insert: never; Update: never; Relationships: [] };
       characters: {
         Row: Character;
@@ -169,6 +170,7 @@ export type Database = {
       get_combat: { Args: { battle_id: string }; Returns: Battle | null };
       submit_combat_order: { Args: { battle_id: string; expected_round: number; player_order: CombatOrder; request_id: string }; Returns: CombatResponse };
       save_defence_orders: { Args: { preset: DefenceOrder }; Returns: { preset: DefenceOrder } };
+      set_portrait: { Args: { portrait_id: string }; Returns: { portrait_id: string } };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
