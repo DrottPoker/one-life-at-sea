@@ -6,9 +6,10 @@ import { CombatArena } from "@/components/combat/combat-arena";
 import { CombatHeading } from "@/components/combat/combat-heading";
 import { CombatPreparation } from "@/components/combat/combat-preparation";
 import type { Battle, CombatPreview } from "@/lib/combat";
+import type { SkillProgress } from "@/lib/skills";
 
-export function AttackSession({ battle, preview, heading, hospital = false }: {
-  battle: Battle | null; preview: CombatPreview | null; hospital?: boolean;
+export function AttackSession({ battle, preview, skills, heading, hospital = false }: {
+  battle: Battle | null; preview: CombatPreview | null; skills: SkillProgress | null; hospital?: boolean;
   heading: { energy: number; backUrl: string; backLabel: string; canLeave: boolean };
 }) {
   const router = useRouter();
@@ -27,7 +28,7 @@ export function AttackSession({ battle, preview, heading, hospital = false }: {
 
   if (toHospital) return <p className="o-panel-body" role="status"><span className="o-spinner" aria-hidden="true" /> Returning to hospital...</p>;
   return <>
-    <CombatHeading battle={battle} finished={!!report} {...heading} />
-    {arena ? <CombatArena battle={arena} key={arena.id} /> : preview && <CombatPreparation preview={preview} />}
+    <CombatHeading battle={battle} finished={!!report} skills={skills} {...heading} />
+    {arena ? <CombatArena battle={arena} skills={skills} key={arena.id} /> : preview && <CombatPreparation preview={preview} />}
   </>;
 }

@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Hourglass, Swords, Zap } from "lucide-react";
+import { Hourglass, Ship, Swords, Zap } from "lucide-react";
 import { frontend, gameplay } from "@/config/public";
 import { useServerCountdown } from "@/hooks/use-server-countdown";
 import { formatCountdown } from "@/lib/time";
-import { MAX_ROUNDS, type Battle } from "@/lib/combat";
+import { MAX_ROUNDS, PHASE_SKILLS, skillName, type Battle } from "@/lib/combat";
+import { skillProgress, type SkillProgress } from "@/lib/skills";
+
+const formatXp = new Intl.NumberFormat(frontend.site.locale);
 
 function FightClock({ deadline, observedAt }: { deadline: string; observedAt: string }) {
   const remaining = useServerCountdown(deadline, observedAt);
@@ -15,9 +18,21 @@ function FightClock({ deadline, observedAt }: { deadline: string; observedAt: st
   </div>;
 }
 
-export function CombatHeading({ battle, energy, backUrl, backLabel, canLeave, finished = false }: {
+// The battling skill of the current phase. Every attack adds its XP at once; a new level raises health only after the fight.
+function BattlingXp({ skills, phase }: { skills: SkillProgress; phase: "sea" | "boarding" }) {
+  const id = PHASE_SKILLS[phase], skill = skills.skills.find(entry => entry.id === id);
+  if (!skill) return null;
+  const Icon = phase === "sea" ? Ship : Swords, name = skillName(id);
+  return <div className="o-combat-header-resource o-combat-header-xp">
+    <Icon aria-hidden="true" />
+    <span>{name} · Level {skillProgress(skill.xp).level}<strong><output aria-label={name + " XP"}>{formatXp.format(skill.xp)}</output> XP</strong></span>
+  </div>;
+}
+
+export function CombatHeading({ battle, energy, skills, backUrl, backLabel, canLeave, finished = false }: {
   battle: Battle | null;
   energy: number;
+  skills?: SkillProgress | null;
   backUrl: string;
   backLabel: string;
   canLeave: boolean;
@@ -36,6 +51,7 @@ export function CombatHeading({ battle, energy, backUrl, backLabel, canLeave, fi
     <div className="o-combat-header-resources">
       <div className="o-combat-header-resource"><Zap aria-hidden="true" /><span>Energy<strong>{energy} / {gameplay.resources.energyMax}</strong></span></div>
       {active && <FightClock deadline={encounter.deadline} observedAt={encounter.observed_at} key={encounter.observed_at} />}
+      {encounter && skills && <BattlingXp skills={skills} phase={encounter.phase} />}
       {canLeave && !finished && <Link href={backUrl}>Back to {backLabel}</Link>}
     </div>
   </header>;

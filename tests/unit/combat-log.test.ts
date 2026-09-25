@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CombatEvents, CombatMatchup } from "../../src/components/combat/combat-log";
-import { combatXp, combatXpLabel, type CombatEvent, type CombatPerson } from "../../src/lib/combat";
+import { combatXp, combatXpLabel, roundXpText, type CombatEvent, type CombatPerson } from "../../src/lib/combat";
 
 const base = { actor_id: "a", actor_name: "Ann", round: 1, attacker_hit: false, defender_hit: false, attacker_damage: 0, defender_damage: 0,
   transition: null, outcome: null, timed_out: false, participant_result: "active" as const };
@@ -68,5 +68,15 @@ describe("combat XP summary", () => {
     expect(combatXpLabel(events, "a")).toBe("+20 Ship Battling XP · +20 Crew Battling XP");
     expect(combatXpLabel(events, "b")).toBe("+10 Ship Battling XP");
     expect(combatXpLabel([event({ attacker_order: "retreat" })], "a")).toBeNull();
+  });
+  it("reports each attack's XP at once and a level reached by it, whose health waits for the end of the fight", () => {
+    const skills = (ship: number, crew = 0) => ({ character_level: 7, skills: [{ id: "ship_battling", xp: ship, level: 1 }, { id: "crew_battling", xp: crew, level: 1 }] });
+    expect(roundXpText(event({ attacker_order: "fire" }), skills(205)))
+      .toBe("+10 Ship Battling XP. Ship Battling reached level 2; its health bonus applies after the fight.");
+    expect(roundXpText(event({ attacker_order: "fire_chain" }), skills(215))).toBe("+10 Ship Battling XP.");
+    expect(roundXpText(event({ phase: "boarding", attacker_order: "crew_throw" }), skills(0, 10))).toBe("+10 Crew Battling XP.");
+    expect(roundXpText(event({ attacker_order: "fire" }), null)).toBe("+10 Ship Battling XP.");
+    expect(roundXpText(event({ attacker_order: "board" }), skills(205))).toBeNull();
+    expect(roundXpText(event({ kind: "started" }), skills(205))).toBeNull();
   });
 });

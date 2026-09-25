@@ -315,6 +315,7 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-combat-scene figcaption { display:flex; align-items:center; justify-content:center; gap:10px; min-height:52px; padding:9px; color:var(--o-gold); text-align:center; font:11px/1.5 var(--o-display-font); text-transform:uppercase; letter-spacing:.15em; }
 .o-combat-scene figcaption svg { width:21px; height:21px; stroke-width:1.4; flex-shrink:0; }
 .o-combat-scene figcaption .o-scene-summary { color:var(--o-text); font:12px/1.5 var(--o-body-font); letter-spacing:.02em; text-transform:none; }
+.o-combat-scene figcaption .o-scene-xp { color:var(--o-gold); }
 /* Hit display: effects are pixel squares in artwork coordinates; labels scale with the scene's width. */
 .o-scene-overlay,.o-scene-leaving { position:absolute; inset:0; pointer-events:none; }
 .o-scene-overlay svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
@@ -586,6 +587,7 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-combat-header-resource > span { display:grid; gap:2px; color:var(--o-muted); font-size:11px; }
 .o-combat-header-resource strong { color:var(--o-text); font:18px var(--o-display-font); font-variant-numeric:tabular-nums; }
 .o-combat-header-resource[data-urgent="true"] strong { color:var(--o-combat-danger); }
+.o-combat-header-xp output { color:inherit; font:inherit; }
 .o-section-bar h2:has(> svg) { display:flex; align-items:center; gap:10px; }
 .o-section-bar h2 > svg { width:19px; height:19px; color:var(--o-gold); stroke-width:1.5; flex-shrink:0; }
 .o-encounter-shell .o-section-bar { background:linear-gradient(90deg,var(--o-heading),var(--o-inset)); min-height:39px; }
@@ -663,6 +665,7 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
  .o-combat-title p { font-size:12px; }
  .o-combat-header-resources { gap:8px; width:100%; }
  .o-combat-header-resource { flex:1; min-width:0; gap:8px; padding:8px 10px; }
+ .o-combat-header-xp { flex-basis:100%; }
  .o-combat-header-resource > svg { width:21px; height:21px; }
  .o-combatant-heading { align-items:flex-start; }
  .o-combatant-heading h2 { font-size:16px; }

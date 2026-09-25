@@ -139,7 +139,10 @@ game navigation during combat.
   view, such as another attacker's final blow, the box follows after the same short pause.
 - The caption under the artwork states the round in words, for example "Round 3: You hit
   their sails and rigging for 12 and slowed their ship. Bo missed.", and is announced
-  politely to screen readers. With reduced motion, marks and labels appear without effects.
+  politely to screen readers. An own attack adds its XP in gold, such as "+10 Ship Battling
+  XP.", and a level reached by it notes that the health bonus applies after the fight.
+- The heading shows the current phase's battling skill beside Energy and the order clock:
+  level and total XP, updated after every round. On narrow screens it takes its own row. With reduced motion, marks and labels appear without effects.
   The VS badge sits in the sky at the top center, clear of the effects.
 - Hit areas (one or more ellipses per zone, deck, splash and landing spot) and anchor points
   for guns, hands and labels live in `src/lib/combat-scene-anchors.ts`, in the artwork's own

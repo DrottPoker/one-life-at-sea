@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Anchor, Swords } from "lucide-react";
-import type { CombatEvent } from "@/lib/combat";
+import { roundXpText, type CombatEvent } from "@/lib/combat";
+import type { SkillProgress } from "@/lib/skills";
 import { SCENE_ART, SCENE_SIZE, type ScenePoint } from "@/lib/combat-scene-anchors";
 import { latestOwnRound, markTone, roundStrikes, roundSummary, sceneDuration, sceneHistory, scenePercent, seededRandom, strikePopup, strikeResult,
   type SceneScar, type SceneStrike } from "@/lib/combat-scene";
@@ -206,10 +207,11 @@ function Finale({ finale }: { finale: SceneFinale }) {
 }
 
 // The VS artwork doubles as the hit display: the latest own round plays on it, then its marks stay until the next round.
-export function CombatScene({ phase, events = [], attackerId, defenderName, finale }: {
-  phase: "sea" | "boarding"; events?: CombatEvent[]; attackerId: string; defenderName: string; finale?: SceneFinale;
+export function CombatScene({ phase, events = [], attackerId, defenderName, skills, finale }: {
+  phase: "sea" | "boarding"; events?: CombatEvent[]; attackerId: string; defenderName: string; skills?: SkillProgress | null; finale?: SceneFinale;
 }) {
   const round = latestOwnRound(events, attackerId);
+  const xp = round ? roundXpText(round, skills) : null;
   const [initial] = useState(round?.sequence ?? 0);
   const [finaleShown, setFinaleShown] = useState(false);
   const fresh = !!round && round.sequence > initial, strikes = round ? roundStrikes(round) : [];
@@ -237,7 +239,7 @@ export function CombatScene({ phase, events = [], attackerId, defenderName, fina
       <span className="o-combat-versus" aria-hidden="true">VS</span>
       {finale && finaleShown && <Finale finale={finale} />}
     </div>
-    <figcaption aria-live="polite">{round ? <span className="o-scene-summary">{roundSummary(round, defenderName)}</span>
+    <figcaption aria-live="polite">{round ? <span className="o-scene-summary">{roundSummary(round, defenderName)}{xp && <> <span className="o-scene-xp">{xp}</span></>}</span>
       : <><Icon aria-hidden="true" /><span>{tagline}</span></>}</figcaption>
   </figure>;
 }

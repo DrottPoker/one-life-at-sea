@@ -449,6 +449,8 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     // Guaranteed attacker hits at sea and guaranteed defender misses.
     sql("update public.characters set ship_accuracy=4096,ship_speed=64 where id='" + a.id + "'");
     sql("insert into private.item_stacks(character_id,item_id,quantity) values('" + a.id + "','chain_shot',1),('" + a.id + "','grape_shot',1)");
+    // Five XP short of Ship Battling level 2, so the first salvo levels up during the fight.
+    sql("select private.award_skill_xp('" + a.id + "','ship_battling',195)");
     await login(page, a);
     await page.goto("/attack/" + d.playerNumber);
     const main = page.getByRole("main");
@@ -467,6 +469,11 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await expect(log.getByText(/^Sails and rigging · \d+ ship damage · Ship slowed$/)).toBeVisible();
     await expect(main.getByRole("list", { name: "Opponent active effects", exact: true })).toContainText("Slowed: Ship Speed x0.8 for 3 more rounds");
     const scene = main.locator(".o-combat-scene");
+    // XP arrives with the round, while the new level's health waits for the end of the fight.
+    await expect(page.getByLabel("Ship Battling XP", { exact: true })).toHaveText("205");
+    await expect(page.locator(".o-combat-header-xp")).toContainText("Ship Battling · Level 2");
+    await expect(scene.locator("figcaption")).toContainText("+10 Ship Battling XP. Ship Battling reached level 2; its health bonus applies after the fight.");
+    await expect(main.getByRole("progressbar", { name: "Your Ship Health", exact: true })).toHaveAttribute("aria-valuemax", "100");
     await expect(scene.locator('.o-scene-overlay[data-animate="true"]')).toHaveCount(1);
     await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical )?Sails and rigging \d+$/);
     await expect(scene.locator('.o-scene-mark[data-target="defender"]')).toHaveAttribute("data-zone", "rigging");
@@ -475,6 +482,8 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await ammo.getByText("Grape Shot", { exact: true }).click();
     await main.getByRole("button", { name: /^Fire cannons 1 salvo of Grape Shot/ }).click();
     await expect(main.getByText("Round 2 / 25", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Ship Battling XP", { exact: true })).toHaveText("215");
+    await expect(scene.locator("figcaption")).toContainText(/\+10 Ship Battling XP\.$/);
     await expect(log.getByText("Fire cannons · Basic cannons · Grape Shot", { exact: true })).toBeVisible();
     await expect(log.getByText(/^(Head|Body|Legs|Feet) · \d+ crew damage/)).toBeVisible();
     await expect(main.getByRole("progressbar", { name: "Opponent Crew Health", exact: true })).not.toHaveAttribute("aria-valuenow", "100");
@@ -507,7 +516,7 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await expect(scene.getByText("The attackers withdrew.", { exact: true })).toBeVisible();
     // Both salvos train Ship Battling; the defender's three automatic salvos train it too, although they all miss.
     await expect(scene.getByText("+20 Ship Battling XP", { exact: true })).toBeVisible();
-    expect(sql("select string_agg(xp::text,',' order by character_id='" + a.id + "' desc) from private.character_skills where character_id in('" + a.id + "','" + d.id + "') and skill_id='ship_battling'").trim()).toBe("20,30");
+    expect(sql("select string_agg(xp::text,',' order by character_id='" + a.id + "' desc) from private.character_skills where character_id in('" + a.id + "','" + d.id + "') and skill_id='ship_battling'").trim()).toBe("215,30");
     await expect(scene.locator(".o-combat-versus")).toHaveCSS("opacity", "0");
     await page.waitForTimeout(1500);
     await expect(page).toHaveURL(new RegExp("/attack/" + d.playerNumber + "$"));
@@ -518,5 +527,7 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await scene.locator(".o-combat-scene-art").screenshot({ path: ".local/attack-finale-mobile.png", animations: "disabled" });
     await leave.click();
     await expect(page).toHaveURL(/\/combatlog\//);
+    // After the fight the level's health bonus applies.
+    expect((await a.api.rpc("get_game_state")).data?.ship_health_max).toBe(105);
   } finally { await cleanup([a, d]); }
 });

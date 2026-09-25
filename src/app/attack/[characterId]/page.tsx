@@ -5,6 +5,7 @@ import { withDatabaseRetry } from "@/lib/database-retry";
 import { attackUrl, type Battle, type CombatPreview } from "@/lib/combat";
 import { findPlayerProfile } from "@/lib/player-profile";
 import { AttackSession } from "@/components/combat/attack-session";
+import { ownSkillProgress } from "@/lib/skills-server";
 import { GameStateProvider } from "@/components/game-state";
 
 export const metadata = { title: "Attacking" };
@@ -12,7 +13,7 @@ export const metadata = { title: "Attacking" };
 export default async function AttackPage({ params }: { params: Promise<{ characterId: string }> }) {
   const { characterId: identifier } = await params;
   const character = await requireCharacter({ allowSea: true, allowHospital: true });
-  const state = await gameStateForPlayer();
+  const [state, skills] = await Promise.all([gameStateForPlayer(), ownSkillProgress()]);
   const profile = await findPlayerProfile(identifier);
   if (!profile) notFound();
   const characterId = profile.character_id;
@@ -43,7 +44,7 @@ export default async function AttackPage({ params }: { params: Promise<{ charact
     preview = data;
   }
   return <GameStateProvider state={state}><main id="main" className="o-attack-main">
-    <AttackSession battle={battle} preview={preview} key={characterId} hospital={hospital}
+    <AttackSession battle={battle} preview={preview} skills={skills} key={characterId} hospital={hospital}
       heading={{ energy: state.energy, backUrl, backLabel, canLeave: !state.active_attack && !hospital }} />
   </main></GameStateProvider>;
 }

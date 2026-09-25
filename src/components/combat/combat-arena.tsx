@@ -12,6 +12,7 @@ import { submitOrder } from "@/app/combat-actions";
 import { CombatStage } from "@/components/combat/combat-stage";
 import { CombatEvents, CombatPeople, outcomeLabel } from "@/components/combat/combat-log";
 import { type Battle, type CombatOrder, ORDER_LABELS, combatXpLabel } from "@/lib/combat";
+import type { SkillProgress } from "@/lib/skills";
 import { fallbackWeapons, SHOT_NAMES, temporaryEffect, type ShotKind } from "@/lib/equipment";
 
 const salvos = `${gameplay.combat.ammoPerShot} salvo${gameplay.combat.ammoPerShot === 1 ? "" : "s"}`;
@@ -49,7 +50,7 @@ function orderOptions(battle: Battle, ammo: Ammo): Record<OrderButton, { detail:
   };
 }
 
-export function CombatArena({ battle }: { battle: Battle }) {
+export function CombatArena({ battle, skills }: { battle: Battle; skills?: SkillProgress | null }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   useNavigationActivity(pending);
@@ -89,7 +90,7 @@ export function CombatArena({ battle }: { battle: Battle }) {
   }
 
   return <>
-    <CombatStage attacker={battle.attacker} defender={battle.defender} phase={battle.phase} events={battle.events} finale={finale} />
+    <CombatStage attacker={battle.attacker} defender={battle.defender} phase={battle.phase} events={battle.events} skills={skills} finale={finale} />
     {active ? <section className="o-combat-orders" aria-labelledby="orders-heading">
       <div className="o-section-bar"><h2 id="orders-heading"><Anchor aria-hidden="true" />Your next order</h2><span>Both sides act together</span></div>
       {battle.phase === "sea" && <fieldset className="o-ammo-select" disabled={pending}>
