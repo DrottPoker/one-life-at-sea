@@ -31,10 +31,10 @@ create or replace function private.character_skill_level(target_id uuid,target_s
 returns integer language sql stable strict security invoker set search_path='' as $$
   select private.skill_level(coalesce((select xp from private.character_skills where character_id=target_id and skill_id=target_skill),0));
 $$;
--- Every battling level from two upwards adds its own number to the matching health maximum.
+-- From level two the bonus to the matching health maximum equals the level; level one adds nothing.
 create or replace function private.battling_health_bonus(battling_level integer)
 returns integer language sql immutable strict security invoker set search_path='' as $$
-  select {{gameplay.skills.battlingHealthPerLevel}}*(battling_level*(battling_level+1)/2-1);
+  select case when battling_level>1 then {{gameplay.skills.battlingHealthPerLevel}}*battling_level else 0 end;
 $$;
 create or replace function private.crew_health_max(captain_id uuid)
 returns integer language sql stable strict security invoker set search_path='' as $$

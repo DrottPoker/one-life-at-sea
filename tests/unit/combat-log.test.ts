@@ -45,9 +45,9 @@ describe("combat log", () => {
   });
   it("shows each captain's own Crew Health maximum, falling back to the base for older reports", () => {
     const html = renderToStaticMarkup(createElement(CombatMatchup, { winnerId: null, people: [
-      person({ id: "a", name: "Ann", crew_health: 90, crew_health_max: 154 }), person({ id: "d", name: "Bo", role: "defender", status: "survived" }),
+      person({ id: "a", name: "Ann", crew_health: 90, crew_health_max: 110 }), person({ id: "d", name: "Bo", role: "defender", status: "survived" }),
     ] }));
-    expect(html).toContain('aria-label="Ann Crew Health" aria-valuenow="90" aria-valuemin="0" aria-valuemax="154"');
+    expect(html).toContain('aria-label="Ann Crew Health" aria-valuenow="90" aria-valuemin="0" aria-valuemax="110"');
     expect(html).toContain('aria-label="Bo Crew Health" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"');
   });
 });

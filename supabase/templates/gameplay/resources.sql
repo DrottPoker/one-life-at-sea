@@ -35,9 +35,9 @@ alter table public.characters
   -- Level 100 in a battling skill adds the largest bonus. Constraints run with the client's rights, so no private function is called.
   drop constraint characters_ship_health_check,
   add constraint characters_ship_health_check check(ship_health between 0 and
-    {{gameplay.resources.healthMax}}+{{gameplay.equipment.limits.maxShipHealth}}+{{gameplay.skills.battlingHealthPerLevel}}*(100*101/2-1)),
+    {{gameplay.resources.healthMax}}+{{gameplay.equipment.limits.maxShipHealth}}+{{gameplay.skills.battlingHealthPerLevel}}*100),
   drop constraint characters_crew_health_check,
-  add constraint characters_crew_health_check check(crew_health between 0 and {{gameplay.resources.healthMax}}+{{gameplay.skills.battlingHealthPerLevel}}*(100*101/2-1));
+  add constraint characters_crew_health_check check(crew_health between 0 and {{gameplay.resources.healthMax}}+{{gameplay.skills.battlingHealthPerLevel}}*100);
 alter table public.characters alter column ship_attack set default {{gameplay.startingStats.ship.attack}};
 alter table public.characters alter column ship_defense set default {{gameplay.startingStats.ship.defense}};
 alter table public.characters alter column ship_speed set default {{gameplay.startingStats.ship.speed}};

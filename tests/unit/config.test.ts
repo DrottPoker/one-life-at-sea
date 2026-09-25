@@ -85,7 +85,7 @@ describe("configuration contract", () => {
     ["fractional combat XP", (c: ReturnType<typeof loadConfig>) => { c.gameplay.combat.xpGain = 0.5; }],
     ["missing battling skill", (c: ReturnType<typeof loadConfig>) => { c.gameplay.skills.catalog = c.gameplay.skills.catalog.filter(skill => skill.id !== "ship_battling"); }],
     ["fractional battling health", (c: ReturnType<typeof loadConfig>) => { c.gameplay.skills.battlingHealthPerLevel = 1.5; }],
-    ["battling health overflow", (c: ReturnType<typeof loadConfig>) => { c.gameplay.resources.healthMax = 2_147_480_000; }],
+    ["battling health overflow", (c: ReturnType<typeof loadConfig>) => { c.gameplay.resources.healthMax = 2_147_483_500; }],
     ["unknown equipment slot", (c: ReturnType<typeof loadConfig>) => { c.gameplay.inventory.items[0].slot = "crew_weapon"; }],
     ["weapon without precision", (c: ReturnType<typeof loadConfig>) => { delete (c.gameplay.inventory.items[0].stats as { precision?: unknown }).precision; }],
     ["armor on a weapon", (c: ReturnType<typeof loadConfig>) => { Object.assign(c.gameplay.inventory.items[0].stats!, { armor: { min: 1, max: 2 } }); }],

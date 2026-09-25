@@ -27,13 +27,11 @@ describe("rebalanced skill progression", () => {
 });
 
 describe("battling health bonus", () => {
-  it.each([[1, 0], [2, 2], [3, 5], [4, 9], [10, 54], [100, 5049]])("level %i adds %i maximum health", (level, bonus) => {
+  it.each([[1, 0], [2, 2], [3, 3], [4, 4], [10, 10], [100, 100]])("level %i adds %i maximum health", (level, bonus) => {
     expect(battlingHealthBonus(level)).toBe(bonus * gameplay.skills.battlingHealthPerLevel);
   });
-  it("adds each level's own number on top of the previous levels", () => {
-    for (let level = 2; level <= MAX_SKILL_LEVEL; level++) {
-      expect(battlingHealthBonus(level) - battlingHealthBonus(level - 1)).toBe(level * gameplay.skills.battlingHealthPerLevel);
-    }
+  it("equals the level from level two without stacking earlier levels", () => {
+    for (let level = 2; level <= MAX_SKILL_LEVEL; level++) expect(battlingHealthBonus(level)).toBe(level * gameplay.skills.battlingHealthPerLevel);
   });
   it.each([0, 101, 1.5, NaN])("rejects invalid level %s", level => {
     expect(() => battlingHealthBonus(level)).toThrow(RangeError);
