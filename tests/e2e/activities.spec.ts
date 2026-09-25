@@ -34,6 +34,10 @@ test("activities spend Stamina, advance the right skills and persist on the prof
     await expect(fishingDrop).toContainText("+200 XP");
     await expect(fishingDrop).toContainText("Level up! Level 2");
     await expect(fishingDrop).toContainText("200 XP");
+    // The visible numbers rise to the same values.
+    await expect(fishingDrop.locator(".o-xp-drop-gain")).toHaveText("+200 XP");
+    await expect(fishingDrop.locator(".o-xp-drop-level")).toHaveText("Level up! Level 2");
+    await expect(fishingDrop.locator(".o-xp-drop-total")).toHaveText("200 XP");
     expect(await card!.evaluate(node => node.isConnected)).toBe(true);
     await expect(fishingDrop.getByRole("progressbar", { name: "Fishing progress to next level", exact: true })).toHaveAttribute("aria-valuetext", "216 XP to level 3");
     await expect(page.getByRole("region", { name: "Shore Fishing", exact: true })).not.toContainText("XP.");

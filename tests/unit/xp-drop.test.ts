@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { XpDropCard } from "../../src/components/xp-drop";
+import { countUpAt } from "../../src/hooks/use-count-up";
 import { nextXpDrop, skillGains, type SkillProgress } from "../../src/lib/skills";
 
 const progress = (xp: Record<string, number>): SkillProgress => ({ character_level: 7,
@@ -30,19 +31,27 @@ describe("XP drop", () => {
     expect(nextXpDrop(other, [])).toBe(other);
     expect(nextXpDrop(null, skillGains(progress({}), progress({ fishing: 10, crafting: 30 })))).toMatchObject({ id: "crafting", gained: 30 });
   });
-  it("shows the skill, the gain, the level, the total and progress to the next level", () => {
+  it("starts the rising numbers and bar from before the gain while screen readers get the final values", () => {
     const drop = nextXpDrop(null, skillGains(progress({ ship_battling: 195 }), progress({ ship_battling: 205 })))!;
     const html = renderToStaticMarkup(createElement(XpDropCard, { drop }));
     expect(html).toContain('aria-label="Ship Battling XP gained"');
-    expect(html).toContain('<span class="o-xp-drop-name">Ship Battling</span><strong class="o-xp-drop-gain">+10 XP</strong>');
-    expect(html).toContain('aria-valuetext="211 XP to level 3"');
-    expect(html).toContain('<span class="o-xp-drop-level">Level up! Level 2</span><span class="o-xp-drop-total">205 XP</span>');
-    expect(renderToStaticMarkup(createElement(XpDropCard, { drop: { ...drop, levelUp: false } }))).toContain('<span class="o-xp-drop-level">Level 2</span>');
+    expect(html).toContain('<span class="o-xp-drop-name">Ship Battling</span><strong class="o-xp-drop-gain" aria-hidden="true">+0 XP</strong>');
+    expect(html).toContain('<span class="o-xp-drop-level" aria-hidden="true">Level 1</span><span class="o-xp-drop-total" aria-hidden="true">195 XP</span>');
+    expect(html).toContain('style="width:97.5%"');
+    expect(html).toContain('aria-valuenow="2" aria-valuetext="211 XP to level 3"');
+    expect(html).toContain('<span class="o-xp-drop-summary">+10 XP. Level up! Level 2. 205 XP.</span>');
   });
   it("shows the maximum level without a next level", () => {
     const drop = nextXpDrop(null, skillGains(progress({ fishing: 4_999_990 }), progress({ fishing: 5_000_000 })))!;
     const html = renderToStaticMarkup(createElement(XpDropCard, { drop }));
     expect(html).toContain('aria-valuetext="Maximum level"');
-    expect(html).toContain("Level up! Level 100");
+    expect(html).toContain("Level up! Level 100. 5,000,000 XP.");
+  });
+  it("rises quickly at first and settles on the new value", () => {
+    expect(countUpAt(195, 205, 0)).toBe(195);
+    expect(countUpAt(195, 205, 0.5)).toBe(203.75);
+    expect(countUpAt(195, 205, 1)).toBe(205);
+    const steps = [0, 0.1, 0.3, 0.6, 0.9, 1].map(step => countUpAt(0, 100, step));
+    expect(steps).toEqual([...steps].sort((a, b) => a - b));
   });
 });

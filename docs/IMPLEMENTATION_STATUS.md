@@ -22,10 +22,10 @@ Exakta regler finns i [dokumentindexet](README.md). Helhetsgranskningen rättar 
 | Kontroll | Resultat |
 | --- | --- |
 | `npm run check` | Godkänd dokumentkontroll, lint utan varningar, typkontroll och produktionsbygge |
-| Enhetstester | 480 godkända i 34 filer |
+| Enhetstester | 481 godkända i 34 filer |
 | `npm run test:db` | 2 102 godkända påståenden i 42 filer |
 | `npm run test:config:db` | 127 godkända påståenden; alternativ config rullades tillbaka |
-| Hela webbläsarsviten | 123 godkända och 1 överhoppad (opt-in prestandamätning), Edge mot produktionsbygget, före XP-rutans nya stil. Efter den gick aktivitets-, crafting-, skills- och ammunitionsstridens tester igenom (10 tester) |
+| Hela webbläsarsviten | 123 godkända och 1 överhoppad (opt-in prestandamätning), Edge mot produktionsbygget, före XP-rutans nya stil och uppräkning. Efter dem gick aktivitets-, crafting-, skills- och ammunitionsstridens tester igenom (10 tester) |
 | SQL-lint | Inga varningar eller fel |
 | Databasens säkerhets-/prestandarådgivare | Inga fynd på varnings- eller felnivå (2026-09-23, inte omkörd) |
 | `npm audit` | 0 kända sårbarheter |

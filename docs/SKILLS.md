@@ -84,7 +84,10 @@ view, in the game's own panel style. It names the skill and shows the XP gained,
 total XP and a bar towards the next level, and marks a level-up. The card stays for five seconds
 after the latest gain (`XP_DROP_MS` in `xp-drop.tsx`) and then fades. More XP while it is up
 updates it in place: gains of the same skill add up, with a short pulse, and another skill takes
-the card over. If several skills grow in one update, the largest gain shows.
+the card over. If several skills grow in one update, the largest gain shows. The gain, the total
+and the bar rise from their previous values in a quick ease-out (`XP_COUNT_MS`, 0.45 seconds)
+instead of jumping; across a level the bar fills, starts over and the level-up shows as it
+reaches the new level. Screen readers get the final values once rather than the counting.
 
 The card has one source: the owner's skill progress in the player snapshot. The client compares
 each new snapshot with the previous one and shows every skill whose XP grew, whatever awarded

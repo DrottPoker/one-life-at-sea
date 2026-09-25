@@ -196,7 +196,8 @@ navy surface gradient and hard offset shadow of the floating panels, the skill i
 in gold, the gain in the display font with the same square pixel outline as the combat damage
 numbers, the standard resource track, and the level and total XP in small text. A level-up
 turns the level line gold. The card slides in once, pulses its gain when more XP arrives,
-stays for five seconds after the latest gain and fades. It ignores the pointer, and reduced
+counts the gain and total up while the bar rises, stays for five seconds after the latest gain
+and fades. It ignores the pointer, and reduced
 motion removes the movement. See [Skills](SKILLS.md#xp-drop) for when it appears.
 
 Activities is a sidebar destination and a harbor directory entry. Three rows show a themed
