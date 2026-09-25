@@ -3,9 +3,10 @@
 import { useState, useTransition } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, ChevronLeft, ChevronRight, LoaderCircle, Mail, MailOpen, Trash2 } from "lucide-react";
+import { Bookmark, LoaderCircle, Mail, MailOpen, Trash2 } from "lucide-react";
 import { useNavigationActivity } from "@/components/game-refresh";
 import { MessageTime } from "@/components/messages/message-time";
+import { Pagination } from "@/components/pagination";
 import { updateMail } from "@/app/message-actions";
 import { mailDetailUrl, mailUrl, type MailFolder, type MailOperation, type MailPage } from "@/lib/messages";
 
@@ -33,7 +34,6 @@ export function MailList({ characterId, data, folder, query, openedId }: { chara
     });
   }
   const pages = Math.max(1, Math.ceil(data.total / data.page_size));
-  const pageNumbers = Array.from(new Set([0, ...Array.from({ length: 3 }, (_, index) => data.page - 1 + index), pages - 1])).filter(value => value >= 0 && value < pages).sort((a, b) => a - b);
   return <section className="o-mail-list" aria-label={folder === "outbox" ? "Sent mail" : folder === "saved" ? "Saved mail" : "Inbox"} aria-busy={busy}>
     <div className="o-mail-selection"><span>{visibleSelected.length ? `${visibleSelected.length} selected` : folder === "outbox" ? "Sent letters" : folder === "saved" ? "Saved letters" : "Received letters"}</span>
       <button type="button" disabled={busy || !data.items.length} onClick={() => setSelected(visibleSelected.length === data.items.length ? [] : data.items.map(item => item.id))}>{visibleSelected.length === data.items.length && data.items.length ? "Uncheck all" : "Check all"}</button>
@@ -58,11 +58,7 @@ export function MailList({ characterId, data, folder, query, openedId }: { chara
     })}</ul>
     {!data.items.length && <p className="o-panel-body o-copy">{query ? "No mail matches your search." : "No mail in this folder."} {folder === "inbox" && !query && <Link href="/messages/compose">Compose a mail</Link>}</p>}
     <div className="o-mail-list-foot"><span>{data.total ? `${data.page * data.page_size + 1}-${Math.min((data.page + 1) * data.page_size, data.total)} of ${data.total}` : "0 mails"}</span>
-      <nav className="o-mail-pagination" aria-label="Mail pages">
-        {data.page > 0 && <Link href={mailUrl(folder, query, data.page - 1)} aria-label="Previous page" scroll={false}><ChevronLeft size={16} aria-hidden="true" /></Link>}
-        {pageNumbers.map((value, index) => <span key={value}>{index > 0 && value > pageNumbers[index - 1] + 1 && <span className="o-mail-ellipsis">…</span>}<Link href={mailUrl(folder, query, value)} scroll={false} aria-label={"Page " + (value + 1)} aria-current={value === data.page ? "page" : undefined}>{value + 1}</Link></span>)}
-        {data.page + 1 < pages && <Link href={mailUrl(folder, query, data.page + 1)} aria-label="Next page" scroll={false}><ChevronRight size={16} aria-hidden="true" /></Link>}
-      </nav>
+      <Pagination page={data.page} pages={pages} href={value => mailUrl(folder, query, value)} label="Mail pages" scroll={false} />
     </div>
   </section>;
 }

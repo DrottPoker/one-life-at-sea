@@ -82,7 +82,8 @@ export async function withdrawForumPost(characterId: string, postId: string): Pr
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("withdraw_forum_post", { post_id: postId }));
   if (error || !data) return { error: knownError(error) ?? "The post could not be deleted. Please try again." };
-  revalidatePath("/forums", "layout");
+  // A removed thread no longer renders; the client navigates to its board instead.
+  if (!data.thread_removed) revalidatePath("/forums", "layout");
   return { receipt: data };
 }
 

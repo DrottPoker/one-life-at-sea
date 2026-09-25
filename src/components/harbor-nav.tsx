@@ -1,7 +1,7 @@
 "use client";
 
 import { GameLink as Link, useNavigationPathname } from "@/components/game-navigation";
-import { Utensils, Anchor, Store, Hammer, Swords, Ship, Landmark, HeartPulse, Package, Compass, Users, House } from "lucide-react";
+import { Utensils, Anchor, Store, Hammer, Swords, Ship, Landmark, HeartPulse, Package, Compass, Users, House, MessagesSquare } from "lucide-react";
 
 import { useGameState } from "@/components/game-state";
 import { isHospitalAccessiblePath } from "@/lib/hospital";
@@ -9,6 +9,7 @@ import { isSeaAccessiblePath } from "@/lib/sea-travel";
 
 const locations = [
   { href: "/players", label: "Players", Icon: Users },
+  { href: "/forums", label: "Forums", Icon: MessagesSquare },
   { href: "/sea", label: "At Sea", Icon: Compass },
   { href: "/harbor", label: "The Harbor", Icon: Anchor },
   { href: "/hideout", label: "Hideout", Icon: House },
@@ -28,7 +29,7 @@ export function HarborNav() {
   const state = useGameState();
   return <nav className="o-location-nav" aria-label="Harbor locations">{locations.filter(item => item.href !== "/sea" || state.sea.state !== "in_harbor").map(({ href, label, Icon }) =>
     (state.hospital_until && !isHospitalAccessiblePath(href)) || !isSeaAccessiblePath(href, state.sea.state) ? <span className="o-nav" aria-disabled="true" key={href}><span className="o-nav-symbol"><Icon aria-hidden="true" /></span>{label}</span> :
-    <Link className="o-nav" key={href} href={href} prefetch="auto" aria-current={pathname === href || (["/harbor/marketplace", "/hideout"].includes(href) && pathname.startsWith(href + "/")) ? "page" : undefined}>
+    <Link className="o-nav" key={href} href={href} prefetch="auto" aria-current={pathname === href || (["/harbor/marketplace", "/hideout", "/forums"].includes(href) && pathname.startsWith(href + "/")) ? "page" : undefined}>
       <span className="o-nav-symbol" aria-hidden="true"><Icon /></span>{label}<span className="o-nav-tail" aria-hidden="true">›</span>
     </Link>)}
   </nav>;
