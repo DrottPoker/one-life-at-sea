@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { register, logIn, sendReset, changePassword } from "@/app/actions";
 import { normalizeCharacterName, validateCharacterName, type FormState } from "@/lib/validation";
+import { useHydrated } from "@/hooks/use-hydrated";
 
 type Mode = "register" | "login" | "forgot" | "reset";
 const actions = { register, login: logIn, forgot: sendReset, reset: changePassword };
@@ -15,6 +16,7 @@ export function AuthForm({ mode, initialEmail = "" }: { mode: Mode; initialEmail
   const [email, setEmail] = useState(initialEmail);
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const hydrated = useHydrated();
   const [remaining, setRemaining] = useState(0);
   const [state, action, pending] = useActionState(async (previous: FormState, data: FormData) => {
     const result = await actions[mode](previous, data);
@@ -48,7 +50,7 @@ export function AuthForm({ mode, initialEmail = "" }: { mode: Mode; initialEmail
           <span className="o-password-row"><input aria-labelledby="password-label" id="password" name="password" type={showPassword ? "text" : "password"}
             autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={mode === "login" ? 1 : auth.passwordMinLength} maxLength={auth.passwordMaxLength}
             aria-invalid={!!state.errors?.password} aria-describedby="password-hint" />
-            <button type="button" className="o-password-toggle" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-controls="password">{showPassword ? "Hide" : "Show"}</button>
+            <button type="button" className="o-password-toggle" disabled={!hydrated} onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-controls="password">{showPassword ? "Hide" : "Show"}</button>
           </span><small id="password-hint" className={state.errors?.password ? "o-field-error" : "o-form-hint"} role={state.errors?.password ? "alert" : undefined}>
             {state.errors?.password ?? (mode === "login" ? "Enter the password for your account." : "At least 6 characters. No special characters required.")}
           </small>
