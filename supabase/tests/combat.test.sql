@@ -75,14 +75,14 @@ select throws_ok($$select private.resolve_combat_round(jsonb_set(value,'{attacke
   'P0001','NO_AMMO','Empty ammunition cannot fire');
 select is(private.health_snapshot(0,'2026-01-01Z','2026-01-01 00:04:59Z',300,100),0,'Recovery waits for a complete interval');
 select is(private.health_snapshot(0,'2026-01-01Z','2026-01-01 00:05Z',300,100),5,'Each interval restores five percent of the maximum');
+select is(private.health_snapshot(0,'2026-01-01 00:04:59Z','2026-01-01 00:05Z',300,100),5,'Recovery ticks at fixed five-minute boundaries, not five minutes after the damage');
+select is(private.health_snapshot(0,'2026-01-01 00:00:01Z','2026-01-01 00:04:59Z',300,100),0,'No tick passes between two boundaries');
 select is(private.health_snapshot(0,'2026-01-01Z','2026-01-01 00:05Z',300,850),42,'The share follows the captain''s own maximum');
 select is(private.health_snapshot(0,'2026-01-01Z','2026-01-01 00:10Z',300,150),15,'Fractional shares add up across intervals');
 select is(private.health_snapshot(0,'2026-01-01Z','2026-01-01 01:40Z',300,100),100,'Twenty intervals restore full health from zero');
 select is(private.health_snapshot(99,'2026-01-01Z','2026-01-02Z',300,100),100,'Offline healing caps at the maximum');
 select is(private.health_snapshot(50,'2026-01-02Z','2026-01-01Z',300,100),50,'Backwards time does not remove health');
 select is(private.health_snapshot(0,'1970-01-01Z','2026-01-01Z',1,2147483647),2147483647,'A huge maximum cannot overflow');
-select is(private.health_tick_anchor('2026-01-01Z','2026-01-01 00:07Z',300),'2026-01-01 00:05Z'::timestamptz,'Settling keeps the time to the next tick');
-select is(private.health_tick_anchor('2026-01-02Z','2026-01-01Z',300),'2026-01-02Z'::timestamptz,'A future anchor is kept');
 
 update public.characters set ship_health=41,crew_health=65,ship_recovery_at=clock_timestamp(),crew_recovery_at=clock_timestamp()
   where id=(select a from combat_fixtures);

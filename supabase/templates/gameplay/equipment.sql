@@ -139,12 +139,12 @@ returns integer language sql stable security invoker set search_path='' as $$
     +private.battling_health_bonus(private.character_skill_level(captain_id,'ship_battling'));
 $$;
 
--- Caller holds the character lock. Recovery so far uses the maximum that applied until now; the next tick keeps its time.
+-- Caller holds the character lock. Recovery so far uses the maximum that applied until now; ticks stay on their fixed boundaries.
 create or replace function private.settle_ship_health(captain_id uuid,observed_at timestamptz)
 returns void language sql volatile security invoker set search_path='' as $$
   update public.characters set ship_health=private.health_snapshot(ship_health,ship_recovery_at,observed_at,
     {{gameplay.resources.shipRecoverySeconds}},private.ship_health_max(id)),
-    ship_recovery_at=private.health_tick_anchor(ship_recovery_at,observed_at,{{gameplay.resources.shipRecoverySeconds}}) where id=captain_id;
+    ship_recovery_at=greatest(ship_recovery_at,observed_at) where id=captain_id;
   update public.characters set ship_health=private.ship_health_max(id) where id=captain_id and ship_health>private.ship_health_max(id);
 $$;
 -- Settles both health values around a change of maximum. Combat and Hospital pause recovery, so they are left alone.
@@ -156,7 +156,7 @@ begin
   perform private.settle_ship_health(captain_id,observed_at);
   update public.characters set crew_health=private.health_snapshot(crew_health,crew_recovery_at,observed_at,
     {{gameplay.resources.crewRecoverySeconds}},private.crew_health_max(id)),
-    crew_recovery_at=private.health_tick_anchor(crew_recovery_at,observed_at,{{gameplay.resources.crewRecoverySeconds}}) where id=captain_id;
+    crew_recovery_at=greatest(crew_recovery_at,observed_at) where id=captain_id;
 end;
 $$;
 revoke all on function private.equipment_stat(numeric,numeric,numeric),private.item_stats(private.item_definitions,numeric),

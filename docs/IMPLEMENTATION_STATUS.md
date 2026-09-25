@@ -23,7 +23,7 @@ Exakta regler finns i [dokumentindexet](README.md). Helhetsgranskningen rättar 
 | --- | --- |
 | `npm run check` | Godkänd dokumentkontroll, lint utan varningar, typkontroll och produktionsbygge |
 | Enhetstester | 481 godkända i 34 filer |
-| `npm run test:db` | 2 107 godkända påståenden i 42 filer |
+| `npm run test:db` | 2 108 godkända påståenden i 42 filer |
 | `npm run test:config:db` | 128 godkända påståenden; alternativ config rullades tillbaka |
 | Hela webbläsarsviten | 123 godkända och 1 överhoppad, Edge mot produktionsbygget. Den överhoppade är den opt-in-styrda prestandamätningen, som inte kördes |
 | SQL-lint | Inga varningar eller fel |
@@ -32,7 +32,7 @@ Exakta regler finns i [dokumentindexet](README.md). Helhetsgranskningen rättar 
 | RPC-avtal | Alla 67 typade funktioner finns med rätt parameterlistor |
 | Ekonomins integritet efter alla tester | 0 avvikelser i samtliga 8 kontroller |
 
-De fem nya SQL-migrationerna är applicerade lokalt. Next.js 16.3.6, Supabase JS 2.117.1 och Vitest 5.0.1 ingår i verifieringen.
+De sex nya SQL-migrationerna är applicerade lokalt. Next.js 16.3.6, Supabase JS 2.117.1 och Vitest 5.0.1 ingår i verifieringen.
 [Granskningsrapporten](PROJECT_AUDIT.md) beskriver fynd, rättningar och kontrollernas omfattning.
 [Prestanda](PERFORMANCE.md) innehåller faktiska lokala mätvärden.
 

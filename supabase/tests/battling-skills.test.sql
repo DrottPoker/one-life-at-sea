@@ -56,6 +56,7 @@ select is((public.get_game_state()->>'crew_health_max')::integer,105,'Game state
 select is((public.get_game_state()->>'ship_health_max')::integer,140,'Game state reports the raised Ship Health maximum');
 select is((public.get_game_state()->>'crew_health')::integer,100,'A level does not heal');
 select ok((public.get_game_state()->>'health_next_at') is not null,'Recovery continues towards the raised maximum');
+select is(extract(epoch from (public.get_game_state()->>'health_next_at')::timestamptz)::numeric % 300,0::numeric,'The next recovery is on a fixed five-minute boundary');
 reset role;
 update public.characters set ship_recovery_at=clock_timestamp()-interval '1 day',crew_recovery_at=clock_timestamp()-interval '1 day' where id=(select p from battlers);
 set local role authenticated;
