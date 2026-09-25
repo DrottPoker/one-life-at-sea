@@ -16,7 +16,7 @@ Object.assign(config.gameplay.stamina, { maximum: 80, recoveryAmount: 2, recover
 Object.assign(config.gameplay.morale, { lossPerEnergy: 0.2, recoveryAmount: 2, recoverySeconds: 60, statBonusBps: 250, trainingBonusBps: 300, tavernGain: 10, tavernGoldCost: 17 });
 config.gameplay.hospital.durationSeconds = 19;
 Object.assign(config.gameplay.resources, { energyMax: 120, energyRecoverySeconds: 60, energyRecoveryAmount: 3, healthMax: 150,
-  shipHealthInitial: 120, crewHealthInitial: 110, shipRecoverySeconds: 7, crewRecoverySeconds: 4 });
+  shipHealthInitial: 120, crewHealthInitial: 110, shipRecoverySeconds: 7, crewRecoverySeconds: 4, healthRecoveryPercent: 10 });
 Object.assign(config.gameplay.training, { energyCost: 7, perfectChanceBps: 0, statScale: 2000, statExponent: 0.5 });
 for (const tier of [...config.gameplay.training.crewTiers, ...config.gameplay.training.shipTiers]) tier.efficiency *= 3;
 config.gameplay.training.xpPerEnergy = 2;
@@ -85,6 +85,7 @@ const checks = [
 "select is(public.get_gameplay_revision(),'" + revision(config) + "','Alternative revision is installed within transaction');",
 "select is((select energy from private.energy_snapshot(118,'2026-01-01Z','2026-01-01 00:02Z')),120,'Energy interval and cap are configurable');",
 "select is(private.battling_health_bonus(3),6,'Battling health per level is configurable');",
+"select is(private.health_snapshot(0,'2026-01-01Z','2026-01-01 00:00:07Z',7,150),15,'The recovered share of maximum health is configurable');",
 "select is(private.battling_health_bonus(100),400,'The level 100 battling bonus is configurable');",
 "select is(private.combat_hit_chance(1,100),0.0::double precision,'Alternative evasion threshold applies');",
 "select ok(private.combat_hit_chance(1,64)>0,'Old evasion threshold no longer guarantees misses');",

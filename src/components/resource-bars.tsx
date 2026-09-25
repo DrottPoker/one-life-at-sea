@@ -27,7 +27,7 @@ export function ResourceBars() {
   }, [activeHint]);
   const healthHint = (seconds: number) => state.hospital_until ? "Restored on discharge. Actions are locked in hospital." :
     state.active_combat_id ? "Recovery is paused during combat." :
-    "Recovers 1 HP every " + durationLabel(seconds) + " outside combat.";
+    "Recovers " + gameplay.resources.healthRecoveryPercent + "% of max HP every " + durationLabel(seconds) + " outside combat.";
   const resources = [
     { key: "energy", label: "Energy", value: state.energy, min: 0, max: MAX_ENERGY, Icon: Zap,
       description: "Increases by " + gameplay.resources.energyRecoveryAmount + " every " +

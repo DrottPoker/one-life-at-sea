@@ -7,7 +7,8 @@ Detta dokument samlar kvarstående riktning. Det är inte en beskrivning av leve
 - Inventory har läsning, handel, Trash, Equip och Unequip. Use och aktiva itemeffekter kräver egna spelregler.
 - Utrustningens Temporary-plats och kultyper är implementerade. Sällsynthet och bonusar är uppskjutna.
   Källor för munitionen (butik, crafting eller loot) återstår. Se [utrustning](EQUIPMENT.md).
-- Hideout har Crafting; Cooking och hemuppgraderingar är ännu framtida funktioner.
+- Hideout har Crafting; Cooking och hemuppgraderingar är ännu framtida funktioner. Mat ska ge Crew Morale,
+  inte hälsa (ägarens beslut 2026-09-25).
 - Shipyard är en platshållare. Fler aktiviteter på havsplatser, PvE och intjäningssystem behöver design.
 - Fraktionsmedlemskap, behörigheter och utskick till hela fraktionen är inte implementerade. Kraven på beständiga batchade utskick finns i [Brevpost](MESSAGES.md).
 
@@ -15,7 +16,7 @@ Detta dokument samlar kvarstående riktning. Det är inte en beskrivning av leve
 
 Permanent karaktärsdöd har ersatts av [Hospital](HOSPITAL.md); historiska dödsförslag ska inte återinföras som om de vore aktuella.
 HP-progression finns genom Crew Battling och Ship Battling, se [Skills](SKILLS.md#combat-xp-and-battling-health).
-Återhämtningen är fortfarande en fast mängd per tick och behöver bedömas mot de högre maxvärdena.
+Återhämtningen är en andel av maxhälsan per intervall, se [Combat](COMBAT_SYSTEM.md#hälsa-och-återhämtning).
 Guldbyte från PvP, särskilt boarding, är en framtida mekanik och finns inte i nuvarande stridsutfall.
 
 Hunger och andra offlineberoende system behöver fortfarande avgöranden om tempo och frånvaro.

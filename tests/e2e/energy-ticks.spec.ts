@@ -25,7 +25,7 @@ test("fixed Energy deadlines show the current rate and recovered sea Energy can 
     await page.keyboard.press("Tab");
     await expect(hint).toHaveText("Increases by 1 every 5 minutes. Used for skill activities. Recovery paused at 50. Storage limit: 200.");
     await page.keyboard.press("Tab");
-    await expect(hint).toHaveText("Recovers 1 HP every 30 seconds outside combat.");
+    await expect(hint).toHaveText("Recovers 5% of max HP every 5 minutes outside combat.");
     await page.keyboard.press("Escape");
     await expect(hint).toHaveCount(0);
     await expect(page.locator(".o-condition-card time")).toHaveCount(0);

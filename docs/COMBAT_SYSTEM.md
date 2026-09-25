@@ -98,8 +98,9 @@ Noll Crew Health ger fem minuter i [Hospital](HOSPITAL.md); noll Ship Health sä
 Patienter kan inte spela eller attackeras under vistelsen och återkommer med båda hälsomätarna fulla.
 Karaktär, skepp, besättning, tränade stats och pengar behålls.
 
-- Ship Health: +1 per 30 sekunder efter deltagarens avslut.
-- Crew Health: +1 per 10 sekunder efter deltagarens avslut.
+- Ship Health och Crew Health: 5 % av kaptenens egen maxhälsa per fem minuter efter deltagarens avslut
+  (`resources.healthRecoveryPercent`, `shipRecoverySeconds` och `crewRecoverySeconds`). Andelarna summeras
+  innan de avrundas nedåt, så en bråkdel går inte förlorad mellan intervallen. Från noll tar full hälsa 100 minuter.
 - Överlevande återhämtar båda parallellt, även offline, upp till sitt maxvärde: 100 plus bonusar.
   Utrustad Hull och Ship Battling höjer maximal Ship Health; Crew Battling höjer maximal Crew Health.
   Sjukhuspatienter får full hälsa enligt aktuell utrustning och aktuella nivåer vid utskrivning.

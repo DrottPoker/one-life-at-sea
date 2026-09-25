@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("@/config/public", async importOriginal => {
   const actual = await importOriginal<typeof import("../../src/config/public")>();
   return { ...actual, gameplay: { ...actual.gameplay,
-    resources: { ...actual.gameplay.resources, energyMax: 200, healthMax: 250, energyRecoverySeconds: 45, energyRecoveryAmount: 7, shipRecoverySeconds: 15, crewRecoverySeconds: 5 },
+    resources: { ...actual.gameplay.resources, energyMax: 200, healthMax: 250, energyRecoverySeconds: 45, energyRecoveryAmount: 7, shipRecoverySeconds: 15, crewRecoverySeconds: 5, healthRecoveryPercent: 8 },
     stamina: { ...actual.gameplay.stamina, maximum: 80, recoveryAmount: 2, recoverySeconds: 60 },
     training: { ...actual.gameplay.training, energyCost: 9, crewTiers: actual.gameplay.training.crewTiers.map((t, i) => i ? t : { ...t, efficiency: 4 }) },
   } };
@@ -38,7 +38,7 @@ describe("configured interface", () => {
     expect(html).toContain('width:25%');
     expect(html).toContain('width:20%');
     expect(html).toContain('Increases by 7 every 45 seconds.');
-    expect(html).toContain('every 15 seconds outside combat.');
+    expect(html).toContain('Recovers 8% of max HP every 15 seconds outside combat.');
     expect(html).toContain('every 5 seconds outside combat.');
   });
   it("uses the same configured cost in each card without gain previews", () => {

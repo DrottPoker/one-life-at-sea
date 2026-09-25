@@ -71,13 +71,35 @@ language sql immutable strict security invoker set search_path='' as $$
   select * from private.energy_tick_snapshot(stored_energy,anchor,observed_at,{{gameplay.resources.energyRecoverySeconds}});
 $$;
 
--- Callers pass the captain's own maximum, which equipment and battling levels raise above the base.
+-- Settle health once with the previous model, one HP per 30 (ship) or 10 (crew) seconds, before recovery becomes a share
+-- of the maximum. Combat and Hospital pause recovery, so those captains keep their stored health.
+do $health_cutover$
+begin
+  if to_regprocedure('private.health_tick_anchor(timestamptz,timestamptz,integer)') is null then
+    update public.characters c set ship_health=private.health_snapshot(c.ship_health,c.ship_recovery_at,now(),30,private.ship_health_max(c.id)),
+      crew_health=private.health_snapshot(c.crew_health,c.crew_recovery_at,now(),10,private.crew_health_max(c.id)),
+      ship_recovery_at=greatest(c.ship_recovery_at,now()),crew_recovery_at=greatest(c.crew_recovery_at,now())
+      where c.hospital_until is null and not exists(select 1 from private.combat_engagements e where e.character_id=c.id);
+  end if;
+end;
+$health_cutover$;
+
+-- Every complete interval restores a share of the captain's own maximum, which equipment and battling levels raise.
+-- Shares add up before rounding down, so a fractional share is not lost between intervals.
 create or replace function private.health_snapshot(value integer, anchor timestamptz, observed_at timestamptz, seconds integer, maximum integer)
 returns integer language sql immutable strict security invoker set search_path = ''
 as $$
-  select least(maximum, value + least(maximum, greatest(0, floor(extract(epoch from (observed_at - anchor)) / seconds)))::integer);
+  select least(maximum::numeric, value + floor(least(greatest(0, floor(extract(epoch from (observed_at - anchor)) / seconds)),
+    ceil(100.0 / {{gameplay.resources.healthRecoveryPercent}})) * maximum * {{gameplay.resources.healthRecoveryPercent}} / 100.0))::integer;
 $$;
-revoke all on function private.health_snapshot(integer,timestamptz,timestamptz,integer,integer) from public,anon,authenticated;
+-- The start of the current interval. Settling health there keeps the time to the next tick.
+create or replace function private.health_tick_anchor(anchor timestamptz, observed_at timestamptz, seconds integer)
+returns timestamptz language sql immutable strict security invoker set search_path = ''
+as $$
+  select case when observed_at > anchor then anchor + floor(extract(epoch from (observed_at - anchor)) / seconds) * make_interval(secs => seconds) else anchor end;
+$$;
+revoke all on function private.health_snapshot(integer,timestamptz,timestamptz,integer,integer),
+  private.health_tick_anchor(timestamptz,timestamptz,integer) from public,anon,authenticated;
 drop function if exists private.health_snapshot(integer,timestamptz,timestamptz,integer);
 
 -- An overdue return changes the rate at arrival, including a tick exactly at arrival.

@@ -20,8 +20,10 @@ begin
   ship_hp:=case when active.id is not null or c.hospital_until is not null then c.ship_health else private.health_snapshot(c.ship_health,c.ship_recovery_at,observed_at,{{gameplay.resources.shipRecoverySeconds}},ship_max) end;
   crew_hp:=case when active.id is not null or c.hospital_until is not null then c.crew_health else private.health_snapshot(c.crew_health,c.crew_recovery_at,observed_at,{{gameplay.resources.crewRecoverySeconds}},crew_max) end;
   if active.id is null and c.hospital_until is null then
-    health_next_at:=least(case when ship_hp<ship_max then c.ship_recovery_at+(ship_hp-c.ship_health+1)*make_interval(secs => {{gameplay.resources.shipRecoverySeconds}}) end,
-      case when crew_hp<crew_max then c.crew_recovery_at+(crew_hp-c.crew_health+1)*make_interval(secs => {{gameplay.resources.crewRecoverySeconds}}) end);
+    health_next_at:=least(case when ship_hp<ship_max then private.health_tick_anchor(c.ship_recovery_at,observed_at,{{gameplay.resources.shipRecoverySeconds}})
+        +make_interval(secs => {{gameplay.resources.shipRecoverySeconds}}) end,
+      case when crew_hp<crew_max then private.health_tick_anchor(c.crew_recovery_at,observed_at,{{gameplay.resources.crewRecoverySeconds}})
+        +make_interval(secs => {{gameplay.resources.crewRecoverySeconds}}) end);
   end if;
   select recent.id into last_id from (
     (select b.id,b.started_at from private.combats b where b.defender_id=c.id

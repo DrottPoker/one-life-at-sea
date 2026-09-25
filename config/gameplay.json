@@ -9,8 +9,9 @@
     "healthMax": 100,
     "shipHealthInitial": 100,
     "crewHealthInitial": 100,
-    "shipRecoverySeconds": 30,
-    "crewRecoverySeconds": 10,
+    "shipRecoverySeconds": 300,
+    "crewRecoverySeconds": 300,
+    "healthRecoveryPercent": 5,
     "energyRecoveryAmount": 5,
     "energyStorageMax": 1000
   },

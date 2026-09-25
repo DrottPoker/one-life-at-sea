@@ -105,7 +105,8 @@ select is(public.get_attack_lock(),null::jsonb,'Retreat unlocks attacker');
 select is((select public.start_combat(d,gen_random_uuid())->>'error' from f),'ALREADY_PARTICIPATED','Cannot reset rounds by rejoining');
 select lives_ok($$select public.train_crew('attack','crew_1',gen_random_uuid())$$,'Retreated attacker resumes game actions');
 reset role;
-update private.combat_participants set deadline=clock_timestamp()-interval '3 minutes' where combat_id=(select (value#>>'{battle,id}')::uuid from results where name='second') and status='active';
+-- Past one five-minute recovery interval, so healing from the deadline shows.
+update private.combat_participants set deadline=clock_timestamp()-interval '6 minutes' where combat_id=(select (value#>>'{battle,id}')::uuid from results where name='second') and status='active';
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"d4000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 insert into results select 'expired',public.get_combat((value#>>'{battle,id}')::uuid) from results where name='second';
