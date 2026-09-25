@@ -1,7 +1,7 @@
 # Profile presence and last action
 
-Profiles show a 12px green, gold or grey status dot before `Name [ID]` in the heading.
-The dot displays Online, Idle or Offline through its tooltip and accessible label;
+Profiles show a 12px green, gold or grey status dot with the label Online, Idle or Offline
+in the status line under `Name [ID]`. The dot carries the accessible label;
 there is no separate Player status detail row. The same live snapshot supplies
 **Last action** as elapsed time. The hospital status remains a separate field.
 This applies to the owner's profile and other registered players' profiles.

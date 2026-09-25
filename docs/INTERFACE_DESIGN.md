@@ -32,8 +32,10 @@ serif headings follow the supplied reference. Dense tables, forms and item
 details retain sans-serif text. The harbor welcome header and caption use the
 same navy surfaces as the surrounding panels; the owner removed the parchment
 bands above and below the artwork on 2026-09-21.
-The captain's identity and live resources share one sidebar card. A vector anchor
-emblem provides a neutral placeholder for future supplied character artwork.
+The captain's identity and live resources share one sidebar card: the portrait, name,
+current location and a My Profile link, then Gold Coins as a large figure. Player ID and
+join date are on the profile, and no rank title is shown next to the name. See
+[the profile](#profile-september-25) for the portrait.
 Crew Morale shares this card with Energy and health. Its bar has a fixed midpoint
 at zero, green fill to the right for positive values and coral fill to the left
 for negative values. A signed one-decimal value and an accessible meter expose
@@ -61,10 +63,10 @@ combat reports and administration. Text-style buttons follow the same convention
 Links retain their existing colors, hover feedback and visible keyboard-focus outlines.
 Keep this rule in the shared interface template and the admin stylesheet.
 
-Profile headings use a compact bold `Name [ID]` with a 12px live presence dot before
-the name. A subtle vertical gradient darkens the lower edge for depth in every
-status color. Presence is shown by the dot, with a tooltip and accessible label, instead
-of a separate detail row. Long names wrap without splitting the bracketed number.
+Profile headings show `Name [ID]`, the number smaller than the name. The 12px live presence
+dot and its label (Online, Idle or Offline) open the status line below the heading; the dot
+carries the accessible label. A subtle vertical gradient darkens the lower edge of the dot for
+depth in every status color. Long names wrap without splitting the bracketed number.
 The Players directory shows names without separate public number badges.
 The connection indicator and unread notification dots share the same shading.
 Read notification markers remain transparent.
@@ -186,10 +188,10 @@ Stamina appears after Energy in the condition sidebar, using a green track and t
 hover/focus/touch tooltip as the other resources. Its tooltip shows only the recovery rule and purpose.
 
 Profiles display public Character Level alongside Player ID. Only the owner receives the
-Skills section: seven compact cards with level, XP and progress to the next level, in two
-columns on desktop and one on mobile. Maxed skills display Maximum level. Crew Battling and
-Ship Battling add a row with their maximum health bonus and what the next level adds. Other players
-receive neither these cards nor their underlying private data.
+Skills card: seven compact rows with level, total XP, a progress bar and the XP to the next
+level. Maxed skills display Maximum level. Crew Battling and Ship Battling add a line with their
+maximum health bonus and what the next level adds. Other players receive neither the card nor
+the underlying private data.
 
 The XP drop uses the game's own panel style rather than a separate look: the brass border,
 navy surface gradient and hard offset shadow of the floating panels, the skill icon and name
@@ -262,3 +264,31 @@ former welcome art panel (the "Welcome ashore" greeting is now the banner lead);
 banner on every marketplace route. Pages without dedicated artwork use `PLACEHOLDER_HERO`
 (`public/images/headers/harbor-placeholder.webp`, the owner's harbor scene re-encoded to about
 295 KiB) and their navigation icon; replace the `image` prop per page when final art exists.
+
+## Profile, September 25
+
+The profile follows the owner's September 25 mockup as a reference, not 1:1, on one page
+without tabs. `/players/<number>` opens with an artwork hero (`o-profile-hero`):
+
+- `public/images/headers/profile-harbor-dusk.webp` is the owner's 2000 x 667 harbor at dusk,
+  unchanged. A dark gradient from the left keeps the text readable; the ship stays visible on
+  the right and on narrow screens.
+- `public/images/portraits/captain-default.webp` is the owner's 1086 x 1448 pixel-art captain,
+  unchanged, in a gold frame. Every captain uses it until players can choose their own
+  portrait; the path is in `src/components/captain-portrait.tsx`. The sidebar shows the same
+  portrait, which also links to the profile.
+- Beside the portrait: `Name [ID]`, a status line with presence, location (or In hospital with
+  the remaining time) and three figures: Level, Character age and Max sea distance. Other
+  captains' profiles have Send message and Attack at the top right of the hero.
+
+Below the hero, cards with a gold uppercase heading hold the rest: Details (Last action, At sea
+since, Forum posts, Forum karma), then the owner-only Defence orders and Skills. The owner sees
+Details and Defence orders beside Skills when the main column is wide; other profiles show the
+Details rows in two columns across the full width. Defence orders show the saved order's icon
+next to the existing selector and Save orders button.
+
+The page is its own size container: at 640px the portrait shrinks and the actions move below,
+at 440px the figures move under the portrait, and at 340px the defence selector stacks.
+There is no rank title, biography or Edit profile button yet, since the game has no data for
+them. The name preview at registration shows the name without a Captain prefix.
+

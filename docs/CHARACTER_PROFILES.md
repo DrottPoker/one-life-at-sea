@@ -1,10 +1,13 @@
 # Karaktärsprofiler
 
-Uppdaterat 2026-09-23.
+Uppdaterat 2026-09-25.
 
 ## Innehåll och åtkomst
 
 `/players/<player-number>` visar namn, grov plats, Max sea distance, skapandedatum och karaktärsålder.
+Sidan öppnar med en bild med porträtt, namn, status och tre nyckeltal, följd av kort med
+detaljer; se [gränssnittet](INTERFACE_DESIGN.md#profile-september-25). Alla kaptener har samma
+standardporträtt tills egna porträtt finns. Ingen rangtitel visas.
 Max sea distance är karaktärens längsta nådda avstånd, ökar vid ankomst och behålls
 efter hemkomst, kortare resor och Hospital. Nya karaktärer börjar på 0.
 My Profile och namn i hamnlistan länkar hit. Profilen visar även permanent Player ID.
