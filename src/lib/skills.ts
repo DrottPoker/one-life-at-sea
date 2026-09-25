@@ -44,3 +44,12 @@ export function skillGains(previous: SkillProgress, next: SkillProgress): SkillG
       levelUp: now.level > skillProgress(before).level, nextXp: now.nextXp, remaining: now.remaining, percent: now.percent }];
   });
 }
+
+export type XpDropState = SkillGain & { updates: number };
+// The drop stays while XP keeps coming: the largest new gain adds to what the same skill already shows, and another skill takes over.
+export function nextXpDrop(current: XpDropState | null, gains: SkillGain[]): XpDropState | null {
+  const gain = gains.reduce<SkillGain | null>((best, entry) => best && best.gained >= entry.gained ? best : entry, null);
+  if (!gain) return current;
+  const kept = current?.id === gain.id ? current : null;
+  return { ...gain, gained: gain.gained + (kept?.gained ?? 0), levelUp: gain.levelUp || !!kept?.levelUp, updates: (current?.updates ?? 0) + 1 };
+}

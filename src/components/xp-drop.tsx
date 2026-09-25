@@ -1,48 +1,48 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
-import { Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
 import { frontend } from "@/config/public";
-import { skillGains, type SkillGain, type SkillProgress } from "@/lib/skills";
-import { skillIcon } from "@/components/skill-icons";
+import { nextXpDrop, skillGains, type SkillProgress, type XpDropState } from "@/lib/skills";
+import { SkillIcon } from "@/components/skill-icons";
 
-// How long a drop stays. A new gain replaces it and starts the time over; CSS fades within the same length.
+// How long the drop stays after the latest gain, ending with a short fade.
 export const XP_DROP_MS = 5000;
+const XP_DROP_FADE_MS = 300;
 const format = new Intl.NumberFormat(frontend.site.locale);
 
-export function XpDropCard({ gains }: { gains: SkillGain[] }) {
-  return <div className="o-xp-drop" style={{ "--o-xp-drop": XP_DROP_MS + "ms" } as CSSProperties}>
-    {gains.map(gain => {
-      const Icon = skillIcon(gain.id);
-      return <section key={gain.id} className="o-xp-drop-skill" data-level-up={gain.levelUp || undefined} aria-label={gain.name + " XP gained"}>
-        <span className="o-xp-drop-icon" aria-hidden="true"><Icon /></span>
-        <div className="o-xp-drop-body">
-          <div className="o-xp-drop-heading"><span className="o-xp-drop-name">{gain.name}</span><strong className="o-xp-drop-gain">+{format.format(gain.gained)} XP</strong></div>
-          <div className="o-xp-drop-meter" role="progressbar" aria-label={gain.name + " progress to next level"} aria-valuemin={0} aria-valuemax={100}
-            aria-valuenow={Math.floor(gain.percent)} aria-valuetext={gain.nextXp === null ? "Maximum level" : format.format(gain.remaining) + " XP to level " + (gain.level + 1)}>
-            <span style={{ width: gain.percent + "%" }} /></div>
-          <div className="o-xp-drop-total"><span>Level {gain.level}</span><span>{format.format(gain.xp)} XP</span></div>
-          <div className="o-xp-drop-next">{gain.nextXp === null ? "Maximum level" : format.format(gain.remaining) + " XP to level " + (gain.level + 1)}</div>
-          {gain.levelUp && <p className="o-xp-drop-level-up"><Sparkles aria-hidden="true" />Level up! Now level {gain.level}.</p>}
-        </div>
-      </section>;
-    })}
-  </div>;
+export function XpDropCard({ drop, closing = false }: { drop: XpDropState; closing?: boolean }) {
+  return <section className="o-xp-drop" data-closing={closing || undefined} data-level-up={drop.levelUp || undefined} aria-label={drop.name + " XP gained"}>
+    <SkillIcon id={drop.id} className="o-xp-drop-icon" />
+    <span className="o-xp-drop-name">{drop.name}</span>
+    <strong key={drop.updates} className="o-xp-drop-gain">+{format.format(drop.gained)} XP</strong>
+    <div className="o-resource-track o-xp-drop-track" role="progressbar" aria-label={drop.name + " progress to next level"}
+      aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor(drop.percent)}
+      aria-valuetext={drop.nextXp === null ? "Maximum level" : format.format(drop.remaining) + " XP to level " + (drop.level + 1)}>
+      <span style={{ width: drop.percent + "%" }} /></div>
+    <span className="o-xp-drop-level">{drop.levelUp && "Level up! "}Level {drop.level}</span>
+    <span className="o-xp-drop-total">{format.format(drop.xp)} XP</span>
+  </section>;
 }
 
 // Every XP gain shows here, bottom right, whatever awarded it: the own skills are compared with the previous snapshot.
+// More XP while the drop is up updates it in place and starts its time over.
 export function XpDrop({ skills }: { skills: SkillProgress | null }) {
   const [seen, setSeen] = useState(skills);
-  const [drop, setDrop] = useState<{ key: number; gains: SkillGain[] } | null>(null);
+  const [drop, setDrop] = useState<XpDropState | null>(null);
+  const [closing, setClosing] = useState(false);
   if (skills !== seen) {
     setSeen(skills);
-    const gains = seen && skills ? skillGains(seen, skills) : [];
-    if (gains.length) setDrop({ key: (drop?.key ?? 0) + 1, gains });
+    const next = seen && skills ? nextXpDrop(drop, skillGains(seen, skills)) : drop;
+    if (next !== drop) {
+      setDrop(next);
+      setClosing(false);
+    }
   }
   useEffect(() => {
     if (!drop) return;
-    const timer = window.setTimeout(() => setDrop(null), XP_DROP_MS);
-    return () => window.clearTimeout(timer);
+    const fade = window.setTimeout(() => setClosing(true), XP_DROP_MS - XP_DROP_FADE_MS);
+    const hide = window.setTimeout(() => { setDrop(null); setClosing(false); }, XP_DROP_MS);
+    return () => { window.clearTimeout(fade); window.clearTimeout(hide); };
   }, [drop]);
-  return <div className="o-xp-drop-region" role="status">{drop && <XpDropCard key={drop.key} gains={drop.gains} />}</div>;
+  return <div className="o-xp-drop-region" role="status">{drop && <XpDropCard drop={drop} closing={closing} />}</div>;
 }

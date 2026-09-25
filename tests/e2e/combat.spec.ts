@@ -473,7 +473,7 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     const xpDrop = page.getByRole("region", { name: "Ship Battling XP gained", exact: true });
     await expect(xpDrop).toContainText("+10 XP");
     await expect(xpDrop).toContainText("205 XP");
-    await expect(xpDrop).toContainText("Level up! Now level 2.");
+    await expect(xpDrop).toContainText("Level up! Level 2");
     await expect(main.getByRole("progressbar", { name: "Your Ship Health", exact: true })).toHaveAttribute("aria-valuemax", "100");
     await expect(scene.locator('.o-scene-overlay[data-animate="true"]')).toHaveCount(1);
     await expect(scene.locator('.o-scene-chip[data-target="defender"]')).toHaveText(/^(Critical )?Sails and rigging \d+$/);
@@ -483,8 +483,9 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     await ammo.getByText("Grape Shot", { exact: true }).click();
     await main.getByRole("button", { name: /^Fire cannons 1 salvo of Grape Shot/ }).click();
     await expect(main.getByText("Round 2 / 25", { exact: true })).toBeVisible();
+    // The drop adds the second salvo to the first when it is still up after the frame captures.
     await expect(xpDrop).toContainText("215 XP");
-    await expect(xpDrop).not.toContainText("Level up!");
+    await expect(xpDrop).toContainText(/\+(10|20) XP/);
     await expect(log.getByText("Fire cannons · Basic cannons · Grape Shot", { exact: true })).toBeVisible();
     await expect(log.getByText(/^(Head|Body|Legs|Feet) · \d+ crew damage/)).toBeVisible();
     await expect(main.getByRole("progressbar", { name: "Opponent Crew Health", exact: true })).not.toHaveAttribute("aria-valuenow", "100");

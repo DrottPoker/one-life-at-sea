@@ -191,13 +191,13 @@ columns on desktop and one on mobile. Maxed skills display Maximum level. Crew B
 Ship Battling add a row with their maximum health bonus and what the next level adds. Other players
 receive neither these cards nor their underlying private data.
 
-The XP drop is a RuneScape-like card at the bottom right: a brown stone panel with a dark rim
-and a light bevel, the skill icon in a round badge, the skill name in orange, the gain in large
-yellow text with a short pop, a green bar on dark red, and the level, total XP and XP to the
-next level in white with a one-pixel black shadow. A level-up adds a yellow line and a pulsing
-badge. The card slides in, stays for five seconds and fades; a new gain replaces it. It ignores
-the pointer, and reduced motion keeps only the fade. Its colours are the `--o-xp-*` tokens in
-`theme.css`. See [Skills](SKILLS.md#xp-drop) for when it appears.
+The XP drop uses the game's own panel style rather than a separate look: the brass border,
+navy surface gradient and hard offset shadow of the floating panels, the skill icon and name
+in gold, the gain in the display font with the same square pixel outline as the combat damage
+numbers, the standard resource track, and the level and total XP in small text. A level-up
+turns the level line gold. The card slides in once, pulses its gain when more XP arrives,
+stays for five seconds after the latest gain and fades. It ignores the pointer, and reduced
+motion removes the movement. See [Skills](SKILLS.md#xp-drop) for when it appears.
 
 Activities is a sidebar destination and a harbor directory entry. Three rows show a themed
 icon, description, skill level/XP progress, reward and action button. Desktop uses a three-column

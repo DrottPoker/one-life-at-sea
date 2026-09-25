@@ -1152,33 +1152,22 @@ dialog button.o-dialog-close svg { width:18px; height:18px; }
 .o-player-search input { flex:1; min-width:0; width:100%; }
 .o-player-search p { margin:0; }
 
-/* XP drop: one RuneScape-style card for every XP gain, bottom right. A new gain replaces it; it fades after --o-xp-drop. */
-.o-xp-drop-region { position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom)); z-index:40; width:min(272px,calc(100vw - 32px)); pointer-events:none; }
-.o-xp-drop { display:grid; gap:8px; padding:9px 11px 10px; border:2px solid var(--o-xp-rim); border-radius:3px; background:linear-gradient(180deg,var(--o-xp-stone),var(--o-xp-stone-dark)); box-shadow:inset 0 0 0 1px var(--o-xp-edge),inset 0 2px 0 color-mix(in srgb,var(--o-xp-edge) 60%,transparent),0 8px 22px var(--o-palette-0009); color:var(--o-xp-text); font:700 12px/1.3 var(--o-body-font); text-shadow:1px 1px 0 var(--o-xp-shadow); animation:o-xp-drop var(--o-xp-drop) linear both; }
-.o-xp-drop-skill { display:grid; grid-template-columns:auto minmax(0,1fr); gap:10px; align-items:start; }
-.o-xp-drop-skill + .o-xp-drop-skill { padding-top:8px; border-top:1px solid var(--o-xp-rim); box-shadow:inset 0 1px 0 color-mix(in srgb,var(--o-xp-edge) 45%,transparent); }
-.o-xp-drop-icon { display:grid; place-items:center; width:36px; height:36px; border:2px solid var(--o-xp-rim); border-radius:50%; background:radial-gradient(circle at 35% 30%,var(--o-xp-edge),var(--o-xp-stone-dark) 72%); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--o-xp-orange) 35%,transparent); color:var(--o-xp-orange); }
-.o-xp-drop-icon svg { width:19px; height:19px; stroke-width:2.2; filter:drop-shadow(1px 1px 0 var(--o-xp-shadow)); }
-.o-xp-drop-body { display:grid; gap:4px; min-width:0; }
-.o-xp-drop-heading { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
-.o-xp-drop-name { color:var(--o-xp-orange); font-size:13px; overflow-wrap:anywhere; }
-.o-xp-drop-gain { color:var(--o-xp-yellow); font-size:17px; white-space:nowrap; animation:o-xp-gain .45s cubic-bezier(.2,.8,.3,1.3) both; }
-.o-xp-drop-meter { height:10px; border:1px solid var(--o-xp-shadow); background:var(--o-xp-bar-empty); box-shadow:inset 0 1px 0 color-mix(in srgb,var(--o-xp-shadow) 60%,transparent),0 1px 0 color-mix(in srgb,var(--o-xp-edge) 45%,transparent); }
-.o-xp-drop-meter > span { display:block; height:100%; background:linear-gradient(var(--o-xp-bar),var(--o-xp-bar-dark)); box-shadow:inset 0 1px 0 color-mix(in srgb,var(--o-xp-text) 33%,transparent); transition:width .5s ease-out; }
-.o-xp-drop-total { display:flex; justify-content:space-between; gap:8px; font-variant-numeric:tabular-nums; }
-.o-xp-drop-next { color:color-mix(in srgb,var(--o-xp-text) 72%,var(--o-xp-orange)); font-size:11px; font-weight:400; font-variant-numeric:tabular-nums; }
-.o-xp-drop-level-up { display:flex; align-items:center; gap:5px; margin:2px 0 0; color:var(--o-xp-yellow); font-size:12px; }
-.o-xp-drop-level-up svg { flex:none; width:15px; height:15px; filter:drop-shadow(1px 1px 0 var(--o-xp-shadow)); }
-.o-xp-drop-skill[data-level-up] .o-xp-drop-icon { color:var(--o-xp-yellow); animation:o-xp-level 1.2s ease-in-out 2; }
-@keyframes o-xp-drop { 0% { opacity:0; transform:translateY(12px); } 6% { opacity:1; transform:none; } 92% { opacity:1; transform:none; } 100% { opacity:0; transform:translateY(4px); } }
-@keyframes o-xp-gain { from { transform:scale(1.35); } }
-@keyframes o-xp-level { 50% { box-shadow:inset 0 0 0 1px var(--o-xp-yellow),0 0 14px color-mix(in srgb,var(--o-xp-yellow) 70%,transparent); } }
-@keyframes o-xp-drop-still { 0%,96% { opacity:1; } 100% { opacity:0; } }
-@media(prefers-reduced-motion:reduce) {
- .o-xp-drop { animation-name:o-xp-drop-still; }
- .o-xp-drop-gain,.o-xp-drop-skill[data-level-up] .o-xp-drop-icon { animation:none; }
- .o-xp-drop-meter > span { transition:none; }
-}
+/* XP drop: every XP gain in one small game panel at the bottom right. More XP updates it in place; the gain uses the combat damage numbers' pixel outline. */
+.o-xp-drop-region { position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom)); z-index:40; width:min(240px,calc(100vw - 32px)); pointer-events:none; }
+.o-xp-drop { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:7px 8px; padding:10px 12px 11px; border:1px solid var(--o-brass); border-radius:2px; background:linear-gradient(120deg,var(--o-surface),var(--o-inset)); box-shadow:4px 4px 0 var(--o-palette-0006),inset 0 1px var(--o-palette-ffffff13); animation:o-xp-drop-in .3s ease-out both; }
+.o-xp-drop[data-closing] { animation:o-xp-drop-out .3s ease-in both; }
+.o-xp-drop-icon { width:17px; height:17px; color:var(--o-gold); }
+.o-xp-drop-name { min-width:0; color:var(--o-gold); font:400 15px/1.2 var(--o-display-font); overflow-wrap:anywhere; }
+.o-xp-drop-gain { color:var(--o-fx-flash); font:700 18px/1 var(--o-display-font); white-space:nowrap; text-shadow:2px 0 var(--o-bg),-2px 0 var(--o-bg),0 2px var(--o-bg),0 -2px var(--o-bg),2px 2px var(--o-bg),-2px -2px var(--o-bg),2px -2px var(--o-bg),-2px 2px var(--o-bg); transform-origin:right center; animation:o-xp-gain .35s ease-out; }
+.o-xp-drop-track { grid-column:1 / -1; }
+.o-xp-drop-level,.o-xp-drop-total { font-size:11px; font-variant-numeric:tabular-nums; }
+.o-xp-drop-level { grid-column:1 / 3; color:var(--o-muted); }
+.o-xp-drop-total { color:var(--o-text); }
+.o-xp-drop[data-level-up] .o-xp-drop-level { color:var(--o-gold); font-weight:700; }
+@keyframes o-xp-drop-in { from { opacity:0; transform:translateY(8px); } }
+@keyframes o-xp-drop-out { to { opacity:0; transform:translateY(4px); } }
+@keyframes o-xp-gain { from { transform:scale(1.3); } }
+@media(prefers-reduced-motion:reduce) { .o-xp-drop,.o-xp-drop[data-closing],.o-xp-drop-gain { animation:none; } }
 .o-profile-skills { border-top:1px solid var(--o-line); padding:16px; }
 .o-profile-skills > header { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:12px; }
 .o-profile-skills h2 { margin:0; color:var(--o-gold); font:400 18px var(--o-display-font); }

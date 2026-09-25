@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type ElementHandle, type Page } from "@playwright/test";
 import { createTestAccount, cleanupTestAccounts, loginTestAccount, testSql } from "../support/accounts";
 import { economyJournalKey } from "../../src/lib/economy-journal";
 
@@ -22,15 +22,19 @@ test("activities spend Stamina, advance the right skills and persist on the prof
     await expect(page).toHaveURL(/\/activities$/);
     const stamina = page.getByRole("progressbar", { name: "Stamina", exact: true });
     const fish = page.getByRole("button", { name: "Fish for 1 Stamina", exact: true });
+    let card: ElementHandle | null = null;
     for (let count = 1; count <= 20; count++) {
       await fish.click();
       await expect(stamina).toHaveAttribute("aria-valuenow", String(50 - count));
       await expect(page.getByLabel("Shore Fishing XP", { exact: true })).toHaveText(String(10 * count));
+      if (count === 1) card = await page.locator(".o-xp-drop").elementHandle();
     }
-    // Every XP gain shows in the shared drop at the bottom right; a new gain replaces it and it fades after five seconds.
+    // Every XP gain shows in the shared drop at the bottom right. It stays while XP keeps coming and adds it up.
     const fishingDrop = page.getByRole("region", { name: "Fishing XP gained", exact: true });
-    await expect(fishingDrop).toContainText("+10 XP");
-    await expect(fishingDrop).toContainText("Level up! Now level 2.");
+    await expect(fishingDrop).toContainText("+200 XP");
+    await expect(fishingDrop).toContainText("Level up! Level 2");
+    await expect(fishingDrop).toContainText("200 XP");
+    expect(await card!.evaluate(node => node.isConnected)).toBe(true);
     await expect(fishingDrop.getByRole("progressbar", { name: "Fishing progress to next level", exact: true })).toHaveAttribute("aria-valuetext", "216 XP to level 3");
     await expect(page.getByRole("region", { name: "Shore Fishing", exact: true })).not.toContainText("XP.");
     // The page reserves a scrollbar gutter, which fixed positioning measures from.
@@ -45,6 +49,8 @@ test("activities spend Stamina, advance the right skills and persist on the prof
     await expect(page.getByLabel("Foraging XP", { exact: true })).toHaveText("10");
     await expect(page.getByRole("region", { name: "Foraging XP gained", exact: true })).toContainText("+10 XP");
     await expect(fishingDrop).toHaveCount(0);
+    // Another skill takes over the same card instead of showing a new one.
+    expect(await card!.evaluate(node => node.isConnected)).toBe(true);
     await xpDropShot(page, ".local/xp-drop-mobile.png");
     await page.setViewportSize({ width: 1280, height: 720 });
     await expect(page.locator(".o-xp-drop")).toHaveCount(0, { timeout: 8000 });

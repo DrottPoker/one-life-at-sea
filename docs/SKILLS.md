@@ -79,11 +79,12 @@ so the battling health bonus of a fighter can be inferred there.
 
 ## XP drop
 
-Every XP gain shows in one shared card at the bottom right of the game frame and the attack
-view, in a RuneScape-like style. It names the skill and shows the XP gained, the level, the
-total XP and a bar with the XP left to the next level, and marks a level-up. The card stays for
-five seconds (`XP_DROP_MS` in `xp-drop.tsx`); a new gain replaces it and starts the time over.
-Several skills that grew in the same update share one card.
+Every XP gain shows in one small card at the bottom right of the game frame and the attack
+view, in the game's own panel style. It names the skill and shows the XP gained, the level, the
+total XP and a bar towards the next level, and marks a level-up. The card stays for five seconds
+after the latest gain (`XP_DROP_MS` in `xp-drop.tsx`) and then fades. More XP while it is up
+updates it in place: gains of the same skill add up, with a short pulse, and another skill takes
+the card over. If several skills grow in one update, the largest gain shows.
 
 The card has one source: the owner's skill progress in the player snapshot. The client compares
 each new snapshot with the previous one and shows every skill whose XP grew, whatever awarded
@@ -92,20 +93,6 @@ corrections. The first snapshot after a page load is the baseline, so a reload s
 replayed receipt that awards nothing shows none, and lower XP is never shown as a gain. Activity
 and crafting results and the attack view no longer repeat the awarded XP; reward previews such
 as "+10 Fishing XP" on actions remain.
-Existing registered-player profile access rules remain in effect: public here means
-visible to other registered players, not anonymous visitors.
-
-private.character_skills holds XP per character/skill. RLS is enabled, the table has
-no client grants and is absent from the realtime publication. public.get_own_skills()
-has no target parameter and obtains the character through auth.uid() after verifying
-the registered account. Server pages call it only for the current player's profile and Activities page.
-A client cannot request another character's detailed progression or grant XP.
-
-Only character_level is added to public.character_profiles and get_character_status.
-The public projection updates only when the sum changes. XP that does not cause a
-level-up does not publish a profile change. Private XP updates use the existing
-owner-scoped player_game_events refresh. Other profiles use their existing public
-profile subscription to refresh Character Level. No extra permanent client cache is added.
 
 ## Server integration and administration
 

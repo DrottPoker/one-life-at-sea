@@ -1,7 +1,7 @@
 import { HeartPulse } from "lucide-react";
 import { gameplay, frontend } from "@/config/public";
 import { BATTLING_HEALTH, MAX_SKILL_LEVEL, battlingHealthBonus, skillProgress, type SkillProgress } from "@/lib/skills";
-import { skillIcon } from "@/components/skill-icons";
+import { SkillIcon } from "@/components/skill-icons";
 
 const formatNumber = new Intl.NumberFormat(frontend.site.locale);
 
@@ -11,10 +11,9 @@ export function ProfileSkills({ progress }: { progress: SkillProgress }) {
     <div className="o-skills-grid">{progress.skills.map(skill => {
       const definition = gameplay.skills.catalog.find(entry => entry.id === skill.id);
       if (!definition) return null;
-      const Icon = skillIcon(skill.id);
       const current = skillProgress(skill.xp), health = BATTLING_HEALTH[skill.id];
       return <article className="o-skill" key={skill.id} aria-label={definition.name}>
-        <div className="o-skill-heading"><h3><Icon aria-hidden="true" />{definition.name}</h3>
+        <div className="o-skill-heading"><h3><SkillIcon id={skill.id} />{definition.name}</h3>
           <span>Level <output aria-label={definition.name + " level"}>{current.level}</output> / {MAX_SKILL_LEVEL}</span></div>
         <div className="o-resource-track" role="progressbar" aria-label={definition.name + " level progress"}
           aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor(current.percent)}

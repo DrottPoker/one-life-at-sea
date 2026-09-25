@@ -24,7 +24,7 @@ test("profiles show private skills only to their owner and publish a live Charac
     await expect(skills.getByLabel("Fishing level", { exact: true })).toHaveText("3");
     // XP awarded anywhere on the server shows in the shared drop once the snapshot refreshes.
     await expect(page.getByRole("region", { name: "Fishing XP gained", exact: true })).toContainText("+216 XP");
-    await expect(page.getByRole("region", { name: "Fishing XP gained", exact: true })).toContainText("Level up! Now level 3.");
+    await expect(page.getByRole("region", { name: "Fishing XP gained", exact: true })).toContainText("Level up! Level 3");
     await expect(page.getByLabel("Character Level", { exact: true })).toHaveText("9");
     // Battling levels raise the matching health maximum; other skills show no bonus.
     await expect(skills.getByLabel("Crew Battling health bonus", { exact: true })).toHaveText("+0");
