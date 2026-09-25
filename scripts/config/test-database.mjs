@@ -100,6 +100,8 @@ const checks = [
 "create temporary table config_users as select gen_random_uuid() a,gen_random_uuid() d;",
 "insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','Config'||translate(id::text,'0123456789','ghijklmnop')) from config_users cross join lateral(values(a),(d)) u(id);",
 "create temporary table config_captains as select (select id from public.characters where user_id=u.a) a,(select id from public.characters where user_id=u.d) d from config_users u;",
+// A fixed one-minute recovery tick between a cost and its check would otherwise add Energy.
+"update public.characters set energy_updated_at=clock_timestamp()+interval '1 day' where id in(select a from config_captains union all select d from config_captains);",
 "select is((select ship_attack from public.characters where id=(select a from config_captains)),12::numeric,'Creation uses changed starting stats');",
 "select is((select ship_health from public.characters where id=(select a from config_captains)),120,'Creation uses changed ship health');",
 "select is((select crew_health from public.characters where id=(select a from config_captains)),110,'Creation uses changed crew health');",
@@ -193,7 +195,7 @@ checks.push(
 "select is(private.morale_multiplier(100,250),1.025::numeric,'Morale stat effect follows its basis points');",
 "create temporary table morale_config_user as select gen_random_uuid() id;",
 "insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','MoraleConfig'||translate(id::text,'0123456789','ghijklmnop')) from morale_config_user;",
-"update public.characters set morale_updated_at=clock_timestamp()+interval '1 day' where user_id=(select id from morale_config_user);",
+"update public.characters set morale_updated_at=clock_timestamp()+interval '1 day',stamina_updated_at=clock_timestamp()+interval '1 day' where user_id=(select id from morale_config_user);",
 "select set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from morale_config_user;",
 "select public.buy_tavern_meal(17,10,gen_random_uuid());",
 "select is((public.get_game_state()->>'crew_morale')::numeric,10::numeric,'Tavern gain follows config');",
