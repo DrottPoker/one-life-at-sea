@@ -61,6 +61,17 @@ export function validateConfig(config) {
     check(g.skills.catalog.some(skill => skill.id === activity.skillId), "Unknown activity skill.");
     check(activity.name.length <= 60 && activity.description.length <= 300 && activity.buttonLabel.length <= 40, "Activity text is too long.");
   }
+  const forum = g.forum;
+  check(forum.boards.length <= 50, "At most 50 forum boards are supported.");
+  check(new Set(forum.boards.map(board => board.id)).size === forum.boards.length, "Forum board IDs must be unique.");
+  for (const board of forum.boards) {
+    check(/^[a-z][a-z0-9_]{0,47}$/.test(board.id), "Invalid forum board ID.");
+    check(["open", "moderators", "closed"].includes(board.posting), "Unknown forum posting rule.");
+    check(board.section.length <= 40 && board.name.length <= 60 && board.description.length <= 300, "Forum board text is too long.");
+  }
+  // Moderators move retired threads to the single closed board.
+  check(forum.boards.filter(board => board.posting === "closed").length === 1 && forum.boards.some(board => board.posting === "closed" && board.active), "The forum requires exactly one active closed board.");
+  check(forum.boards.some(board => board.posting === "open" && board.active), "The forum requires an active open board.");
   const sea = g.seaTravel;
   check(sea.departureEnergyCost <= g.resources.energyMax, "Departure costs more than maximum Energy.");
   check(sea.scoutEnergyCost <= g.resources.energyMax, "Scouting costs more than maximum Energy.");
@@ -234,7 +245,8 @@ export function gameplaySql(config) {
     .replace("{{inventory.catalogSql}}", () => inventoryCatalogSql(config))
     .replaceAll("{{equipment.zonesSql}}", () => equipmentZonesSql(config))
     .replaceAll("{{equipment.temporariesSql}}", () => equipmentTemporariesSql(config))
-    .replace("{{seaTravel.catalogSql}}", () => seaTravelCatalogSql(config)), config);
+    .replace("{{seaTravel.catalogSql}}", () => seaTravelCatalogSql(config))
+    .replace("{{forum.catalogSql}}", () => forumCatalogSql(config)), config);
 }
 export function revision(config) {
   return createHash("sha256").update(JSON.stringify(config.gameplay)).update(gameplaySql(config)).digest("hex");
@@ -307,6 +319,20 @@ export function seaTravelCatalogSql(config) {
   return "update private.sea_location_types set active=false;\n" +
     "insert into private.sea_location_types(id,name,active) values\n" + rows +
     "\non conflict(id) do update set name=excluded.name,active=excluded.active;\n";
+}
+
+export function forumCatalogSql(config) {
+  const quote = value => "'" + value.replaceAll("'", "''") + "'";
+  const rows = config.gameplay.forum.boards.map((board, i) => "(" + [quote(board.id), quote(board.section), quote(board.name),
+    quote(board.description), quote(board.posting), board.active, i].join(",") + ")").join(",\n");
+  let delimiter = "$forum$";
+  while (rows.includes(delimiter)) delimiter = delimiter.slice(0, -1) + "_$";
+  return "do " + delimiter + " begin if exists(select 1 from private.forum_boards old left join (values\n" + rows +
+    "\n) incoming(id,section,name,description,posting,active,position) using(id) where incoming.id is null) " +
+    "then raise exception 'Existing forum board IDs must be preserved'; end if; end " + delimiter + ";\n" +
+    "insert into private.forum_boards(id,section,name,description,posting,active,position) values\n" + rows +
+    "\non conflict(id) do update set section=excluded.section,name=excluded.name,description=excluded.description," +
+    "posting=excluded.posting,active=excluded.active,position=excluded.position;\n";
 }
 
 export function skillCatalogSql(config) {

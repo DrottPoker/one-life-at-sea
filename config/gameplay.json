@@ -1,6 +1,27 @@
 {
   "messages": { "maxRecipients": 10, "subjectMaxLength": 120, "pageSize": 10, "conversationPageSize": 50, "maxLength": 5000, "perMinute": 30 },
   "notifications": { "pageSize": 20 },
+  "forum": {
+    "boards": [
+      { "id": "announcements", "section": "Official", "name": "Announcements", "description": "Official news, updates and changes from the game team.", "posting": "moderators", "active": true },
+      { "id": "general_discussion", "section": "Game", "name": "General Discussion", "description": "Discuss anything related to the game.", "posting": "open", "active": true },
+      { "id": "questions_answers", "section": "Game", "name": "Questions & Answers", "description": "Ask questions and help other players.", "posting": "open", "active": true },
+      { "id": "tutorials_guides", "section": "Game", "name": "Tutorials & Guides", "description": "Guides, tips and tutorials written by players.", "posting": "open", "active": true },
+      { "id": "suggestions", "section": "Game", "name": "Suggestions", "description": "Share ideas and feedback to improve the game.", "posting": "open", "active": true },
+      { "id": "bugs_issues", "section": "Game", "name": "Bugs & Issues", "description": "Report bugs, errors and unexpected behavior.", "posting": "open", "active": true },
+      { "id": "trading_post", "section": "Trading", "name": "Trading Post", "description": "Buy, sell and trade items and services.", "posting": "open", "active": true },
+      { "id": "off_topic", "section": "Community", "name": "Off Topic", "description": "Conversations about anything not related to the game.", "posting": "open", "active": true },
+      { "id": "fun_games", "section": "Community", "name": "Fun & Games", "description": "Forum games, contests and lighthearted threads.", "posting": "open", "active": true },
+      { "id": "graveyard", "section": "Archive", "name": "Graveyard", "description": "Closed threads kept for reference.", "posting": "closed", "active": true }
+    ],
+    "threadTitleMaxLength": 100,
+    "postMaxLength": 10000,
+    "threadsPageSize": 20,
+    "postsPageSize": 20,
+    "postCooldownSeconds": 30,
+    "threadsPerHour": 5,
+    "duplicateWindowMinutes": 10
+  },
   "presence": { "idleSeconds": 300, "unfocusedSeconds": 120, "leaseSeconds": 90 },
   "resources": {
     "energyMax": 100,

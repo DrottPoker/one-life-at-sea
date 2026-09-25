@@ -1,3 +1,4 @@
+import { isForumPath } from "@/lib/forums";
 import { isMessagesPath } from "@/lib/messages";
 import { isPlayerNumber, isPlayerProfilePath } from "@/lib/player-identity";
 import { isUuid } from "@/lib/validation";
@@ -26,7 +27,7 @@ export type CharacterStatus = {
 
 export function isSeaAccessiblePath(pathname: string, state: SeaPhase) {
   if (state === "in_harbor") return true;
-  if (pathname === "/sea" || (pathname === "/notifications" || isMessagesPath(pathname)) || (pathname.startsWith("/combatlog/") && isUuid(pathname.slice(11)))) return true;
+  if (pathname === "/sea" || (pathname === "/notifications" || isMessagesPath(pathname) || isForumPath(pathname)) || (pathname.startsWith("/combatlog/") && isUuid(pathname.slice(11)))) return true;
   return state === "at_sea" && (pathname === "/inventory" ||
     pathname === "/players" || isPlayerProfilePath(pathname) ||
     (pathname.startsWith("/attack/") && (isPlayerNumber(pathname.slice(8)) || isUuid(pathname.slice(8)))));

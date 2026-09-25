@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { loadConfig, migrationSql, revision, validateConfig, inventoryCatalogSql } from "./core.mjs";
+import { loadConfig, migrationSql, revision, validateConfig, inventoryCatalogSql, forumCatalogSql } from "./core.mjs";
 
 const config = loadConfig();
 const originalRevision = revision(config);
@@ -46,8 +46,13 @@ Object.assign(config.gameplay.seaTravel, { scoutEnergyCost: 9, scoutPageSize: 2,
   locationTypes: [{ id: "test_cove", name: "Captain's $sea$ Cove", active: true }, { id: "test_depths", name: "Test depths", active: true }] });
 Object.assign(config.gameplay.marketplace, { feeBps: 1000, popularityHours: 6, valueWindowHours: 2, pageSize: 2, listingsPageSize: 1, maxBatchSize: 2 });
 config.gameplay.inventory.items.find(item => item.id === "brass_compass").tradable = false;
+Object.assign(config.gameplay.forum, { threadTitleMaxLength: 10, postMaxLength: 50, threadsPageSize: 1, postsPageSize: 2, postCooldownSeconds: 0, threadsPerHour: 2 });
+config.gameplay.forum.boards.find(board => board.id === "general_discussion").name = "Captain's $forum$ Deck";
+config.gameplay.forum.boards.find(board => board.id === "fun_games").active = false;
+config.gameplay.forum.boards.push({ id: "config_new_board", section: "Game", name: "New board", description: "Added by configuration.", posting: "open", active: true });
 validateConfig(config);
-const removedItem = structuredClone(config), changedKind = structuredClone(config);
+const removedItem = structuredClone(config), changedKind = structuredClone(config), removedBoard = structuredClone(config);
+removedBoard.gameplay.forum.boards = removedBoard.gameplay.forum.boards.filter(board => board.id !== "config_new_board" && board.id !== "off_topic");
 removedItem.gameplay.inventory.items.pop();
 Object.assign(changedKind.gameplay.inventory.items[0], { kind: "consumable", slot: "none" });
 const checks = [
@@ -230,6 +235,25 @@ checks.push(
 "select private.emit_notification(captain,'test.config','config-'||n,jsonb_build_object('value',n)) from old_craft_fixture cross join generate_series(1,3) n;",
 "select is(jsonb_array_length(public.get_notifications()->'items'),2,'Notification page size follows configuration');",
 "select is(public.get_notification_summary()->>'unread_count','3','Summary counts unread notifications beyond the configured page');"
+);
+checks.push(
+"create temporary table forum_config_user as select gen_random_uuid() id;",
+"insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','ForumConfig'||translate(id::text,'0123456789','ghijklmnop')) from forum_config_user;",
+"select set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from forum_config_user;",
+"select is((select name from private.forum_boards where id='general_discussion'),$$Captain's $forum$ Deck$$,'Board names follow configuration and escape delimiters');",
+"select is((select active from private.forum_boards where id='fun_games'),false,'Configuration deactivates boards');",
+"select is((select position from private.forum_boards where id='config_new_board'),10,'Configuration adds boards');",
+"select throws_ok($guard$" + forumCatalogSql(removedBoard) + "$guard$,'P0001','Existing forum board IDs must be preserved','Config sync cannot remove a board');",
+"create temporary table forum_config_thread as select public.create_forum_thread('general_discussion','Short','Opening post',gen_random_uuid()) value;",
+"select public.create_forum_post((select (value->>'thread_id')::bigint from forum_config_thread),'Second',null,gen_random_uuid());",
+"select public.create_forum_post((select (value->>'thread_id')::bigint from forum_config_thread),'Third',null,gen_random_uuid());",
+"select is((public.get_forum_thread((select (value->>'thread_id')::bigint from forum_config_thread))->>'page_count')::integer,2,'Thread page size and cooldown follow configuration');",
+"select throws_ok($forum_test$select public.create_forum_post((select (value->>'thread_id')::bigint from forum_config_thread),repeat('x',51),null,gen_random_uuid())$forum_test$,'22023','INVALID_POST','Post length follows configuration');",
+"select throws_ok($forum_test$select public.create_forum_thread('general_discussion','Elevenchars','Body',gen_random_uuid())$forum_test$,'22023','INVALID_POST','Title length follows configuration');",
+"select public.create_forum_thread('general_discussion','Second','Body',gen_random_uuid());",
+"select throws_ok($forum_test$select public.create_forum_thread('general_discussion','Third','Body',gen_random_uuid())$forum_test$,'P0001','FORUM_THREAD_LIMIT','Thread limit follows configuration');",
+"select is(jsonb_array_length(public.get_forum_board('general_discussion')->'items'),1,'Board page size follows configuration');",
+"select throws_ok($forum_test$select public.get_forum_board('fun_games')$forum_test$,'P0002','FORUM_NOT_FOUND','Deactivated boards are hidden');"
 );
 const sql = "begin;\ncreate extension if not exists pgtap with schema extensions;\nset local search_path=public,extensions;\n" +
   "create temporary table old_training_user as select gen_random_uuid() id;\n" +

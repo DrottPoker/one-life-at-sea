@@ -37,4 +37,8 @@
 {{include.mail-send}}
 {{include.mail-read}}
 {{include.mail-actions}}
+{{include.forum-schema}}
+{{include.forum-write}}
+{{include.forum-read}}
+{{include.forum-moderation}}
 {{include.player-context}}

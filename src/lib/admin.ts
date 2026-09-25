@@ -65,6 +65,7 @@ export function adminLabel(name: string) {
 }
 export function adminResourceGroup(name: string) {
   if (name.startsWith("admin_")) return "Audit and access";
+  if (name.startsWith("forum_")) return "Forum";
   if (name.endsWith("requests") || name.includes("history") || name === "bank_transfers" || name === "market_sales") return "History and receipts";
   if (name.includes("loot") || name.includes("definitions") || name.includes("categories") || name.includes("tiers") || name === "skill_levels") return "Game content";
   if (name.startsWith("combat") || name === "ship_upgrade_jobs" || name === "hospital_patients") return "Combat and travel";

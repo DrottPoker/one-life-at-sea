@@ -15,6 +15,23 @@
         "notifications": { "type": "object", "properties": {
           "pageSize": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 }
         } },
+        "forum": { "type": "object", "properties": {
+          "boards": { "type": "array", "items": { "type": "object", "properties": {
+            "id": { "type": "string" },
+            "section": { "type": "string" },
+            "name": { "type": "string" },
+            "description": { "type": "string" },
+            "posting": { "type": "string" },
+            "active": { "type": "boolean" }
+          } } },
+          "threadTitleMaxLength": { "type": "number", "integer": true, "minimum": 1, "maximum": 200 },
+          "postMaxLength": { "type": "number", "integer": true, "minimum": 1, "maximum": 20000 },
+          "threadsPageSize": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 },
+          "postsPageSize": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 },
+          "postCooldownSeconds": { "type": "number", "integer": true, "minimum": 0, "maximum": 3600 },
+          "threadsPerHour": { "type": "number", "integer": true, "minimum": 1, "maximum": 100 },
+          "duplicateWindowMinutes": { "type": "number", "integer": true, "minimum": 0, "maximum": 1440 }
+        } },
         "presence": {
           "type": "object",
           "properties": {

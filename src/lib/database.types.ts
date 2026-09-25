@@ -87,6 +87,18 @@ export type Database = {
       set_mail_ignored: { Args: { target_player_number: number; ignored: boolean }; Returns: undefined };
       get_notification_summary: { Args: Record<string, never>; Returns: import("@/lib/notifications").NotificationSummary };
       get_notifications: { Args: { before_id?: string }; Returns: import("@/lib/notifications").NotificationPage };
+      get_forum_index: { Args: Record<string, never>; Returns: import("@/lib/forums").ForumIndex };
+      get_forum_board: { Args: { board_id: string; page?: number }; Returns: import("@/lib/forums").ForumBoardPage };
+      get_forum_thread: { Args: { thread_id: string; page?: number }; Returns: import("@/lib/forums").ForumThreadPage };
+      locate_forum_post: { Args: { post_id?: string; thread_id?: string }; Returns: import("@/lib/forums").ForumLocation };
+      get_forum_post_history: { Args: { post_id: string }; Returns: import("@/lib/forums").ForumPostHistory };
+      create_forum_thread: { Args: { board_id: string; thread_title: string; post_body: string; request_id: string }; Returns: import("@/lib/forums").ForumReceipt };
+      create_forum_post: { Args: { thread_id: string; post_body: string; quoted_post_id: string | null; request_id: string }; Returns: import("@/lib/forums").ForumReceipt };
+      edit_forum_post: { Args: { post_id: string; post_body: string; thread_title: string | null; expected_edit_count: number }; Returns: import("@/lib/forums").ForumEditReceipt };
+      withdraw_forum_post: { Args: { post_id: string }; Returns: import("@/lib/forums").ForumWithdrawReceipt };
+      mark_forum_thread_read: { Args: { thread_id: string; through_number: number }; Returns: undefined };
+      mark_forum_board_read: { Args: { board_id?: string }; Returns: undefined };
+      moderate_forum: { Args: { action: import("@/lib/forums").ForumModerationAction; payload: Record<string, string>; request_id: string; reason: string }; Returns: import("@/lib/forums").ForumModerationReceipt };
       mark_notification_read: { Args: { notification_id: string }; Returns: undefined };
       mark_all_notifications_read: { Args: { through_id: string }; Returns: undefined };
       list_crafting_recipes: { Args: Record<string, never>; Returns: import("@/lib/crafting").CraftingRecipe[] };
