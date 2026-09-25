@@ -39,13 +39,24 @@ function changed() { window.dispatchEvent(new Event(eventName)); }
 function readJournal(key: string) {
   try { return localStorage.getItem(key); } catch { return "unavailable"; }
 }
+// Another tab can release its lock before this tab sees it clear the journal, since storage
+// changes reach other tabs asynchronously. A saved request only counts as unresolved if it is
+// still there after this settle time; the shared lock is held meanwhile so no new request starts.
+const STORAGE_SETTLE_MS = 1000;
 function useRecoveryNeeded(key: string, raw: string | null) {
   const [unresolved, setUnresolved] = useState<{ key: string; raw: string } | null>(null);
   useEffect(() => {
     if (raw === null) return;
     const controller = new AbortController(), snapshot = { key, raw };
     function checkSavedRequest() {
-      if (!controller.signal.aborted && readJournal(key) === raw) setUnresolved(snapshot);
+      return new Promise<void>(resolve => {
+        if (controller.signal.aborted || readJournal(key) !== raw) return resolve();
+        const timer = setTimeout(() => {
+          if (!controller.signal.aborted && readJournal(key) === raw) setUnresolved(snapshot);
+          resolve();
+        }, STORAGE_SETTLE_MS);
+        controller.signal.addEventListener("abort", () => { clearTimeout(timer); resolve(); }, { once: true });
+      });
     }
     // Wait for any active request, including one running in another tab.
     const check = navigator.locks
