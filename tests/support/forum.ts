@@ -17,6 +17,8 @@ export function cleanupForumThreads(characterIds: string[]) {
     "if doomed is null then return; end if; " +
     "delete from private.forum_moderation_log where thread_id=any(doomed) or post_id in(select id from private.forum_posts where thread_id=any(doomed)); " +
     "delete from private.forum_thread_reads where thread_id=any(doomed); " +
+    "delete from private.forum_subscriptions where thread_id=any(doomed); " +
+    "delete from private.forum_reactions where post_id in(select id from private.forum_posts where thread_id=any(doomed)); " +
     "delete from private.forum_post_revisions where post_id in(select id from private.forum_posts where thread_id=any(doomed)); " +
     "update private.forum_threads set last_post_id=null where id=any(doomed); " +
     "delete from private.forum_posts where thread_id=any(doomed); " +

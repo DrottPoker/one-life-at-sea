@@ -111,6 +111,54 @@ revoke all on private.forum_boards,private.forum_threads,private.forum_posts,pri
   private.forum_board_reads,private.forum_author_stats,private.forum_moderation_log from public,anon,authenticated;
 revoke all on sequence private.forum_threads_id_seq,private.forum_posts_id_seq,private.forum_moderation_log_id_seq from public,anon,authenticated;
 
+-- One like or dislike per captain and post. The post keeps the totals, which a trigger maintains
+-- even when a reacting character is deleted.
+create table if not exists private.forum_reactions (
+  post_id bigint not null references private.forum_posts(id),
+  character_id uuid not null references public.characters(id) on delete cascade,
+  value smallint not null check(value in(-1,1)),
+  created_at timestamptz not null default clock_timestamp(),
+  updated_at timestamptz not null default clock_timestamp(),
+  primary key(post_id,character_id)
+);
+create index if not exists forum_reactions_character_idx on private.forum_reactions(character_id,updated_at desc);
+alter table private.forum_posts add column if not exists likes integer not null default 0 check(likes>=0),
+  add column if not exists dislikes integer not null default 0 check(dislikes>=0);
+create or replace function private.count_forum_reaction()
+returns trigger language plpgsql volatile security invoker set search_path='' as $$
+begin
+  if tg_op in('UPDATE','DELETE') then
+    update private.forum_posts set likes=likes-(old.value=1)::integer,dislikes=dislikes-(old.value=-1)::integer where id=old.post_id;
+  end if;
+  if tg_op in('INSERT','UPDATE') then
+    update private.forum_posts set likes=likes+(new.value=1)::integer,dislikes=dislikes+(new.value=-1)::integer where id=new.post_id;
+  end if;
+  return null;
+end;
+$$;
+revoke all on function private.count_forum_reaction() from public,anon,authenticated;
+drop trigger if exists count_forum_reaction on private.forum_reactions;
+create trigger count_forum_reaction after insert or update of value or delete on private.forum_reactions
+  for each row execute function private.count_forum_reaction();
+-- A false row is an explicit unsubscribe that later posting does not undo. notified_number is the
+-- post behind the one reply notification that waits until the subscriber reads the thread.
+create table if not exists private.forum_subscriptions (
+  character_id uuid not null references public.characters(id) on delete cascade,
+  thread_id bigint not null references private.forum_threads(id),
+  subscribed boolean not null,
+  notified_number integer check(notified_number>0),
+  created_at timestamptz not null default clock_timestamp(),
+  primary key(character_id,thread_id)
+);
+create index if not exists forum_subscriptions_thread_idx on private.forum_subscriptions(thread_id) where subscribed and notified_number is null;
+alter table private.forum_posts add column if not exists search_vector tsvector generated always as (to_tsvector('simple',body)) stored;
+alter table private.forum_threads add column if not exists search_vector tsvector generated always as (to_tsvector('simple',title)) stored;
+create index if not exists forum_posts_search_idx on private.forum_posts using gin(search_vector);
+create index if not exists forum_threads_search_idx on private.forum_threads using gin(search_vector);
+alter table private.forum_reactions enable row level security;
+alter table private.forum_subscriptions enable row level security;
+revoke all on private.forum_reactions,private.forum_subscriptions from public,anon,authenticated;
+
 -- Administrators moderate the forum; separate player moderators are a later addition.
 create or replace function private.forum_is_moderator()
 returns boolean language sql stable security definer set search_path='' as $$ select private.is_admin(); $$;

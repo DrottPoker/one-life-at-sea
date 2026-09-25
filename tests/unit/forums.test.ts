@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { gameplay } from "../../src/config/public";
-import { forumBoardUrl, forumDraftKey, forumPostUrl, forumThreadUrl, isForumBoardId, isForumId, isForumPath, normalizeForumBody, parseForumPage,
-  parsePendingForumPost, validForumBody, validForumTitle, validModerationReason } from "../../src/lib/forums";
-import { forumLinkTarget, parseForumMarkup, wrapForumSelection } from "../../src/lib/forum-markup";
+import { forumBoardUrl, forumDraftKey, forumPostUrl, forumSearchUrl, forumSubscriptionsUrl, forumThreadUrl, isForumBoardId, isForumId, isForumPath, normalizeForumBody,
+  parseForumPage, parseForumSearch, parsePendingForumPost, validForumBody, validForumTitle, validModerationReason } from "../../src/lib/forums";
+import { forumLinkTarget, parseForumMarkup, plainForumText, wrapForumSelection } from "../../src/lib/forum-markup";
 import { isHospitalAccessiblePath } from "../../src/lib/hospital";
 import { isSeaAccessiblePath } from "../../src/lib/sea-travel";
 import { navigationRedirect } from "../../src/lib/game-navigation";
@@ -12,7 +12,7 @@ vi.mock("@/lib/player", () => ({ requireCharacter: mocks.requireCharacter }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-import { editForumPost, markForumThreadRead, moderateForum, submitForumPost, withdrawForumPost } from "../../src/app/forum-actions";
+import { editForumPost, markForumThreadRead, moderateForum, setForumReaction, setForumSubscription, submitForumPost, withdrawForumPost } from "../../src/app/forum-actions";
 
 const id = "f0f00000-0000-4000-8000-0000000000a1";
 beforeEach(() => {
@@ -23,7 +23,7 @@ beforeEach(() => {
 
 describe("forum routes and values", () => {
   it("accepts exact forum paths in Hospital and at sea", () => {
-    for (const path of ["/forums", "/forums/boards/general_discussion", "/forums/boards/trading_post/new", "/forums/threads/9223372036854775807", "/forums/posts/1"]) {
+    for (const path of ["/forums", "/forums/search", "/forums/subscriptions", "/forums/boards/general_discussion", "/forums/boards/trading_post/new", "/forums/threads/9223372036854775807", "/forums/posts/1"]) {
       expect(isForumPath(path)).toBe(true);
       expect(isHospitalAccessiblePath(path)).toBe(true);
       expect(isSeaAccessiblePath(path, "at_sea")).toBe(true);
@@ -41,6 +41,14 @@ describe("forum routes and values", () => {
     expect(forumPostUrl("12", gameplay.forum.postsPageSize + 1)).toBe("/forums/threads/12?page=2#post-" + (gameplay.forum.postsPageSize + 1));
     expect(parseForumPage("3")).toBe(2);
     for (const value of [undefined, ["2"], "0", "-1", "1.5", "99999999"]) expect(parseForumPage(value)).toBe(0);
+  });
+  it("separates the author filter from the searched words", () => {
+    expect(parseForumSearch("fair winds by:Captain")).toEqual({ text: "fair winds", author: "Captain" });
+    expect(parseForumSearch("BY:#100001 \"calm seas\" -storm")).toEqual({ text: "\"calm seas\" -storm", author: "#100001" });
+    expect(parseForumSearch("nearby:x standby")).toEqual({ text: "nearby:x standby", author: null });
+    expect(parseForumSearch("by:" + "x".repeat(41))).toEqual({ text: "", author: null });
+    expect(forumSearchUrl("by:100001", { threads: true, page: 1, board: "trading_post" })).toBe("/forums/search?q=by%3A100001&threads=1&board=trading_post&page=2");
+    expect(forumSubscriptionsUrl(2)).toBe("/forums/subscriptions?page=3");
   });
   it("mirrors the database text rules", () => {
     expect(normalizeForumBody("  Hello\r\nCaptain \r")).toBe("Hello\nCaptain");
@@ -103,6 +111,9 @@ describe("forum markup", () => {
     expect(parseForumMarkup("(https://en.wikipedia.org/wiki/Ship_(sailing))")[1]).toMatchObject({ href: "https://en.wikipedia.org/wiki/Ship_(sailing)" });
     expect(parseForumMarkup("[b]https://example.com[/b]")[0]).toMatchObject({ type: "bold", children: [{ type: "link" }] });
   });
+  it("turns posts into plain excerpts that keep spoilers hidden", () => {
+    expect(plainForumText("[b]Fair[/b]  winds\n[spoiler]the ending[/spoiler] [url=https://example.com]charts[/url]")).toBe("Fair winds [spoiler] charts");
+  });
   it("wraps the selected text for the toolbar", () => {
     expect(wrapForumSelection("Hello world", 6, 11, "[b]", "[/b]")).toEqual({ text: "Hello [b]world[/b]", start: 9, end: 14 });
   });
@@ -131,6 +142,16 @@ describe("forum server actions", () => {
     expect((await moderateForum("captain", { id, action: "pin_thread", payload: { thread_id: "1" }, reason: "x" })).error).toBeTruthy();
     expect((await moderateForum("captain", { id, action: "move_thread", payload: { thread_id: "1", board_id: "../x" }, reason: "Moving" })).error).toBeTruthy();
     expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+  it("validates reactions and subscriptions before the database", async () => {
+    expect((await setForumReaction("captain", "0", 1)).error).toBeTruthy();
+    expect((await setForumReaction("captain", "1", 2 as never)).error).toBeTruthy();
+    expect(await setForumSubscription("captain", "x", true)).toBeTruthy();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: "NEW_CHARACTER" } });
+    expect((await setForumReaction("captain", "1", -1)).error).toContain("hours");
+    mocks.rpc.mockResolvedValueOnce({ data: { post_id: "1", likes: 1, dislikes: 0, reaction: 1 }, error: null });
+    expect((await setForumReaction("captain", "1", 1)).receipt?.likes).toBe(1);
   });
   it("trims moderator edits and reasons", async () => {
     mocks.rpc.mockResolvedValueOnce({ data: { message: "Post edited.", thread_id: "1", post_id: "2" }, error: null });

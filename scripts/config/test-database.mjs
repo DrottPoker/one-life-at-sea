@@ -46,7 +46,8 @@ Object.assign(config.gameplay.seaTravel, { scoutEnergyCost: 9, scoutPageSize: 2,
   locationTypes: [{ id: "test_cove", name: "Captain's $sea$ Cove", active: true }, { id: "test_depths", name: "Test depths", active: true }] });
 Object.assign(config.gameplay.marketplace, { feeBps: 1000, popularityHours: 6, valueWindowHours: 2, pageSize: 2, listingsPageSize: 1, maxBatchSize: 2 });
 config.gameplay.inventory.items.find(item => item.id === "brass_compass").tradable = false;
-Object.assign(config.gameplay.forum, { threadTitleMaxLength: 10, postMaxLength: 50, threadsPageSize: 1, postsPageSize: 2, postCooldownSeconds: 0, threadsPerHour: 2 });
+Object.assign(config.gameplay.forum, { threadTitleMaxLength: 10, postMaxLength: 50, threadsPageSize: 1, postsPageSize: 2, postCooldownSeconds: 0, threadsPerHour: 2,
+  reactionsPerMinute: 1, newCharacterHours: 0, searchPageSize: 1 });
 config.gameplay.forum.boards.find(board => board.id === "general_discussion").name = "Captain's $forum$ Deck";
 config.gameplay.forum.boards.find(board => board.id === "fun_games").active = false;
 config.gameplay.forum.boards.push({ id: "config_new_board", section: "Game", name: "New board", description: "Added by configuration.", posting: "open", active: true });
@@ -255,7 +256,14 @@ checks.push(
 "select public.create_forum_thread('general_discussion','Second','Body',gen_random_uuid());",
 "select throws_ok($forum_test$select public.create_forum_thread('general_discussion','Third','Body',gen_random_uuid())$forum_test$,'P0001','FORUM_THREAD_LIMIT','Thread limit follows configuration');",
 "select is(jsonb_array_length(public.get_forum_board('general_discussion')->'items'),1,'Board page size follows configuration');",
-"select throws_ok($forum_test$select public.get_forum_board('fun_games')$forum_test$,'P0002','FORUM_NOT_FOUND','Deactivated boards are hidden');"
+"select throws_ok($forum_test$select public.get_forum_board('fun_games')$forum_test$,'P0002','FORUM_NOT_FOUND','Deactivated boards are hidden');",
+"select is(public.search_forums('second')->>'total','2','Search finds the reply and the thread title');",
+"select is(jsonb_array_length(public.search_forums('second')->'items'),1,'Search page size follows configuration');",
+"create temporary table forum_reactor_user as select gen_random_uuid() id;",
+"insert into auth.users(id,email,is_anonymous,raw_user_meta_data) select id,id::text||'@example.test',false,jsonb_build_object('character_name','ForumReactor'||translate(id::text,'0123456789','ghijklmnop')) from forum_reactor_user;",
+"select set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from forum_reactor_user;",
+"select is(public.set_forum_reaction((select (value->>'post_id')::bigint from forum_config_thread),-1)->>'dislikes','1','New-captain dislike limit follows configuration');",
+"select throws_ok($forum_test$select public.set_forum_reaction((select (value->>'post_id')::bigint from forum_config_thread),1)$forum_test$,'P0001','FORUM_RATE_LIMIT','Reaction rate follows configuration');"
 );
 const sql = "begin;\ncreate extension if not exists pgtap with schema extensions;\nset local search_path=public,extensions;\n" +
   "create temporary table old_training_user as select gen_random_uuid() id;\n" +

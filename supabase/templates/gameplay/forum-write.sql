@@ -33,23 +33,69 @@ returns void language plpgsql volatile security invoker set search_path='' as $$
 begin
   update private.forum_thread_reads set last_read_number=through_number,read_at=clock_timestamp()
     where character_id=reader and thread_id=target_thread and last_read_number<through_number;
-  if found or exists(select 1 from private.forum_thread_reads where character_id=reader and thread_id=target_thread) then return; end if;
-  perform 1 from private.forum_threads where id=target_thread for no key update;
-  insert into private.forum_thread_reads(character_id,thread_id,last_read_number) values(reader,target_thread,through_number)
-    on conflict(character_id,thread_id) do nothing;
-  if found then
-    update private.forum_threads set reader_count=reader_count+1 where id=target_thread;
-  else
-    update private.forum_thread_reads set last_read_number=through_number,read_at=clock_timestamp()
-      where character_id=reader and thread_id=target_thread and last_read_number<through_number;
+  if not found and not exists(select 1 from private.forum_thread_reads where character_id=reader and thread_id=target_thread) then
+    perform 1 from private.forum_threads where id=target_thread for no key update;
+    insert into private.forum_thread_reads(character_id,thread_id,last_read_number) values(reader,target_thread,through_number)
+      on conflict(character_id,thread_id) do nothing;
+    if found then
+      update private.forum_threads set reader_count=reader_count+1 where id=target_thread;
+    else
+      update private.forum_thread_reads set last_read_number=through_number,read_at=clock_timestamp()
+        where character_id=reader and thread_id=target_thread and last_read_number<through_number;
+    end if;
   end if;
+  -- Reading past the notified reply lets the next reply notify again.
+  update private.forum_subscriptions set notified_number=null
+    where character_id=reader and thread_id=target_thread and notified_number<=through_number;
+end;
+$$;
+-- The author and every notification recipient are locked in the shared character order before the
+-- thread. Recipients only need the key-share lock that their notification rows take anyway.
+create or replace function private.forum_lock_participants(author uuid,recipients uuid[])
+returns void language plpgsql volatile security invoker set search_path='' as $$
+declare participant uuid;
+begin
+  for participant in select distinct member from unnest(array_append(coalesce(recipients,'{}'::uuid[]),author)) member where member is not null order by member loop
+    if participant=author then perform 1 from public.characters where id=participant for no key update;
+    else perform 1 from public.characters where id=participant for key share; end if;
+  end loop;
+end;
+$$;
+-- A quoted author hears about the quote; other subscribers get one reply notice per thread until
+-- they read it. One loop in character order keeps notification and event locks in the shared order.
+create or replace function private.forum_notify(thread private.forum_threads,post private.forum_posts,actor public.characters,
+  recipients uuid[],quoted_author uuid,observed timestamptz)
+returns void language plpgsql volatile security invoker set search_path='' as $$
+declare target record; payload jsonb;
+begin
+  payload:=jsonb_build_object('version',1,'thread_id',thread.id::text,'title',thread.title,'post_id',post.id::text,'post_number',post.post_number,
+    'author',jsonb_build_object('name',actor.display_name,'player_number',actor.player_number));
+  for target in
+    select c.id character_id,'forum.quote' kind from public.characters c
+      where c.id=quoted_author and c.id<>actor.id and c.id=any(recipients)
+        and not exists(select 1 from private.mail_ignored i where i.character_id=c.id and i.ignored_id=actor.id)
+    union all
+    select s.character_id,'forum.reply' from private.forum_subscriptions s
+      where s.thread_id=thread.id and s.subscribed and s.notified_number is null and s.character_id=any(recipients)
+        and s.character_id<>actor.id and s.character_id is distinct from quoted_author
+        and not exists(select 1 from private.forum_thread_reads r where r.character_id=s.character_id and r.thread_id=thread.id and r.last_read_number>=post.post_number)
+        and not exists(select 1 from private.mail_ignored i where i.character_id=s.character_id and i.ignored_id=actor.id)
+    order by 1
+  loop
+    if target.kind='forum.reply' then
+      update private.forum_subscriptions set notified_number=post.post_number where character_id=target.character_id and thread_id=thread.id;
+    end if;
+    perform private.emit_notification(target.character_id,target.kind,post.id::text,payload,observed);
+  end loop;
 end;
 $$;
 revoke all on function private.forum_post_receipt(private.forum_posts),private.forum_original(private.forum_posts,text),
-  private.forum_check_cooldown(uuid,timestamptz),private.forum_count_new_post(uuid,timestamptz,boolean),private.forum_mark_read(uuid,bigint,integer)
+  private.forum_check_cooldown(uuid,timestamptz),private.forum_count_new_post(uuid,timestamptz,boolean),private.forum_mark_read(uuid,bigint,integer),
+  private.forum_lock_participants(uuid,uuid[]),private.forum_notify(private.forum_threads,private.forum_posts,public.characters,uuid[],uuid,timestamptz)
   from public,anon,authenticated;
 
--- Lock order for forum writes: author character, thread, board, author statistics.
+-- Lock order for forum writes: author and notification recipients in character order, thread, board,
+-- author statistics, subscriptions, then notifications.
 create or replace function private.create_forum_thread(board_id text,thread_title text,post_body text,request_id uuid)
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); moderator boolean:=private.forum_is_moderator(); observed timestamptz;
@@ -87,6 +133,7 @@ begin
   update private.forum_boards set thread_count=thread_count+1,post_count=post_count+1 where id=board.id;
   perform private.forum_count_new_post(viewer_id,observed,true);
   perform private.forum_mark_read(viewer_id,thread.id,1);
+  insert into private.forum_subscriptions(character_id,thread_id,subscribed) values(viewer_id,thread.id,true) on conflict do nothing;
   perform private.record_character_action(viewer_id);
   return private.forum_post_receipt(post);
 end;
@@ -95,11 +142,19 @@ $$;
 create or replace function private.create_forum_post(thread_id bigint,post_body text,quoted_post_id bigint,request_id uuid)
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); moderator boolean:=private.forum_is_moderator(); observed timestamptz; new_body text;
+  recipients uuid[]; quoted_author uuid;
   board private.forum_boards%rowtype; actor public.characters%rowtype; thread private.forum_threads%rowtype; post private.forum_posts%rowtype;
 begin
   if create_forum_post.request_id is null or create_forum_post.thread_id is null or post_body is null then raise exception 'INVALID_POST' using errcode='22023'; end if;
   new_body:=private.forum_normalize(post_body);
-  perform 1 from public.characters where id=viewer_id for no key update;
+  -- Only locked recipients are notified, so a subscriber added meanwhile waits for the next reply.
+  select array_agg(distinct recipient) into recipients from (
+    select s.character_id recipient from private.forum_subscriptions s
+      where s.thread_id=create_forum_post.thread_id and s.subscribed and s.notified_number is null and s.character_id<>viewer_id
+    union all
+    select q.author_id from private.forum_posts q where q.id=create_forum_post.quoted_post_id and q.thread_id=create_forum_post.thread_id and q.author_id<>viewer_id
+  ) candidates where recipient is not null;
+  perform private.forum_lock_participants(viewer_id,recipients);
   select * into post from private.forum_posts p where p.author_id=viewer_id and p.request_id=create_forum_post.request_id;
   if found then
     if post.thread_id<>create_forum_post.thread_id or post.quoted_post_id is distinct from create_forum_post.quoted_post_id
@@ -114,9 +169,10 @@ begin
   if thread.removed_at is not null or not private.forum_can_post(board.posting,moderator) then raise exception 'FORUM_READ_ONLY' using errcode='42501'; end if;
   if thread.locked_at is not null and not moderator then raise exception 'THREAD_LOCKED' using errcode='42501'; end if;
   -- Quotes point to a visible post in the same thread and are shown from the original.
-  if create_forum_post.quoted_post_id is not null and not exists(select 1 from private.forum_posts q
-    where q.id=create_forum_post.quoted_post_id and q.thread_id=thread.id and q.removed_at is null) then
-    raise exception 'INVALID_QUOTE' using errcode='22023'; end if;
+  if create_forum_post.quoted_post_id is not null then
+    select q.author_id into quoted_author from private.forum_posts q where q.id=create_forum_post.quoted_post_id and q.thread_id=thread.id and q.removed_at is null;
+    if not found then raise exception 'INVALID_QUOTE' using errcode='22023'; end if;
+  end if;
   observed:=clock_timestamp();
   perform private.forum_check_cooldown(viewer_id,observed);
   if exists(select 1 from private.forum_posts p where p.author_id=viewer_id and p.thread_id=thread.id and p.body=new_body and p.removed_at is null
@@ -130,6 +186,9 @@ begin
   update private.forum_boards set post_count=post_count+1 where id=board.id;
   perform private.forum_count_new_post(viewer_id,observed,false);
   perform private.forum_mark_read(viewer_id,thread.id,post.post_number);
+  insert into private.forum_subscriptions(character_id,thread_id,subscribed) values(viewer_id,thread.id,true) on conflict do nothing;
+  select * into thread from private.forum_threads t where t.id=thread.id;
+  perform private.forum_notify(thread,post,actor,recipients,quoted_author,observed);
   perform private.record_character_action(viewer_id);
   return private.forum_post_receipt(post);
 end;
@@ -224,6 +283,58 @@ begin
     where (mark_forum_board_read.board_id is null or b.id=mark_forum_board_read.board_id) and (b.active or moderator) order by b.id
     on conflict on constraint forum_board_reads_pkey do update set read_through=greatest(private.forum_board_reads.read_through,excluded.read_through);
   if not found and mark_forum_board_read.board_id is not null then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
+  update private.forum_subscriptions s set notified_number=null from private.forum_threads t
+    where s.character_id=viewer_id and s.notified_number is not null and t.id=s.thread_id
+      and (mark_forum_board_read.board_id is null or t.board_id=mark_forum_board_read.board_id);
+end;
+$$;
+
+-- Likes and dislikes set a state, so repeating a request changes nothing. They follow Torn: no
+-- reactions on your own posts, in closed or staff boards, or in locked threads, and new captains
+-- cannot dislike.
+create or replace function private.set_forum_reaction(post_id bigint,reaction integer)
+returns jsonb language plpgsql volatile security definer set search_path='' as $$
+declare viewer_id uuid:=private.combat_captain(); moderator boolean:=private.forum_is_moderator(); observed timestamptz:=clock_timestamp();
+  joined timestamptz; current_value smallint; post private.forum_posts%rowtype; thread private.forum_threads%rowtype; board private.forum_boards%rowtype;
+begin
+  if set_forum_reaction.post_id is null or reaction is null or reaction not in(-1,0,1) then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
+  select c.created_at into joined from public.characters c where c.id=viewer_id for no key update;
+  select * into post from private.forum_posts p where p.id=set_forum_reaction.post_id;
+  select * into thread from private.forum_threads t where t.id=post.thread_id;
+  select * into board from private.forum_boards b where b.id=thread.board_id;
+  if post.id is null or ((thread.removed_at is not null or not board.active) and not moderator) then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
+  if post.removed_at is not null then raise exception 'POST_REMOVED' using errcode='P0001'; end if;
+  if thread.removed_at is not null or board.posting<>'open' then raise exception 'FORUM_READ_ONLY' using errcode='42501'; end if;
+  if thread.locked_at is not null then raise exception 'THREAD_LOCKED' using errcode='42501'; end if;
+  if post.author_id=viewer_id then raise exception 'SELF_REACTION' using errcode='22023'; end if;
+  select r.value into current_value from private.forum_reactions r where r.post_id=post.id and r.character_id=viewer_id;
+  if current_value is distinct from nullif(reaction,0)::smallint then
+    if reaction=-1 and joined>observed-make_interval(hours=>{{gameplay.forum.newCharacterHours}}) then raise exception 'NEW_CHARACTER' using errcode='P0001'; end if;
+    if (select count(*) from private.forum_reactions r where r.character_id=viewer_id and r.updated_at>observed-interval '1 minute')>={{gameplay.forum.reactionsPerMinute}} then
+      raise exception 'FORUM_RATE_LIMIT' using errcode='P0001'; end if;
+    if reaction=0 then
+      delete from private.forum_reactions r where r.post_id=post.id and r.character_id=viewer_id;
+    else
+      insert into private.forum_reactions(post_id,character_id,value,created_at,updated_at) values(post.id,viewer_id,reaction,observed,observed)
+        on conflict on constraint forum_reactions_pkey do update set value=excluded.value,updated_at=excluded.updated_at;
+    end if;
+  end if;
+  return (select jsonb_build_object('post_id',p.id::text,'likes',p.likes,'dislikes',p.dislikes,'reaction',reaction) from private.forum_posts p where p.id=post.id);
+end;
+$$;
+
+-- An explicit unsubscribe is kept, so replying later does not subscribe again.
+create or replace function private.set_forum_subscription(thread_id bigint,subscribed boolean)
+returns void language plpgsql volatile security definer set search_path='' as $$
+declare viewer_id uuid:=private.combat_captain(); moderator boolean:=private.forum_is_moderator(); thread private.forum_threads%rowtype; board_active boolean;
+begin
+  if set_forum_subscription.thread_id is null or set_forum_subscription.subscribed is null then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
+  select * into thread from private.forum_threads t where t.id=set_forum_subscription.thread_id;
+  select b.active into board_active from private.forum_boards b where b.id=thread.board_id;
+  if thread.id is null or ((thread.removed_at is not null or not board_active) and not moderator) then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
+  insert into private.forum_subscriptions(character_id,thread_id,subscribed) values(viewer_id,thread.id,set_forum_subscription.subscribed)
+    on conflict on constraint forum_subscriptions_pkey do update set subscribed=excluded.subscribed,notified_number=null
+    where private.forum_subscriptions.subscribed<>excluded.subscribed;
 end;
 $$;
 
@@ -239,15 +350,21 @@ create or replace function public.mark_forum_thread_read(thread_id bigint,throug
 returns void language sql volatile security invoker set search_path='' as $$ select private.mark_forum_thread_read(thread_id,through_number); $$;
 create or replace function public.mark_forum_board_read(board_id text default null)
 returns void language sql volatile security invoker set search_path='' as $$ select private.mark_forum_board_read(board_id); $$;
+create or replace function public.set_forum_reaction(post_id bigint,reaction integer)
+returns jsonb language sql volatile security invoker set search_path='' as $$ select private.set_forum_reaction(post_id,reaction); $$;
+create or replace function public.set_forum_subscription(thread_id bigint,subscribed boolean)
+returns void language sql volatile security invoker set search_path='' as $$ select private.set_forum_subscription(thread_id,subscribed); $$;
 revoke all on function private.create_forum_thread(text,text,text,uuid),public.create_forum_thread(text,text,text,uuid),
   private.create_forum_post(bigint,text,bigint,uuid),public.create_forum_post(bigint,text,bigint,uuid),
   private.edit_forum_post(bigint,text,text,integer),public.edit_forum_post(bigint,text,text,integer),
   private.withdraw_forum_post(bigint),public.withdraw_forum_post(bigint),
   private.mark_forum_thread_read(bigint,integer),public.mark_forum_thread_read(bigint,integer),
-  private.mark_forum_board_read(text),public.mark_forum_board_read(text) from public,anon,authenticated;
+  private.mark_forum_board_read(text),public.mark_forum_board_read(text),private.set_forum_reaction(bigint,integer),public.set_forum_reaction(bigint,integer),
+  private.set_forum_subscription(bigint,boolean),public.set_forum_subscription(bigint,boolean) from public,anon,authenticated;
 grant execute on function private.create_forum_thread(text,text,text,uuid),public.create_forum_thread(text,text,text,uuid),
   private.create_forum_post(bigint,text,bigint,uuid),public.create_forum_post(bigint,text,bigint,uuid),
   private.edit_forum_post(bigint,text,text,integer),public.edit_forum_post(bigint,text,text,integer),
   private.withdraw_forum_post(bigint),public.withdraw_forum_post(bigint),
   private.mark_forum_thread_read(bigint,integer),public.mark_forum_thread_read(bigint,integer),
-  private.mark_forum_board_read(text),public.mark_forum_board_read(text) to authenticated;
+  private.mark_forum_board_read(text),public.mark_forum_board_read(text),private.set_forum_reaction(bigint,integer),public.set_forum_reaction(bigint,integer),
+  private.set_forum_subscription(bigint,boolean),public.set_forum_subscription(bigint,boolean) to authenticated;

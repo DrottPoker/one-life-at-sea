@@ -1,10 +1,20 @@
 import { Fragment } from "react";
-import { ChevronRight, Lock, MessagesSquare, Pin } from "lucide-react";
+import Form from "next/form";
+import { ChevronRight, Lock, MessagesSquare, Pin, Search } from "lucide-react";
 import { GameLink as Link } from "@/components/game-navigation";
 import { MessageTime } from "@/components/messages/message-time";
 import { ForumPersonLink } from "@/components/forums/forum-person";
 import { gameplay } from "@/config/public";
 import { forumBoardUrl, forumPageCount, forumPermalink, forumThreadUrl, forumUnreadUrl, forumUrl, type ForumBoardSummary, type ForumThreadSummary } from "@/lib/forums";
+
+export function ForumSearchForm({ query = "", threads = false, board = null }: { query?: string; threads?: boolean; board?: string | null }) {
+  return <Form action="/forums/search" className="o-forum-search" role="search" aria-label="Search the forums">
+    <input name="q" defaultValue={query} maxLength={200} aria-label="Search the forums" placeholder="Search posts, or by:name" />
+    {threads && <input type="hidden" name="threads" value="1" />}
+    {board && <input type="hidden" name="board" value={board} />}
+    <button className="o-primary" type="submit"><Search size={16} aria-hidden="true" />Search</button>
+  </Form>;
+}
 
 export function ForumBreadcrumbs({ trail }: { trail: { label: string; href?: string }[] }) {
   return <nav className="o-forum-breadcrumbs" aria-label="Forum location"><ol>
@@ -50,7 +60,7 @@ function ThreadPages({ thread }: { thread: ForumThreadSummary }) {
 
 export function ForumThreadList({ threads }: { threads: ForumThreadSummary[] }) {
   return <table className="o-forum-table o-forum-threads">
-    <thead><tr><th scope="col">Thread</th><th scope="col">Replies</th><th scope="col">Views</th><th scope="col">Last post</th></tr></thead>
+    <thead><tr><th scope="col">Thread</th><th scope="col">Replies</th><th scope="col">Views</th><th scope="col">Rating</th><th scope="col">Last post</th></tr></thead>
     <tbody>{threads.map(thread => <tr key={thread.id} data-unread={thread.unread} data-pinned={thread.pinned}>
       <td className="o-forum-topic"><div><span className="o-forum-marker" aria-hidden="true">{thread.pinned ? <Pin /> : thread.locked ? <Lock /> : <MessagesSquare />}</span>
         <span><Link className="o-forum-title" href={forumThreadUrl(thread.id)}>{thread.title}</Link>
@@ -59,6 +69,7 @@ export function ForumThreadList({ threads }: { threads: ForumThreadSummary[] }) 
           <small>by <ForumPersonLink person={thread.author} />, <MessageTime value={thread.created_at} compact /></small><ThreadPages thread={thread} /></span></div></td>
       <td data-label="Replies">{thread.replies.toLocaleString("en-GB")}</td>
       <td data-label="Views">{thread.views.toLocaleString("en-GB")}</td>
+      <td data-label="Rating">{thread.rating === null ? "-" : (thread.rating > 0 ? "+" : "") + thread.rating.toLocaleString("en-GB")}</td>
       <td className="o-forum-last" data-label="Last post">{thread.last_post && <>
         <Link href={forumPermalink(thread.last_post.post_id)} prefetch={false}>#{thread.last_post.post_number}</Link>
         <small>by <ForumPersonLink person={thread.last_post.author} />, <MessageTime value={thread.last_post.posted_at} compact /></small>

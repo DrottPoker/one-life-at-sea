@@ -13,7 +13,7 @@ export type ForumBoardSummary = {
 export type ForumIndex = { boards: ForumBoardSummary[]; can_moderate: boolean };
 export type ForumThreadSummary = {
   id: string; title: string; board_id: string; author: ForumPerson | null; created_at: string; replies: number; views: number; post_seq: number;
-  pinned: boolean; locked: boolean; last_post: ForumLastPost | null; last_read_number: number | null; unread: boolean;
+  pinned: boolean; locked: boolean; rating: number | null; last_post: ForumLastPost | null; last_read_number: number | null; unread: boolean;
 };
 export type ForumBoardPage = {
   board: { id: string; section: string; name: string; description: string; posting: ForumPosting; active: boolean; can_post: boolean };
@@ -24,17 +24,28 @@ export type ForumPost = {
   id: string; number: number; author: ForumAuthor | null; created_at: string; body: string | null; format_version: number; edit_count: number;
   edited: { at: string; by: string | null; moderator: boolean; count: number } | null;
   removed: { by: "author" | "moderator"; at: string } | null; quote: ForumQuote | null; own: boolean; can_edit: boolean; can_withdraw: boolean;
+  likes: number | null; dislikes: number | null; my_reaction: ForumReaction; can_react: boolean; can_dislike: boolean;
 };
 export type ForumThread = {
   id: string; title: string; board: { id: string; name: string; section: string; posting: ForumPosting }; author: ForumPerson | null; created_at: string;
   pinned: boolean; locked: boolean; removed: { by: "moderator"; at: string } | null; post_count: number; post_seq: number; views: number;
-  last_read_number: number | null; can_reply: boolean; can_moderate: boolean;
+  last_read_number: number | null; can_reply: boolean; can_moderate: boolean; subscribed: boolean;
 };
 export type ForumThreadPage = { thread: ForumThread; posts: ForumPost[]; page: number; page_count: number; page_size: number };
 export type ForumLocation = { thread_id: string; post_number: number; page: number };
 export type ForumReceipt = { thread_id: string; post_id: string; post_number: number; created_at: string };
 export type ForumEditReceipt = { post_id: string; edit_count: number };
 export type ForumWithdrawReceipt = { post_id: string };
+export type ForumReaction = -1 | 0 | 1;
+export type ForumReactionReceipt = { post_id: string; likes: number; dislikes: number; reaction: ForumReaction };
+export type ForumSearchItem = {
+  post_id: string; post_number: number; created_at: string; excerpt: string; author: ForumPerson;
+  thread: { id: string; title: string }; board: { id: string; name: string };
+};
+export type ForumSearchPage = { items: ForumSearchItem[]; total: number; page: number; page_size: number };
+export type ForumSubscription = ForumThreadSummary & { board: { id: string; name: string }; new_posts: number };
+export type ForumSubscriptionPage = { items: ForumSubscription[]; total: number; page: number; page_size: number };
+export type ForumAuthorStats = { post_count: number; thread_count: number };
 export type ForumRevision = { revision: number; title: string | null; body: string; replaced_at: string; editor: string | null };
 export type ForumPostHistory = { post_id: string; revisions: ForumRevision[] };
 export type ForumModerationAction = "pin_thread" | "unpin_thread" | "lock_thread" | "unlock_thread" | "move_thread" | "grave_thread" |
@@ -103,8 +114,22 @@ export function forumPageCount(posts: number, pageSize: number) {
   return Math.max(1, Math.ceil(posts / pageSize));
 }
 
+// "by:" picks an author by name or player number; the rest is searched as words and "phrases".
+export function parseForumSearch(value: string) {
+  const author = /(?:^|\s)by:(\S+)/i.exec(value)?.[1] ?? null;
+  return { text: value.replace(/(?:^|\s)by:\S+/gi, " ").replace(/\s+/g, " ").trim(), author: author && author.length <= 40 ? author : null };
+}
+export function forumSearchUrl(query: string, options: { page?: number; threads?: boolean; board?: string | null } = {}) {
+  const params = new URLSearchParams({ q: query });
+  if (options.threads) params.set("threads", "1");
+  if (options.board) params.set("board", options.board);
+  if (options.page) params.set("page", String(options.page + 1));
+  return "/forums/search?" + params.toString();
+}
+export function forumSubscriptionsUrl(page = 0) { return withPage("/forums/subscriptions", page); }
+
 export function isForumPath(pathname: string) {
-  if (pathname === "/forums") return true;
+  if (pathname === "/forums" || pathname === "/forums/search" || pathname === "/forums/subscriptions") return true;
   const parts = pathname.split("/");
   if (parts.length === 4 && parts[2] === "boards") return isForumBoardId(parts[3]);
   if (parts.length === 5 && parts[2] === "boards" && parts[4] === "new") return isForumBoardId(parts[3]);

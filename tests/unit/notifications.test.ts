@@ -8,6 +8,23 @@ const notification: PlayerNotification = { id: "1", kind: "combat.attacked", cre
   payload: { version: 1, battle_id: battle, hospitalized: false, attackers: [
     { name: "First", player_number: 100001 }, { name: "Second", player_number: 100002 }, { name: "Third", player_number: 100003 },
   ] } };
+const forumReply: PlayerNotification = { id: "2", kind: "forum.reply", created_at: "2026-09-25T12:00:00Z", read_at: null,
+  payload: { version: 1, thread_id: "5", title: "Harbor news", post_id: "9223372036854775807", post_number: 2, author: { name: "Captain", player_number: 100001 } } };
+describe("forum notifications", () => {
+  it("links replies and quotes to the post permalink", () => {
+    expect(notificationContent(forumReply)).toEqual({ actors: [{ name: "Captain", href: "/players/100001" }], text: "replied in \u201cHarbor news\u201d",
+      href: "/forums/posts/9223372036854775807", linkLabel: "View forum post" });
+    expect(notificationContent({ ...forumReply, kind: "forum.quote" }).text).toBe("quoted your post in \u201cHarbor news\u201d");
+  });
+  it("falls back for damaged payloads without unsafe links", () => {
+    for (const payload of [{ ...forumReply.payload, post_id: "javascript:alert(1)" }, { ...forumReply.payload, version: 2 }, { ...forumReply.payload, title: "" },
+      { ...forumReply.payload, author: null }, { ...forumReply.payload, author: { name: 5 } }]) {
+      expect(notificationContent({ ...forumReply, payload })).toEqual({ actors: [], text: "You have a new notification.", href: null });
+    }
+    expect(notificationContent({ ...forumReply, payload: { ...forumReply.payload, author: { name: "Former", player_number: "x" } } }).actors).toEqual([{ name: "Former", href: null }]);
+  });
+});
+
 describe("notifications", () => {
   it("links every attacker and the completed combat log", () => {
     expect(notificationContent(notification)).toEqual({ actors: [

@@ -8,12 +8,13 @@ import { createSnapshotPoller, snapshotRefreshDelay } from "@/lib/snapshot-polle
 import { createClient } from "@/lib/supabase/browser";
 import type { CharacterProfile } from "@/lib/database.types";
 import type { CharacterStatus } from "@/lib/sea-travel";
+import { forumSearchUrl, type ForumAuthorStats } from "@/lib/forums";
 import { useGameState } from "@/components/game-state";
 import { HospitalCountdown } from "@/components/hospital-countdown";
 import { ProfilePresence } from "@/components/profile-presence";
 
-export function ProfileDetails({ profile, initialStatus, joined, age, ownProfile }: {
-  profile: CharacterProfile; initialStatus: CharacterStatus; joined: string; age: string; ownProfile: boolean;
+export function ProfileDetails({ profile, initialStatus, joined, age, ownProfile, forum }: {
+  profile: CharacterProfile; initialStatus: CharacterStatus; joined: string; age: string; ownProfile: boolean; forum: ForumAuthorStats;
 }) {
   const viewer = useGameState(), instance = useId();
   const [live, setLive] = useState(initialStatus), [error, setError] = useState(false), [attempt, setAttempt] = useState(0);
@@ -66,6 +67,8 @@ export function ProfileDetails({ profile, initialStatus, joined, age, ownProfile
       <div><dt>Max sea distance</dt><dd><output aria-label="Max sea distance">{hospital.max_sea_distance}</output></dd></div>
       <div><dt>At sea since</dt><dd><time dateTime={profile.created_at}>{joined}</time></dd></div>
       <div><dt>Character age</dt><dd>{age}</dd></div>
+      <div><dt>Forum posts</dt><dd><Link href={forumSearchUrl("by:" + profile.player_number)} prefetch={false} aria-label={"Forum posts: " + forum.post_count}>{forum.post_count.toLocaleString("en-GB")}</Link>
+        {forum.thread_count > 0 && <> (<Link href={forumSearchUrl("by:" + profile.player_number, { threads: true })} prefetch={false}>{forum.thread_count} {forum.thread_count === 1 ? "thread" : "threads"}</Link>)</>}</dd></div>
     </ProfilePresence>
     {error && <p className="o-feedback" role="status">Character status could not be refreshed. <button className="o-text-button" onClick={() => setAttempt(a => a + 1)}>Retry status</button></p>}
     {!ownProfile && <div className="o-profile-actions">

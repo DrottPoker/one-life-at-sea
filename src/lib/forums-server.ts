@@ -24,3 +24,13 @@ export async function locateForumPost(target: { post_id: string } | { thread_id:
   const { data, error } = await (await createClient()).rpc("locate_forum_post", target);
   return data && !error ? data : unavailable(error);
 }
+export const loadForumSubscriptions = cache(async (page: number) => {
+  const { data, error } = await (await createClient()).rpc("get_forum_subscriptions", { page });
+  return data && !error ? data : unavailable(error);
+});
+// An unusable query shows the search form again instead of an error page.
+export async function searchForums(args: { query: string; author: string | null; board_id: string | null; threads_only: boolean; page: number }) {
+  const { data, error } = await (await createClient()).rpc("search_forums", args);
+  if (error?.message === "INVALID_REQUEST") return null;
+  return data && !error ? data : unavailable(error);
+}

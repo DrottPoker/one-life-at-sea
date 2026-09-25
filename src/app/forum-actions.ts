@@ -8,7 +8,7 @@ import { isUuid } from "@/lib/validation";
 import { gameplay } from "@/config/public";
 import { forumModerationActions, isForumBoardId, isForumId, normalizeForumBody, validForumBody, validForumTitle, validModerationReason,
   type ForumEditReceipt, type ForumModerationReceipt, type ForumModerationRequest, type ForumPostHistory, type ForumPostResult,
-  type ForumWithdrawReceipt, type PendingForumPost } from "@/lib/forums";
+  type ForumReaction, type ForumReactionReceipt, type ForumWithdrawReceipt, type PendingForumPost } from "@/lib/forums";
 
 const changedAccount = "Your signed-in character changed. Reload the forum.";
 const messages: Record<string, string> = {
@@ -27,6 +27,9 @@ const messages: Record<string, string> = {
   LAST_VISIBLE_POST: "This is the last visible post. Remove the whole thread instead.",
   CANNOT_RESTORE: "Content withdrawn by its author cannot be restored.",
   THREAD_REMOVED: "Restore the thread first.",
+  SELF_REACTION: "You cannot react to your own post.",
+  NEW_CHARACTER: `New captains can dislike posts after ${gameplay.forum.newCharacterHours} hours.`,
+  FORUM_RATE_LIMIT: "You are reacting too quickly. Please wait a minute.",
   REQUEST_MISMATCH: "This saved request does not match the original. Reload the page.",
 };
 type RpcError = { message: string; details?: string | null } | null;
@@ -142,4 +145,25 @@ export async function loadForumPostHistory(characterId: string, postId: string):
   const { data, error } = await withDatabaseRetry(() => client.rpc("get_forum_post_history", { post_id: postId }));
   if (error || !data) return { error: error?.message === "FORUM_FORBIDDEN" ? messages.ADMIN_REQUIRED : knownError(error) ?? "The history could not be loaded." };
   return { history: data };
+}
+
+// A reaction sets a state, so a repeated or retried request is harmless.
+export async function setForumReaction(characterId: string, postId: string, reaction: ForumReaction): Promise<{ error?: string; receipt?: ForumReactionReceipt }> {
+  if (!await currentCharacter(characterId)) return { error: changedAccount };
+  if (!isForumId(postId) || ![-1, 0, 1].includes(reaction)) return { error: messages.FORUM_NOT_FOUND };
+  const client = await createClient();
+  const { data, error } = await withDatabaseRetry(() => client.rpc("set_forum_reaction", { post_id: postId, reaction }));
+  if (error || !data) return { error: knownError(error) ?? "Your reaction could not be saved. Please try again." };
+  revalidatePath("/forums", "layout");
+  return { receipt: data };
+}
+
+export async function setForumSubscription(characterId: string, threadId: string, subscribed: boolean): Promise<string | null> {
+  if (!await currentCharacter(characterId)) return changedAccount;
+  if (!isForumId(threadId) || typeof subscribed !== "boolean") return messages.FORUM_NOT_FOUND;
+  const client = await createClient();
+  const { error } = await withDatabaseRetry(() => client.rpc("set_forum_subscription", { thread_id: threadId, subscribed }));
+  if (error) return knownError(error) ?? "Your subscription could not be changed. Please try again.";
+  revalidatePath("/forums", "layout");
+  return null;
 }

@@ -20,7 +20,10 @@
     "postsPageSize": 20,
     "postCooldownSeconds": 30,
     "threadsPerHour": 5,
-    "duplicateWindowMinutes": 10
+    "duplicateWindowMinutes": 10,
+    "reactionsPerMinute": 30,
+    "newCharacterHours": 24,
+    "searchPageSize": 20
   },
   "presence": { "idleSeconds": 300, "unfocusedSeconds": 120, "leaseSeconds": 90 },
   "resources": {

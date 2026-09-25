@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { Archive, History, Lock, LockOpen, MoveRight, Pencil, Pin, PinOff, Quote, RotateCcw, Trash2 } from "lucide-react";
+import { useEffect, useId, useOptimistic, useRef, useState, useTransition } from "react";
+import { Archive, Bell, BellOff, History, Lock, LockOpen, MoveRight, Pencil, Pin, PinOff, Quote, RotateCcw, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
 import { GameLink as Link } from "@/components/game-navigation";
 import { useNavigationActivity } from "@/components/game-refresh";
 import { MessageTime } from "@/components/messages/message-time";
@@ -10,11 +10,11 @@ import { ForumMarkup } from "@/components/forums/forum-markup";
 import { ForumPersonLink } from "@/components/forums/forum-person";
 import { ForumEditor, ForumTextArea, ForumToolbar, type ForumQuoteDraft } from "@/components/forums/forum-editor";
 import { ForumDialog, ForumModerationDialog, type ForumModerationPrompt } from "@/components/forums/forum-dialog";
-import { editForumPost, loadForumPostHistory, markForumThreadRead, moderateForum, withdrawForumPost } from "@/app/forum-actions";
+import { editForumPost, loadForumPostHistory, markForumThreadRead, moderateForum, setForumReaction, setForumSubscription, withdrawForumPost } from "@/app/forum-actions";
 import { gameplay } from "@/config/public";
 import { subscribeToForeground } from "@/lib/browser-events";
 import { forumPermalink, forumThreadUrl, normalizeForumBody, validForumBody, validForumTitle, validModerationReason,
-  type ForumPost, type ForumRevision, type ForumThread, type ForumThreadPage } from "@/lib/forums";
+  type ForumPost, type ForumReaction, type ForumRevision, type ForumThread, type ForumThreadPage } from "@/lib/forums";
 
 // Only a mounted, visible thread acknowledges reading, and only up to the posts it shows.
 function useReadMarker(characterId: string, threadId: string, highest: number, lastRead: number | null) {
@@ -29,6 +29,38 @@ function useReadMarker(characterId: string, threadId: string, highest: number, l
     const unsubscribe = subscribeToForeground(mark); mark();
     return () => { disposed = true; unsubscribe(); };
   }, [characterId, threadId, highest, lastRead]);
+}
+
+// The server's counts stay authoritative; the pressed state and counts only lead them while saving.
+function Reactions({ characterId, post, onError }: { characterId: string; post: ForumPost; onError: (message: string) => void }) {
+  const [shown, setShown] = useOptimistic({ likes: post.likes ?? 0, dislikes: post.dislikes ?? 0, mine: post.my_reaction });
+  const [pending, start] = useTransition();
+  useNavigationActivity(pending);
+  if (post.likes === null || post.dislikes === null) return null;
+  function react(value: 1 | -1) {
+    const next: ForumReaction = shown.mine === value ? 0 : value;
+    start(async () => {
+      setShown({ likes: shown.likes - (shown.mine === 1 ? 1 : 0) + (next === 1 ? 1 : 0), dislikes: shown.dislikes - (shown.mine === -1 ? 1 : 0) + (next === -1 ? 1 : 0), mine: next });
+      try { const result = await setForumReaction(characterId, post.id, next); if (result.error) onError(result.error); }
+      catch { onError("Your reaction could not be saved. Please try again."); }
+    });
+  }
+  const dislikeHint = post.can_react && !post.can_dislike ? `New captains can dislike posts after ${gameplay.forum.newCharacterHours} hours.` : undefined;
+  return <div className="o-forum-reactions" role="group" aria-label={"Reactions to post #" + post.number}>
+    <button type="button" aria-pressed={shown.mine === 1} disabled={!post.can_react || pending} onClick={() => react(1)} aria-label={"Like (" + shown.likes + ")"}><ThumbsUp aria-hidden="true" />{shown.likes}</button>
+    <button type="button" aria-pressed={shown.mine === -1} disabled={!post.can_dislike || pending} onClick={() => react(-1)} aria-label={"Dislike (" + shown.dislikes + ")"} title={dislikeHint}><ThumbsDown aria-hidden="true" />{shown.dislikes}</button>
+  </div>;
+}
+
+function SubscribeButton({ characterId, thread }: { characterId: string; thread: ForumThread }) {
+  const [error, setError] = useState<string | null>(null), [pending, start] = useTransition();
+  useNavigationActivity(pending);
+  return <span className="o-forum-subscribe">
+    <button type="button" className="o-text-button" aria-pressed={thread.subscribed} disabled={pending} onClick={() => start(async () => {
+      try { setError(await setForumSubscription(characterId, thread.id, !thread.subscribed)); } catch { setError("Your subscription could not be changed. Please try again."); }
+    })}>{thread.subscribed ? <BellOff aria-hidden="true" /> : <Bell aria-hidden="true" />}{thread.subscribed ? "Unsubscribe" : "Subscribe"}</button>
+    {error && <span role="alert" className="o-field-error">{error}</span>}
+  </span>;
 }
 
 function PostEditor({ characterId, post, thread, asModerator, onDone }: {
@@ -135,6 +167,7 @@ function PostCard({ characterId, post, thread, fresh, onQuote, onModerate, onHis
         : post.body !== null && <ForumMarkup source={post.body} />}
       {post.edited && !editing && <p className="o-forum-edited">Last edited by {post.edited.by ?? "a former captain"}{post.edited.moderator && " (moderator)"} on <MessageTime value={post.edited.at} /></p>}
       {!editing && <footer className="o-forum-post-actions">
+        <Reactions characterId={characterId} post={post} onError={setError} />
         {thread.can_reply && !post.removed && <button type="button" onClick={onQuote}><Quote aria-hidden="true" />Quote</button>}
         {post.can_edit && <button type="button" onClick={() => setEditing("author")}><Pencil aria-hidden="true" />Edit</button>}
         {post.can_withdraw && <button type="button" onClick={() => setConfirming(true)}><Trash2 aria-hidden="true" />Delete</button>}
@@ -194,6 +227,7 @@ export function ForumThreadView({ characterId, data }: { characterId: string; da
     <header className="o-forum-thread-head">
       <h2>{thread.pinned && <Pin aria-label="Pinned" />}{thread.locked && <Lock aria-label="Locked" />}{thread.title}</h2>
       <p className="o-copy">Started by <ForumPersonLink person={thread.author} /> on <MessageTime value={thread.created_at} /> · {thread.post_count} {thread.post_count === 1 ? "post" : "posts"} · {thread.views} {thread.views === 1 ? "view" : "views"}</p>
+      {!thread.removed && <SubscribeButton characterId={characterId} thread={thread} />}
       {thread.removed && <p className="o-forum-warning" role="status">A moderator removed this thread. Only moderators can open it.</p>}
       {thread.can_moderate && <ThreadModeration thread={thread} onModerate={setPrompt} />}
     </header>

@@ -98,6 +98,11 @@ export type Database = {
       withdraw_forum_post: { Args: { post_id: string }; Returns: import("@/lib/forums").ForumWithdrawReceipt };
       mark_forum_thread_read: { Args: { thread_id: string; through_number: number }; Returns: undefined };
       mark_forum_board_read: { Args: { board_id?: string }; Returns: undefined };
+      set_forum_reaction: { Args: { post_id: string; reaction: import("@/lib/forums").ForumReaction }; Returns: import("@/lib/forums").ForumReactionReceipt };
+      set_forum_subscription: { Args: { thread_id: string; subscribed: boolean }; Returns: undefined };
+      search_forums: { Args: { query: string; author?: string | null; board_id?: string | null; threads_only?: boolean; page?: number }; Returns: import("@/lib/forums").ForumSearchPage };
+      get_forum_subscriptions: { Args: { page?: number }; Returns: import("@/lib/forums").ForumSubscriptionPage };
+      get_forum_author_stats: { Args: { player_number: number }; Returns: import("@/lib/forums").ForumAuthorStats };
       moderate_forum: { Args: { action: import("@/lib/forums").ForumModerationAction; payload: Record<string, string>; request_id: string; reason: string }; Returns: import("@/lib/forums").ForumModerationReceipt };
       mark_notification_read: { Args: { notification_id: string }; Returns: undefined };
       mark_all_notifications_read: { Args: { through_id: string }; Returns: undefined };

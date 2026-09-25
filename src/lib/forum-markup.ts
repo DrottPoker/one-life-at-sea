@@ -92,6 +92,13 @@ export function parseForumMarkup(source: string): ForumMarkupNode[] {
   return autolink(root);
 }
 
+// Plain text for excerpts: formatting is dropped and spoilers stay hidden.
+export function plainForumText(source: string) {
+  const flatten = (nodes: ForumMarkupNode[]): string => nodes.map(node =>
+    node.type === "text" ? node.text : node.type === "spoiler" ? "[spoiler]" : flatten(node.children)).join("");
+  return flatten(parseForumMarkup(source)).replace(/\s+/g, " ").trim();
+}
+
 // Toolbar helpers wrap the selection so the editor never produces an invalid tag.
 export const forumFormats = [
   { tag: "b", label: "Bold" }, { tag: "i", label: "Italic" }, { tag: "u", label: "Underline" },

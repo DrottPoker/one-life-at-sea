@@ -23,8 +23,12 @@ export default async function CharacterProfilePage({ params }: { params: Promise
   const profile = await findPlayerProfile(playerNumber);
   if (!profile) notFound();
 
-  const { data: hospital, error: hospitalError } = await supabase.rpc("get_character_status", { target_id: profile.character_id });
+  const [{ data: hospital, error: hospitalError }, { data: forum, error: forumError }] = await Promise.all([
+    supabase.rpc("get_character_status", { target_id: profile.character_id }),
+    supabase.rpc("get_forum_author_stats", { player_number: profile.player_number }),
+  ]);
   if (hospitalError || !hospital) throw new Error("The hospital status could not be loaded.");
+  if (forumError || !forum) throw new Error("The forum profile could not be loaded.");
   const ownProfile = viewer.id === profile.character_id;
   const skills = ownProfile ? await ownSkillProgress() : null;
   const created = new Date(profile.created_at);
@@ -39,7 +43,7 @@ export default async function CharacterProfilePage({ params }: { params: Promise
       <div className="o-profile">
         <div className="o-profile-portrait" aria-hidden="true"><Anchor /><span>{frontend.site.name.toUpperCase()}</span></div>
         <div className="o-profile-info">
-          <ProfileDetails key={profile.character_id} profile={profile} initialStatus={hospital} joined={joined} age={age} ownProfile={ownProfile} />
+          <ProfileDetails key={profile.character_id} profile={profile} initialStatus={hospital} joined={joined} age={age} ownProfile={ownProfile} forum={forum} />
         </div>
       </div>
       {skills && <ProfileSkills progress={skills} />}
