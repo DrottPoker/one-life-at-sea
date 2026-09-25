@@ -54,6 +54,7 @@ En ny sammanslagning är tillåten så länge ingen hosted databas har migration
 Träningsnivåer behåller installerade ID:n och ordning. XP-krav och effektivitet måste stiga; första nivån är gratis vid 0 XP. Kurvor och sammansatta resultat valideras mot tillåtna numeriska gränser. Se [Träning](TRAINING_FOUNDATION.md).
 
 Skill-ID:n får inte tas bort. Nya skills initialiseras och påverkar Character Level enligt [Skills](SKILLS.md).
+Porträtt-ID:n får inte heller tas bort. Varje porträtt behöver en befintlig WebP-bild under `public/images/portraits/`, och standardporträttet måste finnas i katalogen. Se [porträtt](CHARACTER_PROFILES.md#porträtt).
 Crew Battling och Ship Battling krävs, eftersom strid delar ut deras XP och deras nivåer höjer maxhälsan.
 Hälsokolumnernas databasgräns inkluderar bonusen på nivå 100, och kontrollen stoppar värden som skulle överskrida heltalsgränsen.
 Aktivitets-ID och koppling till skill är stabila; avaktivera i stället för att radera.
@@ -80,6 +81,7 @@ Ekonomiövervakningens namngivna cronjobb uppdateras utan att observationshistor
 | `inventory`, `marketplace`, `economy` | [Inventory](INVENTORY.md), [Marketplace](MARKETPLACE.md), [värde](ITEM_MARKET_VALUE.md), [cirkulation](ITEM_CIRCULATION.md), [Bank](GOLD_COINS_AND_BANK.md) |
 | `seaTravel`, scouting | [Resor](SEA_TRAVEL.md), [Scouting](SEA_SCOUTING.md) |
 | `messages`, `notifications`, `presence` | [Brevpost](MESSAGES.md), [Notiser](NOTIFICATIONS.md), [Närvaro](PLAYER_PRESENCE.md) |
+| `portraits` | [Porträtt](CHARACTER_PROFILES.md#porträtt) |
 | `forum` | [Forum](FORUMS.md) |
 
 Återhämtningsgräns och lagringsgräns är olika: överfyllda resurser bevaras tills de används.

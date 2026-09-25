@@ -6,8 +6,8 @@ Uppdaterat 2026-09-25.
 
 `/players/<player-number>` visar namn, grov plats, Max sea distance, skapandedatum och karaktärsålder.
 Sidan öppnar med en bild med porträtt, namn, status och tre nyckeltal, följd av kort med
-detaljer; se [gränssnittet](INTERFACE_DESIGN.md#profile-september-25). Alla kaptener har samma
-standardporträtt tills egna porträtt finns. Ingen rangtitel visas.
+detaljer; se [gränssnittet](INTERFACE_DESIGN.md#profile-september-25). Kaptenen väljer sitt
+[porträtt](#porträtt) i ett galleri. Ingen rangtitel visas.
 Max sea distance är karaktärens längsta nådda avstånd, ökar vid ankomst och behålls
 efter hemkomst, kortare resor och Hospital. Nya karaktärer börjar på 0.
 My Profile och namn i hamnlistan länkar hit. Profilen visar även permanent Player ID.
@@ -25,8 +25,8 @@ SQL kontrollerar dessutom stridsvillkoren vid start. Den egna profilen visar fö
 ## Publik datagräns
 
 `public.character_profiles` innehåller `character_id`, `player_number`, `character_level`, `display_name`,
-`location`, `created_at`, `arrives_at`, `arrival_location`, `max_sea_distance` och
-`arrival_max_sea_distance`. Det sista fältet är ett eventuellt planerat nytt rekord
+`location`, `created_at`, `arrives_at`, `arrival_location`, `max_sea_distance`,
+`arrival_max_sea_distance` och `portrait_id`. Det sista fältet är ett eventuellt planerat nytt rekord
 som räknas först vid ankomst. En kortare resa innehåller inget kommande rekord.
 Konton, e-post, Energy, hälsa, stats, besöks-ID och privata resealternativ ingår inte.
 
@@ -48,6 +48,24 @@ Plats används aldrig för att påstå att spelaren är online.
 
 [Resor](SEA_TRAVEL.md), [strid](COMBAT_SYSTEM.md), [Hospital](HOSPITAL.md) och
 [verifiering](IMPLEMENTATION_STATUS.md) beskriver de anslutna funktionerna.
+
+## Porträtt
+
+Porträtten är en katalog i `gameplay.portraits`: ID, namn och bild under `public/images/portraits/`.
+Bilderna är 3:4 och visas beskurna till det formatet. Nya kaptener får `defaultId`. Katalogens
+ID:n får inte tas bort, eftersom valda porträtt pekar på dem; konfigurationen kan lägga till nya.
+Bara ID:n når databasen, som tabellen `private.portrait_definitions`.
+
+På den egna profilen öppnar pennknappen vid porträttet ett galleri. Valet sparas med
+`set_portrait(portrait_id)`, som kontrollerar att ID:t finns i katalogen, låser karaktärsraden
+och räknas som en handling för närvaron. Samma val igen ändrar ingenting. Porträtt är utseende
+utan spelpåverkan och kan därför bytas överallt, även i Hospital, till sjöss och under strid.
+Klienten har ingen skrivrätt till kolumnen `characters.portrait_id`, och en främmande nyckel mot
+katalogen stoppar okända värden.
+
+Valet speglas till `character_profiles` och ingår i `get_character_status` och spelstatusen.
+Sidopanelen och profilen byter därför bild direkt efter sparandet, och andra spelare som har
+profilen öppen ser bytet via realtidsuppdateringen utan att ladda om.
 
 ## Brevpost
 

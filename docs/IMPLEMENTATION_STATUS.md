@@ -22,14 +22,14 @@ Exakta regler finns i [dokumentindexet](README.md). Helhetsgranskningen rättar 
 | Kontroll | Resultat |
 | --- | --- |
 | `npm run check` | Godkänd dokumentkontroll, lint utan varningar, typkontroll och produktionsbygge |
-| Enhetstester | 530 godkända i 37 filer |
-| `npm run test:db` | 2 535 godkända påståenden i 46 filer |
-| `npm run test:config:db` | 157 godkända påståenden; alternativ config rullades tillbaka. 20 körningar i rad utan fel efter rättningen av klockberoendet |
-| Hela webbläsarsviten | 129 godkända och 1 överhoppad, Edge mot produktionsbygget. Den överhoppade är den opt-in-styrda prestandamätningen, som inte kördes |
+| Enhetstester | 535 godkända i 37 filer |
+| `npm run test:db` | 2 558 godkända påståenden i 47 filer |
+| `npm run test:config:db` | 163 godkända påståenden; alternativ config rullades tillbaka. 20 körningar i rad utan fel efter rättningen av klockberoendet |
+| Hela webbläsarsviten | 130 godkända och 1 överhoppad, Edge mot produktionsbygget. Den överhoppade är den opt-in-styrda prestandamätningen, som inte kördes |
 | SQL-lint | Inga varningar eller fel |
 | Databasens säkerhets-/prestandarådgivare | Inga fynd på varnings- eller felnivå (2026-09-23, inte omkörd) |
 | `npm audit` | 0 kända sårbarheter |
-| RPC-avtal | Alla 94 typade funktioner finns med rätt parameterlistor |
+| RPC-avtal | Alla 95 typade funktioner finns med rätt parameterlistor |
 | Ekonomins integritet efter alla tester | 0 avvikelser i samtliga 8 kontroller |
 
 Alla SQL-migrationer, även forumets, är applicerade lokalt. Next.js 16.3.6, Supabase JS 2.117.1 och Vitest 5.0.1 ingår i verifieringen.

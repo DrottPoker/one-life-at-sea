@@ -273,10 +273,16 @@ without tabs. `/players/<number>` opens with an artwork hero (`o-profile-hero`):
 - `public/images/headers/profile-harbor-dusk.webp` is the owner's 2000 x 667 harbor at dusk,
   unchanged. A dark gradient from the left keeps the text readable; the ship stays visible on
   the right and on narrow screens.
-- `public/images/portraits/captain-default.webp` is the owner's 1086 x 1448 pixel-art captain,
-  unchanged, in a gold frame. Every captain uses it until players can choose their own
-  portrait; the path is in `src/components/captain-portrait.tsx`. The sidebar shows the same
-  portrait, which also links to the profile.
+- The captain's chosen portrait sits in a gold frame. The owner supplied three 1086 x 1448
+  pixel-art portraits, used unchanged: Harbor Rover (`harbor-rover.webp`, the default), Old Salt
+  and Red Corsair. The catalog is `gameplay.portraits`; see [the profile rules](CHARACTER_PROFILES.md#porträtt).
+  The sidebar shows the same portrait, which also links to the profile.
+- On the owner's profile a round pencil button on the portrait's lower right corner opens the
+  gallery: a modal with every portrait as a radio card, the current one marked Current and the
+  selection outlined in gold. Save portrait is enabled once another portrait is selected; a saved
+  choice closes the dialog, returns focus to the button and is announced as Portrait saved.
+  Escape and Cancel close without saving. The gallery uses the shared `GameDialog`
+  (`src/components/game-dialog.tsx`), which the forum dialogs also build on.
 - Beside the portrait: `Name [ID]`, a status line with presence, location (or In hospital with
   the remaining time) and three figures: Level, Character age and Max sea distance. Other
   captains' profiles have Send message and Attack at the top right of the hero.
@@ -289,6 +295,5 @@ next to the existing selector and Save orders button.
 
 The page is its own size container: at 640px the portrait shrinks and the actions move below,
 at 440px the figures move under the portrait, and at 340px the defence selector stacks.
-There is no rank title, biography or Edit profile button yet, since the game has no data for
-them. The name preview at registration shows the name without a Captain prefix.
+There is no rank title or biography yet. The name preview at registration shows the name without a Captain prefix.
 

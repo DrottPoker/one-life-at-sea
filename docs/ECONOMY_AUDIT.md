@@ -14,6 +14,9 @@ klienternas återförsök och lokala utvecklingsverktyg ingår.
    Samma begäran kan kontrolleras efter navigation, omladdning och omstart.
    Web Locks serialiserar webbläsarens skrivningar mellan flikar. En olöst
    begäran måste kontrolleras innan en annan ekonomihandling kan skickas.
+   Ändringar i localStorage når andra flikar asynkront, ibland efter att låset
+   släppts. En sparad begäran räknas därför som olöst först om den finns kvar en
+   sekund efter att det delade låset tagits, och låset hålls under tiden.
    Ingen begäran körs automatiskt efter återkomst.
 2. **Fel karaktär efter kontobyte.** Serverhandlingarna kontrollerar nu att den
    inloggade karaktären fortfarande är den som formuläret visades för. En gammal
