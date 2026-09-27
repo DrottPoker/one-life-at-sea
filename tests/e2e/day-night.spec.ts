@@ -94,8 +94,8 @@ test("gameplay refreshes reuse server time without extra clock fetches", async (
     let clockRequests = 0;
     page.on("request", request => { if (new URL(request.url()).pathname === "/api/world-time") clockRequests++; });
     for (let count = 1; count <= 3; count++) {
-      await page.getByRole("button", { name: "Fish for 1 Stamina", exact: true }).click();
-      await expect(page.getByLabel("Shore Fishing XP", { exact: true })).toHaveText(String(count * 10));
+      await page.getByRole("button", { name: "Forage for 1 Stamina", exact: true }).click();
+      await expect(page.getByLabel("Foraging XP", { exact: true })).toHaveText(String(count * 10));
     }
     await page.waitForLoadState("networkidle");
     expect(clockRequests).toBe(0);

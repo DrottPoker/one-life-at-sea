@@ -6,6 +6,7 @@ const originalRevision = revision(config);
 const originalShipSecondsPerEnergy = config.gameplay.training.shipSecondsPerEnergy;
 config.gameplay.economy.initialGoldCoins = 77;
 config.gameplay.activities.catalog[0].xpGain = 17;
+config.gameplay.activities.failureXpPercent = 30;
 config.gameplay.crafting.recipes[0].ingredients[0].quantity = 3;
 config.gameplay.crafting.recipes[0].ingredients.push({ itemId: "brass_compass", quantity: 2 });
 config.gameplay.crafting.recipes[0].outputQuantity = 2;
@@ -226,7 +227,9 @@ checks.push(
 // Keep cost/XP checks independent of randomized inventory rewards.
 "update private.activity_loot set loot_table_id=null where activity_id='shore_fishing';",
 "select is((public.perform_activity('shore_fishing',3,17,gen_random_uuid())->>'xp_awarded')::integer,17,'Activity reward follows configuration');",
-"select is((public.get_game_state()->>'stamina')::integer,74,'Activity uses the configured Stamina cost');"
+"select is((public.get_game_state()->>'stamina')::integer,74,'Activity uses the configured Stamina cost');",
+"update private.activity_loot set loot_table_id='harbor_shore',success_start=0,success_end=0 where activity_id='shore_fishing';",
+"select is((public.perform_activity('shore_fishing',3,17,gen_random_uuid())->>'xp_awarded')::integer,5,'A miss grants the configured XP share');"
 );
 checks.push(
 "select set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from old_craft_user;",

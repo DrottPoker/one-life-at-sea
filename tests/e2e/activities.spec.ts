@@ -2,7 +2,14 @@ import { test, expect, type ElementHandle, type Page } from "@playwright/test";
 import { createTestAccount, cleanupTestAccounts, loginTestAccount, testSql } from "../support/accounts";
 import { economyJournalKey } from "../../src/lib/economy-journal";
 
-const offer = { activity_id: "shore_fishing", expected_stamina_cost: 1, expected_xp_gain: 10 };
+// Foraging has no catch roll, so every attempt grants its full XP.
+const offer = { activity_id: "coastal_foraging", expected_stamina_cost: 1, expected_xp_gain: 10 };
+// Catch activities roll their outcome; a miss grants half the XP.
+async function attemptXp(page: Page, activity: string) {
+  const result = page.getByRole("region", { name: activity + " result", exact: true });
+  await expect(result.getByRole("heading", { name: /^(Success|Failure)$/ })).toBeVisible();
+  return await result.getByRole("heading", { name: "Failure", exact: true }).count() ? 5 : 10;
+}
 // Captures the XP drop one second into its display for visual review.
 async function xpDropShot(page: Page, path: string) {
   const card = page.locator(".o-xp-drop");
@@ -22,25 +29,29 @@ test("activities spend Stamina, advance the right skills and persist on the prof
     await expect(page).toHaveURL(/\/activities$/);
     const stamina = page.getByRole("progressbar", { name: "Stamina", exact: true });
     const fish = page.getByRole("button", { name: "Fish for 1 Stamina", exact: true });
+    const forage = page.getByRole("button", { name: "Forage for 1 Stamina", exact: true });
     let card: ElementHandle | null = null;
     for (let count = 1; count <= 20; count++) {
-      await fish.click();
+      await forage.click();
       await expect(stamina).toHaveAttribute("aria-valuenow", String(50 - count));
-      await expect(page.getByLabel("Shore Fishing XP", { exact: true })).toHaveText(String(10 * count));
+      await expect(page.getByLabel("Foraging XP", { exact: true })).toHaveText(String(10 * count));
       if (count === 1) card = await page.locator(".o-xp-drop").elementHandle();
     }
     // Every XP gain shows in the shared drop at the bottom right. It stays while XP keeps coming and adds it up.
-    const fishingDrop = page.getByRole("region", { name: "Fishing XP gained", exact: true });
-    await expect(fishingDrop).toContainText("+200 XP");
-    await expect(fishingDrop).toContainText("Level up! Level 2");
-    await expect(fishingDrop).toContainText("200 XP");
+    const foragingDrop = page.getByRole("region", { name: "Foraging XP gained", exact: true });
+    await expect(foragingDrop).toContainText("+200 XP");
+    await expect(foragingDrop).toContainText("Level up! Level 2");
+    await expect(foragingDrop).toContainText("200 XP");
     // The visible numbers rise to the same values.
-    await expect(fishingDrop.locator(".o-xp-drop-gain")).toHaveText("+200 XP");
-    await expect(fishingDrop.locator(".o-xp-drop-level")).toHaveText("Level up! Level 2");
-    await expect(fishingDrop.locator(".o-xp-drop-total")).toHaveText("200 XP");
+    await expect(foragingDrop.locator(".o-xp-drop-gain")).toHaveText("+200 XP");
+    await expect(foragingDrop.locator(".o-xp-drop-level")).toHaveText("Level up! Level 2");
+    await expect(foragingDrop.locator(".o-xp-drop-total")).toHaveText("200 XP");
     expect(await card!.evaluate(node => node.isConnected)).toBe(true);
-    await expect(fishingDrop.getByRole("progressbar", { name: "Fishing progress to next level", exact: true })).toHaveAttribute("aria-valuetext", "216 XP to level 3");
-    await expect(page.getByRole("region", { name: "Shore Fishing", exact: true })).not.toContainText("XP.");
+    await expect(foragingDrop.getByRole("progressbar", { name: "Foraging progress to next level", exact: true })).toHaveAttribute("aria-valuetext", "216 XP to level 3");
+    await expect(page.getByRole("region", { name: "Foraging", exact: true })).not.toContainText("XP.");
+    const foragingResult = page.getByRole("region", { name: "Foraging result", exact: true });
+    await expect(foragingResult.getByRole("heading", { name: "Success", exact: true })).toBeVisible();
+    await expect(foragingResult.getByRole("list", { name: "Activity rewards" })).toHaveCount(0);
     // The page reserves a scrollbar gutter, which fixed positioning measures from.
     expect(await page.locator(".o-xp-drop-region").evaluate(element => {
       const box = element.getBoundingClientRect(), root = document.documentElement;
@@ -48,22 +59,20 @@ test("activities spend Stamina, advance the right skills and persist on the prof
     })).toBeLessThanOrEqual(20);
     await xpDropShot(page, ".local/xp-drop-desktop.png");
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.getByRole("button", { name: "Forage for 1 Stamina", exact: true }).click();
+    await fish.click();
     await expect(stamina).toHaveAttribute("aria-valuenow", "29");
-    await expect(page.getByLabel("Foraging XP", { exact: true })).toHaveText("10");
-    await expect(page.getByRole("region", { name: "Foraging XP gained", exact: true })).toContainText("+10 XP");
-    await expect(fishingDrop).toHaveCount(0);
+    const fishingXp = String(await attemptXp(page, "Shore Fishing"));
+    await expect(page.getByLabel("Shore Fishing XP", { exact: true })).toHaveText(fishingXp);
+    await expect(page.getByRole("region", { name: "Fishing XP gained", exact: true })).toContainText("+" + fishingXp + " XP");
+    await expect(foragingDrop).toHaveCount(0);
     // Another skill takes over the same card instead of showing a new one.
     expect(await card!.evaluate(node => node.isConnected)).toBe(true);
     await xpDropShot(page, ".local/xp-drop-mobile.png");
     await page.setViewportSize({ width: 1280, height: 720 });
     await expect(page.locator(".o-xp-drop")).toHaveCount(0, { timeout: 8000 });
-    const foragingResult = page.getByRole("region", { name: "Foraging result", exact: true });
-    await expect(foragingResult.getByRole("heading", { name: "Success", exact: true })).toBeVisible();
-    await expect(foragingResult.getByRole("list", { name: "Activity rewards" })).toHaveCount(0);
     await page.getByRole("button", { name: "Chop trees for 1 Stamina", exact: true }).click();
     await expect(stamina).toHaveAttribute("aria-valuenow", "28");
-    await expect(page.getByLabel("Logging XP", { exact: true })).toHaveText("10");
+    await expect(page.getByLabel("Logging XP", { exact: true })).toHaveText(String(await attemptXp(page, "Logging")));
     await expect(page.getByRole("progressbar", { name: "Energy", exact: true })).toHaveAttribute("aria-valuenow", "100");
     for (const width of [1440, 375, 320]) {
       await page.setViewportSize({ width, height: 1100 });
@@ -78,8 +87,9 @@ test("activities spend Stamina, advance the right skills and persist on the prof
     await expect(fish).toBeEnabled();
     await expect(stamina).toHaveAttribute("aria-valuenow", "50");
     await page.getByRole("link", { name: "My Profile", exact: true }).click();
-    await expect(page.getByLabel("Fishing level", { exact: true })).toHaveText("2");
-    await expect(page.getByLabel("Fishing XP", { exact: true })).toHaveText("200");
+    await expect(page.getByLabel("Foraging level", { exact: true })).toHaveText("2");
+    await expect(page.getByLabel("Foraging XP", { exact: true })).toHaveText("200");
+    await expect(page.getByLabel("Fishing XP", { exact: true })).toHaveText(fishingXp);
     await expect(page.getByLabel("Character Level", { exact: true })).toHaveText("8");
     expect(errors).toEqual([]);
   } finally { await cleanupTestAccounts([own]); }
@@ -93,14 +103,14 @@ test("concurrent activity requests cannot duplicate rewards or overspend Stamina
     const duplicate = await Promise.all(Array.from({ length: 8 }, () => own.api.rpc("perform_activity", { ...offer, request_id })));
     expect(duplicate.every(result => !result.error && JSON.stringify(result.data) === JSON.stringify(duplicate[0].data))).toBe(true);
     expect((await own.api.rpc("get_game_state")).data!.stamina).toBe(49);
-    const conflict = await own.api.rpc("perform_activity", { ...offer, activity_id: "coastal_foraging", request_id });
+    const conflict = await own.api.rpc("perform_activity", { ...offer, activity_id: "shore_fishing", request_id });
     expect(conflict.error?.message).toBe("REQUEST_CONFLICT");
     testSql("update public.characters set stamina=3 where id='" + own.id + "';");
     const requests = await Promise.all(Array.from({ length: 10 }, () => own.api.rpc("perform_activity", { ...offer, request_id: crypto.randomUUID() })));
     expect(requests.filter(result => !result.error)).toHaveLength(3);
     expect(requests.filter(result => result.error?.message === "INSUFFICIENT_STAMINA")).toHaveLength(7);
     expect((await own.api.rpc("get_game_state")).data!.stamina).toBe(0);
-    expect((await own.api.rpc("get_own_skills")).data!.skills.find(skill => skill.id === "fishing")).toMatchObject({ xp: 40, level: 1 });
+    expect((await own.api.rpc("get_own_skills")).data!.skills.find(skill => skill.id === "foraging")).toMatchObject({ xp: 40, level: 1 });
     expect(testSql("select count(*) from private.activity_requests where character_id='" + own.id + "';").trim()).toBe("4");
   } finally { await cleanupTestAccounts([own]); }
 });
@@ -114,14 +124,14 @@ test("a committed activity with a lost response can be recovered without a secon
     const committed = await own.api.rpc("perform_activity", { ...offer, request_id });
     expect(committed.error).toBeNull();
     await page.evaluate(({ key, request_id }) => localStorage.setItem(key, JSON.stringify({ kind: "activity", id: request_id,
-      fields: { request_id, activity_id: "shore_fishing", stamina_cost: "1", xp_gain: "10" } })), { key: economyJournalKey(own.id), request_id });
+      fields: { request_id, activity_id: "coastal_foraging", stamina_cost: "1", xp_gain: "10" } })), { key: economyJournalKey(own.id), request_id });
     await page.goto("/activities");
-    await expect(page.getByRole("button", { name: "Fish for 1 Stamina", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Forage for 1 Stamina", exact: true })).toBeDisabled();
     await page.getByRole("button", { name: "Check saved action", exact: true }).click();
     await expect(page.getByRole("region", { name: "Unconfirmed action", exact: true })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Fish for 1 Stamina", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Forage for 1 Stamina", exact: true })).toBeEnabled();
     await expect(page.getByRole("progressbar", { name: "Stamina", exact: true })).toHaveAttribute("aria-valuenow", "49");
-    await expect(page.getByLabel("Shore Fishing XP", { exact: true })).toHaveText("10");
+    await expect(page.getByLabel("Foraging XP", { exact: true })).toHaveText("10");
     expect(testSql("select count(*) from private.activity_requests where character_id='" + own.id + "';").trim()).toBe("1");
   } finally { await cleanupTestAccounts([own]); }
 });
@@ -132,7 +142,7 @@ test("activity result expands for misses, item rewards and future Gold Coins", a
   page.on("pageerror", error => errors.push(error.message));
   try {
     const requestId = crypto.randomUUID();
-    const saved = await own.api.rpc("perform_activity", { ...offer, request_id: requestId });
+    const saved = await own.api.rpc("perform_activity", { ...offer, activity_id: "shore_fishing", request_id: requestId });
     expect(saved.error).toBeNull();
     await loginTestAccount(page, own);
     await page.goto("/activities");

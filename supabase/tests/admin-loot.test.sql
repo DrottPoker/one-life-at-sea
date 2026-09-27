@@ -70,7 +70,7 @@ select set_config('request.jwt.claims','{"sub":"ae110000-0000-4000-8000-00000000
 set local role authenticated;
 insert into loot_saved select 'miss',public.perform_activity('shore_fishing',1,10,gen_random_uuid());
 select is((select value#>>'{loot,caught}' from loot_saved where key='miss'),'false','Success roll precedes even a guaranteed fixed item');
-select is((select value->>'xp_awarded' from loot_saved where key='miss'),'10','A miss still grants ten XP');
+select is((select value->>'xp_awarded' from loot_saved where key='miss'),'5','A miss grants half the XP');
 select is((public.get_game_state()->>'stamina')::integer,49,'A miss costs one Stamina');
 select is((public.list_inventory()->>'total')::integer,0,'A miss grants no items');
 reset role;
@@ -90,7 +90,7 @@ select public.perform_activity('shore_fishing',1,10,gen_random_uuid());
 rollback to savepoint reward_rollback;
 select is((select total from private.item_circulation where item_id='test_pearl'),3::numeric,'Rollback removes circulation and reward changes');
 select is((select stamina from public.characters where id=(select captain from loot_fixture)),48,'Rollback restores Stamina');
-select is((select xp from private.character_skills where character_id=(select captain from loot_fixture) and skill_id='fishing'),20::bigint,'Rollback restores XP');
+select is((select xp from private.character_skills where character_id=(select captain from loot_fixture) and skill_id='fishing'),15::bigint,'Rollback restores XP from one miss and one catch');
 update private.item_stacks set quantity=9007199254740990 where item_id='test_pearl';
 set local role authenticated;
 select throws_ok($$select public.perform_activity('shore_fishing',1,10,gen_random_uuid())$$,'P0001','INVENTORY_FULL','Stack overflow is a definite failure');

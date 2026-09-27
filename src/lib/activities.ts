@@ -1,5 +1,6 @@
 import { DEFAULT_ITEM_IMAGE } from "@/lib/loot";
 import { formatGold } from "@/lib/bank";
+import { gameplay } from "@/config/public";
 
 export type ActivityItemReward = { item_id: string; name: string; image_path: string; quantity: number };
 export type ActivityRewards = { items: ActivityItemReward[]; gold_coins: number };
@@ -21,6 +22,12 @@ export function parseActivityForm(form: FormData) {
   const staminaCost = number(stamina), xpGain = number(xp);
   if (staminaCost === null || staminaCost > 2147483647 || xpGain === null) return null;
   return { activity_id: activity, expected_stamina_cost: staminaCost, expected_xp_gain: xpGain };
+}
+
+// Mirrors perform_activity: a missed loot roll grants a share of the XP, rounded down but at least 1.
+// Split at 100 so the product stays within safe integers.
+export function activityFailureXp(xpGain: number, percent = gameplay.activities.failureXpPercent) {
+  return Math.max(1, Math.floor(xpGain / 100) * percent + Math.floor(xpGain % 100 * percent / 100));
 }
 
 export function activityOutcome(receipt: ActivityReceipt) {

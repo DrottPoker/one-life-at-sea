@@ -9,7 +9,8 @@ and Miscellaneous organize items without influencing their chance.
 1. The server checks eligibility and deducts the activity's Stamina cost.
 2. Read the skill level before granting this attempt's XP. Compute catch chance from
    the activity's starting chance, mastery chance and mastery level.
-3. Roll catch success. A miss gives no item but still grants the usual XP.
+3. Roll catch success. A miss gives no item and grants reduced
+   [failure XP](ACTIVITIES.md#failure-xp).
 4. For a successful catch, fixed entries reserve their exact percentages first.
 5. The weighted entries share the remaining percentage. Select exactly one entry and
    grant its configured quantity. Each equipment piece rolls its own Quality from 0 to 100%
@@ -71,7 +72,7 @@ values, not fixed balance rules. Foraging remains XP-only.
 Logging is linked to Woodland Logging (`woodland_logging`). Its only entry is
 Oak Logs (`oak_logs`), with quantity 1 and a fixed 100% share of successful attempts.
 The activity success roll still applies: 70% at level 1, increasing to 90% at level 100.
-Each attempt continues to cost 1 Stamina and award 10 Logging XP, including misses.
+Each attempt costs 1 Stamina. A success awards 10 Logging XP and a miss [failure XP](ACTIVITIES.md#failure-xp).
 Five successful attempts supply the logs for one instant Oak Plank craft in Hideout.
 
 The table and activity binding are seeded once, following Harbor Shore's existing

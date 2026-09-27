@@ -2,13 +2,13 @@
 
 The /activities page is available from the sidebar and the harbor directory. The initial
 activities are Shore Fishing (Fishing XP), Foraging (Foraging XP) and Logging (Logging XP).
-Each successful action costs 1 Stamina and grants 10 XP to its skill. Twenty actions give
-200 XP and reach level 2 on the rebalanced curve. All three are available from level 1.
+Each action costs 1 Stamina and a successful one grants 10 XP to its skill. Twenty successful
+actions give 200 XP and reach level 2 on the rebalanced curve. All three are available from level 1.
 
 These are immediate actions with no timer, equipment requirement or morale modifier.
 Shore Fishing now uses the admin-managed Harbor Shore loot table: success roll first,
-fixed items second, then weighted fish. Both catches and misses cost 1 Stamina and grant
-10 XP. Logging uses Woodland Logging and grants one Oak Log per successful attempt,
+fixed items second, then weighted fish. Both catches and misses cost 1 Stamina. A catch grants
+10 XP and a miss grants half of that, 5 XP (see [Failure XP](#failure-xp)). Logging uses Woodland Logging and grants one Oak Log per successful attempt,
 with the same 70%-90% success curve. Foraging remains XP-only until a table is assigned. Energy, Gold Coins
 and training XP are unaffected. See [Loot tables](LOOT_TABLES.md). The
 activity row shows its skill level, XP progress, reward and cost. Results appear in an
@@ -20,7 +20,7 @@ The profile reflects the same XP and public Character Level.
 
 A confirmed receipt opens a compact panel below the activity. Successful catches show
 Success and their item thumbnails/quantities. Misses show Failure while retaining the
-Stamina cost; their XP shows in the XP drop like any other gain. Activities with XP only show Success without an empty
+Stamina cost; their reduced XP shows in the XP drop like any other gain. Activities with XP only show Success without an empty
 reward row. Pending or rejected requests are not labelled as a failed catch: uncertain
 responses show Unconfirmed, while known errors explain why the action could not complete.
 
@@ -48,6 +48,14 @@ This is display support only: current drop counts, loot odds and actual currency
 are unchanged. Future multi-item/gold awards must be granted atomically by the server and
 included in its durable receipt. The browser never grants rewards from displayed values.
 
+## Failure XP
+
+A missed catch roll grants `gameplay.activities.failureXpPercent` (50) percent of the
+activity's XP, rounded down but never below 1 XP. A catch, and every attempt of an activity
+without a linked loot table, grants the full XP. The server alone decides the amount from
+the saved loot outcome; the client's offer still names the full XP for stale-offer checks.
+Receipts saved before the change keep the XP they awarded.
+
 ## Eligibility
 
 The first activities take place near The Harbor and require the character to be in the
@@ -71,7 +79,7 @@ hospital. Reusing the ID with another activity, cost or reward raises REQUEST_CO
 
 For a new request the server checks eligibility, an active activity and the current offer,
 then calls spend_activity_stamina, rolls and grants any configured loot using the skill
-level before this attempt, and calls award_skill_xp in the same transaction and records
+level before this attempt, and calls award_skill_xp with the full or failure XP in the same transaction and records
 its receipt. Cost, XP, inventory, circulation, level projection, notifications and receipt commit together.
 A replay returns the saved catch without rerolling, even after rebalancing or unlinking loot.
 Invalid or failed actions leave no cost, reward or receipt. Concurrent unique requests
@@ -86,7 +94,8 @@ control. Recovered requests refresh the current game state and skill display.
 ## Configuration and data access
 
 The catalog is under gameplay.activities.catalog: stable id, name, skillId, description,
-buttonLabel, xpGain and active. Stamina cost uses gameplay.stamina.activityCost. SQL and UI
+buttonLabel, xpGain and active. gameplay.activities.failureXpPercent (1-100) sets the share
+of xpGain a miss grants. Stamina cost uses gameplay.stamina.activityCost. SQL and UI
 use the same validated configuration. Existing activity IDs and skill mappings cannot be
 removed or reassigned; activities can instead be disabled. XP gains may be rebalanced.
 The client submits expected values for stale-offer detection, not authority over rewards.
@@ -100,8 +109,9 @@ still applies: detailed skill levels/XP belong only to their owner.
 
 Database checks cover all three skills, rebalanced early levels, atomic cost/reward, saved loot,
 stale/tampered offers, disabled activities, receipt replay, account isolation, rollback,
-Stamina recovery, zero balance, combat, travel and hospital. Alternative-config checks
-use 3 Stamina and 17 XP. Browser tests cover immediate feedback, profile persistence,
+Stamina recovery, zero balance, combat, travel and hospital. Misses grant half the XP and at
+least 1 XP. Alternative-config checks use 3 Stamina, 17 XP and a 30% failure share (5 XP).
+Tests that need exact XP totals use Foraging, which has no catch roll. Browser tests cover immediate feedback, profile persistence,
 mobile layouts, resource recovery, concurrent/duplicate requests and saved-action recovery.
 The shared feedback test holds a response open while checking two tabs for banner flashes.
 

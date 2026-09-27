@@ -37,6 +37,7 @@ update private.activity_loot set success_start=0,success_end=0 where activity_id
 set local role authenticated;
 insert into logging_results select 'miss',public.perform_activity('woodland_logging',1,10,gen_random_uuid());
 select is((select value#>>'{loot,caught}' from logging_results where key='miss'),'false','A failed logging attempt awards no item');
+select is((select value->>'xp_awarded' from logging_results where key='miss'),'5','A failed logging attempt grants half the XP');
 select is(public.list_crafting_recipes()#>>'{0,ingredients,0,owned}','0','The fixed loot entry does not bypass the success roll');
 reset role;
 select * from finish();

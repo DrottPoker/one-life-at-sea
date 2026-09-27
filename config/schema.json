@@ -953,6 +953,12 @@
         "activities": {
           "type": "object",
           "properties": {
+            "failureXpPercent": {
+              "type": "number",
+              "integer": true,
+              "minimum": 1,
+              "maximum": 100
+            },
             "catalog": {
               "type": "array",
               "items": {

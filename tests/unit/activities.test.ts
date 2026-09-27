@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { activityMessage, activityOutcome, activityRewards, parseActivityForm, type ActivityReceipt } from "../../src/lib/activities";
+import { activityFailureXp, activityMessage, activityOutcome, activityRewards, parseActivityForm, type ActivityReceipt } from "../../src/lib/activities";
+import { gameplay } from "../../src/config/public";
 import { formRequest, parseEconomyRequest, requestForm } from "../../src/lib/economy-journal";
 
 const fields = { request_id: "a9920000-0000-4000-8000-000000000001", activity_id: "shore_fishing", stamina_cost: "1", xp_gain: "10" };
@@ -17,6 +18,14 @@ describe("activity requests", () => {
     const receipt = { skill_id: "fishing", xp_awarded: 10, stamina_cost: 1, level: 2, previous_level: 1 } as ActivityReceipt;
     expect(activityMessage(receipt)).toBe("Spent 1 Stamina.");
     expect(activityMessage({ ...receipt, level: 1 })).toBe("Spent 1 Stamina.");
+  });
+  it("grants a rounded-down share of the XP on a miss, but at least 1", () => {
+    expect(activityFailureXp(10, 50)).toBe(5);
+    expect(activityFailureXp(17, 50)).toBe(8);
+    expect(activityFailureXp(1, 50)).toBe(1);
+    expect(activityFailureXp(17, 100)).toBe(17);
+    expect(activityFailureXp(Number.MAX_SAFE_INTEGER, 50)).toBe(Number((BigInt(Number.MAX_SAFE_INTEGER) * 50n / 100n)));
+    expect(activityFailureXp(10)).toBe(Math.max(1, Math.floor(10 * gameplay.activities.failureXpPercent / 100)));
   });
 });
 

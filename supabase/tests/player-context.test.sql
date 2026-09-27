@@ -25,12 +25,12 @@ select is(public.get_player_snapshot()->'notifications',public.get_notification_
 select is(public.get_player_snapshot()#>>'{state,stamina}',public.get_game_state()->>'stamina','Snapshot resources match the current state');
 select is(public.get_player_snapshot()#>>'{state,revision}',(select revision::text from public.player_game_events where character_id=(select id from context_fixture)),'Snapshot includes its authoritative event revision');
 select is(public.get_navigation_lock()->>'sea_state','in_harbor','Navigation reports the current harbor state');
-select public.perform_activity('shore_fishing',1,10,gen_random_uuid());
-select is((select s->>'xp' from jsonb_array_elements(public.get_player_snapshot()#>'{skills,skills}') s where s->>'id'='fishing'),'10','Snapshot includes committed activity XP');
+select public.perform_activity('coastal_foraging',1,10,gen_random_uuid());
+select is((select s->>'xp' from jsonb_array_elements(public.get_player_snapshot()#>'{skills,skills}') s where s->>'id'='foraging'),'10','Snapshot includes committed activity XP');
 select is(public.get_player_snapshot()#>>'{state,stamina}','49','Snapshot includes the committed cost');
 select set_config('request.jwt.claims','{"sub":"abcf0000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 select is(public.get_player_context()#>>'{character,user_id}','abcf0000-0000-4000-8000-000000000002','An account switch changes the entire context');
-select is((select s->>'xp' from jsonb_array_elements(public.get_player_snapshot()#>'{skills,skills}') s where s->>'id'='fishing'),'0','Another account cannot read the first account XP');
+select is((select s->>'xp' from jsonb_array_elements(public.get_player_snapshot()#>'{skills,skills}') s where s->>'id'='foraging'),'0','Another account cannot read the first account XP');
 reset role;
 delete from public.characters where user_id='abcf0000-0000-4000-8000-000000000002';
 set local role authenticated;

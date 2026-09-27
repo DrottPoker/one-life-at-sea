@@ -32,8 +32,8 @@ test("measure action and page latency", async ({ page }) => {
     }
     await page.goto("/activities");
     await page.waitForLoadState("networkidle");
-    const button = page.getByRole("button", { name: "Fish for 1 Stamina", exact: true });
-    const xp = page.getByLabel("Shore Fishing XP", { exact: true });
+    const button = page.getByRole("button", { name: "Forage for 1 Stamina", exact: true });
+    const xp = page.getByLabel("Foraging XP", { exact: true });
     const requests: Promise<void>[] = [];
     page.on("requestfinished", request => {
       if (request.method() === "POST" && (request.url().includes("/activities") || request.url().includes("/rpc/"))) requests.push((async () => {
@@ -52,7 +52,7 @@ test("measure action and page latency", async ({ page }) => {
         button.click();
         await new Promise<void>(resolve => {
           const check = () => {
-            const xp = Number(document.querySelector('[aria-label="Shore Fishing XP"]')!.textContent!.replaceAll(",", ""));
+            const xp = Number(document.querySelector('[aria-label="Foraging XP"]')!.textContent!.replaceAll(",", ""));
             if (!button.disabled && xp === before + 10) resolve(); else requestAnimationFrame(check);
           };
           requestAnimationFrame(check);

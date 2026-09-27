@@ -15,6 +15,8 @@ create temporary table activity_results(key text primary key,value jsonb);
 grant all on activity_results to authenticated;
 update public.characters set stamina=20,stamina_updated_at=clock_timestamp()+interval '1 day',
   energy=100,energy_updated_at=clock_timestamp()+interval '1 day' where id in(select a from activity_fixture union all select b from activity_fixture);
+-- Make catches deterministic within this rolled-back fixture; misses are tested explicitly below.
+update private.activity_loot set success_start=100,success_end=100 where activity_id in('shore_fishing','woodland_logging');
 set local role anon;
 select throws_ok($$select public.perform_activity('shore_fishing',1,10,gen_random_uuid())$$,'42501',null,'Logged-out users cannot do activities');
 reset role;
@@ -79,6 +81,19 @@ rollback to savepoint activity_rollback;
 select is((select xp from private.character_skills where character_id=(select a from activity_fixture) and skill_id='fishing'),100::bigint,'Transaction rollback removes the XP reward');
 select is((select stamina from public.characters where id=(select a from activity_fixture)),49,'Transaction rollback restores Stamina');
 select is((select count(*) from private.activity_requests where character_id=(select a from activity_fixture)),12::bigint,'Transaction rollback removes the receipt');
+update private.activity_loot set success_start=0,success_end=0 where activity_id='shore_fishing';
+set local role authenticated;
+insert into activity_results select 'miss',public.perform_activity('shore_fishing',1,10,gen_random_uuid());
+select is((select value#>>'{loot,caught}' from activity_results where key='miss'),'false','A missed catch is recorded as a failure');
+select is((select (value->>'xp_awarded')::integer from activity_results where key='miss'),5,'A miss grants half the XP');
+reset role;
+update private.activity_definitions set xp_gain=1 where id='shore_fishing';
+set local role authenticated;
+select is((public.perform_activity('shore_fishing',1,1,gen_random_uuid())->>'xp_awarded')::integer,1,'A miss always grants at least one XP');
+reset role;
+update private.activity_definitions set xp_gain=10 where id='shore_fishing';
+update private.activity_loot set success_start=100,success_end=100 where activity_id='shore_fishing';
+select is((select xp from private.character_skills where character_id=(select a from activity_fixture) and skill_id='fishing'),106::bigint,'Misses add their reduced XP to the skill');
 set local role authenticated;
 insert into activity_results select 'combat',public.start_combat(b,gen_random_uuid()) from activity_fixture;
 select throws_ok($$select public.perform_activity('shore_fishing',1,10,gen_random_uuid())$$,'P0001','IN_COMBAT','Combat blocks new activities');

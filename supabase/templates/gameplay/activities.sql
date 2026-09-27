@@ -71,7 +71,9 @@ begin
   remaining_stamina:=private.spend_activity_stamina(viewer_id);
   select private.skill_level(xp) into before_level from private.character_skills where character_id=viewer_id and skill_id=definition.skill_id;
   loot_result:=private.roll_activity_loot(viewer_id,definition.id,before_level);
-  awarded:=private.award_skill_xp(viewer_id,definition.skill_id,definition.xp_gain);
+  -- A missed loot roll grants a configured share of the XP, rounded down but at least 1.
+  awarded:=private.award_skill_xp(viewer_id,definition.skill_id,case when (loot_result->>'caught')::boolean is false
+    then greatest(1,definition.xp_gain*{{gameplay.activities.failureXpPercent}}/100) else definition.xp_gain end);
   result:=awarded||jsonb_build_object('activity_id',definition.id,'stamina_cost',{{gameplay.stamina.activityCost}},
     'stamina_after',remaining_stamina,'loot',loot_result,'config_revision',public.get_gameplay_revision());
   insert into private.activity_requests(character_id,request_id,activity_id,expected_stamina_cost,expected_xp_gain,result)

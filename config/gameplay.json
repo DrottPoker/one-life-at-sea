@@ -874,6 +874,7 @@
     ]
   },
   "activities": {
+    "failureXpPercent": 50,
     "catalog": [
       {
         "id": "shore_fishing",
