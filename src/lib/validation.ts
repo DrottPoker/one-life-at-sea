@@ -9,6 +9,16 @@ export type FormState = {
   retryAfter?: number;
 };
 
+// Positive bigint ids as the database sends them, as strings within PostgreSQL's bigint range.
+export function isBigintId(value: unknown): value is string {
+  return typeof value === "string" && /^[1-9][0-9]{0,18}$/.test(value) && BigInt(value) <= 9223372036854775807n;
+}
+
+// Unix line endings, trimmed spaces, tabs and newlines; the database applies the same rule to posts and mail.
+export function normalizePlainText(value: string) {
+  return value.replace(/\r\n?/g, "\n").replace(/^[ \t\n]+|[ \t\n]+$/g, "");
+}
+
 export function normalizeCharacterName(value: string) {
   return value.normalize("NFC");
 }

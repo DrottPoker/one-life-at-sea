@@ -1,6 +1,5 @@
 import { frontend } from "@/config/public";
 
-export const WORLD_TIME_ZONE = "UTC";
 export type DayPeriod = "day" | "night";
 export type WorldTime = { observed_at: string; period: DayPeriod; next_change_at: string };
 

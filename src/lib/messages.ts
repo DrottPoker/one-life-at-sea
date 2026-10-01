@@ -1,6 +1,6 @@
 import { gameplay } from "@/config/public";
 import { isPlayerNumber } from "@/lib/player-identity";
-import { isUuid } from "@/lib/validation";
+import { isBigintId, isUuid, normalizePlainText } from "@/lib/validation";
 
 // Retain the supported request bound when confirming older, larger sends.
 export const MAX_MAIL_REQUEST_RECIPIENTS = 50;
@@ -18,17 +18,13 @@ export type PendingMessage = { id: string; body: string };
 export type PendingMail = PendingMessage & { recipients: MailPerson[]; subject: string; replyTo: string | null };
 export type MailResult = { error?: string; retry?: boolean; receipt?: MailReceipt };
 
-export function isMessageId(value: unknown): value is string {
-  return typeof value === "string" && /^[1-9][0-9]{0,18}$/.test(value) && BigInt(value) <= 9223372036854775807n;
-}
+export const isMessageId = isBigintId;
 export function isMessagesPath(path: string) {
   return ["/messages", "/messages/compose", "/messages/ignore"].includes(path) ||
     (path.startsWith("/messages/mail/") && isMessageId(path.slice(15))) ||
     (path.startsWith("/messages/") && isPlayerNumber(path.slice(10)));
 }
-export function normalizeMessage(value: string) {
-  return value.replace(/\r\n?/g, "\n").replace(/^[ \t\n]+|[ \t\n]+$/g, "");
-}
+export const normalizeMessage = normalizePlainText;
 export function validMessage(value: unknown): value is string {
   if (typeof value !== "string" || !value.trim() || Array.from(value).length > gameplay.messages.maxLength) return false;
   return !Array.from(value).some(character => {

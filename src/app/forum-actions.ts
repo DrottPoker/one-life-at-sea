@@ -80,7 +80,7 @@ export async function submitForumPost(characterId: string, post: PendingForumPos
     const known = knownError(error);
     return { error: known ?? "Posting could not be confirmed. Retry to check the same post.", retry: !known || error?.message === "REQUEST_MISMATCH" };
   }
-  revalidatePath("/forums", "layout");
+  revalidatePath("/(game)/forums", "layout");
   // Reply notices go out once the response is sent; a scheduled job catches anything missed.
   if (post.kind === "reply") after(async () => { await client.rpc("deliver_forum_notifications"); });
   return { receipt: data };
@@ -96,7 +96,7 @@ export async function editForumPost(characterId: string, postId: string, body: s
     post_id: postId, post_body: text, thread_title: title === null ? null : title.trim(), expected_edit_count: expectedEditCount,
   }));
   if (error || !data) return { error: knownError(error) ?? "The post could not be saved. Please try again." };
-  revalidatePath("/forums", "layout");
+  revalidatePath("/(game)/forums", "layout");
   return { receipt: data };
 }
 
@@ -106,7 +106,7 @@ export async function withdrawForumPost(characterId: string, postId: string): Pr
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("withdraw_forum_post", { post_id: postId }));
   if (error || !data) return { error: knownError(error) ?? "The post could not be deleted. Please try again." };
-  revalidatePath("/forums", "layout");
+  revalidatePath("/(game)/forums", "layout");
   return { receipt: data };
 }
 
@@ -125,7 +125,7 @@ export async function markForumBoardRead(characterId: string, boardId: string | 
   const client = await createClient();
   const { error } = await withDatabaseRetry(() => client.rpc("mark_forum_board_read", boardId === null ? {} : { board_id: boardId }));
   if (error) return knownError(error) ?? "The forum could not be marked as read. Please try again.";
-  revalidatePath("/forums", "layout");
+  revalidatePath("/(game)/forums", "layout");
   return null;
 }
 
@@ -168,7 +168,7 @@ export async function moderateForum(characterId: string, request: ForumModeratio
     const removed = await client.storage.from(FORUM_IMAGE_BUCKET).remove([data.image_path]);
     if (removed.error) return { error: "The image is hidden, but its file could not be deleted yet. Retry to delete it.", retry: true };
   }
-  revalidatePath("/forums", "layout");
+  revalidatePath("/(game)/forums", "layout");
   return { receipt: data };
 }
 
@@ -188,7 +188,7 @@ export async function setForumReaction(characterId: string, postId: string, reac
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("set_forum_reaction", { post_id: postId, reaction }));
   if (error || !data) return { error: knownError(error) ?? "Your reaction could not be saved. Please try again." };
-  revalidatePath("/forums", "layout");
+  revalidatePath("/(game)/forums", "layout");
   return { receipt: data };
 }
 
@@ -198,7 +198,7 @@ export async function setForumSubscription(characterId: string, threadId: string
   const client = await createClient();
   const { error } = await withDatabaseRetry(() => client.rpc("set_forum_subscription", { thread_id: threadId, subscribed }));
   if (error) return knownError(error) ?? "Your subscription could not be changed. Please try again.";
-  revalidatePath("/forums", "layout");
+  revalidatePath("/(game)/forums", "layout");
   return null;
 }
 
@@ -209,7 +209,7 @@ export async function reportForumPost(characterId: string, postId: string, reaso
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("report_forum_post", { post_id: postId, reason, note: note.trim() }));
   if (error || !data) return { error: knownError(error) ?? "The report could not be sent. Please try again." };
-  revalidatePath("/forums", "layout");
+  revalidatePath("/(game)/forums", "layout");
   return { receipt: data };
 }
 
@@ -221,7 +221,7 @@ export async function voteForumPoll(characterId: string, threadId: string, choic
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("vote_forum_poll", { thread_id: threadId, choices }));
   if (error || !data) return { error: knownError(error, { NEW_CHARACTER: `New captains can vote after ${newCaptainHours} hours.` }) ?? "Your vote could not be saved. Please try again." };
-  revalidatePath("/forums", "layout");
+  revalidatePath("/(game)/forums", "layout");
   return { poll: data };
 }
 
@@ -231,7 +231,7 @@ export async function closeForumPoll(characterId: string, threadId: string): Pro
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("close_forum_poll", { thread_id: threadId }));
   if (error || !data) return { error: knownError(error, { FORUM_FORBIDDEN: "Only the thread's author can close its poll." }) ?? "The poll could not be closed. Please try again." };
-  revalidatePath("/forums", "layout");
+  revalidatePath("/(game)/forums", "layout");
   return { poll: data };
 }
 
@@ -243,6 +243,6 @@ export async function saveForumSettings(characterId: string, signature: string, 
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("set_forum_settings", { signature: text, show_signatures: showSignatures }));
   if (error || !data) return { error: knownError(error, { NEW_CHARACTER: `New captains can add a signature after ${newCaptainHours} hours.` }) ?? "Your settings could not be saved. Please try again." };
-  revalidatePath("/forums", "layout");
+  revalidatePath("/(game)/forums", "layout");
   return { settings: data };
 }

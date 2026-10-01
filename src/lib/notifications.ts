@@ -1,6 +1,6 @@
 import { isForumId } from "@/lib/forums";
 import { isPlayerNumber, playerProfileUrl } from "@/lib/player-identity";
-import { isUuid } from "@/lib/validation";
+import { isBigintId, isUuid } from "@/lib/validation";
 
 export type PlayerNotification = {
   id: string; kind: string; payload: Record<string, unknown>; created_at: string; read_at: string | null;
@@ -9,9 +9,7 @@ export type NotificationSummary = { unread_count: number; latest_id: string | nu
 export type NotificationPage = NotificationSummary & { items: PlayerNotification[]; next_before: string | null };
 export type NotificationContent = { actors: { name: string; href: string | null }[]; text: string; href: string | null; linkLabel?: string };
 
-export function isNotificationId(value: unknown): value is string {
-  return typeof value === "string" && /^[1-9][0-9]{0,18}$/.test(value) && BigInt(value) <= 9223372036854775807n;
-}
+export const isNotificationId = isBigintId;
 
 // Forum notices link to the post through its permalink, built from a validated ID.
 function forumNotice(payload: Record<string, unknown>, text: string): NotificationContent | null {

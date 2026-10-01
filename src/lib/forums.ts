@@ -1,5 +1,5 @@
 import { gameplay } from "@/config/public";
-import { isUuid } from "@/lib/validation";
+import { isBigintId, isUuid, normalizePlainText } from "@/lib/validation";
 
 export type ForumPosting = "open" | "moderators" | "closed";
 export type ForumPerson = { display_name: string; player_number: number; deleted: boolean };
@@ -106,18 +106,14 @@ export type ForumModerationOverview = {
   log_total: number; page: number; page_size: number;
 };
 
-export function isForumId(value: unknown): value is string {
-  return typeof value === "string" && /^[1-9][0-9]{0,18}$/.test(value) && BigInt(value) <= 9223372036854775807n;
-}
+export const isForumId = isBigintId;
 export function isForumBoardId(value: unknown): value is string {
   return typeof value === "string" && /^[a-z][a-z0-9_]{0,47}$/.test(value);
 }
 export function forumBoard(id: string) {
   return gameplay.forum.boards.find(board => board.id === id) ?? null;
 }
-export function normalizeForumBody(value: string) {
-  return value.replace(/\r\n?/g, "\n").replace(/^[ \t\n]+|[ \t\n]+$/g, "");
-}
+export const normalizeForumBody = normalizePlainText;
 // Mirrors the database: code points, no control characters except tab and newline.
 export function validForumBody(value: unknown): value is string {
   if (typeof value !== "string" || !value.trim()) return false;
