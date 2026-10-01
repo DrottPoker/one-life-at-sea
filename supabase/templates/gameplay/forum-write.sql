@@ -200,8 +200,9 @@ begin
 end;
 $$;
 
--- Authors may delete their posts at any time. Like Reddit, the post keeps its number and time
--- behind a placeholder, and the thread stays even when no visible post is left.
+-- Authors may delete their posts at any time, also after a moderator removed the post or its
+-- thread. Like Reddit, the post keeps its number and time behind a placeholder, and the thread
+-- stays even when no visible post is left.
 create or replace function private.withdraw_forum_post(post_id bigint)
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); moderator boolean:=private.forum_is_moderator(); observed timestamptz:=clock_timestamp();
@@ -218,12 +219,20 @@ begin
     if (thread.removed_at is not null or not board.active) and not moderator then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
     raise exception 'FORUM_FORBIDDEN' using errcode='42501';
   end if;
-  if post.removed_at is not null or thread.removed_at is not null then return jsonb_build_object('post_id',post.id::text); end if;
-  update private.forum_posts set removed_at=observed,removed_by='author' where id=post.id;
-  update private.forum_threads set post_count=post_count-1 where id=thread.id;
-  if post.id=thread.last_post_id then perform private.forum_refresh_last_post(thread.id); end if;
-  update private.forum_boards set post_count=post_count-1 where id=board.id;
-  update private.forum_author_stats set post_count=post_count-1 where character_id=viewer_id;
+  if post.removed_by='author' then return jsonb_build_object('post_id',post.id::text); end if;
+  -- Deleting also covers content a moderator already hid, so no restore can bring it back.
+  if post.removed_at is not null then
+    update private.forum_posts set removed_by='author' where id=post.id;
+  else
+    update private.forum_posts set removed_at=observed,removed_by='author' where id=post.id;
+    update private.forum_threads set post_count=post_count-1 where id=thread.id;
+    if post.id=thread.last_post_id then perform private.forum_refresh_last_post(thread.id); end if;
+    -- The posts of a removed thread already left the board and author counts.
+    if thread.removed_at is null then
+      update private.forum_boards set post_count=post_count-1 where id=board.id;
+      update private.forum_author_stats set post_count=post_count-1 where character_id=viewer_id;
+    end if;
+  end if;
   perform private.forum_refresh_karma(viewer_id);
   perform private.record_character_action(viewer_id);
   return jsonb_build_object('post_id',post.id::text);
@@ -266,6 +275,7 @@ create or replace function private.set_forum_reaction(post_id bigint,reaction in
 returns jsonb language plpgsql volatile security definer set search_path='' as $$
 declare viewer_id uuid:=private.combat_captain(); moderator boolean:=private.forum_is_moderator(); observed timestamptz:=clock_timestamp();
   joined timestamptz; current_value smallint; counted boolean; post private.forum_posts%rowtype; thread private.forum_threads%rowtype; board private.forum_boards%rowtype;
+  recent_changes integer;
 begin
   if set_forum_reaction.post_id is null or reaction is null or reaction not in(-1,0,1) then raise exception 'INVALID_REQUEST' using errcode='22023'; end if;
   select c.created_at into joined from public.characters c where c.id=viewer_id for no key update;
@@ -281,8 +291,12 @@ begin
   select r.value into current_value from private.forum_reactions r where r.post_id=post.id and r.character_id=viewer_id;
   if current_value is distinct from nullif(reaction,0)::smallint then
     if reaction=-1 and joined>observed-make_interval(hours=>{{gameplay.forum.newCharacterHours}}) then raise exception 'NEW_CHARACTER' using errcode='P0001'; end if;
-    if (select count(*) from private.forum_reactions r where r.character_id=viewer_id and r.updated_at>observed-interval '1 minute')>={{gameplay.forum.reactionsPerMinute}} then
-      raise exception 'FORUM_RATE_LIMIT' using errcode='P0001'; end if;
+    insert into private.forum_reaction_limits as l(character_id,window_started_at,changes) values(viewer_id,observed,1)
+      on conflict(character_id) do update set
+        window_started_at=case when l.window_started_at<=observed-interval '1 minute' then observed else l.window_started_at end,
+        changes=case when l.window_started_at<=observed-interval '1 minute' then 1 else l.changes+1 end
+      returning l.changes into recent_changes;
+    if recent_changes>{{gameplay.forum.reactionsPerMinute}} then raise exception 'FORUM_RATE_LIMIT' using errcode='P0001'; end if;
     counted:=joined<=observed-make_interval(hours=>{{gameplay.forum.newCharacterHours}}) and length(post.body)>={{gameplay.forum.karmaMinPostLength}} and board.karma
       and (select count(*) from private.forum_reactions r join private.forum_posts q on q.id=r.post_id
         where r.character_id=viewer_id and r.counts and q.author_id=post.author_id and r.created_at>observed-interval '1 day')<{{gameplay.forum.karmaPerAuthorPerDay}};

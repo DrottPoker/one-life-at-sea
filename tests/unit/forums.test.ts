@@ -101,6 +101,8 @@ describe("forum routes and values", () => {
       { ...poll, options: [...poll.options, ""] }, { ...poll, extra: true }, { ...poll, options: Array.from({ length: gameplay.forum.pollOptionsMax + 1 }, (_, index) => "Option " + index) },
       { ...poll, question: "x".repeat(gameplay.forum.pollQuestionMaxLength + 1) }, null, "poll"]) expect(validForumPoll(bad)).toBe(false);
     expect(normalizeForumPoll({ question: " Which? ", options: [" A ", "B "], max_choices: 1, days: 3 })).toEqual({ question: "Which?", options: ["A", "B"], max_choices: 1, days: 3 });
+    // A crafted request gets the poll error instead of a crash.
+    for (const crafted of [{}, { question: 5, options: "A" }, { question: "Q", options: [1, " B "] }, [], "poll"]) expect(validForumPoll(normalizeForumPoll(crafted))).toBe(false);
     expect(forumPollDurations.every(days => days <= gameplay.forum.pollMaxDays)).toBe(true);
   });
   it("mirrors the database signature rules", () => {

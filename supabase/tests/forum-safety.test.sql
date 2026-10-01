@@ -223,6 +223,31 @@ select is(public.moderate_forum('unban_player',jsonb_build_object('player_number
   'Administrators lift a moderator''s ban');
 select public.moderate_forum('revoke_moderator',jsonb_build_object('player_number',pg_temp.number('SafetyNew')),gen_random_uuid(),'Trial over');
 
+-- Authors delete content a moderator already hid, and nothing restores it afterwards.
+select pg_temp.as_player('SafetyFan');
+select pg_temp.cool();
+insert into safety_results values('w1',public.create_forum_thread('general_discussion','Second thoughts','A post that a moderator will hide.',gen_random_uuid()));
+select pg_temp.cool();
+insert into safety_results values('w2',public.create_forum_post((select (value->>'thread_id')::bigint from safety_results where key='w1'),'A reply in a thread that a moderator will remove.',null,gen_random_uuid()));
+select pg_temp.as_player('SafetyMod');
+select public.moderate_forum('remove_post',jsonb_build_object('post_id',pg_temp.post('w1')::text),gen_random_uuid(),'Hidden');
+select pg_temp.as_player('SafetyFan');
+select lives_ok($$select public.withdraw_forum_post(pg_temp.post('w1'))$$,'Authors delete a post a moderator removed');
+select pg_temp.as_player('SafetyMod');
+select throws_ok($$select public.moderate_forum('restore_post',jsonb_build_object('post_id',pg_temp.post('w1')::text),gen_random_uuid(),'Bring it back')$$,
+  'P0001','CANNOT_RESTORE','Moderators cannot restore it afterwards');
+select public.moderate_forum('remove_thread',jsonb_build_object('thread_id',(select (value->>'thread_id')::bigint from safety_results where key='w1')::text),gen_random_uuid(),'Whole thread');
+select pg_temp.as_player('SafetyFan');
+select lives_ok($$select public.withdraw_forum_post(pg_temp.post('w2'))$$,'Authors delete posts in a removed thread');
+select pg_temp.as_player('SafetyMod');
+select public.moderate_forum('restore_thread',jsonb_build_object('thread_id',(select (value->>'thread_id')::bigint from safety_results where key='w1')::text),gen_random_uuid(),'Restored');
+select is(public.get_forum_thread((select (value->>'thread_id')::bigint from safety_results where key='w1'))#>>'{posts,1,removed,by}','author','A restored thread keeps the author''s deletion');
+select is((public.get_forum_thread((select (value->>'thread_id')::bigint from safety_results where key='w1'))#>>'{thread,post_count}')::integer,0,'Its visible post count leaves the deleted posts out');
+reset role;
+select is((select count(*) from private.forum_boards b where b.post_count<>(select count(*) from private.forum_posts p join private.forum_threads t on t.id=p.thread_id
+  where t.board_id=b.id and t.removed_at is null and p.removed_at is null)),0::bigint,'Board post counts match the visible posts');
+set local role authenticated;
+
 -- Revoked moderators lose their tools.
 select pg_temp.as_player('SafetyAdmin');
 select public.moderate_forum('revoke_moderator',jsonb_build_object('player_number',pg_temp.number('SafetyMod')),gen_random_uuid(),'Stepped down');

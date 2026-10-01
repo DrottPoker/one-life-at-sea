@@ -23,6 +23,16 @@ export async function processForumImage(input: Uint8Array) {
   return { data: output.data, width: output.info.width, height: output.info.height, size: output.info.size };
 }
 
+// The bucket also takes a player's own upload of a reserved file directly, past this route's
+// encoding. A stored file is served only when it is the single-frame WebP without metadata that
+// was reserved, with the same size and dimensions.
+export async function storedForumImageMatches(bytes: Uint8Array, reserved: { byte_size: number; width: number; height: number }) {
+  if (bytes.length !== reserved.byte_size) return false;
+  const metadata = await sharp(bytes, { failOn: "error" }).metadata().catch(() => null);
+  return metadata?.format === "webp" && (metadata.pages ?? 1) === 1 && metadata.width === reserved.width && metadata.height === reserved.height
+    && !metadata.exif && !metadata.xmp;
+}
+
 // Uploads come from the game's own pages only.
 export function sameOriginRequest(request: Request) {
   const origin = request.headers.get("origin"), host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");

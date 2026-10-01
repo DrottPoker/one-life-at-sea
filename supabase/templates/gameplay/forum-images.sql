@@ -142,14 +142,15 @@ begin
 end;
 $$;
 -- The image route asks here before it reads the file with the player's own session.
+-- The reserved size and dimensions let the route refuse a file that skipped the upload route.
 create or replace function private.get_forum_image(image_id uuid)
 returns jsonb language plpgsql stable security definer set search_path='' as $$
-declare path text;
+declare image private.forum_images%rowtype;
 begin
   perform private.combat_captain();
-  select i.storage_path into path from private.forum_images i where i.id=get_forum_image.image_id;
-  if path is null or not private.forum_image_readable(path) then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
-  return jsonb_build_object('path',path);
+  select * into image from private.forum_images i where i.id=get_forum_image.image_id;
+  if image.storage_path is null or not private.forum_image_readable(image.storage_path) then raise exception 'FORUM_NOT_FOUND' using errcode='P0002'; end if;
+  return jsonb_build_object('path',image.storage_path,'byte_size',image.byte_size,'width',image.width,'height',image.height);
 end;
 $$;
 -- Cleanup moved to the scheduled sweep below.

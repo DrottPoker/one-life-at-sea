@@ -113,7 +113,7 @@ export type Database = {
       get_forum_settings: { Args: Record<string, never>; Returns: import("@/lib/forums").ForumSettings };
       set_forum_settings: { Args: { signature: string; show_signatures: boolean }; Returns: import("@/lib/forums").ForumSettings };
       reserve_forum_image: { Args: { request_id: string; byte_size: number; width: number; height: number }; Returns: import("@/lib/forums").ForumImageReservation };
-      get_forum_image: { Args: { image_id: string }; Returns: { path: string } };
+      get_forum_image: { Args: { image_id: string }; Returns: { path: string; byte_size: number; width: number; height: number } };
       deliver_forum_notifications: { Args: Record<string, never>; Returns: number };
       mark_notification_read: { Args: { notification_id: string }; Returns: undefined };
       mark_all_notifications_read: { Args: { through_id: string }; Returns: undefined };

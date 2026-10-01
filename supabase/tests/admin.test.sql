@@ -58,7 +58,7 @@ select is(public.get_game_state()->>'crew_health','80','Manual crew health does 
 select set_config('request.jwt.claims','{"sub":"ad000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 
 select is(public.admin_read('characters','',0,jsonb_build_object('id',current_setting('test.captain')))#>>'{rows,0,values,gold_coins}','12345','Updated gold persisted');
-select throws_ok($$select public.admin_mutate('update',current_setting('test.update')::jsonb,gen_random_uuid(),'Stale edit test')$$,'40001','STALE_ROW','Stale edits cannot overwrite new values');
+select throws_ok($$select public.admin_mutate('update',current_setting('test.update')::jsonb,gen_random_uuid(),'Stale edit test')$$,'P0001','STALE_ROW','Stale edits cannot overwrite new values');
 select throws_ok($$select public.admin_mutate('update',current_setting('test.update')::jsonb,'ad100000-0000-4000-8000-000000000001','Changed reason')$$,'22023','REQUEST_CONFLICT','Receipt payload cannot change');
 select throws_ok($$select public.admin_mutate('update',jsonb_set(current_setting('test.update')::jsonb,'{changes}','{"user_id":"ad000000-0000-4000-8000-000000000001"}'),gen_random_uuid(),'Account takeover')$$,'42501','READ_ONLY_COLUMN','Account identity cannot be reassigned');
 select throws_ok($$select public.admin_mutate('delete',jsonb_build_object('resource','admin_audit'),gen_random_uuid(),'Erase audit')$$,'42501','READ_ONLY_RESOURCE','Admin audit cannot be deleted');
@@ -140,6 +140,18 @@ select lives_ok($$select public.admin_mutate('grant_items',jsonb_build_object('c
   'item_id','cutlass','quantity','60'),gen_random_uuid(),'Test equipment pagination')$$,'Large permitted grant with rolled Quality works');
 select is(jsonb_array_length(public.admin_read('item_instances','',0,jsonb_build_object('character_id',current_setting('test.captain')))->'rows'),50,'Database page is bounded');
 select is(jsonb_array_length(public.admin_read('item_instances','',1,jsonb_build_object('character_id',current_setting('test.captain')))->'rows'),12,'Remaining records appear on next page');
+-- An equipped Hull edit settles health at the old maximum, so the raised maximum grants no free health.
+reset role;
+insert into private.item_instances(id,character_id,item_id,quality) values('ad200000-0000-4000-8000-000000000001',current_setting('test.owner')::uuid,'oak_sheathing',0);
+insert into private.character_equipment(character_id,slot,instance_id) values(current_setting('test.owner')::uuid,'hull','ad200000-0000-4000-8000-000000000001');
+update public.characters set ship_health=40,ship_recovery_at=clock_timestamp()-interval '3 hours' where id=current_setting('test.owner')::uuid;
+select set_config('test.hull_max',private.ship_health_max(current_setting('test.owner')::uuid)::text,true);
+set local role authenticated;
+select set_config('test.hull',(public.admin_read('item_instances','',0,jsonb_build_object('id','ad200000-0000-4000-8000-000000000001'))->'rows'->0)::text,true);
+select lives_ok($$select public.admin_mutate('update',jsonb_build_object('resource','item_instances','key',jsonb_build_object('id','ad200000-0000-4000-8000-000000000001'),
+  'version',current_setting('test.hull')::jsonb->>'version','changes','{"quality":"100"}'::jsonb),gen_random_uuid(),'Raise hull quality')$$,'Admins correct an equipped Hull''s Quality');
+select is((public.get_game_state()->>'ship_health')::integer,current_setting('test.hull_max')::integer,'Recovery before the edit stops at the old maximum');
+select ok((public.get_game_state()->>'ship_health_max')::integer>current_setting('test.hull_max')::integer,'The edit raises the maximum');
 reset role;
 delete from private.admin_members where user_id='ad000000-0000-4000-8000-000000000001';
 set local role authenticated;

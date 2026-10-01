@@ -45,7 +45,7 @@ select throws_ok($$select public.admin_mutate('save_item',value||'{"kind":"equip
 select throws_ok($$select public.admin_mutate('save_item',value||'{"image_path":"https://example.com/tracker.png"}',gen_random_uuid(),'External image') from loot_saved where key='item_edit'$$,'23514',null,'Arbitrary external image paths are rejected');
 select throws_ok($$select public.admin_mutate('save_item',value||'{"image_path":"/api/item-images/ae110000-0000-4000-8000-000000000001/ae110000-0000-4000-8000-000000000002.png"}',gen_random_uuid(),'Missing upload') from loot_saved where key='item_edit'$$,'22023','INVALID_IMAGE','Uploaded images must exist');
 select public.admin_mutate('save_item',value||'{"name":"Polished Pearl"}',gen_random_uuid(),'Rename pearl') from loot_saved where key='item_edit';
-select throws_ok($$select public.admin_mutate('save_item',value,gen_random_uuid(),'Stale edit') from loot_saved where key='item_edit'$$,'40001','STALE_ROW','Stale item edit cannot overwrite another edit');
+select throws_ok($$select public.admin_mutate('save_item',value,gen_random_uuid(),'Stale edit') from loot_saved where key='item_edit'$$,'P0001','STALE_ROW','Stale item edit cannot overwrite another edit');
 
 insert into loot_saved values('table_payload','{"id":"test_loot","name":"Test Loot","description":"Fixture","active":true,"entries":[{"item_id":"test_pearl","mode":"fixed","fixed_chance":100,"weight_start":0,"weight_end":0,"quantity":3,"damage":0,"accuracy":0}]}');
 insert into loot_saved select 'table',public.admin_mutate('save_loot_table',value,request,'Create loot table') from loot_saved cross join (select gen_random_uuid() request) ids where key='table_payload';
@@ -58,7 +58,7 @@ select is((select count(*) from private.loot_tables where id='invalid_loot'),0::
 insert into loot_saved select 'binding',to_jsonb(a) from private.activity_loot a where activity_id='shore_fishing';
 set local role authenticated;
 select public.admin_mutate('save_activity_loot',value||'{"loot_table_id":"test_loot","success_start":0,"success_end":0}',gen_random_uuid(),'Guarantee failure') from loot_saved where key='binding';
-select throws_ok($$select public.admin_mutate('save_activity_loot',value,gen_random_uuid(),'Stale activity edit') from loot_saved where key='binding'$$,'40001','STALE_ROW','Activity edits check the original version');
+select throws_ok($$select public.admin_mutate('save_activity_loot',value,gen_random_uuid(),'Stale activity edit') from loot_saved where key='binding'$$,'P0001','STALE_ROW','Activity edits check the original version');
 select throws_ok($$select public.admin_mutate('save_loot_table',public.admin_get_loot_table('test_loot')||'{"active":false}',gen_random_uuid(),'Disable used table')$$,'22023','LOOT_IN_USE','A linked table cannot be disabled');
 reset role;
 insert into loot_saved select 'disable_item',(select value from loot_saved where key='item_payload')||jsonb_build_object('version',md5(to_jsonb(i)::text),'active',false) from private.item_definitions i where id='test_pearl';

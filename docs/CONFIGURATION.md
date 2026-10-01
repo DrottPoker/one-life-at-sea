@@ -38,6 +38,8 @@ Aktiva stridsdeltagare behåller snapshots, medan nya order använder aktuella r
 Att sänka en lagrings- eller hälsogräns under sparade värden stoppas av databasen.
 Det finns ingen tyst klippning. En sådan ändring kräver en avsiktlig datamigration.
 Historiska rundor och ammunition får överstiga nya gränser; nya handlingar valideras mot aktiva regler.
+Utrustningens statgränser (`equipment.limits`) byts runt katalogens uppdatering, så en höjd gräns kan användas av ett föremål i samma ändring.
+Ett föremål som en aktiv loottabell fortfarande delar ut kan inte stängas av i config; migrationen stoppas med `ITEM_IN_LOOT`, precis som adminredigeraren vägrar. Ta först bort det ur loottabellen.
 
 ## Migrationshistorik och baslinje
 

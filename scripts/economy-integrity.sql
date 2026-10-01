@@ -29,7 +29,7 @@ with stock as (
   union all select 'market_value_projection',count(*) from expected_history e full join private.item_market_totals h using(sale_id)
     where (e.item_id,e.sold_at,e.quantity_total,e.gross_total) is distinct from (h.item_id,h.sold_at,h.quantity_total,h.gross_total)
   union all select 'balances',count(*) from public.characters
-    where gold_coins<0 or bank_gold_coins<0 or gold_coins>9007199254740991 or bank_gold_coins>9007199254740991
+    where gold_coins<0 or bank_gold_coins<0 or gold_coins>:max_gold or bank_gold_coins>:max_gold
 )
 select jsonb_object_agg(check_name,violations) from failures;
 rollback;

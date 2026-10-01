@@ -38,7 +38,9 @@ config.gameplay.combat.mitigation.fullReductionDefenseRatio = 50;
 Object.assign(config.gameplay.combat.damage, { quadratic: 0, linear: 0, constant: 40 });
 config.gameplay.equipment.fallbackWeapons.cannons.name = "Captain's test cannons";
 Object.assign(config.gameplay.equipment, { weaponScale: 20 });
-Object.assign(config.gameplay.equipment.limits, { maxShipHealth: 60 });
+Object.assign(config.gameplay.equipment.limits, { maxShipHealth: 60, maxDamage: 150 });
+// A raised limit can be used in the same change.
+config.gameplay.inventory.items.find(item => item.id === "flintlock_pistol").stats.damage.max = 140;
 config.gameplay.equipment.zones.crew[0].weight = 100;
 config.gameplay.harbor.pageSize = 3;
 config.gameplay.inventory.pageSize = 2;
@@ -76,6 +78,7 @@ const checks = [
 "select is(jsonb_array_length(public.list_inventory('crew_weapons','',1)->'items'),1,'Final inventory page is bounded');",
 "select is((select sum(quality) from private.item_instances where character_id=(select captain from old_training_fixture)),61.50::numeric,'Catalog changes preserve individual Quality');",
 "select is(private.item_stats(d,10.25)->>'damage','21.03','Stat ranges follow the configured definition') from private.item_definitions d where id='cutlass';",
+"select is((select damage_max from private.item_definitions where id='flintlock_pistol'),140::numeric,'A raised stat limit applies in the same configuration change');",
 "select is(private.combat_damage(12,12,40,1,0),40,'Weapon scale is configurable');",
 "select is((select zone from private.combat_zone('crew',0.4)),'head','Hit zone weights are configurable');",
 "select lives_ok($$update public.characters set ship_health=610 where id=(select captain from old_training_fixture)$$,'Ship Health may reach the configured equipment and battling maximum');",
@@ -279,6 +282,7 @@ checks.push(
 "select set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from forum_reactor_user;",
 "select is(public.set_forum_reaction((select (value->>'post_id')::bigint from forum_config_thread),-1)->>'dislikes','1','New-captain dislike limit follows configuration');",
 "select throws_ok($forum_test$select public.set_forum_reaction((select (value->>'post_id')::bigint from forum_config_thread),1)$forum_test$,'P0001','FORUM_RATE_LIMIT','Reaction rate follows configuration');",
+"select throws_ok($forum_test$select public.set_forum_reaction((select (value->>'post_id')::bigint from forum_config_thread),0)$forum_test$,'P0001','FORUM_RATE_LIMIT','Removing a reaction counts toward the rate');",
 "select is((select karma from private.forum_posts where id=(select (value->>'post_id')::bigint from forum_config_thread)),-1,'Karma minimum length follows configuration');",
 "select is((select karma from private.forum_boards where id='off_topic'),false,'Board karma follows configuration');",
 "select is(public.report_forum_post((select (value->>'post_id')::bigint from forum_config_thread),'spam','')->>'already','false','Captains report with the configured age limit');",
@@ -294,6 +298,9 @@ checks.push(
 "select throws_ok($forum_test$select public.reserve_forum_image(gen_random_uuid(),100,257,100)$forum_test$,'22023','INVALID_IMAGE','Image size follows configuration');",
 "select ok(public.reserve_forum_image(gen_random_uuid(),100,256,100) ? 'image_id','Images within the configured size are reserved');",
 "select throws_ok($forum_test$select public.reserve_forum_image(gen_random_uuid(),100,100,100)$forum_test$,'P0001','IMAGE_RATE_LIMIT','Upload rate follows configuration');",
+// Only replies and likes from other captains make a thread popular.
+"select set_config('request.jwt.claims',jsonb_build_object('sub',id,'role','authenticated')::text,true) from forum_reactor_user;",
+"select public.create_forum_post((select (value->>'thread_id')::bigint from forum_config_thread),'A reply from another captain.',null,gen_random_uuid());",
 "select private.refresh_forum_popular();",
 "select ok((select count(*) from private.forum_popular_threads) between 1 and 1,'Popular thread count follows configuration');"
 );

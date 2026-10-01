@@ -38,11 +38,13 @@ select ok(exists(select 1 from private.character_actions where character_id=(sel
 select is((select portrait_id from public.characters where id=(select own from portrait_test)), (select chosen from portrait_test), 'The choice is stored on the character');
 select is((select portrait_id from public.character_profiles where character_id=(select own from portrait_test)), (select chosen from portrait_test), 'The public profile follows the choice');
 create temp table portrait_profile_version as select ctid as version from public.character_profiles where character_id=(select own from portrait_test);
+create temp table portrait_action as select last_action_at from private.character_actions where character_id=(select own from portrait_test);
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"d5000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select lives_ok($$select public.set_portrait((select chosen from portrait_test))$$, 'Choosing the current portrait again succeeds');
 reset role;
 select is((select ctid from public.character_profiles where character_id=(select own from portrait_test)), (select version from portrait_profile_version), 'Choosing the current portrait again rewrites nothing');
+select is((select last_action_at from private.character_actions where character_id=(select own from portrait_test)), (select last_action_at from portrait_action), 'Choosing the current portrait again is no action');
 select is((select portrait_id from public.characters where id=(select other from portrait_test)),
   (select d.id from private.portrait_definitions d, portrait_test t where t.default_expression like '''' || d.id || '''%'), 'Another captain keeps their own portrait');
 

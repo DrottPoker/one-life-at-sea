@@ -123,6 +123,15 @@ create table if not exists private.forum_reactions (
   primary key(post_id,character_id)
 );
 create index if not exists forum_reactions_character_idx on private.forum_reactions(character_id,updated_at desc);
+-- Reaction changes per captain in a one-minute window. Removing a reaction deletes its row, so the
+-- rows themselves cannot count how often a captain changes their mind.
+create table if not exists private.forum_reaction_limits (
+  character_id uuid primary key references public.characters(id) on delete cascade,
+  window_started_at timestamptz not null,
+  changes integer not null check(changes>0)
+);
+alter table private.forum_reaction_limits enable row level security;
+revoke all on private.forum_reaction_limits from public,anon,authenticated;
 alter table private.forum_posts add column if not exists likes integer not null default 0 check(likes>=0),
   add column if not exists dislikes integer not null default 0 check(dislikes>=0);
 -- Whether a reaction earns karma is decided once, when it is first given.
@@ -131,8 +140,11 @@ alter table private.forum_posts add column if not exists karma integer not null 
 alter table private.forum_author_stats add column if not exists karma integer not null default 0 check(karma>=0);
 -- Karma is the sum of counted reactions on an author's posts. A removed or deleted post keeps its
 -- minus but loses its plus, and the total never drops below zero.
+-- The author's row is locked first, so the sum, taken in the next statement, includes reactions
+-- that another transaction committed while this one waited.
 create or replace function private.forum_refresh_karma(author uuid)
 returns void language sql volatile security invoker set search_path='' as $$
+  select 1 from private.forum_author_stats s where s.character_id=author for update;
   update private.forum_author_stats s set karma=greatest(0,coalesce((select sum(case when p.removed_at is null and t.removed_at is null then p.karma else least(p.karma,0) end)
     from private.forum_posts p join private.forum_threads t on t.id=p.thread_id where p.author_id=author),0))::integer
   where s.character_id=author;

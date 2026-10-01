@@ -16,6 +16,13 @@ const sql = Object.entries(secrets).map(([name, value]) => "do $sweep$ declare e
   "select id into existing from vault.secrets where name='" + name + "'; " +
   "if existing is null then perform vault.create_secret($value$" + value + "$value$,'" + name + "','Forum image sweep'); " +
   "else perform vault.update_secret(existing,$value$" + value + "$value$); end if; end $sweep$;").join("\n");
-execFileSync("docker", ["exec", "-i", "supabase_db_" + config.server.local.supabaseProjectId, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-q"],
-  { input: sql, stdio: ["pipe", "ignore", "inherit"] });
+// psql echoes a failing statement on stderr, and that statement holds the key, so its output is
+// captured and printed only with the key removed.
+try {
+  execFileSync("docker", ["exec", "-i", "supabase_db_" + config.server.local.supabaseProjectId, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-q"],
+    { input: "\\set VERBOSITY terse\n\\set SHOW_CONTEXT never\n" + sql, encoding: "utf8", stdio: ["pipe", "ignore", "pipe"] });
+} catch (error) {
+  const detail = String(error?.stderr ?? "").replaceAll(key, "[service key]").trim();
+  throw new Error("The forum image sweep settings could not be stored." + (detail ? " " + detail : ""));
+}
 console.log("Stored the forum image sweep settings in the local Vault. No credentials were printed.");

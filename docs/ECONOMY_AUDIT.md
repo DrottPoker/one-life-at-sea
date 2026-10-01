@@ -76,7 +76,8 @@ Kör `npm run audit:economy` mot den lokala Supabase-databasen. Kontrollen läse
 ett konsekvent, skrivskyddat snapshot och returnerar felstatus vid avvikelse.
 Den ändrar ingen speldata och skriver inte ut spelaridentiteter.
 
-Åtta kontroller jämför saldogränser, cirkulation mot faktiskt innehav inklusive
+Åtta kontroller jämför saldogränser (noll till den konfigurerade `economy.maxGoldCoins`,
+som skriptet skickar till SQL-filen), cirkulation mot faktiskt innehav inklusive
 escrow, utrustnings-ID mellan inventory och escrow, itemtyp, listingens
 antal, kumulativa avgifter, försäljningar mot listingräknare och hela
 marknadsvärdesprojektionen mot ursprungliga köp.

@@ -39,7 +39,7 @@ begin
     raise exception 'INVALID_PORTRAIT' using errcode='22023';
   end if;
   update public.characters c set portrait_id=set_portrait.portrait_id where c.id=viewer_id and c.portrait_id<>set_portrait.portrait_id;
-  perform private.record_character_action(viewer_id);
+  if found then perform private.record_character_action(viewer_id); end if;
   return jsonb_build_object('portrait_id',set_portrait.portrait_id);
 end;
 $$;

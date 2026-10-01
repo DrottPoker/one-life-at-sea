@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { gameplay } from "../../src/config/public";
 
 vi.mock("server-only", () => ({}));
-import { ForumImageError, processForumImage, sameOriginRequest } from "../../src/lib/forum-images-server";
+import { ForumImageError, processForumImage, sameOriginRequest, storedForumImageMatches } from "../../src/lib/forum-images-server";
 
 function picture(width: number, height: number) {
   return sharp({ create: { width, height, channels: 3, background: "#2a6f97" } });
@@ -38,5 +38,18 @@ describe("forum image processing", () => {
     expect(sameOriginRequest(request({ origin: "http://127.0.0.1:3000", host: "127.0.0.1:3000", "sec-fetch-site": "cross-site" }))).toBe(false);
     expect(sameOriginRequest(request({ host: "127.0.0.1:3000" }))).toBe(false);
     expect(sameOriginRequest(request({ origin: "null", host: "127.0.0.1:3000" }))).toBe(false);
+  });
+  it("serves only the reserved file the upload route encoded", async () => {
+    const stored = await processForumImage(await picture(64, 48).png().toBuffer());
+    const reserved = { byte_size: stored.size, width: stored.width, height: stored.height };
+    expect(await storedForumImageMatches(stored.data, reserved)).toBe(true);
+    expect(await storedForumImageMatches(stored.data, { ...reserved, width: 65 })).toBe(false);
+    expect(await storedForumImageMatches(stored.data.subarray(0, stored.size - 1), reserved)).toBe(false);
+    // Files a player could store directly: animated, with metadata or in another format.
+    const frame = (color: string) => sharp({ create: { width: 64, height: 48, channels: 3, background: color } }).png().toBuffer();
+    const animated = await sharp([await frame("#000000"), await frame("#ffffff")], { join: { animated: true } }).webp().toBuffer();
+    const withExif = await picture(64, 48).webp().withExif({ IFD0: { Artist: "Somebody" } }).toBuffer();
+    const png = await picture(64, 48).png().toBuffer();
+    for (const file of [animated, withExif, png]) expect(await storedForumImageMatches(file, { byte_size: file.length, width: 64, height: 48 })).toBe(false);
   });
 });

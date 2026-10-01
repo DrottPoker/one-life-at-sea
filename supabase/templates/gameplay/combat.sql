@@ -1,3 +1,17 @@
+-- Event rows are written only for captains whose character row this transaction holds. Captains who
+-- left the fight earlier are locked without waiting and skipped while another action holds them, so
+-- two fights never wait on each other's event rows; a skipped page refreshes on its next signal.
+create or replace function private.notify_combat(battle_id uuid)
+returns void language sql volatile security invoker set search_path='' as $$
+  with captains as (select c.id from public.characters c where c.id in(
+      select p.character_id from private.combat_participants p where p.combat_id=battle_id
+      union select b.defender_id from private.combats b where b.id=battle_id)
+    order by c.id for update skip locked)
+  insert into public.player_game_events(character_id,revision) select id,1 from captains
+  on conflict(character_id) do update set revision=player_game_events.revision+1;
+$$;
+revoke all on function private.notify_combat(uuid) from public,anon,authenticated;
+
 create or replace function private.combat_snapshot(c public.characters, observed_at timestamptz)
 returns jsonb language sql stable security invoker set search_path = ''
 as $$

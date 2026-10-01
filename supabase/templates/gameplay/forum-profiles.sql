@@ -80,7 +80,8 @@ begin
     select row_number() over(order by ranked.score desc,ranked.last_post_at desc,ranked.id desc),ranked.id,ranked.score,ranked.replies,ranked.repliers,ranked.likes,observed
     from (select t.id,t.last_post_at,a.replies,a.repliers,a.likes,a.replies+2*a.repliers+a.likes score
       from (select activity.thread_id,sum(activity.replies)::integer replies,sum(activity.repliers)::integer repliers,sum(activity.likes)::integer likes
-        from (select p.thread_id,count(*) replies,count(distinct p.author_id) filter(where p.author_id is distinct from t.author_id) repliers,0 likes
+        from (select p.thread_id,count(*) filter(where p.author_id is distinct from t.author_id) replies,
+            count(distinct p.author_id) filter(where p.author_id is distinct from t.author_id) repliers,0 likes
             from private.forum_posts p join private.forum_threads t on t.id=p.thread_id
             where p.created_at>since and p.post_number>1 and p.removed_at is null group by p.thread_id
           union all

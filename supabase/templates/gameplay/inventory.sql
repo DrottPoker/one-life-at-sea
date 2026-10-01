@@ -1,11 +1,19 @@
+-- The stat limits are replaced around the catalog, so a configuration may raise a limit and use it at once.
+alter table private.item_definitions drop constraint if exists item_definitions_equipment_stats_check;
 -- Definitions are durable. Removing a definition or changing its ownership shape is rejected.
 {{inventory.catalogSql}}
+-- Like the admin editor, configuration cannot switch off an item that an active loot table drops.
+do $guard$ begin
+  if exists(select 1 from private.loot_entries e join private.loot_tables t on t.id=e.loot_table_id
+    join private.item_definitions d on d.id=e.item_id where t.active and not d.active) then
+    raise exception 'ITEM_IN_LOOT: an active loot table still drops an inactive item. Remove it from the loot table before disabling the item.';
+  end if;
+end $guard$;
 -- Admin-authored weapons from before stat ranges fight like the fallback weapons until edited.
 update private.item_definitions set damage_min={{gameplay.equipment.fallbackWeapons.melee.damage}},damage_max={{gameplay.equipment.fallbackWeapons.melee.damage}},
   precision_min={{gameplay.equipment.fallbackWeapons.melee.precision}},precision_max={{gameplay.equipment.fallbackWeapons.melee.precision}}
   where slot in ('melee','cannons') and damage_min is null;
-alter table private.item_definitions drop constraint if exists item_definitions_equipment_stats_check,
-  add constraint item_definitions_equipment_stats_check check(
+alter table private.item_definitions add constraint item_definitions_equipment_stats_check check(
     (damage_min is not null)=coalesce(slot in ('firearm','melee','cannons'),false) and (damage_max is not null)=(damage_min is not null)
     and (precision_min is not null)=coalesce(slot in ('firearm','melee','cannons'),false) and (precision_max is not null)=(precision_min is not null)
     and (armor_min is not null)=coalesce(slot in ('head','body','legs','feet','hull','sails'),false) and (armor_max is not null)=(armor_min is not null)

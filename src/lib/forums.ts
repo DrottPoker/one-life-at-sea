@@ -141,8 +141,13 @@ export function validForumLine(value: unknown, maxLength: number): value is stri
   const characters = Array.from(value);
   return characters.length <= maxLength && !hasControl(characters, false);
 }
-export function normalizeForumPoll(poll: ForumPollInput): ForumPollInput {
-  return { question: poll.question.trim(), options: poll.options.map(option => option.trim()), max_choices: poll.max_choices, days: poll.days };
+// Trims a poll's text. A request may carry any shape, so anything that is not poll-like passes
+// through unchanged for validForumPoll to refuse.
+export function normalizeForumPoll<T>(poll: T): T {
+  if (!poll || typeof poll !== "object" || Array.isArray(poll)) return poll;
+  const value = poll as Record<string, unknown>;
+  return { ...value, question: typeof value.question === "string" ? value.question.trim() : value.question,
+    options: Array.isArray(value.options) ? value.options.map(option => typeof option === "string" ? option.trim() : option) : value.options } as T;
 }
 export function validForumPoll(value: unknown): value is ForumPollInput {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;

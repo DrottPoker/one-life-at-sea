@@ -68,14 +68,25 @@ revoke all on function private.roll_activity_loot(uuid,text,integer) from public
 
 create or replace function private.admin_save_item(payload jsonb)
 returns jsonb language plpgsql volatile security invoker set search_path='' as $$
-declare old_row jsonb; new_row jsonb; identifier text:=payload->>'id'; image text;
+declare old_row jsonb; new_row jsonb; identifier text:=payload->>'id'; image text; captains uuid[];
 begin
   if identifier='new' then raise exception 'INVALID_CONTENT_ID' using errcode='22023'; end if;
+  -- Captains with this Hull equipped settle health at the old maximum first. Their locks come
+  -- before the content lock, like every other path, and a captain who equips it meanwhile retries.
+  select coalesce(array_agg(e.character_id order by e.character_id),'{}') into captains from private.character_equipment e
+    join private.item_instances i on i.id=e.instance_id where i.item_id=identifier and e.slot='hull';
+  if cardinality(captains)>0 then
+    perform private.lock_combat_context(captains);
+    if captains is distinct from (select coalesce(array_agg(e.character_id order by e.character_id),'{}') from private.character_equipment e
+      join private.item_instances i on i.id=e.instance_id where i.item_id=identifier and e.slot='hull') then
+      raise exception 'EQUIPMENT_CHANGED' using errcode='40001'; end if;
+    perform private.settle_health(captain,clock_timestamp()) from unnest(captains) captain;
+  end if;
   perform pg_advisory_xact_lock(74192,1);
   select to_jsonb(i) into old_row from private.item_definitions i where id=identifier for update;
   if (old_row is null and payload->>'version' is not null)
     or (old_row is not null and payload->>'version' is distinct from md5(old_row::text)) then
-    raise exception 'STALE_ROW' using errcode='40001'; end if;
+    raise exception 'STALE_ROW' using errcode='P0001'; end if;
   if old_row is not null and (old_row->>'kind' is distinct from payload->>'kind'
     or old_row->>'slot' is distinct from nullif(payload->>'slot','none')) then
     raise exception 'ITEM_SHAPE_LOCKED' using errcode='22023'; end if;
@@ -115,6 +126,7 @@ begin
       raise exception 'INVALID_STATS' using errcode='22023'; end if;
     raise;
   end;
+  perform private.settle_health(captain,clock_timestamp()) from unnest(captains) captain;
   return jsonb_build_object('before',old_row,'after',new_row,'message','Item saved.','id',identifier);
 end;
 $$;
@@ -132,7 +144,7 @@ begin
   old_row:=private.loot_document(identifier);
   if (old_row is null and payload->>'version' is not null)
     or (old_row is not null and payload->>'version' is distinct from old_row->>'version') then
-    raise exception 'STALE_ROW' using errcode='40001'; end if;
+    raise exception 'STALE_ROW' using errcode='P0001'; end if;
   if entries is null or jsonb_typeof(entries)<>'array' or jsonb_array_length(entries) not between 1 and 50 then
     raise exception 'INVALID_LOOT' using errcode='22023'; end if;
   if not (payload->>'active')::boolean and exists(select 1 from private.activity_loot where loot_table_id=identifier) then
@@ -166,7 +178,7 @@ begin
   select to_jsonb(a) into old_row from private.activity_loot a where activity_id=identifier for update;
   if (old_row is null and payload->>'version' is not null)
     or (old_row is not null and payload->>'version' is distinct from old_row->>'version') then
-    raise exception 'STALE_ROW' using errcode='40001'; end if;
+    raise exception 'STALE_ROW' using errcode='P0001'; end if;
   if nullif(payload->>'loot_table_id','') is not null and not exists(select 1 from private.loot_tables
     where id=payload->>'loot_table_id' and active) then raise exception 'LOOT_UNAVAILABLE' using errcode='22023'; end if;
   insert into private.activity_loot(activity_id,loot_table_id,success_start,success_end,mastery_level)

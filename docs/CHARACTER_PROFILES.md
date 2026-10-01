@@ -58,7 +58,7 @@ Bara ID:n når databasen, som tabellen `private.portrait_definitions`.
 
 På den egna profilen öppnar pennknappen vid porträttet ett galleri. Valet sparas med
 `set_portrait(portrait_id)`, som kontrollerar att ID:t finns i katalogen, låser karaktärsraden
-och räknas som en handling för närvaron. Samma val igen ändrar ingenting. Porträtt är utseende
+och räknas som en handling för närvaron. Samma val igen ändrar ingenting och räknas inte som handling. Porträtt är utseende
 utan spelpåverkan och kan därför bytas överallt, även i Hospital, till sjöss och under strid.
 Klienten har ingen skrivrätt till kolumnen `characters.portrait_id`, och en främmande nyckel mot
 katalogen stoppar okända värden.

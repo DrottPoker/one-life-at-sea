@@ -38,6 +38,7 @@ export const adminErrors: Record<string, string> = {
   ADMIN_REQUIRED: "Administrator access is required. Your access may have been revoked.",
   STALE_ROW: "This record changed after you opened it. Reload the record before editing again.",
   ROW_NOT_FOUND: "This record no longer exists. Reload the page.",
+  EQUIPMENT_CHANGED: "A captain equipped or removed this Hull while it was saved. Try again.",
   SHIP_JOB_FINISHED: "This ship job has finished. Its result applies to the captain and it can no longer be cancelled.",
   READ_ONLY_RESOURCE: "This table is maintained by the game and cannot be edited here.",
   READ_ONLY_COLUMN: "One of these columns cannot be changed.",

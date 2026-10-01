@@ -11,7 +11,8 @@ is the first authorized local administrator.
    description, effect text, active/tradable flags and image. Item IDs, ownership types
    and equipment slots are permanent after creation. Equipment also has the stat ranges
    its slot requires (see [Equipment](EQUIPMENT.md)); editing them changes every owned piece,
-   because stats derive from each piece's Quality. Other effects are descriptive text;
+   because stats derive from each piece's Quality. Saving a Hull first settles Ship Health for
+   every captain who has it equipped, so a changed health range grants no health in arrears. Other effects are descriptive text;
    creating a consumable does not add a new gameplay operation.
 2. **Loot tables**: create a named collection, add items, choose fixed percentages or
    weights at level 1/mastery, and set quantity. Equipment rolls its Quality when granted.
@@ -59,7 +60,8 @@ directory includes registration/last-activity timestamps, activity filters and s
   decimal places) or, when Quality is left empty, a Quality rolled for each piece.
   Limits: 1,000,000 stack items or 100 equipment instances per request.
 - Correct stack quantities and equipment Quality, or delete an entire inventory row.
-  Deleting an equipped piece also removes it from the captain's loadout.
+  Deleting an equipped piece also removes it from the captain's loadout. An equipment edit or
+  deletion settles health at the previous maximum first, like a battling level correction.
 - Release a hospital patient with full health, including Hull and battling level bonuses.
   The release is its own audited action and is refused while the captain is in an encounter.
 - Correct private skill XP. A Crew Battling or Ship Battling correction first settles health

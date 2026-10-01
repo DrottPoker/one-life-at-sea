@@ -216,6 +216,8 @@ insert into extras_results values('quiet',public.create_forum_thread('off_topic'
 select pg_temp.cool();
 insert into extras_results values('lively',public.create_forum_thread('off_topic','Lively thread','Everyone answers here.',gen_random_uuid()));
 select pg_temp.cool();
+select public.create_forum_post(pg_temp.thread('quiet'),'Answering myself does not count.',null,gen_random_uuid());
+select pg_temp.cool();
 select pg_temp.as_player('ExtrasVoter');
 select public.create_forum_post(pg_temp.thread('lively'),'First answer.',null,gen_random_uuid());
 select pg_temp.cool();
@@ -228,7 +230,7 @@ select private.refresh_forum_popular();
 set local role authenticated;
 select pg_temp.as_player('ExtrasNew');
 select ok(jsonb_path_exists(public.get_forum_index()->'popular','$[*] ? (@.title == "Lively thread")'),'Threads with replies and likes are popular');
-select ok(not jsonb_path_exists(public.get_forum_index()->'popular','$[*] ? (@.title == "Quiet thread")'),'Threads without activity from others are not');
+select ok(not jsonb_path_exists(public.get_forum_index()->'popular','$[*] ? (@.title == "Quiet thread")'),'Threads without activity from others are not, even with the author''s own replies');
 select ok((select min(ordinality) from jsonb_array_elements(public.get_forum_index()->'popular') with ordinality where value->>'title'='Lively thread')
   <(select min(ordinality) from jsonb_array_elements(public.get_forum_index()->'popular') with ordinality where value->>'title'='Best ship'),'More activity ranks higher');
 select is((select value#>>'{board,name}' from jsonb_array_elements(public.get_forum_index()->'popular') where value->>'title'='Lively thread'),'Off Topic','Popular threads name their board');

@@ -74,7 +74,7 @@ begin
     perform private.lock_combat_context(array[captain_id]);
     execute format('select to_jsonb(t) from %s t where %s for update',relation,clause) into before_row using identity;
     if before_row is null then raise exception 'ROW_NOT_FOUND' using errcode='P0001'; end if;
-    if payload->>'version' is distinct from md5(before_row::text) then raise exception 'STALE_ROW' using errcode='40001'; end if;
+    if payload->>'version' is distinct from md5(before_row::text) then raise exception 'STALE_ROW' using errcode='P0001'; end if;
     if spec.name='characters' and exists(select 1 from private.combat_engagements where character_id=captain_id) then
       raise exception 'PLAYER_IN_COMBAT' using errcode='P0001'; end if;
     -- The version matches the unsettled row the administrator saw. Due discharges, arrivals and ship
@@ -92,17 +92,20 @@ begin
         if patch ? 'ship_health' then patch:=patch||jsonb_build_object('ship_recovery_at',clock_timestamp()); end if;
         if patch ? 'crew_health' then patch:=patch||jsonb_build_object('crew_recovery_at',clock_timestamp()); end if;
       end if;
-      -- A battling level sets a health maximum; recovery so far keeps the previous one.
-      if spec.name='character_skills' and before_row->>'skill_id' in ('crew_battling','ship_battling') then
+      -- A battling level or an equipped Hull sets a health maximum; recovery so far keeps the previous one.
+      if (spec.name='character_skills' and before_row->>'skill_id' in ('crew_battling','ship_battling')) or spec.name='item_instances' then
         perform private.settle_health(captain_id,clock_timestamp()); end if;
       select string_agg(format('%I=(jsonb_populate_record(null::%s,$2)).%I',key,relation,key),',')
         into columns_sql from jsonb_object_keys(patch) key;
       execute format('update %s t set %s where %s returning to_jsonb(t)',relation,columns_sql,clause)
         into after_row using identity,patch;
-      if spec.name='character_skills' and before_row->>'skill_id' in ('crew_battling','ship_battling') then
+      if (spec.name='character_skills' and before_row->>'skill_id' in ('crew_battling','ship_battling')) or spec.name='item_instances' then
         perform private.settle_health(captain_id,clock_timestamp()); end if;
     else
+      -- Deleting an equipped Hull lowers the maximum.
+      if spec.name='item_instances' then perform private.settle_health(captain_id,clock_timestamp()); end if;
       execute format('delete from %s t where %s',relation,clause) using identity;
+      if spec.name='item_instances' then perform private.settle_health(captain_id,clock_timestamp()); end if;
     end if;
     perform private.notify_training(captain_id);
     result:=jsonb_build_object('audit_id',audit_id,'message',case when action='delete' then 'Row deleted.' else 'Changes saved.' end);
@@ -145,7 +148,7 @@ begin
       raise exception 'SHIP_JOB_FINISHED' using errcode='P0001'; end if;
     select to_jsonb(j) into before_row from private.ship_upgrade_jobs j where character_id=captain_id and applied_at is null for update;
     if before_row is null then raise exception 'ROW_NOT_FOUND' using errcode='P0001'; end if;
-    if payload->>'version' is distinct from md5(before_row::text) then raise exception 'STALE_ROW' using errcode='40001'; end if;
+    if payload->>'version' is distinct from md5(before_row::text) then raise exception 'STALE_ROW' using errcode='P0001'; end if;
     delete from private.ship_upgrade_jobs where id=(before_row->>'id')::uuid;
     perform private.notify_training(captain_id);
     result:=jsonb_build_object('audit_id',audit_id,'message','Ship job cancelled without refund. The original job is preserved in this audit record.');
@@ -154,7 +157,7 @@ begin
     perform private.lock_combat_context(array[captain_id]);
     select to_jsonb(c) into before_row from public.characters c where c.id=captain_id and c.hospital_until is not null for update;
     if before_row is null then raise exception 'ROW_NOT_FOUND' using errcode='P0001'; end if;
-    if payload->>'version' is distinct from md5(before_row::text) then raise exception 'STALE_ROW' using errcode='40001'; end if;
+    if payload->>'version' is distinct from md5(before_row::text) then raise exception 'STALE_ROW' using errcode='P0001'; end if;
     if exists(select 1 from private.combat_engagements where character_id=captain_id) then
       raise exception 'PLAYER_IN_COMBAT' using errcode='P0001'; end if;
     -- Full health follows current equipment and battling levels, like a normal discharge.
