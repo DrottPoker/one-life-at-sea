@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import { ArrowLeft, Bookmark, Clock3, History, Mail, Reply, Trash2, UserRoundX } from "lucide-react";
 import { useNavigationActivity } from "@/components/game-refresh";
 import { MessageTime } from "@/components/messages/message-time";
@@ -71,7 +71,7 @@ export function MailReader({ characterId, playerNumber, mail, showHistory, folde
       <footer className="o-mail-reader-actions">
         <button className="o-mail-delete" type="button" disabled={busy || reading} onClick={() => act("delete")}><Trash2 size={16} aria-hidden="true" />Delete</button>
         {mail.can_reply && <button type="button" disabled={busy} aria-label="Ignore sender" onClick={ignore}><UserRoundX size={16} aria-hidden="true" />Ignore</button>}
-        <button type="button" disabled={busy || reading} aria-pressed={mail.saved} onClick={() => act(mail.saved ? "unsave" : "save")}><Bookmark size={16} aria-hidden="true" fill={mail.saved ? "currentColor" : "none"} />{mail.saved ? "Unsave" : "Save"}</button>
+        <button type="button" disabled={busy || reading} onClick={() => act(mail.saved ? "unsave" : "save")}><Bookmark size={16} aria-hidden="true" fill={mail.saved ? "currentColor" : "none"} />{mail.saved ? "Unsave" : "Save"}</button>
         {mail.direction === "inbox" && <button type="button" disabled={busy || reading} onClick={() => act("unread")}><Mail size={16} aria-hidden="true" />Mark unread</button>}
         {mail.can_reply && <button className="o-mail-reply" type="button" aria-expanded={replying} aria-controls={"reply-" + mail.id} onClick={() => setReplying(!replying)}><Reply size={16} aria-hidden="true" />{replying ? "Close reply" : "Reply"}</button>}
       </footer>

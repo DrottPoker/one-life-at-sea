@@ -50,7 +50,7 @@ export function CraftingPanel({ recipes }: { recipes: CraftingRecipe[] }) {
           <input type="hidden" name="expected_version" value={recipe.version} />
           <p>{full ? "Your output stack is full." : enough ? "All materials ready." : "Gather the missing materials to craft this item."}</p>
           <button type="submit" className="o-training-button" disabled={pending || (!retry && (locked || journal.unconfirmed || !!result.retry || !enough || full))}>
-            {pending ? "Crafting..." : retry ? "Check crafting" : "Craft " + recipe.name}
+            {pending ? "Crafting..." : retry ? "Retry crafting" : "Craft " + recipe.name}
           </button>
         </form>
       </section>;

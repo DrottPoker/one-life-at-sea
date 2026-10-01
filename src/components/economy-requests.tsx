@@ -11,6 +11,7 @@ import type { ActivityResult } from "@/lib/activities";
 import { buyTavernMeal } from "@/app/tavern-actions";
 import type { TavernResult } from "@/lib/morale";
 import { trainingAction } from "@/app/training-actions";
+import { usePathname } from "next/navigation";
 import { useGameRefresh } from "@/components/game-refresh";
 import { economyJournalKey, executeSavedRequest, formRequest, parseEconomyRequest, requestForm, type EconomyRequest } from "@/lib/economy-journal";
 import type { MarketCommand, MarketActionResult } from "@/lib/marketplace";
@@ -70,7 +71,8 @@ function useRecoveryNeeded(key: string, raw: string | null) {
 
 export function EconomyRequests({ characterId, children }: { characterId: string; children: ReactNode }) {
   const key = economyJournalKey(characterId), refresh = useGameRefresh();
-  const [notice, setNotice] = useState("");
+  const pathname = usePathname();
+  const [notice, setNotice] = useState({ text: "", pathname: "" });
   const [checking, startChecking] = useTransition();
   const raw = useSyncExternalStore(subscribe, () => readJournal(key), () => null);
   const recoveryNeeded = useRecoveryNeeded(key, raw);
@@ -100,7 +102,7 @@ export function EconomyRequests({ characterId, children }: { characterId: string
     startChecking(async () => {
       const result = request.kind === "market" ? await journal.market(request.command) :
         await journal[request.kind](requestForm(request.fields));
-      setNotice(result.message ?? "");
+      setNotice({ text: result.message ?? "", pathname });
       refresh.request();
     });
   }
@@ -115,7 +117,7 @@ export function EconomyRequests({ characterId, children }: { characterId: string
         </button>}
       </div>
     </section>}
-    {notice && <p className="o-copy" role="status">{notice}</p>}
+    {notice.text && notice.pathname === pathname && <p className="o-copy" role="status">{notice.text}</p>}
     {children}
   </Context.Provider>;
 }

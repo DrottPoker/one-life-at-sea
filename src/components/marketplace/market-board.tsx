@@ -32,6 +32,11 @@ export function MarketBoard({ market, filters }: { market: MarketPage<MarketItem
   function toggle(item: MarketItem, kind: "details" | "listings") {
     setExpanded(current => current?.id === item.item_id && current.kind === kind ? null : { id: item.item_id, kind });
   }
+  function close() {
+    const current = expanded;
+    setExpanded(null);
+    if (current) grid.current?.querySelector<HTMLButtonElement>(`[data-item-id="${CSS.escape(current.id)}"] [data-toggle="${current.kind}"]`)?.focus();
+  }
   function details(item: MarketItem): InventoryEntry {
     return { ...item, id: item.item_id, entry_type: item.kind === "equipment" ? "instance" : "stack", quantity: 0, stats: null };
   }
@@ -51,9 +56,9 @@ export function MarketBoard({ market, filters }: { market: MarketPage<MarketItem
             <div className="o-market-card-art">
               <ItemImage item={details(item)} />
               <div className="o-market-card-actions">
-                <button type="button" aria-label={"View " + item.name + " details"} aria-expanded={expanded?.id === item.item_id && expanded.kind === "details"}
+                <button type="button" data-toggle="details" aria-label={"View " + item.name + " details"} aria-expanded={expanded?.id === item.item_id && expanded.kind === "details"}
                   onClick={() => toggle(item, "details")}><Eye aria-hidden="true" /></button>
-                <button type="button" aria-label={"View " + item.name + " listings"} aria-expanded={expanded?.id === item.item_id && expanded.kind === "listings"}
+                <button type="button" data-toggle="listings" aria-label={"View " + item.name + " listings"} aria-expanded={expanded?.id === item.item_id && expanded.kind === "listings"}
                   onClick={() => toggle(item, "listings")}><ShoppingCart aria-hidden="true" /></button>
               </div>
             </div>
@@ -66,10 +71,10 @@ export function MarketBoard({ market, filters }: { market: MarketPage<MarketItem
             </p>
           </article>,
           ...row.map(card => <Collapsible key={"details-" + card.item_id} open={expanded?.id === card.item_id && expanded.kind === "details"}>
-            <div className="o-market-expanded"><ItemDetails item={details(card)} quantity={{ label: "Available", value: formatCirculation(card.available) }} onClose={() => setExpanded(null)} /></div>
+            <div className="o-market-expanded"><ItemDetails item={details(card)} quantity={{ label: "Available", value: formatCirculation(card.available) }} onClose={close} /></div>
           </Collapsible>),
           selected && expanded?.kind === "listings" && index === afterIndex && <div key={"listings-" + selected.item_id} className="o-market-expanded">
-            <MarketListings key={selected.item_id} itemId={selected.item_id} itemName={selected.name} observedAt={market.observed_at} mutation={mutation} onClose={() => setExpanded(null)} />
+            <MarketListings key={selected.item_id} itemId={selected.item_id} itemName={selected.name} observedAt={market.observed_at} mutation={mutation} onClose={close} />
           </div>,
           ];
         })}

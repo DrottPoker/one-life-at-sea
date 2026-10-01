@@ -49,7 +49,7 @@ function orderOptions(battle: Battle, ammo: Ammo): Record<OrderButton, { detail:
   };
 }
 
-export function CombatArena({ battle }: { battle: Battle }) {
+export function CombatArena({ battle, back }: { battle: Battle; back: { url: string; label: string } }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   useNavigationActivity(pending);
@@ -116,7 +116,7 @@ export function CombatArena({ battle }: { battle: Battle }) {
     </section> : battle.status === "active" && <section className="o-combat-result">
       <h2>{battle.participant_status === "retreated" ? "You withdrew" : battle.participant_status === "draw" ? "Round limit reached" : "Defeat"}</h2>
       <p>The other attackers are still fighting. The public combat log becomes available when the encounter ends.</p>
-      <Link href="/harbor" className="o-training-button">Back to The Harbor</Link>
+      <Link href={back.url} className="o-training-button">Back to {back.label}</Link>
     </section>}
     <div className="o-combat-feedback" role="status">{message}{message && <button className="o-text-button" onClick={() => router.refresh()}>Reload fight</button>}</div>
     <div className="o-battle-record">

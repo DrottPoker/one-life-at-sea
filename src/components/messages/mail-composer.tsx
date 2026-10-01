@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Feather, Send } from "lucide-react";
 import { GameLink as Link } from "@/components/game-navigation";
 import { useGameRefresh, useNavigationActivity } from "@/components/game-refresh";
+import { useMountedRef } from "@/hooks/use-mounted";
 import { MailRecipientPicker } from "@/components/messages/mail-recipient-picker";
 import { sendMail } from "@/app/message-actions";
 import { gameplay } from "@/config/public";
@@ -24,7 +25,7 @@ export function MailComposer({ characterId, playerNumber, initialRecipients = []
 }) {
   const [recipients, setRecipients] = useState(initialRecipients), [subject, setSubject] = useState(initialSubject), [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null), [sending, startSending] = useTransition();
-  const inFlight = useRef(false), id = useId(), router = useRouter(), refresh = useGameRefresh();
+  const inFlight = useRef(false), id = useId(), router = useRouter(), refresh = useGameRefresh(), mounted = useMountedRef();
   const key = mailDraftKey(characterId);
   const legacyKey = !replyTo && initialRecipients.length === 1 ? messageDraftKey(characterId, initialRecipients[0].player_number) : null;
   const raw = useSyncExternalStore(subscribe, () => readDraft(key), () => null);
@@ -63,7 +64,8 @@ export function MailComposer({ characterId, playerNumber, initialRecipients = []
           changed();
         }
         if (result.error) { setError(result.error); setRecipients(attempt.recipients); setSubject(attempt.subject); setBody(attempt.body); }
-        else if (result.receipt) router.push("/messages/mail/" + result.receipt.mail_id + "?folder=outbox&sent=1");
+        // A late confirmation does not pull a player who has moved on back to the sent mail.
+        else if (result.receipt && mounted.current) router.push("/messages/mail/" + result.receipt.mail_id + "?folder=outbox&sent=1");
       } catch { setError("Sending could not be confirmed. Retry to check the same mail."); }
       finally { inFlight.current = false; release(); }
     });

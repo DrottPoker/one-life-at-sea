@@ -2,6 +2,7 @@ import Form from "next/form";
 import { Users } from "lucide-react";
 import { GameLink as Link } from "@/components/game-navigation";
 import { Panel } from "@/components/shell";
+import { Pagination } from "@/components/pagination";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
 import { playerProfileUrl, playerSearchUrl } from "@/lib/player-identity";
@@ -36,10 +37,6 @@ export default async function PlayersPage({ searchParams }: {
       </li>)}
       {data.total === 0 && <li className="o-roster-empty">No players match your search.</li>}
     </ul>
-    {pages > 1 && <nav className="o-panel-foot o-roster-footer" aria-label="Player search pages">
-      {data.page > 0 ? <Link href={playerSearchUrl(query, data.page - 1)}>Previous</Link> : <span />}
-      <span>Page {data.page + 1} of {pages}</span>
-      {data.page + 1 < pages ? <Link href={playerSearchUrl(query, data.page + 1)}>Next</Link> : <span />}
-    </nav>}
+    {pages > 1 && <div className="o-panel-foot"><Pagination page={data.page} pages={pages} href={value => playerSearchUrl(query, value)} label="Player search pages" /></div>}
   </Panel>;
 }

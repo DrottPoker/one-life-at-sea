@@ -71,7 +71,7 @@ test("captain profiles open from the harbor and keep private character data prot
     await sidebar.getByRole("link", { name: "My Profile", exact: true }).focus();
     await page.keyboard.press("Enter");
     await expect(main.getByRole("heading", { name: new RegExp("^" + ownerName + " \\[\\d+\\]$") })).toBeVisible();
-    await expect(main.getByRole("region", { name: "Defence orders", exact: true })).toBeVisible();
+    await expect(main.getByRole("region", { name: "Defense orders", exact: true })).toBeVisible();
     await expect(main.getByText("< 1 day", { exact: true })).toBeVisible();
     await expect(sidebar.getByText("Captain", { exact: true })).toHaveCount(0);
     await main.getByRole("link", { name: "Back to The Harbor", exact: true }).click();
@@ -81,7 +81,7 @@ test("captain profiles open from the harbor and keep private character data prot
     await expect(main.getByRole("heading", { name: otherName + " [" + target.data!.player_number + "]", exact: true })).toBeVisible();
     await expect(main.getByText("2 days", { exact: true })).toBeVisible();
     await expect(main.locator("time")).toHaveAttribute("datetime", publicProfile.data!.created_at);
-    await expect(main.getByRole("region", { name: "Defence orders", exact: true })).toHaveCount(0);
+    await expect(main.getByRole("region", { name: "Defense orders", exact: true })).toHaveCount(0);
     await expect(main.getByText("9876", { exact: true })).toHaveCount(0);
     await expect(main.getByText(email, { exact: true })).toHaveCount(0);
     await expect(sidebar.getByText(ownerName, { exact: true })).toBeVisible();

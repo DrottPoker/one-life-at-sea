@@ -1,5 +1,5 @@
 import { frontend } from "@/config/public";
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import Image from "next/image";
 import { Anchor, Compass, Bell, Mail, type LucideIcon } from "lucide-react";
 import type { MessageSummary } from "@/lib/messages";

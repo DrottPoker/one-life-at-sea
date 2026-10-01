@@ -3,8 +3,9 @@
 import { GameLink as Link } from "@/components/game-navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, Package, Search, Trash2 } from "lucide-react";
+import { ChevronDown, Package, Search, Trash2 } from "lucide-react";
 import { DialogCloseButton } from "@/components/dialog-close-button";
+import { Pagination } from "@/components/pagination";
 import { ItemImage } from "@/components/inventory/item-image";
 import { Collapsible } from "@/components/collapsible";
 import { ItemDetails } from "@/components/inventory/item-details";
@@ -186,13 +187,7 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
     <div className="o-inventory-footer">
       <span>{inventory.total ? formatItemCount(inventory.page * inventory.page_size + 1) + "-" +
         formatItemCount(Math.min((inventory.page + 1) * inventory.page_size, inventory.total)) + " of " + formatItemCount(inventory.total) : "0 items"}</span>
-      {pages > 1 && <nav aria-label="Inventory pages">
-        {inventory.page > 0 ? <Link href={inventoryHref(filters.category, filters.query, inventory.page - 1)} aria-label="Previous page"><ChevronLeft aria-hidden="true" /></Link> :
-          <span aria-disabled="true"><ChevronLeft aria-hidden="true" /></span>}
-        <span>Page {inventory.page + 1} of {pages}</span>
-        {inventory.page + 1 < pages ? <Link href={inventoryHref(filters.category, filters.query, inventory.page + 1)} aria-label="Next page"><ChevronRight aria-hidden="true" /></Link> :
-          <span aria-disabled="true"><ChevronRight aria-hidden="true" /></span>}
-      </nav>}
+      {pages > 1 && <Pagination page={inventory.page} pages={pages} href={value => inventoryHref(filters.category, filters.query, value)} label="Inventory pages" />}
     </div>
     <div className="o-inventory-feedback" role="status" aria-live="polite">
       {!dialogOpen && result.message && <p className={result.error ? "o-field-error" : ""}>{result.message}</p>}
@@ -221,7 +216,8 @@ export function InventoryPanel({ inventory, filters, characterId }: { inventory:
         {dialogOpen && <div role="status" aria-live="polite">
           {result.message && <p className="o-field-error">{result.message}</p>}
           {!available && !result.retry && <p className="o-field-error">This item is no longer available.</p>}
-          {blocked && <p className="o-field-error">{state.hospital_until ? "You cannot destroy items while in hospital." : state.sea.state !== "in_harbor" ? "Return to The Harbor to destroy items." : "Finish your current fight first."}</p>}
+          {blocked && <p className="o-field-error">{state.hospital_until ? "You cannot destroy items while in hospital." : state.sea.state !== "in_harbor" ? "Return to The Harbor to destroy items."
+            : state.active_combat_id ? "Finish your current fight first." : "Check the saved action before destroying items."}</p>}
         </div>}
       </form>}
     </dialog>

@@ -44,7 +44,7 @@ export function CombatPreparation({ preview }: { preview: CombatPreview }) {
       <p>{preview.join_combat_id ? "Join the attackers with your own orders. You share the opposing ship and crew health." : "Inspect your condition before committing. The opposing equipment will be revealed when the fight starts."}</p></div>
     <CombatStage attacker={preview.attacker} defender={preview.defender} phase="sea" />
     <div className="o-combat-start">
-      <div><h2>Give the order</h2><p>Both captains act each round. Your opponent follows saved defence orders.</p>
+      <div><h2>Give the order</h2><p>Both captains act each round. Your opponent follows saved defense orders.</p>
         <p className="o-copy">You can attack while injured. At least {gameplay.combat.minimumHealth} Ship Health and {gameplay.combat.minimumHealth} Crew Health are required.</p></div>
       <button className="o-training-button o-combat-start-button" disabled={pending || !!state.active_combat_id || !preview.can_start} onClick={start}>
         {pending && <span className="o-spinner" aria-hidden="true" />}

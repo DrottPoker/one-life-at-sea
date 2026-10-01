@@ -29,7 +29,9 @@ usable. The previous page is hidden and inert while the content loader is visibl
 - `src/lib/supabase/server.ts`: shares one authenticated client within a server
   render using React cache, without sharing sessions across requests.
 
-Use `GameLink` for links inside the game shell. It preserves Next.js Link props,
+Use `GameLink` for links inside the game shell, including the masthead and `Pagination`.
+`AppFrame` holds the navigation provider, so a masthead link such as Messages shows the
+same loading view and holds background refresh like a sidebar link. It preserves Next.js Link props,
 prefetch choices, Ctrl-click, keyboard activation, redirects and browser history.
 Outside the game provider it behaves as a regular Next.js Link. The content switch
 does not unmount old components before the router commits; pending economy actions

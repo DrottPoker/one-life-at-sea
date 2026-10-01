@@ -8,6 +8,7 @@ import { frontend } from "@/config/public";
 import { Suspense, useEffect, useLayoutEffect, useId, useMemo, useRef, useTransition, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { GameRefreshContext } from "@/components/game-refresh";
+import { GameNavigationProvider } from "@/components/game-navigation";
 import { Masthead } from "@/components/shell";
 import { createGameRefreshQueue } from "@/lib/game-refresh-queue";
 import { subscribeToForeground } from "@/lib/browser-events";
@@ -101,11 +102,13 @@ function SessionFrame({ children, accountId, characterId, attack, hospitalUntil,
   }, [characterId, instance, router, queue]);
 
   if (blocked) return <main id="main" className="o-attack-loading"><span className="o-spinner" /> {hospitalUntil ? "Returning to hospital..." : attack ? "Returning to your battle..." : "Returning to your voyage..."}</main>;
-  return <GameRefreshContext value={refreshControl}><div className={attackScreen ? "o-attack-shell o-encounter-shell" : isAdmin && adminScreen ? "o-attack-shell" : "game-shell"}>
+  // Navigation state spans the masthead and the game pages, so its links show the same loading view.
+  return <GameRefreshContext value={refreshControl}><GameNavigationProvider key={characterId ?? "guest"}>
+    <div className={attackScreen ? "o-attack-shell o-encounter-shell" : isAdmin && adminScreen ? "o-attack-shell" : "game-shell"}>
     {!attackScreen && <Masthead messages={characterId ? messages : undefined} isAdmin={isAdmin} notifications={characterId ? notifications : undefined} />}
     {children}
     {!attackScreen && <footer className="o-bottom"><span>{frontend.site.name}</span><span>A life to remember.</span></footer>}
-  </div></GameRefreshContext>;
+  </div></GameNavigationProvider></GameRefreshContext>;
 }
 
 export function AppFrame(props: { messages: MessageSummary | null; revision: number | null; notifications: NotificationSummary | null; accountId: string | null; isAdmin: boolean; children: ReactNode; characterId: string | null; attack: AttackLock | null; hospitalUntil: string | null; seaState: SeaPhase | null }) {

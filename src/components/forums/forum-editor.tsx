@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, useSyncExternalStore, useTransition
 import { useRouter } from "next/navigation";
 import { Bold, Eye, EyeOff, ImagePlus, Italic, Link2, Send, Strikethrough, Underline, X, type LucideIcon } from "lucide-react";
 import { useGameRefresh, useNavigationActivity } from "@/components/game-refresh";
+import { useMountedRef } from "@/hooks/use-mounted";
 import { ForumMarkup } from "@/components/forums/forum-markup";
 import { ForumPollBuilder } from "@/components/forums/forum-poll";
 import { useForumImageUpload } from "@/components/forums/forum-image-upload";
@@ -56,7 +57,7 @@ export function ForumToolbar({ textarea, value, onChange, disabled, preview, onP
     <button type="button" title="Link" aria-label="Link" disabled={disabled || preview} onClick={link}><Link2 aria-hidden="true" /></button>
     {onImage && <button type="button" title="Add image" aria-label={imageBusy ? "Uploading image" : "Add image"} disabled={disabled || preview || imageBusy} onClick={onImage}>
       <ImagePlus aria-hidden="true" />{imageBusy && "Uploading..."}</button>}
-    <button type="button" className="o-forum-preview-toggle" aria-pressed={preview} onClick={onPreview}><Eye aria-hidden="true" />{preview ? "Write" : "Preview"}</button>
+    <button type="button" className="o-forum-preview-toggle" onClick={onPreview}><Eye aria-hidden="true" />{preview ? "Write" : "Preview"}</button>
   </div>;
 }
 
@@ -99,7 +100,7 @@ export function ForumEditor({ characterId, target, quote = null, onClearQuote, t
 }) {
   const [title, setTitle] = useState(""), [body, setBody] = useState(""), [preview, setPreview] = useState(false), [poll, setPoll] = useState<ForumPollInput | null>(null);
   const [error, setError] = useState<string | null>(null), [sending, startSending] = useTransition();
-  const inFlight = useRef(false), ownTextarea = useRef<HTMLTextAreaElement>(null), id = useId(), router = useRouter(), refresh = useGameRefresh();
+  const inFlight = useRef(false), ownTextarea = useRef<HTMLTextAreaElement>(null), id = useId(), router = useRouter(), refresh = useGameRefresh(), mounted = useMountedRef();
   const textarea = sharedTextarea ?? ownTextarea;
   const key = forumDraftKey(characterId, target);
   const raw = useSyncExternalStore(subscribe, () => readDraft(key), () => null);
@@ -136,7 +137,8 @@ export function ForumEditor({ characterId, target, quote = null, onClearQuote, t
           if (!result.retry) { setBody(attempt.body); if (attempt.kind === "thread") { setTitle(attempt.title); setPoll(attempt.poll); } }
         } else if (result.receipt) {
           setBody(""); setTitle(""); setPoll(null); setPreview(false); onClearQuote?.();
-          router.push(attempt.kind === "thread" ? forumThreadUrl(result.receipt.thread_id) : forumPostUrl(result.receipt.thread_id, result.receipt.post_number));
+          // A late confirmation does not pull a player who has moved on back to the thread.
+          if (mounted.current) router.push(attempt.kind === "thread" ? forumThreadUrl(result.receipt.thread_id) : forumPostUrl(result.receipt.thread_id, result.receipt.post_number));
         }
       } catch { setError("Posting could not be confirmed. Retry to check the same post."); }
       finally { inFlight.current = false; release(); }

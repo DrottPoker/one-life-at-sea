@@ -29,7 +29,8 @@ Använd befintliga hjälpare för validering, formatering, tid, nedräkning och 
 `subscribeToForeground` äger webbläsarens fokus-/onlinehändelser.
 `game-refresh.tsx` samordnar sidbyten och bakgrundsuppdatering.
 `ItemHistoryChart` visar både cirkulations- och marknadsvärdeshistorik.
-`Pagination` ger numrerade sidlänkar åt brevposten och forumet.
+`Pagination` ger numrerade sidlänkar åt brevposten, forumet, Inventory, Marketplace och spelarsökningen. Listor som hålls aktuella i webbläsaren, som hamnlistan, Hospital och scouting, bläddrar med knappar utan adress.
+`useMountedRef` låter ett svar som kommer efter att spelaren lämnat sidan avstå från att navigera tillbaka.
 
 Ekonomins journal delar lagring och samordning mellan flikar. Serverhandlingar och databaskvitton behåller domänens egna regler. Adminjournalen validerar lagrat innehåll och binder begäran till kontot. Refaktorering måste bevara låsordning, behörighet, atomiska utfall och historiska kvitton.
 

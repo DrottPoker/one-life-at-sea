@@ -57,7 +57,7 @@ function SubscribeButton({ characterId, thread }: { characterId: string; thread:
   const [error, setError] = useState<string | null>(null), [pending, start] = useTransition();
   useNavigationActivity(pending);
   return <span className="o-forum-subscribe">
-    <button type="button" className="o-text-button" aria-pressed={thread.subscribed} disabled={pending} onClick={() => start(async () => {
+    <button type="button" className="o-text-button" disabled={pending} onClick={() => start(async () => {
       try { setError(await setForumSubscription(characterId, thread.id, !thread.subscribed)); } catch { setError("Your subscription could not be changed. Please try again."); }
     })}>{thread.subscribed ? <BellOff aria-hidden="true" /> : <Bell aria-hidden="true" />}{thread.subscribed ? "Unsubscribe" : "Subscribe"}</button>
     {error && <span role="alert" className="o-field-error">{error}</span>}

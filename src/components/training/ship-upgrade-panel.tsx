@@ -11,6 +11,7 @@ import { TrainingTiers } from "@/components/training/training-tiers";
 import { useServerCountdown } from "@/hooks/use-server-countdown";
 import { formatCountdown } from "@/lib/time";
 import { formatStat, formatStatGain } from "@/lib/format";
+import { formatItemCount } from "@/lib/inventory";
 import { STATS, STAT_LABELS, type Stat } from "@/lib/game";
 import { trainingTier, trainingTiers, shipTrainingStatGain, shipMaterialCosts, type ShipJob } from "@/lib/training";
 
@@ -66,7 +67,7 @@ export function ShipUpgradePanel() {
         <div className="o-ship-job">
           <p className="o-work-preview"><strong>+{formatStatGain(job.stat_gain)} {STAT_LABELS[job.stat]}</strong><span>{job.workshop_name}</span></p>
           <p className="o-form-hint">{job.energy_cost} Energy paid. Your ship stays in harbor until the work is complete.</p>
-          {job.materials.length > 0 && <p className="o-form-hint">Materials used: {job.materials.map(item => `${item.quantity.toLocaleString()} ${item.name}`).join(", ")}.</p>}
+          {job.materials.length > 0 && <p className="o-form-hint">Materials used: {job.materials.map(item => `${formatItemCount(item.quantity)} ${item.name}`).join(", ")}.</p>}
         </div>
       </section>
     </> : <TrainingActionForm label="Start ship work" className="o-ship-work" fields={{ action: "ship", tier_id: tier.id }}>
@@ -93,7 +94,7 @@ export function ShipUpgradePanel() {
             <div className="o-ship-order-cost">
               <div className="o-ship-materials" aria-label="Required materials"><strong>Materials required</strong>
                 <ul>{materials.map(item => <li key={item.item_id} data-missing={!item.available || item.owned < item.quantity}>
-                  <span>{item.name}</span><span>{item.quantity.toLocaleString()} required · {item.owned.toLocaleString()} owned{!item.available && " · Unavailable"}</span>
+                  <span>{item.name}</span><span>{formatItemCount(item.quantity)} required · {formatItemCount(item.owned)} owned{!item.available && " · Unavailable"}</span>
                 </li>)}</ul>
                 <small>Material costs round up per {gameplay.training.shipMaterialEnergy} Energy.</small>
               </div>

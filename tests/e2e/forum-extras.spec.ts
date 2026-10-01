@@ -7,7 +7,7 @@ import { cleanupForumThreads, removeForumImages, resetForumCooldown } from "../s
 async function settingsReady(page: Page) {
   await page.goto("/forums/settings");
   await page.getByRole("button", { name: "Preview", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Write", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Write", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Write", exact: true }).click();
 }
 

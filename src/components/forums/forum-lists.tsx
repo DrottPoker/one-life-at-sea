@@ -19,7 +19,7 @@ export function ForumSearchForm({ query = "", threads = false, board = null }: {
 export function ForumBreadcrumbs({ trail }: { trail: { label: string; href?: string }[] }) {
   return <nav className="o-forum-breadcrumbs" aria-label="Forum location"><ol>
     <li><Link href={forumUrl()}>Forums</Link></li>
-    {trail.map(item => <li key={item.label}><ChevronRight aria-hidden="true" />{item.href ? <Link href={item.href}>{item.label}</Link> : <span aria-current="page">{item.label}</span>}</li>)}
+    {trail.map((item, index) => <li key={index}><ChevronRight aria-hidden="true" />{item.href ? <Link href={item.href}>{item.label}</Link> : <span aria-current="page">{item.label}</span>}</li>)}
   </ol></nav>;
 }
 

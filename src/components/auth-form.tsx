@@ -50,9 +50,9 @@ export function AuthForm({ mode, initialEmail = "" }: { mode: Mode; initialEmail
           <span className="o-password-row"><input aria-labelledby="password-label" id="password" name="password" type={showPassword ? "text" : "password"}
             autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={mode === "login" ? 1 : auth.passwordMinLength} maxLength={auth.passwordMaxLength}
             aria-invalid={!!state.errors?.password} aria-describedby="password-hint" />
-            <button type="button" className="o-password-toggle" disabled={!hydrated} onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-controls="password">{showPassword ? "Hide" : "Show"}</button>
+            <button type="button" className="o-password-toggle" disabled={!hydrated} onClick={() => setShowPassword(!showPassword)} aria-controls="password">{showPassword ? "Hide" : "Show"}</button>
           </span><small id="password-hint" className={state.errors?.password ? "o-field-error" : "o-form-hint"} role={state.errors?.password ? "alert" : undefined}>
-            {state.errors?.password ?? (mode === "login" ? "Enter the password for your account." : "At least 6 characters. No special characters required.")}
+            {state.errors?.password ?? (mode === "login" ? "Enter the password for your account." : `At least ${auth.passwordMinLength} characters. No special characters required.`)}
           </small>
         </label>}
         {hasConfirmation && <label className="o-field" htmlFor="confirm-password"><span className="o-field-label" id="confirm-password-label">Confirm password</span>

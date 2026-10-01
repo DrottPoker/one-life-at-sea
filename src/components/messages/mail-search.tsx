@@ -3,7 +3,7 @@
 import { useTransition, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import { useNavigationActivity } from "@/components/game-refresh";
 import { mailUrl, parseMailView } from "@/lib/messages";
 

@@ -864,10 +864,9 @@ input[aria-invalid="true"] { border-color:var(--o-palette-edb397); }
 .o-inventory-empty p { margin:0 0 6px; color:var(--o-text); }
 .o-inventory-empty span { font-size:12px; }
 .o-inventory-footer { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:9px 12px; background:var(--o-heading); border-top:1px solid var(--o-line); color:var(--o-muted); font-size:12px; }
-.o-inventory-footer nav { display:flex; align-items:center; gap:12px; }
-.o-inventory-footer nav > a,.o-inventory-footer nav > span[aria-disabled] { display:grid; place-items:center; width:26px; height:26px; }
+.o-inventory-footer .o-pagination { gap:0; padding:0; background:none; border:0; }
+.o-inventory-footer .o-pagination a { display:inline-flex; align-items:center; justify-content:center; padding:4px 8px; min-width:26px; }
 .o-inventory-footer svg { width:16px; height:16px; }
-.o-inventory-footer [aria-disabled] { opacity:0.35; }
 .o-inventory-feedback:not(:empty) { padding:10px 12px; border-top:1px solid var(--o-line); }
 .o-inventory-feedback p { margin:0; }
 /* Modal dialogs are centered in the viewport unless explicitly overridden. */

@@ -6,6 +6,7 @@ import { useEffect, type FormEvent, type ReactNode } from "react";
 import { PageHero, PLACEHOLDER_HERO } from "@/components/page-hero";
 import { ArrowLeft, List, ListPlus, Search, Store, Flame, Package } from "lucide-react";
 import { categoryIcon } from "@/components/inventory/category-icons";
+import { Pagination } from "@/components/pagination";
 import { createClient } from "@/lib/supabase/browser";
 import { useGameRefresh } from "@/components/game-refresh";
 import { inventoryCategories, type InventoryFilters } from "@/lib/inventory";
@@ -65,10 +66,6 @@ export function MarketPages({ page, pageSize, total, filters, mode = "browse" }:
 }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   return <div className="o-inventory-footer"><span>{total} {mode === "listings" ? "listings" : "items"}</span>
-    {pages > 1 && <nav aria-label="Market pages">
-      {page > 0 && <Link href={marketHref(mode, filters.category, filters.query, page - 1)}>Previous</Link>}
-      <span>Page {page + 1} of {pages}</span>
-      {page + 1 < pages && <Link href={marketHref(mode, filters.category, filters.query, page + 1)}>Next</Link>}
-    </nav>}
+    {pages > 1 && <Pagination page={page} pages={pages} href={value => marketHref(mode, filters.category, filters.query, value)} label="Market pages" />}
   </div>;
 }

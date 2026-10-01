@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { shipTrainingStatGain, crewTrainingStatGain } from "../../src/lib/training";
 import { formatStat, formatStatGain } from "../../src/lib/format";
+import { formatItemCount } from "../../src/lib/inventory";
 import { createTestAccount, createTestClient as client, cleanupTestAccounts, loginTestAccount as login, testSql } from "../support/accounts";
 import { seedShipMaterials } from "../support/inventory";
 import { isUuid } from "../../src/lib/validation";
@@ -131,7 +132,7 @@ test("variable ship jobs complete automatically, preserve work after login and u
     await slider.press("Home");
     for (let amount = 5; amount < cost; amount++) await slider.press("ArrowRight");
     const materials = page.locator(".o-ship-materials");
-    await expect(materials.getByText(`${Math.ceil(cost / 5)} required · ${stock.toLocaleString()} owned`, { exact: true })).toHaveCount(2);
+    await expect(materials.getByText(`${Math.ceil(cost / 5)} required · ${formatItemCount(stock)} owned`, { exact: true })).toHaveCount(2);
     await page.getByRole("button", { name: "Start work", exact: true }).click();
     energy -= cost;
     stock -= Math.ceil(cost / 5);

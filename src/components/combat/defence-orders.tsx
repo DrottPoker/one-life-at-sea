@@ -15,7 +15,7 @@ export function DefenceOrders() {
   const blocked = pending || !!state.active_combat_id || !!state.hospital_until || state.sea.state !== "in_harbor";
   const OrderIcon = state.defence_order === "boarding" ? Swords : Crosshair;
   return <section className="o-profile-card o-defence" aria-labelledby="defence-heading">
-    <header className="o-profile-card-head"><h2 id="defence-heading"><Shield aria-hidden="true" />Defence orders</h2><span><Lock aria-hidden="true" />Only visible to you</span></header>
+    <header className="o-profile-card-head"><h2 id="defence-heading"><Shield aria-hidden="true" />Defense orders</h2><span><Lock aria-hidden="true" />Only visible to you</span></header>
     <form action={action}>
       <p className="o-copy">Used while you are away.</p>
       <div className="o-defence-order">
@@ -28,9 +28,9 @@ export function DefenceOrders() {
         <button className="o-training-button" disabled={blocked}>{pending ? "Saving..." : "Save orders"}</button>
       </div>
       <p className="o-copy">Cannon focus fires while salvos remain, then boards. Boarding focus boards immediately. Your crew attacks during boarding.</p>
-      {state.sea.state !== "in_harbor" && <p className="o-copy">Return to The Harbor to change defence orders.</p>}
+      {state.sea.state !== "in_harbor" && <p className="o-copy">Return to The Harbor to change defense orders.</p>}
       {state.active_combat_id && <p className="o-copy">Finish your current fight before changing defence orders.</p>}
-      {state.hospital_until && <p className="o-copy">Defence orders cannot be changed while in hospital.</p>}
+      {state.hospital_until && <p className="o-copy">Defense orders cannot be changed while in hospital.</p>}
       <p className="o-feedback" role="status">{result.message}</p>
     </form>
     {(!state.hospital_until && !state.active_combat_id && state.last_combat_id) && <div className="o-profile-card-foot">

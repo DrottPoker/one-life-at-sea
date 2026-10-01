@@ -28,6 +28,6 @@ export function AttackSession({ battle, preview, heading, hospital = false }: {
   if (toHospital) return <p className="o-panel-body" role="status"><span className="o-spinner" aria-hidden="true" /> Returning to hospital...</p>;
   return <>
     <CombatHeading battle={battle} finished={!!report} {...heading} />
-    {arena ? <CombatArena battle={arena} key={arena.id} /> : preview && <CombatPreparation preview={preview} />}
+    {arena ? <CombatArena battle={arena} key={arena.id} back={{ url: heading.backUrl, label: heading.backLabel }} /> : preview && <CombatPreparation preview={preview} />}
   </>;
 }

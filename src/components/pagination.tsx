@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { GameLink as Link } from "@/components/game-navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // The first, last, current and neighbouring pages, in order and without repeats.

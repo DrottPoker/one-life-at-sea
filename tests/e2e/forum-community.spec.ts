@@ -58,7 +58,7 @@ test("captains react, follow threads through notifications and find posts by aut
 
     await page.goto("/forums/threads/" + threadId);
     await page.getByRole("button", { name: "Unsubscribe", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Subscribe", exact: true })).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByRole("button", { name: "Subscribe", exact: true })).toBeVisible();
     await page.goto("/forums/subscriptions");
     await expect(page.getByText("You are not subscribed to any threads.", { exact: true })).toBeVisible();
 

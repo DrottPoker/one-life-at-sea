@@ -57,9 +57,9 @@ export function ActivitiesPanel({ progress }: { progress: SkillProgress }) {
           <input type="hidden" name="stamina_cost" value={gameplay.stamina.activityCost} />
           <input type="hidden" name="xp_gain" value={activity.xpGain} />
           <span>+{format.format(activity.xpGain)} {skillName} XP</span>
-          <button id={"perform-" + activity.id} type="submit" className="o-training-button" aria-label={retry ? "Retry " + activity.name : activity.buttonLabel + " for " + gameplay.stamina.activityCost + " Stamina"}
+          <button id={"perform-" + activity.id} type="submit" className="o-training-button" aria-label={retry ? "Retry activity: " + activity.name : activity.buttonLabel + " for " + gameplay.stamina.activityCost + " Stamina"}
             disabled={pending || (!retry && (locked || journal.unconfirmed || !!result.retry || !enoughStamina || xpLimit))}>
-            {pending && active === activity.id ? "Working..." : retry ? "Check activity" : activity.buttonLabel}
+            {pending && active === activity.id ? "Working..." : retry ? "Retry activity" : activity.buttonLabel}
           </button>
           <small>{gameplay.stamina.activityCost} Stamina</small>
         </form>
