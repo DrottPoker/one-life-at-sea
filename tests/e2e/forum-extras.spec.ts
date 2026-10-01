@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import sharp from "sharp";
 import { createTestAccount, cleanupTestAccounts, loginTestAccount, testSql } from "../support/accounts";
 import { cleanupForumThreads, removeForumImages, resetForumCooldown } from "../support/forum";
+import { gameplay } from "../../src/config/public";
 
 // Toggling the preview proves the settings form is hydrated before its controlled inputs change.
 async function settingsReady(page: Page) {
@@ -109,8 +110,11 @@ test("captains run polls, share images and signatures, and find popular threads"
     await expect(third.locator(".o-forum-signature")).toHaveCount(0);
 
     testSql("select private.refresh_forum_popular();");
+    const ranked = testSql("select t.title from private.forum_popular_threads p join private.forum_threads t on t.id=p.thread_id order by p.rank;").split(/\r?\n/).filter(Boolean);
+    if (ranked.length < gameplay.forum.popularThreadsCount) expect(ranked).toContain(title);
     await third.goto("/forums");
-    await expect(third.getByRole("region", { name: "Popular threads", exact: true })).toContainText(title);
+    const popular = third.getByRole("region", { name: "Popular threads", exact: true });
+    for (const ranking of ranked) await expect(popular).toContainText(ranking);
     for (const width of [390, 320]) {
       await second.setViewportSize({ width, height: 900 });
       await second.goto("/forums/threads/" + threadId);

@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
 import { createTestAccount, cleanupTestAccounts, loginTestAccount, testSql } from "../support/accounts";
 
@@ -101,6 +101,7 @@ test("measure action and page latency", async ({ page }) => {
     const summarize = (values: number[]) => { const sorted = [...values].sort((a, b) => a - b); return { count: values.length, median: Math.round(sorted[Math.floor(sorted.length / 2)]), p95: Math.round(sorted[Math.ceil(sorted.length * .95) - 1]), min: Math.round(sorted[0]), max: Math.round(sorted.at(-1)!) }; };
     const summary = Object.fromEntries(Object.entries(samples).map(([key, values]) => [key, summarize(values)]));
     const tag = process.env.MEASURE_PERFORMANCE!.replace(/[^a-z0-9-]/gi, "");
+    mkdirSync(".local", { recursive: true });
     writeFileSync(".local/performance-" + tag + ".json", JSON.stringify({ summary, samples }, null, 2));
     console.log(JSON.stringify(summary, null, 2));
   } finally { await cleanupTestAccounts([own]); }

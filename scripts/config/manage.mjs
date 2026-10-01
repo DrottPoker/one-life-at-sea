@@ -23,6 +23,9 @@ if (mode === "check") {
   const stale = Object.entries(files).filter(([path, expected]) => !existsSync(resolve(root, path)) || read(path) !== expected).map(([path]) => path);
   if (!latest || read(latest) !== sql) stale.push("gameplay migration");
   if (stale.length) throw new Error("Config artifacts are stale: " + stale.join(", ") + ". Run npm run config:sync, then npm run db:migrate.");
+  // A later sync would silently replace a hand-written migration, so gameplay SQL must come from the templates.
+  const newest = "supabase/migrations/" + readdirSync(resolve(root, "supabase/migrations")).sort().at(-1);
+  if (latest && newest !== latest) throw new Error(newest + " is newer than the gameplay migration. Move its SQL into supabase/templates/, then run npm run config:sync.");
   console.log("Configuration and generated artifacts match.");
 } else {
   if (!latest || read(latest) !== sql) {

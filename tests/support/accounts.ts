@@ -21,19 +21,33 @@ export function testSql(statement: string): string {
   { input: statement, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
 }
 
+// Accounts this worker created and has not deleted. A test that fails after creating accounts but
+// before reaching its own cleanup, for example while creating several at once, still loses them
+// when the worker exits.
+const createdUsers = new Set<string>();
+process.on("exit", () => { if (createdUsers.size) cleanupTestUsers([...createdUsers]); });
+
 export async function createTestAccount(prefix: string, metadata: Record<string, unknown> = {}) {
   const api = createTestClient(), tag = randomBytes(10).toString("hex");
   const email = prefix + "-" + tag + "@example.test", password = randomBytes(24).toString("hex");
   const name = "Captain" + tag.replace(/[0-9]/g, digit => String.fromCharCode(103 + Number(digit)));
   const signup = await api.auth.signUp({ email, password, options: { data: { character_name: name, ...metadata } } });
   expect(signup.error).toBeNull();
-  const own = await api.from("characters").select("id, player_number").single();
-  expect(own.error).toBeNull();
-  const id = own.data!.id, userId = signup.data.user!.id;
-  if (![id, userId].every(isUuid)) throw new Error("Invalid fixture ID.");
-  // Isolate action-cost tests from real clock ticks; recovery tests set explicit past checkpoints.
-  testSql("update public.characters set energy_updated_at=clock_timestamp()+interval '1 day',morale_updated_at=clock_timestamp()+interval '1 day' where id='" + id + "';");
-  return { api, id, playerNumber: own.data!.player_number, userId, email, password, name };
+  const userId = signup.data.user!.id;
+  if (!isUuid(userId)) throw new Error("Invalid fixture ID.");
+  createdUsers.add(userId);
+  try {
+    const own = await api.from("characters").select("id, player_number").single();
+    expect(own.error).toBeNull();
+    const id = own.data!.id;
+    if (!isUuid(id)) throw new Error("Invalid fixture ID.");
+    // Isolate action-cost tests from real clock ticks; recovery tests set explicit past checkpoints.
+    testSql("update public.characters set energy_updated_at=clock_timestamp()+interval '1 day',morale_updated_at=clock_timestamp()+interval '1 day' where id='" + id + "';");
+    return { api, id, playerNumber: own.data!.player_number, userId, email, password, name };
+  } catch (error) {
+    cleanupTestUsers([userId]);
+    throw error;
+  }
 }
 
 const accountContexts = new Map<string, Set<BrowserContext>>();
@@ -61,6 +75,7 @@ export function cleanupTestUsers(userIds: string[]) {
   if (!userIds.every(isUuid)) throw new Error("Invalid cleanup ID.");
   const ids = userIds.map(id => "'" + id + "'::uuid").join(",");
   testSql("do $$ declare statistics_ids bigint[]; begin select array_agg(id) into statistics_ids from private.player_statistics_accounts where user_id=any(array[" + ids + "]); delete from auth.users where id=any(array[" + ids + "]); delete from private.player_statistics_accounts where id=any(statistics_ids); end $$;");
+  for (const id of userIds) createdUsers.delete(id);
 }
 
 export async function cleanupTestAccounts(accounts: TestAccount[]) {

@@ -38,15 +38,18 @@ Ta bort en fil först efter att importer, dynamiska namn, SQL, konfiguration och
 
 ## Verifiering vid ändring
 
-- `npm run check`: dokumentlänkar, lint utan varningar, oanvända TypeScript-symboler, enhetstester och produktionsbygge.
+- `npm run check`: dokumentlänkar och ankare, lint utan varningar, oanvända TypeScript-symboler, enhetstester och produktionsbygge.
 - `npm run test:db`: databasbeteende, RLS, behörigheter, kvitton och rollback.
 - `npm run test:config:db`: alternativa regler i en transaktion som rullas tillbaka.
-- `npm run test:e2e`: verklig lokal Auth, serverhandlingar och webbläsarflöden mot produktionsbygget.
+- `npm run test:e2e`: bygger först, kontrollerar databasen och testar sedan verklig lokal Auth, serverhandlingar och webbläsarflöden mot produktionsbygget.
+- `npm run db:check`: att den lokala databasen kör repots gameplayrevision och att `database.types.ts` har samma RPC-namn, parametrar och standardvärden som databasen. Körs före `test:db`, `test:config:db` och `test:e2e`.
+- `npm run db:lint`: Supabase SQL-lint för `public` och `private` på varningsnivå.
 - `npm run audit:economy`: läsande kontroll av ekonomins invariants.
 
 Kör hela sviten när delade livscykler, rättigheter eller navigation ändras.
-Testkonton ska använda gemensamma hjälpare och städas även vid testfel. Stäng deras webbläsarsidor före radering så att bakgrundsanrop inte läser borttagna konton. Spara inga inloggningshemligheter i testartefakter.
+Testkonton ska använda gemensamma hjälpare och städas även vid testfel. `createTestAccount` registrerar varje konto, och konton som ett misslyckat test inte hann städa raderas när arbetsprocessen avslutas. Stäng deras webbläsarsidor före radering så att bakgrundsanrop inte läser borttagna konton. Spara inga inloggningshemligheter i testartefakter.
 
+<a id="nextjs-stream-cancellation"></a>
 Next.js 16.3 loggar `⨯ Error: The destination stream closed early.` när en klient avbryter en
 strömmad RSC-rendering, till exempel när ett sidbyte avbryter en pågående uppdatering. Det är inget
 serverfel: bara GET-renderingen avbryts och inget sparas. React rapporterar avbrottet som ett vanligt

@@ -149,7 +149,7 @@ Verified during the navigation implementation on 2026-09-15:
 - The new scenario reported no browser JavaScript errors.
 - The local development app remains available on port 3000.
 
-The [navigation architecture](../../ARCHITECTURE.md#navigation-and-loading) describes
+The [navigation architecture](../../NAVIGATION.md) describes
 the shared layout and nested loading boundaries. Automatic prefetching is assessed
 in the production build; development mode does not enable it.
 

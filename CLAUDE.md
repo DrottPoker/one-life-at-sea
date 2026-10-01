@@ -33,10 +33,12 @@ Tables created before the template system (for example `public.characters`) are 
 
 | Command | Covers |
 | --- | --- |
-| `npm run check` | docs links, lint (zero warnings), typecheck, unit tests, production build |
+| `npm run check` | docs links and anchors, lint (zero warnings), typecheck, unit tests, production build |
 | `npm run test:db` | pgTAP: behavior, RLS, grants, receipts (needs local stack) |
 | `npm run test:config:db` | alternative config values in a rolled-back transaction |
-| `npm run test:e2e` | Playwright in Edge against a production build on port 3100 |
+| `npm run test:e2e` | builds, checks the database, then Playwright in Edge against the production build on port 3100 |
+| `npm run db:check` | local database runs the repository's gameplay revision; typed RPC signatures match (also before `test:db`) |
+| `npm run db:lint` | Supabase SQL lint of `public` and `private` at warning level |
 | `npm run audit:economy` | read-only economy invariants |
 
 Run the full suite when shared lifecycles, permissions or navigation change. E2E tests create and clean up their own accounts; never store credentials in test artifacts. Report actual results only.

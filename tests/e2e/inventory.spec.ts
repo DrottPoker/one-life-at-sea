@@ -276,13 +276,15 @@ test("item rows keep straight stat and action columns and details roll down with
     expect(await panel.locator(".o-collapsible-clip").evaluate(element => element.scrollTop)).toBe(0);
     await expect(row).toContainText("x122");
     // Closing rolls the details up just as quickly, inert meanwhile, before they leave the page.
-    // The state is read right after the click, well inside the 0.1 s roll, so the check cannot race the unmount.
-    const closing = await row.evaluate(async button => {
-      (button as HTMLButtonElement).click();
-      await new Promise(resolve => setTimeout(resolve));
+    // The state is read the moment React marks the panel as closing, well inside the 0.1 s roll, so the check cannot race the unmount.
+    const closing = await row.evaluate(button => new Promise(resolve => {
       const rolling = document.querySelector('section[aria-label="Linen Bandages details"]')?.closest<HTMLElement>(".o-collapsible");
-      return rolling && { closing: rolling.dataset.closing, roll: getComputedStyle(rolling).animationName + " " + getComputedStyle(rolling).animationDuration, inert: rolling.inert };
-    });
+      if (!rolling) { resolve(null); return; }
+      const read = () => ({ closing: rolling.dataset.closing, roll: getComputedStyle(rolling).animationName + " " + getComputedStyle(rolling).animationDuration, inert: rolling.inert });
+      new MutationObserver((_, observer) => { if (rolling.dataset.closing === "true") { observer.disconnect(); resolve(read()); } })
+        .observe(rolling, { attributes: true, attributeFilter: ["data-closing"] });
+      (button as HTMLButtonElement).click();
+    }));
     expect(closing).toEqual({ closing: "true", roll: "o-roll-up 0.1s", inert: true });
     await expect(row).toHaveAttribute("aria-expanded", "false");
     await expect(details).toHaveCount(0);

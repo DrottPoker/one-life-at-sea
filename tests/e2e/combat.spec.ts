@@ -519,7 +519,7 @@ test("one fire order uses the chosen cannon ammunition and falls back to round s
     // Both salvos train Ship Battling; the defender's three automatic salvos train it too, although they all miss.
     expect(sql("select string_agg(xp::text,',' order by character_id='" + a.id + "' desc) from private.character_skills where character_id in('" + a.id + "','" + d.id + "') and skill_id='ship_battling'").trim()).toBe("215,30");
     await expect(scene.locator(".o-combat-versus")).toHaveCSS("opacity", "0");
-    await page.waitForTimeout(1500);
+    await scene.evaluate(element => Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished)));
     await expect(page).toHaveURL(new RegExp("/attack/" + d.playerNumber + "$"));
     await scene.locator(".o-combat-scene-art").screenshot({ path: ".local/attack-finale-desktop.png", animations: "disabled" });
     await page.screenshot({ path: ".local/attack-finale-page.jpg", type: "jpeg", quality: 75, fullPage: true, animations: "disabled" });
