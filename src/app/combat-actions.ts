@@ -36,9 +36,9 @@ export async function submitOrder(battleId: string, round: number, order: string
 export async function saveDefence(_previous: { message?: string }, form: FormData): Promise<{ message?: string }> {
   await requireCharacter();
   const preset = form.get("preset");
-  if (preset !== "cannon" && preset !== "boarding") return { message: "Choose a defence order." };
+  if (preset !== "cannon" && preset !== "boarding") return { message: "Choose a defense order." };
   const client = await createClient();
   const { error } = await withDatabaseRetry(() => client.rpc("save_defence_orders", { preset }));
   revalidatePath("/", "layout");
-  return { message: error ? error.message === "IN_COMBAT" ? "Finish your current fight before changing defence orders." : "Your defence orders could not be saved." : "Defence orders saved. Changes apply to your next fight." };
+  return { message: error ? error.message === "IN_COMBAT" ? "Finish your current fight before changing defense orders." : "Your defense orders could not be saved." : "Defense orders saved. Changes apply to your next fight." };
 }
