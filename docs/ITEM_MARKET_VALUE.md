@@ -22,23 +22,24 @@ precis före den sista försäljningens utgång. Läsningen ger inga nya spelarh
 
 ## Beräkning
 
-Det godkända fönstret är de senaste **12 timmarna**, baserat på databasens tid:
+Värdefönstret `W` styrs av `gameplay.marketplace.valueWindowHours`, standard 12 timmar,
+och baseras på databasens tid:
 
 `floor(sum(gross) / sum(quantity))`
 
-Bara genomförda köp med `t - 12 timmar < sold_at <= t` ingår. Antalet köpta
+Bara genomförda köp med `t - W < sold_at <= t` ingår. Antalet köpta
 exemplar viktar priset, inte antalet affärer. Exempel: ett exemplar för 100 och
 nio för 200 ger Value 190. Försäljningsavgiften dras inte av från marknadsvärdet.
 Heltalsvärdet avrundas nedåt.
 
 Aktiva, avbrutna och osålda listings påverkar inte Value. Utrustningens olika
 stats ingår i samma gemensamma värde för itemtypen. Most Popular behåller sitt
-separata fönster på 12 timmar och sorterar fortfarande efter sålt antal.
+separata fönster, se [Marketplace](MARKETPLACE.md), och sorterar fortfarande efter sålt antal.
 
 Utan köp i tidsfönstret behålls **senaste icke-tomma Value**. Samma värde ligger
 kvar i både detaljer och diagram, även efter omstart eller lång tid utan läsningar.
 **N/A** och tom historik visas bara när itemtypen aldrig har sålts vid observationstiden.
-När nya köp kommer används åter bara de köp som ligger inom de senaste 12 timmarna;
+När nya köp kommer används åter bara de köp som ligger inom fönstret;
 gamla försäljningar blandas inte in i det nya snittet.
 
 ## Beständig historik och prestanda
@@ -63,14 +64,14 @@ använder samma itemlås; flera berörda itemtyper låses i stabil ordning.
 Kontoradering anonymiserar köpens identiteter men behåller marknadsvärdet.
 
 Historikens ändringar kommer både från köptider och från deras utgångstider
-12 timmar senare. Ingen cron, webbläsartimer eller ny affär behövs för att
+ett fönster senare. Ingen cron, webbläsartimer eller ny affär behövs för att
 registrera utgången. Värdet rekonstrueras från beständiga köp vid läsning.
 Första punkt är periodens start eller första kända köpet, sista är serverns tid.
 
-`marketplace.valueWindowHours` styr fönstret, standard 12.
-`inventory.historyMaxPoints` begränsar interna punkter till 500 plus ändpunkter.
+`inventory.historyMaxPoints` begränsar interna punkter på samma sätt som för
+[cirkulationen](ITEM_CIRCULATION.md#prestanda-och-konfiguration).
 Små historiker innehåller varje ändring; stora intervall visar tidsmässigt jämna
-stickprov märkta **Sampled values**. Stickprov är exakta vid sina tidsstämplar,
+stickprov märkta **Sampled**. Stickprov är exakta vid sina tidsstämplar,
 men mycket korta variationer mellan dem kan utelämnas. Kompletta köpdata bevaras.
 Ett ändrat värdefönster räknar om även historiska värden från samma köpdata.
 

@@ -16,7 +16,7 @@ eller nummer, inklusive entydig `#100001`-sökning. Se [spelar-ID:n](PLAYER_IDS.
 Profiler kräver ett registrerat konto med karaktär. De är läsbara i Hospital och
 på en stillastående havsplats; under resa visas vänteläget.
 
-Platsen visas som The Harbor, At sea, Traveling eller Hospital. Sjukhusvistelse
+Platsen visas som The Harbor, At sea, Traveling eller In hospital. Sjukhusvistelse
 har företräde och visar återstående tid. Andra profiler visar Attack när både
 betraktare och mål är i hamnen, eller efter [scouting](SEA_SCOUTING.md) när båda
 är kvar vid samma Sea distance. Resande skepp och patienter är skyddade.
@@ -26,7 +26,7 @@ SQL kontrollerar dessutom stridsvillkoren vid start. Den egna profilen visar fö
 
 `public.character_profiles` innehåller `character_id`, `player_number`, `character_level`, `display_name`,
 `location`, `created_at`, `arrives_at`, `arrival_location`, `max_sea_distance`,
-`arrival_max_sea_distance` och `portrait_id`. Det sista fältet är ett eventuellt planerat nytt rekord
+`arrival_max_sea_distance` och `portrait_id`. `arrival_max_sea_distance` är ett eventuellt planerat nytt rekord
 som räknas först vid ankomst. En kortare resa innehåller inget kommande rekord.
 Konton, e-post, Energy, hälsa, stats, besöks-ID och privata resealternativ ingår inte.
 

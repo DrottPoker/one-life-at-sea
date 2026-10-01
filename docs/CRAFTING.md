@@ -1,71 +1,67 @@
 # Crafting
 
-Crafting lives at `/hideout/crafting`, reached through the Crafting link in the
-Hideout workshop. Recipes show required ingredients, the captain's available stock,
-the output and whether more materials are needed. Each click crafts one recipe
-immediately and places the output in Inventory. There is no job or waiting timer.
+Crafting finns på `/hideout/crafting` och nås via länken Crafting i Hideouts workshop. Recepten visar
+ingredienser, kaptenens tillgängliga lager, resultatet och om mer material behövs. Varje klick tillverkar
+ett recept direkt och lägger resultatet i Inventory. Det finns inget jobb och ingen väntetid.
 
-## First recipe
+## Första receptet
 
-- Oak Plank (`oak_plank`): consume **5 Oak Logs** (`oak_logs`) and create
-  **1 Oak Plank**, using the existing `oak_planks` item definition and stack.
-- The only cost is the listed ingredients. No Gold Coins, Energy or Stamina is
-  charged. Each successful craft grants **10 Crafting XP**, regardless of its output
-  quantity. The confirmed result lists the output and materials; the XP award and any Crafting level-up
-  show in the shared [XP drop](SKILLS.md#xp-drop).
-- Oak Logs is a new stackable, tradable material. Existing plank holdings retain
-  their IDs and quantities. The log image uses the standard inventory placeholder.
-- Logging uses the Woodland Logging loot table and awards one Oak Log per successful
-  attempt. Five successes provide the ingredients for one plank. The activity starts
-  at 70% success and reaches 90% at level 100; loot remains editable through admin.
-  Players can also trade logs through Marketplace.
+- Oak Plank (`oak_plank`): förbrukar **5 Oak Logs** (`oak_logs`) och skapar **1 Oak Plank** med den
+  befintliga itemdefinitionen och stacken `oak_planks`. Receptet ligger i `gameplay.crafting.recipes`.
+- Den enda kostnaden är ingredienserna. Inga Gold Coins, ingen Energy och ingen Stamina dras. Varje lyckat
+  craft ger **10 Crafting XP**, oavsett hur många föremål det skapar. Det bekräftade resultatet listar vad
+  som skapades och vilka material som gick åt; XP:n och eventuell nivåhöjning i Crafting visas i den
+  gemensamma [XP drop](SKILLS.md#xp-drop).
+- Oak Logs är ett nytt stapelbart och handelsbart material. Befintliga plankor behåller sina ID:n och
+  antal. Bilden för Oak Logs är inventoryns standardplatshållare.
+- Logging ger Oak Logs från loot table Woodland Logging, se [Loot tables](LOOT_TABLES.md#woodland-logging)
+  och [Activities](ACTIVITIES.md). Med standardinnehållet ger fem lyckade försök ingredienserna till en
+  planka. Spelare kan också handla Oak Logs på Marketplace.
 
-## Configuration and ownership
+## Konfiguration och ägarskap
 
-`gameplay.crafting.recipes` holds IDs, names, ingredients, output and active state.
-`gameplay.crafting.xpGain` sets the XP reward per craft (10).
-Config validation requires known stackable items, positive safe integer quantities,
-unique recipe/ingredient IDs and no recipe consuming its own output. It supports
-up to 100 recipes and 16 ingredients per recipe. Config sync preserves recipes and
-receipts, deactivates omitted recipes and updates ingredients transactionally.
+`gameplay.crafting.recipes` innehåller ID, namn, ingredienser, resultat och aktiv status.
+`gameplay.crafting.xpGain` styr XP per craft (10). Configvalideringen kräver kända stapelbara föremål,
+positiva säkra heltal som antal, unika recept- och ingrediens-ID:n och att inget recept förbrukar sitt eget
+resultat. Den stöder upp till 100 recept och 16 ingredienser per recept. Configsynkningen behåller recept
+och kvitton, inaktiverar recept som saknas i config och uppdaterar ingredienser i en transaktion.
 
-Private RLS-protected tables are `crafting_recipes`, `crafting_ingredients` and
-`crafting_requests`. Players have no direct table access. The authenticated
-`list_crafting_recipes()` RPC returns active recipes with current item metadata and
-only the caller's inventory quantities. Marketplace escrow is not usable stock.
-Unavailable or non-stackable definitions remove a recipe from the current list.
+De privata RLS-skyddade tabellerna är `crafting_recipes`, `crafting_ingredients` och `crafting_requests`.
+Spelare har ingen direkt tabellåtkomst. Den autentiserade RPC:n `list_crafting_recipes()` returnerar aktiva
+recept med aktuell itemmetadata och bara anroparens egna inventoryantal. Föremål i Marketplace-escrow räknas
+inte som tillgängligt lager. Otillgängliga eller icke stapelbara definitioner tar bort ett recept ur den
+aktuella listan.
 
-## Transaction and recovery
+## Transaktion och återställning
 
-`craft_item(recipe_id, expected_version, request_id)` derives the character from
-Auth, settles the shared character/combat locks and checks for an existing receipt.
-An exact replay returns that receipt even after the recipe changes or the character
-travels, enters hospital or starts combat. Reusing an ID with a changed payload fails.
-New crafting is permitted only in The Harbor and outside combat/hospital.
+`craft_item(recipe_id, expected_version, request_id)` hämtar karaktären från Auth, tar de gemensamma låsen
+för karaktär och strid och letar efter ett befintligt kvitto. En exakt återspelning returnerar kvittot även
+om receptet har ändrats eller karaktären har rest, lagts in på Hospital eller hamnat i strid. Återanvänds
+ett ID med ändrat innehåll misslyckas anropet. Ny crafting tillåts bara i The Harbor och utanför strid och
+Hospital.
 
-The recipe version is a SHA-256 digest of its input/output terms and XP reward. Stale offers fail
-without charging anything. The transaction validates every ingredient and output
-capacity before changing stock, locks circulation counters in item order, removes
-empty input stacks, merges output into inventory and records the result. All stock,
-circulation history, Crafting XP, derived skill/Character Level, Last action and the
-game refresh event commit together. Old receipts without an XP reward remain
-unchanged; replay never retroactively awards XP or charges again.
-The normal database retry wrapper handles transient lock/serialization failures.
+Receptversionen är en SHA-256-hash av in- och utvärdena och XP-belöningen. Inaktuella erbjudanden
+misslyckas utan att något dras. Transaktionen validerar varje ingrediens och utrymmet för resultatet innan
+lagret ändras, låser cirkulationsräknare i föremålsordning, tar bort tomma ingrediensstackar, slår ihop
+resultatet med inventory och sparar resultatet. Lager, cirkulationshistorik, Crafting XP, härledd skillnivå
+och Character Level, Last action och spelets uppdateringshändelse committas tillsammans. Gamla kvitton utan
+XP-belöning är oförändrade; en återspelning ger aldrig XP i efterhand och drar aldrig kostnaden igen. Den
+vanliga omförsöksfunktionen för databasen hanterar tillfälliga lås- och serialiseringsfel.
 
-Crafting participates in the shared browser economy journal and Web Locks. The
-exact request is stored before sending and retained when the outcome is uncertain.
-Reload/navigation can recover it with Check saved action; another economic action
-cannot replace it. Current stock comes from fresh server snapshots, never from an
-old receipt. Revalidation and the existing player-game event refresh other tabs.
+Crafting använder den gemensamma ekonomijournalen i webbläsaren och Web Locks. Den exakta begäran sparas
+innan den skickas och behålls när utfallet är osäkert. Efter omladdning eller navigering kan den återställas
+med **Check saved action**; en annan ekonomisk handling kan inte ersätta den. Aktuellt lager kommer från
+färska ögonblicksbilder från servern, aldrig från ett gammalt kvitto. Revalidering och den befintliga
+spelhändelsen för spelaren uppdaterar andra flikar.
 
-## Verification
+## Verifiering
 
-- Database tests cover authorization, private ownership, exact costs/output,
-  replay/conflicts, unavailable recipes/items, overflow, transaction rollback,
-  circulation, XP/level-ups, Last action, stack deletion and hospital/travel/combat restrictions.
-- Alternative-config tests change both ingredient costs and output, add a second
-  ingredient and verify unchanged historical receipts and stock after rejection.
-- Browser tests cover keyboard navigation from Hideout, instant crafting, disabled
-  buttons/material shortages, updates in a second tab, inventory persistence,
-  reload recovery, parallel duplicate/unique requests and marketplace escrow.
-- Responsive checks cover 1440/768/375/320px and review desktop/mobile screenshots.
+- Databastester täcker behörighet, privat ägarskap, exakta kostnader och resultat, återspelning och
+  konflikter, otillgängliga recept och föremål, överskridna tak, återrullade transaktioner, cirkulation, XP och
+  nivåhöjningar, Last action, borttagna stackar och spärrar för Hospital, resor och strid.
+- Tester med alternativ config ändrar både ingredienskostnad och resultat, lägger till en andra ingrediens
+  och kontrollerar att historiska kvitton och lager är oförändrade efter ett nekat anrop.
+- Webbläsartester täcker tangentbordsnavigering från Hideout, direkt crafting, inaktiverade knappar vid
+  materialbrist, uppdateringar i en andra flik, beständighet i inventory, återställning efter omladdning,
+  parallella duplicerade och unika anrop samt Marketplace-escrow.
+- Responsiva kontroller täcker 1440/768/375/320 px och granskar skärmbilder för desktop och mobil.

@@ -7,13 +7,15 @@ Implementerat lokalt 2026-09-19. Detta ersätter idén om hardcore och permanent
 - Hospital finns i Harbor-panelen och visar alla aktuella patienter, även utloggade spelare.
 - Noll Crew Health skickar karaktären till Hospital, oavsett om orsaken är PvP eller annan skada.
 - Noll Ship Health innebär att besättningen också dör: Crew Health sätts till 0.
-- Vistelsen är fem minuter i utvecklingsversionen, styrd av hospital.durationSeconds (300).
-- Karaktären kan inte träna crew, starta skeppsarbete, köpa nivåer, sätta in eller ta ut pengar,
-  ändra försvarsorder eller attackera under vistelsen.
+- Vistelsens längd styrs av `gameplay.hospital.durationSeconds`, standard 300 sekunder (fem minuter).
+- Karaktären kan inte utföra spelhandlingar under vistelsen, till exempel träning, handel, avfärd
+  eller attack. Hela listan finns under [Server och samtidighet](#server-och-samtidighet).
 - Patienten kan se sjukhussidan, läsa patientlistan, besöka sin egen och andra spelares profiler och logga ut.
   My Profile fungerar under hela vistelsen, och patientnamnen länkar till profilerna.
   Players-sökningen och nummerbaserade profiler fungerar också under vistelsen.
-  [Inventory](INVENTORY.md) får läsas, filtreras och öppnas via direktlänk. Trash är spärrat.
+  [Messages](MESSAGES.md), [Forums](FORUMS.md), [Notifications](NOTIFICATIONS.md) och stridsrapporter
+  (`/combatlog/<battle-id>`) är öppna.
+  [Inventory](INVENTORY.md) får läsas, filtreras och öppnas via direktlänk. Trash, Equip och Unequip är spärrade.
   Medicinsk itemanvändning kommer i nästa etapp; Use är ännu inaktivt.
   Andra spelare kan inte attackera patienten.
 - Profilen visar Hospital, In hospital och en nedräkning för alla inloggade spelare.
@@ -40,9 +42,20 @@ den faktiska rundans tid, även vid efterbehandlad timeout. Upprepade nollhälso
 förlänger inte en redan sparad vistelse.
 
 private.settle_combat_context tar de befintliga ordnade deltagarlåsen, hanterar utgångna
-strider och skriver ut förfallna patienter. private.assert_can_act kontrollerar nya
-bank-, tränings-, uppgraderings-, nivåköps- och försvarshandlingar. Stridsstart och
-order har motsvarande spärr. Klienten kan inte ändra sjukhustid eller anropa privata
+strider och skriver ut förfallna patienter. `private.assert_can_act` i `hospital.sql` skriver
+först ut en förfallen patient och nekar sedan med `IN_HOSPITAL`, `IN_COMBAT` eller `NOT_IN_HARBOR`.
+Funktionen är den gemensamma spärren för sjukhus, strid och plats. Den används av:
+
+- Crew Training, skeppsarbete och nivåköp (`training.sql`).
+- Aktiviteter (`activities.sql`) och crafting (`crafting.sql`).
+- Bankens Deposit och Withdraw (`bank.sql`) och tavernans måltid (`tavern.sql`).
+- Equip och Unequip (`equipment.sql`) samt Trash (`inventory.sql`).
+- Marketplace: köp (`marketplace-buy.sql`), nya listings och återtagning (`marketplace-sell.sql`).
+- Försvarsorder (`hospital.sql`).
+
+Avfärd, vidare resa, hemresa och scouting gör egna kontroller av sjukhus och strid i
+`sea-travel.sql` och `sea-scouting.sql`. Stridsstart och order har motsvarande spärr i
+`combat.sql`. Klienten kan inte ändra sjukhustid eller anropa privata
 utskrivningsfunktioner. Återspelning av ett redan sparat transaktionskvitto gör ingen ny handling.
 
 Om en framtida extern skadeorsak slår ut en deltagare mitt i en strid avslutas mötet som
@@ -57,7 +70,9 @@ Attacksidan släpps igenom av proxyn men skickar själv en inlagd spelare till H
 avslutade striden mot samma mål i fliken där striden pågick: där spelas den sista rundan klart och resultatet
 ligger kvar tills spelaren väljer Leave till rapporten. Andra besök på adressen skickas vidare till Hospital
 av klienten. Databasen nekar ändå nya attacker.
-Profiler är tillåtna läsvyer under sjukhusvistelse; övriga sidlås och databasens handlingsspärrar kvarstår.
+Tillåtna sidor under sjukhusvistelse är Hospital, Inventory, Players, profiler, Messages, Forums,
+Notifications och stridsrapporter (`isHospitalAccessiblePath` i `src/lib/hospital.ts`); övriga sidor
+skickas till Hospital och databasens handlingsspärrar kvarstår.
 Servervyer, rotlayout, liveuppdateringar och inaktiva knappar stöder samma regel även
 för direkta länkar, gamla flikar, omladdning och återinloggning. Databasen spärrar
 handlingar oberoende av gränssnittet.
@@ -66,7 +81,7 @@ public.hospital_patients är en begränsad publik projektion med karaktärs-ID, 
 Registrerade spelare får läsa aktuella patienter; kontodata, stats och saldon publiceras inte.
 Anonyma besökare och anonyma auth-konton saknar åtkomst. Klienter får inte skriva till listan.
 
-list_hospital_patients returnerar 20 namn per sida i stabil alfabetisk ordning och filtrerar
+list_hospital_patients returnerar `gameplay.harbor.pageSize` namn per sida i stabil alfabetisk ordning och filtrerar
 bort utgångna vistelser med databastid. Därför försvinner även offlinepatienter i rätt tid
 utan bakgrundsjobb. Profilen hämtar aktuell plats och Hospital-deadline genom
 get_character_status. Den äldre get_hospital_status finns kvar för kompatibilitet.
@@ -76,8 +91,8 @@ fokus/återanslutning och reservkontroll uppdaterar gränssnittet.
 
 ## Konfiguration och källor
 
-- [gameplay.json](../config/gameplay.json): hospital.durationSeconds.
-- [gameplay.sql](../supabase/templates/gameplay.sql): auktoritativ logik och RPC.
+- [gameplay.json](../config/gameplay.json): `hospital.durationSeconds` och patientlistans `harbor.pageSize`.
+- [hospital.sql](../supabase/templates/gameplay/hospital.sql): auktoritativ logik och RPC.
 - [Baslinjen](../supabase/migrations/20260923111042_baseline.sql): kolumner, projektion, RLS och Realtime, ursprungligen från migrationen `hospital_recovery`.
 - [hospital-panel.tsx](../src/components/hospital-panel.tsx): nedräkning och patientlista.
 - [hospital.test.sql](../supabase/tests/hospital.test.sql): databasregler och behörighet.
@@ -89,8 +104,8 @@ Configbyten påverkar nya intagningar. En redan sparad sluttid ändras inte.
 
 Avfärd är spärrad under sjukhusvistelsen. Om en administrativ hälsoändring på havet
 utlöser intagning avbryts resan och alternativen tas bort. Kaptenen är i hamnen;
-intjänad Energy räknas med tiominutersticks till havs och femminutersticks från
-intagningen eller en tidigare faktisk hemkomst. Energy är alltid heltal. Detta följer
+intjänad Energy räknas i havets takt fram till intagningen, eller en tidigare faktisk
+hemkomst, och därefter i hamnens takt. Detta följer
 Hospital-regeln och inför ingen räddningshandling för spelaren. Se [resor](SEA_TRAVEL.md)
 och [Energy](ENERGY_RECOVERY.md).
 

@@ -38,7 +38,7 @@ Verktyget accepterar endast lokala adresser och kräver att spelservern redan k�
 - Stäng ett tidigare testfönster innan samma profil öppnas igen.
 - Vanliga flikar i samma profil delar fortfarande konto. Använd de separata
   fönstren som kommandot skapar för olika konton.
-- Detta öppnar Edge på datorn, separat från Codex inbyggda webbläsare.
+- Detta öppnar Edge på datorn, separat från en inbyggd webbläsare i utvecklingsverktyget.
 - Verktyget skapar inga spelkonton automatiskt. Speldata, auth, RLS och
   stridslås fungerar som vanligt. Ingen sessionsisolering har byggts in i produktionen.
 

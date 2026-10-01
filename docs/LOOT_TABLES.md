@@ -1,30 +1,29 @@
-# Loot tables and gathering
+# Loot tables och insamling
 
-Implemented locally on 2026-09-22. Manage content through Admin > Items, Loot tables
-and Activities. There are no rarity categories. Inventory categories such as Materials
-and Miscellaneous organize items without influencing their chance.
+Implementerat lokalt 2026-09-22. Innehållet hanteras under Admin > Items, Loot tables och Activities. Det
+finns inga sällsynthetskategorier. Inventorykategorier som Materials och Miscellaneous ordnar föremål men
+påverkar inte chansen.
 
-## Attempt sequence
+## Försökets ordning
 
-1. The server checks eligibility and deducts the activity's Stamina cost.
-2. Read the skill level before granting this attempt's XP. Compute catch chance from
-   the activity's starting chance, mastery chance and mastery level.
-3. Roll catch success. A miss gives no item and grants reduced
-   [failure XP](ACTIVITIES.md#failure-xp).
-4. For a successful catch, fixed entries reserve their exact percentages first.
-5. The weighted entries share the remaining percentage. Select exactly one entry and
-   grant its configured quantity. Each equipment piece rolls its own Quality from 0 to 100%
-   (see [Equipment](EQUIPMENT.md)); entries no longer store fixed stats.
-6. Inventory, circulation, XP, Stamina and the durable request receipt commit together.
+1. Servern kontrollerar villkoren och drar aktivitetens Stamina-kostnad.
+2. Skillnivån läses innan försökets XP delas ut. Fångstchansen beräknas från aktivitetens startchans,
+   masterychans och masterynivå.
+3. Fångstslaget slås. En miss ger inget föremål och en lägre [failure XP](ACTIVITIES.md#failure-xp).
+4. Vid en fångst reserverar fasta poster sina exakta procentsatser först.
+5. De viktade posterna delar på den återstående procentsatsen. Exakt en post väljs och dess konfigurerade
+   antal delas ut. Varje utrustningsföremål slår sin egen Quality från 0 till 100 %
+   (se [Utrustning](EQUIPMENT.md)); posterna sparar inte längre fasta stats.
+6. Inventory, cirkulation, XP, Stamina och det beständiga kvittot committas tillsammans.
 
-The public RPC accepts neither random numbers nor reward items. Repeated requests use
-their saved result and never reroll or grant again. Rebalancing, item renaming, disabling
-or unlinking a table does not change old receipts. Failure to grant an item, including a
-full stack, rolls back the entire operation, including Stamina and XP.
+Den publika RPC:n tar varken emot slumptal eller belöningsföremål. Upprepade anrop använder sitt sparade
+resultat och slår eller delar aldrig ut igen. Ombalansering, namnbyte på föremål, avstängning eller en
+borttagen koppling till en tabell ändrar inte gamla kvitton. Om ett föremål inte kan delas ut, till exempel
+för att stacken är full, rullas hela handlingen tillbaka, inklusive Stamina och XP.
 
-## Probability model
+## Sannolikhetsmodell
 
-For level L and mastery level M:
+För nivå L och masterynivå M:
 
 ```text
 t = clamp((L - 1) / (M - 1), 0, 1)
@@ -34,79 +33,82 @@ weighted item chance per successful catch =
   (100 - sum of fixed percentages) × item weight / sum of weights
 ```
 
-Mastery can be 2–100, independently for every linked activity. Above mastery, catch
-chance and weights remain at their mastery values. Fixed items do not use skill level.
-A fixed 1% means one in 100 successful catches on average. At 30% catch success its
-per-attempt chance is 0.3%; at 90% success it is 0.9%.
+Masterynivån kan vara 2-100, separat för varje kopplad aktivitet. Över masterynivån står fångstchans och
+vikter kvar på sina masteryvärden. Fasta föremål använder inte skillnivån. En fast 1 % betyder i genomsnitt
+ett föremål per 100 fångster. Vid 30 % fångstchans är chansen per försök 0,3 %; vid 90 % är den 0,9 %.
 
-Multiple fixed items use disjoint intervals in one roll, not sequential independent
-rolls that dilute later entries. The server's cumulative roll puts fixed intervals
-before the normalized weighted remainder. Every successful catch selects one entry.
+Flera fasta föremål använder disjunkta intervall i ett och samma slag, inte separata oberoende slag i följd
+som späder ut senare poster. Serverns kumulativa slag lägger de fasta intervallen före den normaliserade
+viktade resten. Varje fångst väljer en post.
 
-Tables contain 1–50 distinct items. Fixed percentages total at most 100%. Unless they
-total exactly 100%, weighted entries must have positive combined weight at both
-endpoints. Percentages and weights accept up to four decimal places. Quantity is
-1–100; item ownership types and stat constraints remain authoritative.
+En tabell innehåller 1-50 olika föremål. De fasta procentsatserna summerar till högst 100 %. Om de inte
+summerar till exakt 100 % måste de viktade posterna ha positiv sammanlagd vikt vid båda ändpunkterna.
+Procentsatser och vikter tar upp till fyra decimaler. Antalet är 1-100; föremålens ägandetyper och
+statbegränsningar är fortfarande auktoritativa.
 
-## Initial Harbor Shore table
+## Harbor Shore
 
-Shore Fishing is linked to Harbor Shore. It costs 1 Stamina and grants 10 Fishing XP
-per attempt. Catch success rises linearly from 70% at level 1 to 90% at level 100.
+Shore Fishing är kopplad till Harbor Shore. Varje försök kostar Stamina, se [Stamina](STAMINA.md). En
+fångst ger full Fishing XP och en miss ger [failure XP](ACTIVITIES.md#failure-xp). Fångstchansen stiger
+linjärt från 70 % på nivå 1 till 90 % på nivå 100 (masterynivå 100), och Woodland Logging seedas med samma
+kurva. Kurvan är inte config: den seedas en gång från `supabase/templates/gameplay/content-seed.sql`, och
+administratörer kan ändra den per aktivitet under Admin > Activities.
 
-| Item | Rule | Starting weight | Mastery weight | Chance at level 1, per catch | Chance at level 100, per catch |
+| Föremål | Regel | Startvikt | Masteryvikt | Chans på nivå 1, per fångst | Chans på nivå 100, per fångst |
 | --- | --- | ---: | ---: | ---: | ---: |
-| Sprat | Weighted | 40 | 10 | 39.6% | 9.9% |
-| Sardine | Weighted | 30 | 15 | 29.7% | 14.85% |
-| Mackerel | Weighted | 20 | 30 | 19.8% | 29.7% |
-| Sea Bass | Weighted | 9 | 30 | 8.91% | 29.7% |
-| Red Snapper | Weighted | 1 | 15 | 0.99% | 14.85% |
-| Silver Ring | Fixed | - | - | 1% | 1% |
+| Sprat | Viktad | 40 | 10 | 39,6 % | 9,9 % |
+| Sardine | Viktad | 30 | 15 | 29,7 % | 14,85 % |
+| Mackerel | Viktad | 20 | 30 | 19,8 % | 29,7 % |
+| Sea Bass | Viktad | 9 | 30 | 8,91 % | 29,7 % |
+| Red Snapper | Viktad | 1 | 15 | 0,99 % | 14,85 % |
+| Silver Ring | Fast | - | - | 1 % | 1 % |
 
-Each catch grants one item. Fish are passive Materials; the ring is a passive
-Miscellaneous collectible. All six are stackable and tradable, use the shared default
-image and have no consumable, cooking or combat effect yet. These are editable starting
-values, not fixed balance rules. Foraging remains XP-only.
+Varje fångst ger ett föremål. Fiskarna är passiva Materials; ringen är ett passivt samlarföremål i
+Miscellaneous. Alla sex är stapelbara och handelsbara, använder den gemensamma standardbilden och har ännu
+ingen förbruknings-, matlagnings- eller stridseffekt. Det här är redigerbara startvärden, inte fasta
+balansregler. Foraging ger bara XP.
 
-## Initial Woodland Logging table
+## Woodland Logging
 
-Logging is linked to Woodland Logging (`woodland_logging`). Its only entry is
-Oak Logs (`oak_logs`), with quantity 1 and a fixed 100% share of successful attempts.
-The activity success roll still applies: 70% at level 1, increasing to 90% at level 100.
-Each attempt costs 1 Stamina. A success awards 10 Logging XP and a miss [failure XP](ACTIVITIES.md#failure-xp).
-Five successful attempts supply the logs for one instant Oak Plank craft in Hideout.
+Logging är kopplad till Woodland Logging (`woodland_logging`). Dess enda post är Oak Logs (`oak_logs`) med
+antal 1 och en fast andel på 100 % av lyckade försök. Fångstslaget gäller ändå, med den seedade kurvan ovan.
+Kostnad och XP följer samma regler som för Shore Fishing: Stamina per försök, full Logging XP vid fångst och
+failure XP vid miss. Oak Logs är ingrediens i receptet Oak Plank, se [Crafting](CRAFTING.md).
 
-The table and activity binding are seeded once, following Harbor Shore's existing
-pattern. Later admin edits to quantity, chance, table contents or binding are preserved
-by config migrations, including intentionally unlinking Logging from its table.
+Tabellen och aktivitetskopplingen seedas en gång, enligt samma mönster som Harbor Shore. Senare
+adminändringar av antal, chans, tabellinnehåll eller koppling behålls av configmigrationer, även en
+avsiktligt borttagen koppling mellan Logging och tabellen.
 
-## Administration and persistence
+## Administration och lagring
 
-private.loot_tables owns table identity, name, description, enabled status and a version
-UUID. private.loot_entries has foreign keys to the table and item, with one row per item.
-private.activity_loot binds existing activity IDs to a table and its difficulty curve.
-The level-cap migration moves old mastery-99 bindings to 100 once; custom lower
-mastery values and later admin edits remain unchanged. These tables use RLS without direct client grants. Admin read/write endpoints independently
-verify current database membership. No service-role credentials enter the browser.
+`private.loot_tables` äger tabellens identitet, namn, beskrivning, aktiv status och ett versions-UUID.
+`private.loot_entries` har främmande nycklar till tabellen och föremålet, med en rad per föremål.
+`private.activity_loot` kopplar befintliga aktivitets-ID:n till en tabell och dess svårighetskurva.
+Migrationen för nivåtaket flyttade gamla kopplingar med mastery 99 till 100 en gång; egna lägre
+masteryvärden och senare adminändringar är oförändrade. Tabellerna använder RLS utan direkta
+klientbehörigheter. Adminpanelens läs- och skrivendpoints kontrollerar själva aktuellt medlemskap i
+databasen. Inga service role-nycklar når webbläsaren.
 
-Content saves use admin_mutate with request UUID, reason, audit, before/after snapshots
-and optimistic version checking. Administrative content changes serialize under a content
-lock. Gameplay locks the character first, then binding, table and selected item. Admin
-table edits lock the table before replacing entries, so each attempt sees one complete
-version. Content editors never acquire character locks.
+Innehåll sparas via `admin_mutate` med request-UUID, motivering, audit, ögonblicksbilder före och efter samt
+optimistisk versionskontroll. Administrativa innehållsändringar serialiseras under ett innehållslås. Spelet
+låser karaktären först, sedan kopplingen, tabellen och det valda föremålet. Adminändringar av en tabell
+låser tabellen innan posterna ersätts, så varje försök ser en komplett version. Innehållsredigerare tar
+aldrig karaktärslås.
 
-The initial table is seeded only when absent. Admin content survives subsequent config
-migrations. Admin-owned item rows are marked managed_by_admin; the original item catalog
-remains the seed for untouched defaults. IDs and ownership shapes are permanent.
+Starttabellen seedas bara om den saknas. Admininnehåll överlever senare configmigrationer. Föremålsrader
+som admin äger markeras `managed_by_admin`; den ursprungliga föremålskatalogen är fortfarande seed för
+orörda standardvärden. ID:n och ägandeformer är permanenta.
 
-Missing images use public/images/items/placeholder.svg throughout admin, inventory and
-marketplace. Optional artwork is stored in the public item-images Storage bucket with
-admin-only uploads. Existing artwork and audited references are not automatically deleted.
+Saknade bilder använder `public/images/items/placeholder.svg` i admin, inventory och Marketplace. Valfria
+bilder lagras i den publika Storage-bucketen `item-images`, där bara administratörer kan ladda upp.
+Befintliga bilder och granskade referenser raderas inte automatiskt.
 
-## Verification
+## Verifiering
 
-Tests cover exact fixed chances at all 100 levels, normalized weighted probabilities,
-site difficulty, complete table validation, private access, immediate admin revocation,
-audited and stale edits, fallback images, failure before fixed loot, configured quantities,
-inventory/circulation, overflow rollback, receipt replay and unlinking/rebalancing. Browser
-coverage exercises content creation, upload, assignment, real catches, simultaneous retries,
-mobile layout and recovery-banner behavior. See implementation status for executed results.
+Testerna täcker exakta fasta chanser på alla 100 nivåer, normaliserade viktade sannolikheter, platsens
+svårighet, fullständig tabellvalidering, privat åtkomst, omedelbart återkallad adminbehörighet, granskade
+och inaktuella ändringar, reservbilder, att en miss avgörs före fast loot, konfigurerade antal, inventory
+och cirkulation, återrullning när taket överskrids, återspelade kvitton samt borttagna kopplingar och ombalansering.
+Webbläsartesterna går igenom att skapa innehåll, ladda upp, koppla, riktiga fångster, samtidiga
+återförsök, mobillayout och återställningsbannerns beteende. Se
+[implementationsstatus](IMPLEMENTATION_STATUS.md) för körda resultat.

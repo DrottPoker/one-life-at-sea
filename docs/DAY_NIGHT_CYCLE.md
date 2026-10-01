@@ -67,6 +67,7 @@ JavaScript, öppen sida vid båda växlingarna, felställd datorklocka, annan ti
 förlorad tidssynk och klockåtkomst under Hospital.
 Se aktuella körresultat i [implementationsstatus](IMPLEMENTATION_STATUS.md).
 
-Server-rendered clock updates now adjust the existing client anchor directly. They
-do not restart synchronization or add an HTTP request per gameplay action. Initial,
-foreground, interval and offline-retry synchronization remain active.
+En ny serverrenderad tidsobservation justerar klientens befintliga ankarpunkt direkt.
+Den startar inte om synkroniseringen och lägger inte till någon HTTP-förfrågan per
+spelhandling. Synkronisering vid start, vid återgång till sidan, med intervall och vid
+nya försök efter nätfel finns kvar.

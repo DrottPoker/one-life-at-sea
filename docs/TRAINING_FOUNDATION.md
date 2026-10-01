@@ -7,8 +7,7 @@ Uppdaterat och implementerat lokalt 2026-09-23. Balansen kommer från [gameplayc
 
 Crew och skeppet behåller fyra stats: Attack, Defense, Speed och Accuracy.
 Nya karaktärer börjar med 10 i varje stat. Befintliga stats, hälsa, Energy och guld bevaras.
-Energy återhämtas med +5 på serverns fasta femminutersticks i hamnen, även offline, till högst 100.
-Till havs gäller fasta tiominutersticks. Energy lagras alltid som heltal. Se [Energy](ENERGY_RECOVERY.md).
+Energy återhämtas på serverns fasta ticks, även offline, se [Energy](ENERGY_RECOVERY.md).
 
 - Crew: 5 Energy ger en statberoende ökning direkt och 5 XP. Perfect Drill har 1 % chans
   att dubbla statökningen, utan extra XP.
@@ -184,8 +183,10 @@ med katalogens placeholderbild. Något recept eller lootflöde för spikar är �
 
 ## Stridsbalans vid höga stats
 
-HP och skadeformeln har inte ändrats. Med samma Attack och Defense ger den befintliga
-formeln följande skada per lyckad träff mot 100 HP:
+Tabellen visar [stridsformelns](COMBAT_SYSTEM.md#grundskada-och-avrundning) skada per lyckad träff
+för ett neutralt vapen (Damage 10), en ×1-zon och ingen rustning. Annars multipliceras skadan med
+vapnets `Damage / 10`, zonens multiplikator och `1 - Armor / 100`, se [utrustning](EQUIPMENT.md#skada).
+Träffkolumnen räknar mot startvärdet 100 HP:
 
 | Attack / Defense | Skada | Träffar för att slå ut |
 | --- | ---: | ---: |
@@ -198,13 +199,10 @@ formeln följande skada per lyckad träff mot 100 HP:
 | 10 / 250 | 0 | Ingen skada |
 
 Lika Accuracy och Speed ger fortsatt 50 % träffchans. Tabellen gäller lyckade träffar,
-inte rundor. Höga stats kan alltså ge korta strider med dagens
-100 HP. HP, skala och skadebalans behöver ett separat balansbeslut före långsiktig lansering.
-
-Planerad design, förtydligad av ägaren 2026-09-21: 100 är startvärdet för både
-Crew Health och Ship Health. Båda ska kunna ökas genom ett framtida system.
-Mekaniken och tillväxtkurvan är ännu inte bestämda. Långsiktig träningsbalans
-ska ta hänsyn till denna hälsoprogression. Dagens implementerade hälsotak är oförändrat.
+inte rundor. Maximal hälsa är 100 plus bonusar: utrustad Hull och Ship Battling höjer Ship Health,
+Crew Battling höjer Crew Health, se [utrustning](EQUIPMENT.md#ship-health-från-hull) och
+[Skills](SKILLS.md#combat-xp-and-battling-health). Höga stats kan ändå ge korta strider.
+HP, skala och skadebalans behöver ett separat balansbeslut före långsiktig lansering.
 
 ## Databas och offline
 
@@ -258,9 +256,8 @@ Utförda kontroller redovisas i [implementationsstatus](IMPLEMENTATION_STATUS.md
 
 Träning, nivåköp och skeppsarbete kräver hamnposition även vid direkta RPC-anrop.
 Pågående skeppsarbete blockerar avfärd; en passerad sluttid tillgodoräknas före
-avfärdskontrollen. Utresa, havsbesök och hemresa ger +5 Energy på gemensamma
-tiominutersticks. Vid faktisk hemkomst återgår kaptenen till femminutersticks.
-Hälsans befintliga återhämtning ändras inte. Se [resor](SEA_TRAVEL.md).
+avfärdskontrollen. Till havs och under resor återhämtas Energy i havets takt, se
+[Energy](ENERGY_RECOVERY.md). Hälsan återhämtas som i hamnen. Se [resor](SEA_TRAVEL.md).
 
 ## Beständiga återförsök
 

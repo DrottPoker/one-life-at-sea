@@ -1,144 +1,142 @@
-# Skills and Character Level
+# Skills och Character Level
 
-The owner selected seven skills: Fishing, Logging, Cooking, Crafting, Crew Battling,
-Ship Battling and Foraging. Every character starts with 0 XP and level 1 in each skill.
-Each skill ends at level 100. Character Level is the sum of all seven levels, starting
-at 7 and reaching 700. It does not grant an additional combat or resource bonus.
+Ägaren valde sju skills: Fishing, Logging, Cooking, Crafting, Crew Battling, Ship Battling och Foraging.
+Varje karaktär börjar med 0 XP och nivå 1 i varje skill. Högsta nivån är 100. Character Level är summan
+av alla sju nivåer, från 7 till 700. Den ger ingen extra strids- eller resursbonus.
 
-## XP curve
+## XP-kurva
 
-The curve has 100 levels and requires exactly **5,000,000 total XP** for level 100.
-The first increase costs 200 XP. Successive level costs grow by about 7.98%.
-Compared with the original classic curve, early levels are slightly slower while
-late levels require much less XP.
+Kurvan har 100 nivåer och kräver exakt **5 000 000 XP totalt** för nivå 100. Den första nivåhöjningen
+kostar 200 XP och varje följande nivå kostar cirka 7,98 % mer än den förra. Jämfört med den ursprungliga
+klassiska kurvan går de tidiga nivåerna något långsammare, medan de sena kräver mycket mindre XP.
 
-For level L (1 through 100), thresholds are rounded to the nearest integer:
+För nivå L (1 till 100) avrundas tröskeln till närmaste heltal:
 
 ```text
 XP(L) = round(200 * (r^(L - 1) - 1) / (r - 1))
 r = 1.079775901474282
 ```
 
-The growth factor is the positive solution to `200 * (r^99 - 1) / (r - 1) = 5000000`.
-It was solved by bisection between 1 and 1.2; the last stored threshold is exactly
-5,000,000. The stored integer table is authoritative in both SQL and the interface.
+Tillväxtfaktorn är den positiva lösningen till `200 * (r^99 - 1) / (r - 1) = 5000000`. Den togs fram med
+bisektion mellan 1 och 1,2; den sista sparade tröskeln är exakt 5 000 000. Den sparade heltalstabellen är
+auktoritativ i både SQL och gränssnittet.
 
-| Level | Total XP |
+| Nivå | Total XP |
 | --- | ---: |
 | 1 | 0 |
 | 2 | 200 |
 | 3 | 416 |
-| 10 | 2,495 |
-| 25 | 13,311 |
-| 50 | 105,265 |
-| 75 | 731,748 |
-| 90 | 2,319,435 |
-| 99 | 4,630,405 |
-| 100 | 5,000,000 |
+| 10 | 2 495 |
+| 25 | 13 311 |
+| 50 | 105 265 |
+| 75 | 731 748 |
+| 90 | 2 319 435 |
+| 99 | 4 630 405 |
+| 100 | 5 000 000 |
 
-At 10 XP per action, level 2 takes 20 actions. The higher initial cost and lower
-growth factor make the curve flatter while preserving the five-million-XP total.
-The final level costs 369,595 XP. Rounding is performed before storing thresholds.
+Med 10 XP per handling krävs 20 handlingar för nivå 2. Den högre startkostnaden och den lägre
+tillväxtfaktorn gör kurvan flackare men behåller totalen på fem miljoner XP. Sista nivån kostar 369 595 XP.
+Avrundningen sker innan trösklarna sparas.
 
-The 100 integer thresholds are stored once in `gameplay.skills.xpThresholds`. Levels
-are derived from XP and cannot be independently edited. Migration preserves all
-existing XP and recalculates skill levels and public Character Level. A character can
-therefore gain or lose levels when the curve changes, without losing earned XP.
+De 100 heltalströsklarna sparas på ett ställe, i `gameplay.skills.xpThresholds`. Nivåer härleds från XP
+och kan inte ändras separat. Migrationen behåller all befintlig XP och räknar om skillnivåer och publik
+Character Level. En karaktär kan därför gå upp eller ner i nivå när kurvan ändras, utan att förlora
+intjänad XP.
 
-XP may continue after level 100 while the level stays capped. Stored XP and awards
-remain nonnegative safe integers, capped at 9,007,199,254,740,991 for JSON transport.
-Award inputs must be positive; the shared helper saturates without wrapping.
-Crafting checks capacity first so every successful craft awards its full configured XP.
+XP kan fortsätta öka efter nivå 100 medan nivån står still. Sparad XP och tilldelningar är alltid
+icke-negativa säkra heltal, med taket 9 007 199 254 740 991 för JSON-transport. En tilldelning måste vara
+positiv; den gemensamma hjälparen stannar vid taket i stället för att slå runt. Crafting kontrollerar först
+att XP:n ryms under taket, så varje lyckat craft ger hela sin konfigurerade XP.
 
-## Combat XP and battling health
+<a id="combat-xp-and-battling-health"></a>
+## Strids-XP och maxhälsa från Battling
 
-Every attacking order in [combat](COMBAT_SYSTEM.md#xp-och-maxhälsa) awards `combat.xpGain`
-XP (10) to the skill of its phase, hit or miss. Cannon salvos train Ship Battling; firearm shots,
-thrown temporaries and melee attacks train Crew Battling. The defender's automatic replies train
-the defender the same way. Board, Disengage and Retreat award nothing.
+Varje attackorder i [strid](COMBAT_SYSTEM.md#xp-och-maxhälsa) ger `combat.xpGain` XP (10) till skillen för
+sin fas, vid träff eller miss. Kanonsalvor tränar Ship Battling; skott med skjutvapen, kastade
+Temporary-föremål och närstridsattacker tränar Crew Battling. Försvararens automatiska svar tränar
+försvararen på samma sätt. Board, Disengage och Retreat ger ingenting.
 
-Crew Battling raises maximum Crew Health and Ship Battling raises maximum Ship Health. Level 1
-adds nothing. Each later level up to 99 adds one step of `skills.battlingHealth.perLevel` (5), so
-level 2 gives +5, level 3 +10 and level 99 +490 in total. Level 100 jumps to
-`skills.battlingHealth.maxLevelBonus` (+750). Configuration rejects a level-100 bonus below the
-level-99 bonus. Maximum Ship Health also includes the equipped Hull, see [equipment](EQUIPMENT.md#ship-health-från-hull).
-A new level raises only the maximum: current health keeps its value and recovers at the normal
-rate, while Hospital discharge restores the raised maxima. A combat snapshot keeps the maxima
-from the start of the encounter, so a level gained during a fight applies afterwards. An
-administrative XP correction settles recovery at the previous maximum first and lowers current
-health to a reduced maximum. `private.battling_health_bonus` is authoritative; the profile shows
-the same formula. The database bounds stored health by the level-100 bonus.
+Crew Battling höjer max Crew Health och Ship Battling höjer max Ship Health. Nivå 1 ger inget. Varje
+följande nivå upp till 99 lägger till ett steg om `skills.battlingHealth.perLevel` (5), så nivå 2 ger +5,
+nivå 3 +10 och nivå 99 totalt +490. Nivå 100 hoppar till `skills.battlingHealth.maxLevelBonus` (+750).
+Konfigurationen nekar en bonus för nivå 100 som är lägre än bonusen för nivå 99. Max Ship Health
+inkluderar även utrustad Hull, se [utrustning](EQUIPMENT.md#ship-health-från-hull).
 
-## Privacy and profile
+En ny nivå höjer bara maxvärdet: aktuell hälsa behåller sitt värde och återhämtas i normal takt, medan
+utskrivning från Hospital återställer till de höjda maxvärdena. Stridens ögonblicksbild behåller
+maxvärdena från mötets start, så en nivå som nås under en strid gäller efteråt. En administrativ
+XP-korrigering avräknar först återhämtningen mot det tidigare maxvärdet och sänker aktuell hälsa till ett
+lägre maxvärde. `private.battling_health_bonus` är auktoritativ; profilen visar samma formel. Databasen
+begränsar sparad hälsa med bonusen för nivå 100.
 
-The owner sees a Skills section on their own profile with all levels, total XP and
-progress/remaining XP to the next level. The Crew Battling and Ship Battling cards also show
-their health bonus and what the next level adds. Other players see only Character Level.
-Opponents and public combat logs still show maximum health, as they did before these bonuses,
-so the battling health bonus of a fighter can be inferred there.
+## Integritet och profil
+
+Ägaren ser en Skills-sektion på sin egen profil med alla nivåer, total XP samt framsteg och återstående XP
+till nästa nivå. Korten för Crew Battling och Ship Battling visar även hälsobonusen och vad nästa nivå ger.
+Andra spelare ser bara Character Level. Motståndare och publika stridsloggar visar fortfarande maxhälsa,
+precis som före bonusarna, så en kämpes hälsobonus från Battling kan räknas ut där.
 
 ## XP drop
 
-Every XP gain shows in one small card at the bottom right of the game frame and the attack
-view, in the game's own panel style. It names the skill and shows the XP gained, the level, the
-total XP and a bar towards the next level, and marks a level-up. The card stays for five seconds
-after the latest gain (`XP_DROP_MS` in `xp-drop.tsx`) and then fades. More XP while it is up
-updates it in place: gains of the same skill add up, with a short pulse, and another skill takes
-the card over. If several skills grow in one update, the largest gain shows. The gain, the total
-and the bar rise from their previous values in a quick ease-out (`XP_COUNT_MS`, 0.45 seconds)
-instead of jumping; across a level the bar fills, starts over and the level-up shows as it
-reaches the new level. Screen readers get the final values once rather than the counting.
+Varje XP-ökning visas i ett litet kort längst ned till höger i spelramen och attackvyn, i spelets egen
+panelstil. Kortet anger skillen och visar intjänad XP, nivå, total XP och en mätare mot nästa nivå, och
+markerar en nivåhöjning. Kortet ligger kvar i fem sekunder efter senaste ökningen (`XP_DROP_MS` i
+`xp-drop.tsx`) och tonar sedan ut. Mer XP medan det syns uppdaterar kortet på plats: ökningar i samma skill
+läggs ihop med en kort puls, och en annan skill tar över kortet. Om flera skills ökar i samma uppdatering
+visas den största ökningen. Ökningen, totalen och mätaren stiger från sina tidigare värden i en snabb
+ease-out (`XP_COUNT_MS`, 0,45 sekunder) i stället för att hoppa; över en nivågräns fylls mätaren, börjar om
+och nivåhöjningen visas när den når den nya nivån. Skärmläsare får slutvärdena en gång i stället för
+uppräkningen.
 
-The card has one source: the owner's skill progress in the player snapshot. The client compares
-each new snapshot with the previous one and shows every skill whose XP grew, whatever awarded
-it: activities, crafting, combat, including a defender's automatic replies, and administrative
-corrections. The first snapshot after a page load is the baseline, so a reload shows no card, a
-replayed receipt that awards nothing shows none, and lower XP is never shown as a gain. Activity
-and crafting results and the attack view no longer repeat the awarded XP; reward previews such
-as "+10 Fishing XP" on actions remain.
+Kortet har en enda källa: ägarens skillframsteg i spelarens ögonblicksbild. Klienten jämför varje ny
+ögonblicksbild med den förra och visar varje skill vars XP ökat, oavsett vad som gav den: aktiviteter,
+crafting, strid, inklusive försvararens automatiska svar, och administrativa korrigeringar. Den första
+ögonblicksbilden efter en sidladdning är baslinjen, så en omladdning visar inget kort, ett återspelat
+kvitto som inte ger något visar inget, och lägre XP visas aldrig som en ökning. Resultaten från aktiviteter
+och crafting samt attackvyn upprepar inte längre den tilldelade XP:n; belöningsförhandsvisningar som
+"+10 Fishing XP" på handlingarna finns kvar.
 
-## Server integration and administration
+## Server och administration
 
-private.award_skill_xp(character_id, skill_id, amount) is an internal helper with no
-client execute grant. It uses the shared character/combat lock order and locks the
-character before updating XP. Different skills awarded concurrently share that lock,
-so both XP and the public total stay correct. It returns actual XP awarded, previous
-and new skill level, total XP and Character Level.
+`private.award_skill_xp(target_id, target_skill, amount)` är en intern hjälpare utan execute-behörighet för
+klienter. Den använder den gemensamma låsordningen för karaktär och strid och låser karaktären innan XP
+uppdateras. Olika skills som tilldelas samtidigt delar det låset, så både XP och den publika totalen blir
+rätt. Den returnerar faktiskt tilldelad XP, tidigare och ny skillnivå, skillens totala XP och Character
+Level.
 
-Future activity RPCs must validate eligibility and call the helper in the same
-transaction as costs/rewards and their durable idempotency receipt. A request replay
-returns its saved result without awarding XP again. Combat calls the helper for the
-attacker and the defender while resolving a round, under the locks it already holds, so
-offline defenders are rewarded too and a replayed order awards nothing new. The helper is
-not itself a public action or an idempotent activity endpoint.
+Aktiviteter och crafting validerar villkoren och anropar hjälparen i samma transaktion som kostnader,
+belöningar och sitt beständiga idempotenskvitto; nya handlingar ska göra likadant. En återspelad begäran
+returnerar sitt sparade resultat utan att ge XP igen. Strid anropar hjälparen för angripare och försvarare
+när en runda avgörs, under de lås striden redan håller, så även offlineförsvarare belönas och en återspelad
+order ger ingen ny XP. Hjälparen är i sig varken en publik handling eller en idempotent aktivitetsendpoint.
 
-Administrators can make audited XP corrections in the character_skills database
-resource; levels and the public sum update automatically. Skill definitions and
-thresholds are read-only in admin and edited through gameplay configuration.
-Existing characters are backfilled at zero XP once. Reapplying config preserves XP.
-Deleting an account cascades to its skill rows. Existing skill IDs cannot be removed
-from configuration. New skill definitions add a level-1 row for each character and
-therefore increase the public total by one.
+Administratörer kan göra granskade XP-korrigeringar i databasresursen `character_skills`; nivåer och den
+publika summan uppdateras automatiskt. Skilldefinitioner och trösklar är skrivskyddade i admin och ändras
+via gameplaykonfigurationen. Befintliga karaktärer fick skillrader med 0 XP en gång. Att applicera config
+igen behåller XP. Raderas ett konto raderas även dess skillrader. Befintliga skill-ID:n kan inte tas bort
+ur konfigurationen. En ny skilldefinition lägger till en rad på nivå 1 för varje karaktär och höjer därför
+den publika totalen med ett.
 
-## Scope
+## Omfattning
 
-Progression, privacy and display are implemented. [Activities](ACTIVITIES.md) now provides
-Shore Fishing, Foraging and Logging for 1 Stamina and 10 XP each.
-[Crafting](CRAFTING.md) grants 10 Crafting XP per successful craft. [Combat](COMBAT_SYSTEM.md#xp-och-maxhälsa)
-grants Crew Battling and Ship Battling XP, and those levels raise maximum health. Cooking, additional
-recipes, level requirements and other level bonuses remain future work. Crew Training and Ship Upgrades keep their own workshop/training
-XP and do not award Crew Battling or Ship Battling skill XP automatically.
+Progression, integritet och visning är implementerade. [Activities](ACTIVITIES.md) ger Fishing, Foraging
+och Logging XP, och [Crafting](CRAFTING.md) ger Crafting XP per lyckat craft; respektive dokument beskriver
+hur mycket. [Strid](COMBAT_SYSTEM.md#xp-och-maxhälsa) ger Crew Battling och Ship Battling XP, och de
+nivåerna höjer maxhälsan. Cooking, fler recept, nivåkrav och andra nivåbonusar återstår. Crew Training och
+Ship Upgrades behåller sin egen workshop- och tränings-XP och ger inte automatiskt Crew Battling eller Ship
+Battling XP.
 
-## Verification
+## Verifiering
 
-Unit tests cover the rebalanced milestones and every exact level boundary. Database
-tests cover initialization, all level boundaries, private API/table access, total
-projection, max level, invalid awards, transaction rollback, admin changes and cleanup.
-Alternative config tests double XP thresholds and add an eighth skill within a rolled-
-back transaction. Browser tests cover ownership, live updates, responsive profiles
-and eight concurrent XP awards without lost increments or an inconsistent public sum.
-Database tests in `battling-skills.test.sql` cover the health formula, both maxima with and
-without a Hull, recovery, Hospital, administrative corrections and release, and XP from every
-attacking order for both sides. Alternative config tests change the XP per attack and the
-health per level. Browser tests cover the profile bonus, the raised Crew Health bar and the XP
-line in the combat result.
+Enhetstester täcker de ombalanserade milstolparna och varje exakt nivågräns. Databastester täcker
+initiering, alla nivågränser, åtkomst till privata API:er och tabeller, den publika totalen, maxnivå,
+ogiltiga tilldelningar, återrullade transaktioner, adminändringar och städning. Tester med alternativ
+config dubblar XP-trösklarna och lägger till en åttonde skill i en transaktion som rullas tillbaka.
+Webbläsartester täcker ägarskap, liveuppdateringar, responsiva profiler och åtta samtidiga XP-tilldelningar
+utan förlorade ökningar eller inkonsekvent publik summa.
+
+Databastesterna i `battling-skills.test.sql` täcker hälsoformeln, båda maxvärdena med och utan Hull,
+återhämtning, Hospital, administrativa korrigeringar och administrativ utskrivning samt XP från varje
+attackorder för båda sidor. Tester med alternativ config ändrar XP per attack och hälsa per nivå.
+Webbläsartester täcker profilbonusen, den höjda Crew Health-mätaren och XP drop-kortet (regionen
+"Ship Battling XP gained") efter en attackorder.

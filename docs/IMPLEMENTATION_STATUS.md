@@ -1,6 +1,6 @@
 # Aktuell implementationsstatus
 
-Verifierat lokalt 2026-09-25. Tidigare leveransnoteringar finns i [arkivet](archive/README.md); de är inte dagens kontrollresultat.
+Verifierat lokalt 2026-10-01, efter [projektgranskningen](PROJECT_AUDIT.md). Tidigare leveransnoteringar finns i [arkivet](archive/README.md); de är inte dagens kontrollresultat.
 
 ## Implementerat
 
@@ -21,24 +21,24 @@ Exakta regler finns i [dokumentindexet](README.md). Helhetsgranskningen rättar 
 
 | Kontroll | Resultat |
 | --- | --- |
-| `npm run check` | Godkänd dokumentkontroll, lint utan varningar, typkontroll och produktionsbygge |
-| Enhetstester | 535 godkända i 37 filer |
-| `npm run test:db` | 2 558 godkända påståenden i 47 filer |
-| `npm run test:config:db` | 163 godkända påståenden; alternativ config rullades tillbaka. 20 körningar i rad utan fel efter rättningen av klockberoendet |
-| Hela webbläsarsviten | 130 godkända och 1 överhoppad, Edge mot produktionsbygget. Den överhoppade är den opt-in-styrda prestandamätningen, som inte kördes |
-| SQL-lint | Inga varningar eller fel |
+| `npm run check` | Godkänd dokumentkontroll med ankare, lint utan varningar, typkontroll och produktionsbygge |
+| Enhetstester | 540 godkända i 37 filer |
+| `npm run test:db` | 2 590 godkända påståenden i 47 filer |
+| `npm run test:config:db` | 166 godkända påståenden; alternativ config rullades tillbaka |
+| Hela webbläsarsviten | 130 godkända och 1 överhoppad, Edge mot produktionsbygget. Den överhoppade är den opt-in-styrda prestandamätningen. Inga testkonton fanns kvar efteråt |
+| `npm run db:lint` | Inga varningar eller fel |
+| `npm run db:check` | Databasen kör repots gameplayrevision och alla 95 typade RPC-signaturer stämmer |
 | Databasens säkerhets-/prestandarådgivare | Inga fynd på varnings- eller felnivå (2026-09-23, inte omkörd) |
 | `npm audit` | 0 kända sårbarheter |
-| RPC-avtal | Alla 95 typade funktioner finns med rätt parameterlistor |
 | Ekonomins integritet efter alla tester | 0 avvikelser i samtliga 8 kontroller |
 
-Alla SQL-migrationer, även forumets, är applicerade lokalt. Next.js 16.3.8 (hela webbläsarsviten körd 2026-10-01), Supabase JS 2.117.1 och Vitest 5.0.1 ingår i verifieringen.
+Alla SQL-migrationer, även forumets, är applicerade lokalt. Next.js 16.3.8, Supabase JS 2.117.1 och Vitest 5.0.1 ingår i verifieringen.
 [Granskningsrapporten](PROJECT_AUDIT.md) beskriver fynd, rättningar och kontrollernas omfattning.
 [Prestanda](PERFORMANCE.md) innehåller faktiska lokala mätvärden.
 
 ## Kvarstående begränsningar och produktarbete
 
-Next.js loggar fortfarande streamfel vid vissa avbrutna sidladdningar och en Gzip-varning om listeners. Detta redovisas i granskningsrapporten och har inte dolts genom loggfilter.
+Next.js loggar fortfarande streamfel vid vissa avbrutna sidladdningar och en Gzip-varning om listeners. Detta redovisas i granskningsrapporten och har inte dolts genom loggfilter. Granskningsrapporten beskriver också en enstaka inloggningssida som inte blev interaktiv i en testkörning och inte gick att återskapa.
 
 Use och aktiva föremålseffekter, källor för munition, matlagning, hemuppgraderingar, Shipyard, fler platsaktiviteter, PvE och fraktionssystem är inte färdiga. Forumets besättningsforum väntar på fraktioner.
 Se [Roadmap](ROADMAP.md) för fortsatt riktning och öppna beslut.

@@ -1,299 +1,310 @@
-# Nautical interface foundation
+# Gränssnittsdesign
 
-The September 2026 owner-supplied mockup is a visual reference, not a new feature
-specification. Existing game behavior, route loading, travel locks and authoritative
-resource/economy state remain in place.
+Ägarens mockup från september 2026 är en visuell referens, inte en ny funktionsspecifikation.
+Befintligt spelbeteende, laddning av rutter, reselås och auktoritativt resurs- och
+ekonomitillstånd ligger kvar.
 
-## Frame and artwork
+## Ram och bilder
 
-- The centered game frame is at most 1240px wide, with a 232px desktop sidebar.
-- `public/images/harbor-background.webp` is an optimized copy of the owner's
+- Den centrerade spelramen är högst 1240px bred, med en sidopanel på 232px på desktop.
+- `public/images/harbor-background.webp` är en optimerad kopia av ägarens
   `ChatGPT Image 21 sep. 2026 03_31_20 (1).png` (1672 x 941).
-  The original file in Downloads is unchanged.
-- At 21:00-06:00 UTC, the backdrop uses the supplied matching night artwork
-  in `public/images/harbor-background-night.webp` (1672 x 941, 341932 bytes).
-  Server time selects the first render and an open page changes automatically.
-  See [day and night](DAY_NIGHT_CYCLE.md).
-- A decorative fixed `body::before` layer draws the background behind the frame.
-  The document has a single scrollbar; the game content moves and the scenery
-  stays in place. No scroll listeners, parallax script or nested game scroller.
-- Below the wide breakpoint, the decorative backdrop is omitted to prioritize
-  content. The compact layout uses the full screen with a three-column navigation.
-- The existing local harbor illustration remains the welcome artwork: 180px
-  desktop, 140px compact. Slimmer header/caption padding gives the image
-  24px more space on desktop and 20px
-  on compact screens, preserving the card's total height and text wrapping.
-  Other short banners and authentication artwork keep their own height rules.
+  Originalfilen i Downloads är oförändrad.
+- Klockan 21:00-06:00 UTC använder bakgrunden den levererade matchande nattbilden
+  i `public/images/harbor-background-night.webp` (1672 x 941, 341932 byte).
+  Servertiden väljer första renderingen och en öppen sida byter automatiskt.
+  Se [dag och natt](DAY_NIGHT_CYCLE.md).
+- Ett dekorativt fast lager, `body::before`, ritar bakgrunden bakom ramen.
+  Dokumentet har en enda rullningslist; spelinnehållet rör sig och miljön står still.
+  Inga scroll-lyssnare, inget parallaxskript och ingen inre rullning i spelet.
+- Under den breda brytpunkten utelämnas den dekorativa bakgrunden så att innehållet får
+  företräde. Den kompakta layouten använder hela skärmen med navigation i tre kolumner.
+- Den lokala hamnillustrationen (`public/images/harbor.webp`) är inte längre välkomstbild;
+  The Harbor öppnar med [sidbannern](#sidbanners-24-september). Illustrationen visas som låg
+  banner när karaktären skapas och på platser som ännu inte är öppna, och som bild på
+  inloggnings- och registreringssidorna. Dessa har egna höjdregler.
 
-## Visual language
+## Visuellt språk
 
-Deep navy surfaces, warm gold accents, cyan links, thin borders and restrained
-serif headings follow the supplied reference. Dense tables, forms and item
-details retain sans-serif text. The harbor welcome header and caption use the
-same navy surfaces as the surrounding panels; the owner removed the parchment
-bands above and below the artwork on 2026-09-21.
-The captain's identity and live resources share one sidebar card: the portrait, name,
-current location and a My Profile link, then Gold Coins as a large figure. Player ID and
-join date are on the profile, and no rank title is shown next to the name. See
-[the profile](#profile-september-25) for the portrait.
-Crew Morale shares this card with Energy and health. Its bar has a fixed midpoint
-at zero, green fill to the right for positive values and coral fill to the left
-for negative values. A signed one-decimal value and an accessible meter expose
-the exact state. The four resource bars form a two-by-two grid on mobile.
+Djupt marinblå ytor, varma guldaccenter, cyan länkar, tunna ramar och återhållsamma
+serifrubriker följer den levererade referensen. Täta tabeller, formulär och
+föremålsdetaljer behåller sans-serif-text.
+Kaptenens identitet och aktuella resurser delar ett kort i sidopanelen: porträtt, namn,
+aktuell plats och länken My Profile, sedan Gold Coins som en stor siffra. Player ID och
+skapandedatum finns på profilen, och ingen rangtitel visas bredvid namnet. Se
+[profilen](#profile-september-25) för porträttet.
+Crew Morale delar kortet med Energy och hälsan. Dess stapel har en fast mittpunkt vid noll,
+grön fyllning åt höger för positiva värden och korallröd fyllning åt vänster för negativa.
+Ett värde med tecken och en decimal samt en tillgänglig mätare visar det exakta läget.
+Resursstaplarna ligger i ett rutnät med två kolumner på mobil.
 
-Resource descriptions appear in short tooltips on hover, keyboard focus or touch.
-The tooltip stays open when hovered and can be dismissed with Escape or an
-outside tap. Desktop hints sit beside the bar; mobile hints open above it.
-Recovery text and next-tick timestamps are omitted from the card. Server deadlines
-still drive automatic resource updates. Health hints reflect combat and hospital
-recovery rules; morale shows the current stats and training effect.
+Resursbeskrivningar visas i korta tooltips vid hovring, tangentbordsfokus eller tryck.
+Tooltipen stannar öppen medan pekaren är över den och stängs med Escape eller ett tryck
+utanför. På desktop ligger tipsen bredvid stapeln; på mobil öppnas de ovanför den.
+Återhämtningstext och tidpunkter för nästa tick visas inte i kortet. Serverns deadlines
+styr fortfarande de automatiska resursuppdateringarna. Hälsotipsen följer
+återhämtningsreglerna för strid och Hospital; moralen visar aktuella stats och effekten på
+träning.
 
-Harbor departures stay prominent below the compact welcome card. The captain
-directory and harbor destinations sit side by side on wide screens, then stack
-at narrower widths. Marketplace is correctly labelled Open.
+Avgångarna från hamnen syns tydligt direkt under bannern. Kaptenslistan och hamnens
+destinationer ligger sida vid sida på breda skärmar och staplas vid smalare bredder.
+Marketplace är korrekt märkt Open.
 
-There are no placeholder messages, quests, daily objectives, market quotes or
-other invented data from the mockup.
+Det finns inga platshållarmeddelanden, uppdrag, dagliga mål, marknadsnoteringar eller
+annan påhittad data från mockupen.
 
-## Links and names
+## Länkar och namn
 
-Links and linked player names never use text underlines, including hover, focus,
-active and visited states. This applies across authentication, gameplay, notifications,
-combat reports and administration. Text-style buttons follow the same convention.
-Links retain their existing colors, hover feedback and visible keyboard-focus outlines.
-Keep this rule in the shared interface template and the admin stylesheet.
+Länkar och länkade spelarnamn är aldrig understrukna, inte heller vid hovring, fokus,
+aktivt eller besökt läge. Det gäller inloggning, spel, notiser, stridsrapporter och
+administration. Knappar i textstil följer samma konvention. Länkar behåller sina färger,
+sin hovringsrespons och synliga fokusramar för tangentbord. Regeln hålls i den gemensamma
+gränssnittsmallen och i adminpanelens stilmall.
 
-Profile headings show `Name [ID]`, the number smaller than the name. The 12px live presence
-dot and its label (Online, Idle or Offline) open the status line below the heading; the dot
-carries the accessible label. A subtle vertical gradient darkens the lower edge of the dot for
-depth in every status color. Long names wrap without splitting the bracketed number.
-The Players directory shows names without separate public number badges.
-The connection indicator and unread notification dots share the same shading.
-Read notification markers remain transparent.
+Profilrubriker visar `Name [ID]`, med numret mindre än namnet. Den 12px stora
+närvaropricken och dess etikett (Online, Idle eller Offline) inleder statusraden under
+rubriken; pricken bär den tillgängliga etiketten. En diskret vertikal gradient gör
+prickens nedre kant mörkare för djup i varje statusfärg. Långa namn radbryts utan att
+numret inom hakparentes delas. Players-katalogen visar namn utan separata publika
+nummerbrickor. Anslutningsindikatorn och prickarna för olästa notiser har samma skuggning.
+Markörer för lästa notiser förblir genomskinliga.
 
-## Maintenance
+## Underhåll
 
-Edit `config/theme.css` for palette, typography, frame size, sidebar width,
-banner height and the day/night background image paths (`--o-background-image`, `--o-night-background-image`).
-Edit `config/interface.css.template` for component layout, then run
-`npm run config:sync`. Do not hand-edit the generated stylesheet.
-Shared rendering is in `shell.tsx`, the game layout and `resource-bars.tsx`.
+Ändra `config/theme.css` för palett, typografi, ramstorlek, sidopanelens bredd,
+bannerhöjd och bakgrundsbildernas sökvägar för dag och natt (`--o-background-image`,
+`--o-night-background-image`). Ändra `config/interface.css.template` för
+komponentlayout och kör sedan `npm run config:sync`. Redigera inte den genererade
+stilmallen för hand. Gemensam rendering finns i `shell.tsx`, spelets layout och
+`resource-bars.tsx`.
 
-Future 2D artwork can be added without rebuilding the navigation or game logic.
-Keep original uploads intact and use optimized local assets for the application.
+Framtida 2D-grafik kan läggas till utan att navigationen eller spellogiken byggs om.
+Behåll originaluppladdningarna orörda och använd optimerade lokala filer i applikationen.
 
-## Verification
+## Verifiering
 
-`tests/e2e/design.spec.ts` covers fixed scenery versus scrolling content,
-compact banner height, responsive overflow, live resource visibility and
-navigation through inventory, market, crew and ship views. Screenshots are
-written to ignored `.local/design-*.jpg` files for visual inspection.
-Existing interaction suites cover the underlying functionality.
+`tests/e2e/design.spec.ts` täcker fast miljö mot rullande innehåll, kompakt bannerhöjd,
+responsivt överflöde, synliga resurser och navigering genom vyerna för inventarier,
+marknad, besättning och skepp. Skärmdumpar skrivs till ignorerade `.local/design-*.jpg`
+för visuell granskning. Befintliga interaktionssviter täcker den underliggande
+funktionaliteten.
 
-## Combat presentation
+<a id="combat-presentation"></a>
+## Stridspresentation
 
-The attack route has its own navy-and-brass frame, separate from the administrative
-frame. It retains the fixed harbor backdrop on wide screens and has no regular
-game navigation during combat.
+Attackrutten har en egen ram i marinblått och mässing, skild från administrationens ram.
+Den behåller den fasta hamnbakgrunden på breda skärmar och saknar den vanliga
+spelnavigationen under strid.
 
-- `CombatHeading` shows Energy, the current participant's phase and round, and
-  the server-anchored order deadline. The timer uses the existing countdown hook.
-- `CombatStage` is shared by preparation and active combat. Own and opposing
-  captain panels flank the artwork on desktop. The artwork moves above the two
-  panels below the combat breakpoint; mobile order buttons stack vertically.
-- `public/images/combat-sea-broadside.webp` and `combat-boarding-duel.webp` are the
-  owner's 1774 x 887 scene artwork (2026-09-24): two pirate ships in side profile, and
-  two duelists on a boarding plank. The attacker is always drawn left, the defender
-  right. New artwork gets a new file name so image caches never serve the old version.
-- The artwork doubles as the hit display (`CombatScene`). The viewer's latest own round
-  plays on it: cannon fire, Chain Shot, Grape Shot, melee, firearm, Grenado and Smoke Pot
-  each have their own effect built from square pixels. Damage rises from the impact, and a
-  label under the struck side keeps the result until the next round. The label is text on
-  the artwork, not a box: the zone in small caps in the display serif, then the damage as a
-  larger number in the result's colour (red, gold for a critical hit with a gold Critical in
-  front, white Blocked, blue Blinded, grey italic Miss), over a soft shadow with a thin rule
-  in the same colour fading out beneath. On scenes narrower than 420 px each label keeps to
-  its own edge. Misses splash beside the ship, are parried between the blades, or land
-  beside the target. The attacker's strike plays first, then the defender's.
-- A hit lands at a random spot inside the struck zone's area, such as any sail for Sails
-  and rigging or either leg for Legs, and the effect plays there. The spot is seeded by the
-  round, so a reload shows it in the same place. Every strike leaves a small reticle like
-  Torn's that locks on where it landed: red for damage, gold for a critical hit, white for a
-  blocked hit, blue for Smoke Pot and grey for a miss. Misses land around the target rather
-  than in one spot: cannon shot in the water along the ship's side, off the bow, behind the
-  stern or farther out; firearm shots in the space around the captain (above the head, beside
-  the head and waist, between the legs); swings are either parried between the blades, with
-  sparks, or dodged beside the captain; throws land along the plank. Earlier
-  strikes of the viewer's rounds in the same phase stay as smaller rings with a dot in the
-  same colours, fading with age, on whichever side they were aimed at.
-- Only rounds that arrive while the page is open animate; a reload shows the marks and
-  labels still. A round that changes phase finishes on its own artwork before the new phase
-  fades in. Other attackers' rounds stay in the log.
-- Effects use small pixels (about 10-14 artwork pixels, 3-4 on screen) so they match the
-  artwork's detail; blasts are dense clouds that are hottest in the middle. Damage numbers
-  rise just after and above the impact so the blast stays visible.
-- The round that ends the encounter plays out in full. 0.5 seconds after its effects fade
-  (`FINALE_DELAY` in `combat-scene.tsx`) the artwork darkens, the VS badge fades out and a
-  centered box shows the outcome (Victory, Defeat, You withdrew or Draw) with a Leave button
-  that takes focus. The combat log opens only when the player chooses Leave; the order panel
-  and the heading's back link are gone meanwhile. When the final round is not new to this
-  view, such as another attacker's final blow, the box follows after the same short pause.
-- The caption under the artwork states the round in words, for example "Round 3: You hit
-  their sails and rigging for 12 and slowed their ship. Bo missed.", and is announced
-  politely to screen readers. XP from the round shows in the shared XP drop, described below. With reduced motion, marks and labels appear without effects.
-  The VS badge sits in the sky at the top center, clear of the effects.
-- Hit areas (one or more ellipses per zone, deck, splash and landing spot) and anchor points
-  for guns, hands and labels live in `src/lib/combat-scene-anchors.ts`, in the artwork's own
-  pixels. Recalibrate them when the artwork changes; unit tests check that every configured
-  hit zone has an area inside the artwork and that hits always land inside it.
-  `src/lib/combat-scene.ts` turns a round into strikes, labels and the caption. Effect
-  colors are the `--o-fx-*` tokens in `config/theme.css`.
-- The scene follows the current attacker's authoritative phase, including a
-  return to sea after Disengage. It does not infer phase from the last clicked
-  button or another attacker's phase.
-- Health, equipment and the relevant ship/crew stats remain visible. Opponent
-  stats and ammunition remain concealed; opponent equipment is unknown before
-  joining. The pennants are decorative neutral icons, not player/faction data.
-- Primary attacks use gold, boarding/disengagement blue, and retreat muted red.
-  All controls retain text labels, keyboard focus, pending states and disabled
-  ammunition/start conditions. Boarding offers Crew attack, Disengage and Retreat.
-- The compact log and people panels keep timestamps, contributions, participant
-  conditions and profile links.
-- The combat log reads as a timeline in both the attack view and the public report: a
-  marker per entry on a vertical line (flag for the start, ship for cannon combat, crossed
-  swords for boarding, heart for hospital), blue or gold headings by phase, and each order
-  as aligned captain, order and result columns. Hits are gold, criticals bold gold, misses
-  and blocked hits muted, and the deciding entry is highlighted. Narrow screens put the
-  captain on its own line and let a long result drop below the order.
-- The public report (`/combatlog/<id>`) opens with a banner of the artwork of the phase that
-  decided the encounter, the outcome as its headline, who landed the final blow, when it was
-  fought and how long it lasted, and Copy public link. Below it the attackers face the
-  defender as cards with a VS between them: role, result badge, hits and damage as large
-  numbers, and Ship and Crew Health bars after the fight. The full timeline follows without
-  an inner scroll, and the PvP survival note closes the page.
+- `CombatHeading` visar Energy, den aktuella deltagarens fas och runda samt den
+  serverförankrade deadlinen för order. Timern använder den befintliga nedräkningshooken.
+- `CombatStage` delas av förberedelse och aktiv strid. Den egna och motståndarens
+  kaptenspanel flankerar bilden på desktop. Under stridsbrytpunkten flyttas bilden ovanför
+  de två panelerna; på mobil staplas orderknapparna vertikalt.
+- `public/images/combat-sea-broadside.webp` och `combat-boarding-duel.webp` är ägarens
+  scenbilder i 1774 x 887 (2026-09-24): två piratskepp i sidoprofil och två duellanter på en
+  äntringsplanka. Angriparen ritas alltid till vänster, försvararen till höger. Ny grafik får
+  ett nytt filnamn så att bildcacher aldrig serverar den gamla versionen.
+- Bilden fungerar också som träffvisning (`CombatScene`). Betraktarens senaste egna runda
+  spelas upp på den: kanoneld, Chain Shot, Grape Shot, närstrid, skjutvapen, Grenado och
+  Smoke Pot har var sin effekt byggd av fyrkantiga pixlar. Skadan stiger från nedslaget, och
+  en etikett under den träffade sidan visar resultatet till nästa runda. Etiketten är text på
+  bilden, inte en ruta: zonen i kapitäler i displayserifen, sedan skadan som en större siffra
+  i resultatets färg (röd, guld för kritisk träff med ett guldfärgat Critical framför, vit
+  Blocked, blå Blinded, grå kursiv Miss), över en mjuk skugga med en tunn linje i samma färg
+  som tonar ut under. På scener smalare än 420 px håller sig varje etikett vid sin egen kant.
+  Missar plaskar bredvid skeppet, pareras mellan klingorna eller landar bredvid målet.
+  Angriparens slag spelas först, sedan försvararens.
+- En träff landar på en slumpad punkt inom den träffade zonens område, till exempel valfritt
+  segel för Sails and rigging eller något av benen för Legs, och effekten spelas där.
+  Punkten seedas av rundan, så en omladdning visar den på samma ställe. Varje slag lämnar ett
+  litet sikte som Torns, som låser där det landade: rött för skada, guld för kritisk träff,
+  vitt för blockerad träff, blått för Smoke Pot och grått för miss. Missar landar runt målet
+  i stället för på en punkt: kanonkulor i vattnet längs skeppets sida, framför bogen, bakom
+  aktern eller längre ut; skott från skjutvapen i utrymmet runt kaptenen (ovanför huvudet,
+  bredvid huvudet och midjan, mellan benen); hugg pareras antingen mellan klingorna, med
+  gnistor, eller undviks bredvid kaptenen; kast landar längs plankan. Tidigare slag i
+  betraktarens rundor i samma fas står kvar som mindre ringar med en prick i samma färger,
+  bleknar med åldern och ligger på den sida de siktades mot.
+- Bara rundor som kommer medan sidan är öppen animeras; en omladdning visar märken och
+  etiketter stilla. En runda som byter fas avslutas på sin egen bild innan den nya fasen
+  tonar in. Andra angripares rundor stannar i loggen.
+- Effekterna använder små pixlar (cirka 10-14 bildpixlar, 3-4 på skärmen) så att de matchar
+  bildens detaljnivå; explosioner är täta moln som är hetast i mitten. Skadesiffrorna stiger
+  strax efter och ovanför nedslaget så att explosionen syns.
+- Rundan som avslutar mötet spelas upp i sin helhet. 0,5 sekunder efter att effekterna
+  tonat bort (`FINALE_DELAY` i `combat-scene.tsx`) mörknar bilden, VS-märket tonar ut och en
+  centrerad ruta visar utfallet (Victory, Defeat, You withdrew eller Draw) med en Leave-knapp
+  som får fokus. Stridsloggen öppnas först när spelaren väljer Leave; orderpanelen och
+  rubrikens tillbakalänk är borta under tiden. När slutrundan inte är ny för vyn, till
+  exempel en annan angripares avgörande slag, följer rutan efter samma korta paus.
+- Texten under bilden beskriver rundan i ord, till exempel "Round 3: You hit their sails
+  and rigging for 12 and slowed their ship. Bo missed.", och läses upp för skärmläsare utan
+  att avbryta. XP från rundan visas i det gemensamma XP drop-kortet, som beskrivs nedan. Med
+  reducerad rörelse visas märken och etiketter utan effekter.
+  VS-märket sitter i himlen överst i mitten, fritt från effekterna.
+- Träffområden (en eller flera ellipser per zon, däck, plask och landningsplats) och
+  ankarpunkter för kanoner, händer och etiketter finns i `src/lib/combat-scene-anchors.ts`, i
+  bildens egna pixlar. Kalibrera om dem när grafiken ändras; enhetstester kontrollerar att
+  varje konfigurerad träffzon har ett område inuti bilden och att träffar alltid landar inom
+  det. `src/lib/combat-scene.ts` gör om en runda till slag, etiketter och bildtext.
+  Effektfärgerna är `--o-fx-*`-tokens i `config/theme.css`.
+- Scenen följer den aktuella angriparens auktoritativa fas, inklusive återgång till sjöss
+  efter Disengage. Den härleder inte fasen från den senast klickade knappen eller från en
+  annan angripares fas.
+- Hälsa, utrustning och relevanta stats för skepp och besättning förblir synliga.
+  Motståndarens stats och ammunition förblir dolda; motståndarens utrustning är okänd innan
+  man ansluter. Vimplarna är dekorativa neutrala ikoner, inte spelar- eller fraktionsdata.
+- Primära attacker är guld, boarding och Disengage blå och Retreat dämpat röd. Alla
+  kontroller behåller textetiketter, tangentbordsfokus, vänteläge och inaktiverade villkor
+  för ammunition och start. Boarding erbjuder Crew attack, Disengage och Retreat.
+- Den kompakta loggen och deltagarpanelerna behåller tidsstämplar, bidrag, deltagarnas
+  tillstånd och profillänkar.
+- Stridsloggen läses som en tidslinje både i attackvyn och i den publika rapporten: en
+  markör per händelse på en vertikal linje (flagga för starten, skepp för kanonstrid,
+  korsade svärd för boarding, hjärta för Hospital), blå eller guldfärgade rubriker efter fas
+  och varje order i linjerade kolumner för kapten, order och resultat. Träffar är guld,
+  kritiska träffar fet guld, missar och blockerade träffar dämpade, och den avgörande
+  händelsen är markerad. Smala skärmar lägger kaptenen på en egen rad och låter ett långt
+  resultat hamna under ordern.
+- Den publika rapporten (`/combatlog/<id>`) inleds med en banner med bilden från fasen som
+  avgjorde mötet, utfallet som rubrik, vem som gav det sista slaget, när striden utkämpades
+  och hur länge den varade, samt Copy public link. Under den står angriparna mot försvararen
+  som kort med ett VS emellan: roll, resultatmärke, träffar och skada som stora siffror samt
+  staplar för Ship Health och Crew Health efter striden. Hela tidslinjen följer utan inre
+  rullning, och noten om överlevnad i PvP avslutar sidan.
 
-Combat artwork is served through Next Image with explicit dimensions and
-responsive sizes. No image generation or external asset dependency is required.
-Edit the combat colors in `config/theme.css`, then sync generated styles.
+Stridsgrafiken serveras genom Next Image med uttryckliga mått och responsiva storlekar.
+Ingen bildgenerering eller externt beroende för bilder behövs. Ändra stridsfärgerna i
+`config/theme.css` och synka sedan de genererade stilarna.
 
-The existing `tests/e2e/combat.spec.ts` exercises preparation, both phase images,
-real orders, reloads, public reports and widths from 320 to 1680px. It writes
-ignored `.local/attack-*.jpg` screenshots. With guaranteed hits it checks the scene's
-zones, labels and caption for chain, grape, grenado, pistol and melee strikes and the
-boarding hand-over, and freezes the round animation to write `.local/scene-*.png` frames.
-The combat action-lock suite covers
-defender restrictions independently of the presentation.
+Den befintliga `tests/e2e/combat.spec.ts` kör förberedelse, båda fasbilderna, riktiga
+order, omladdningar, publika rapporter och bredder från 320 till 1680px. Den skriver
+ignorerade skärmdumpar till `.local/attack-*.jpg`. Med garanterade träffar kontrollerar den
+scenens zoner, etiketter och bildtext för slag med chain, grape, grenado, pistol och
+närstrid samt överlämningen till boarding, och fryser rundanimationen för att skriva
+bildrutor till `.local/scene-*.png`. Sviten för stridens handlingslås täcker försvararens
+begränsningar oberoende av presentationen.
 
-Stamina appears after Energy in the condition sidebar, using a green track and the same accessible
-hover/focus/touch tooltip as the other resources. Its tooltip shows only the recovery rule and purpose.
+Stamina visas efter Energy bland tillstånden i sidopanelen, med ett grönt spår och samma
+tillgängliga tooltip vid hovring, fokus och tryck som de andra resurserna. Tooltipen visar
+bara återhämtningsregeln och syftet.
 
-Profiles display public Character Level alongside Player ID. Only the owner receives the
-Skills card: seven compact rows with level, total XP, a progress bar and the XP to the next
-level. Maxed skills display Maximum level. Crew Battling and Ship Battling add a line with their
-maximum health bonus and what the next level adds. Other players receive neither the card nor
-the underlying private data.
+Profiler visar offentlig Character Level bredvid Player ID. Bara profilens ägare får kortet Skills:
+sju kompakta rader med nivå, total XP, en förloppsstapel och XP till nästa nivå. Skills på
+högsta nivå visar Maximum level. Crew Battling och Ship Battling har en extra rad med sin
+bonus till maximal hälsa och vad nästa nivå lägger till. Andra spelare får varken kortet
+eller den underliggande privata datan.
 
-The XP drop uses the game's own panel style rather than a separate look: the brass border,
-navy surface gradient and hard offset shadow of the floating panels, the skill icon and name
-in gold, the gain in the display font with the same square pixel outline as the combat damage
-numbers, the standard resource track, and the level and total XP in small text. A level-up
-turns the level line gold. The card slides in once, pulses its gain when more XP arrives,
-counts the gain and total up while the bar rises, stays for five seconds after the latest gain
-and fades. It ignores the pointer, and reduced
-motion removes the movement. See [Skills](SKILLS.md#xp-drop) for when it appears.
+XP drop använder spelets egen panelstil i stället för ett separat utseende: de flytande
+panelernas mässingsram, marinblå ytgradient och hårda förskjutna skugga, skillens ikon och
+namn i guld, ökningen i displaytypsnittet med samma fyrkantiga pixelkontur som stridens
+skadesiffror, det vanliga resursspåret samt nivå och total XP i liten text. En nivåhöjning
+gör nivåraden guldfärgad. Kortet glider in en gång, pulserar ökningen när mer XP kommer,
+räknar upp ökningen och totalen medan stapeln stiger, stannar i fem sekunder efter den
+senaste ökningen och tonar sedan ut. Det ignorerar pekaren, och reducerad rörelse tar bort
+rörelsen. Se [Skills](SKILLS.md#xp-drop) för när det visas.
 
-Activities is a sidebar destination and a harbor directory entry. Three rows show a themed
-icon, description, skill level/XP progress, reward and action button. Desktop uses a three-column
-row; mobile places the action below the details. Result text stays inline with reserved space.
-Normal activity requests use the existing journal without flashing the recovery banner.
+Activities är ett mål i sidopanelen och en post i hamnkatalogen. Tre rader visar en
+tematisk ikon, beskrivning, skillnivå och XP-förlopp, belöning och handlingsknapp. Desktop
+använder en rad med tre kolumner; mobil lägger knappen under detaljerna. Resultattexten
+står kvar på raden i reserverat utrymme. Vanliga aktivitetsförfrågningar använder den
+befintliga journalen utan att återhämtningsbannern blinkar.
 
-Admin now has task-oriented navigation, overview shortcuts, an item catalog and dedicated item/loot/activity forms. Loot preview shows percentages per successful catch. Responsive cards, readable field labels and grouped database resources replace the database-first starting point. Review screens show human-readable values with technical JSON collapsed. In-flight admin saves do not show the recovery banner.
+Admin har nu uppgiftsorienterad navigation, genvägar på översikten, en föremålskatalog och
+egna formulär för föremål, loot och aktiviteter. Förhandsvisningen av loot visar procent per
+lyckad fångst. Responsiva kort, läsbara fältetiketter och grupperade databasresurser
+ersätter den databasfokuserade startpunkten. Granskningsvyer visar läsbara värden med
+teknisk JSON ihopfälld. Pågående sparningar i admin visar inte återhämtningsbannern.
 
+## Crew Training, 23 september
 
-## Crew Training, September 23
+Ägarens banner med träningsdäcket på natten och fyra genomskinliga guldikoner är
+optimerade WebP-filer i `public/images/training/`. Den levererade originalgrafiken är
+oförändrad. En panoramabanner leder in i den levande översikten i sex delar och fyra
+färgade statkort. Samma konfigurerade Energy-kostnad visas diskret i varje kort. Korten
+visar aktuella stats och Train-knappar med bara text, utan förhandsvisning av ökningen.
+Varje kort har ett eget levande resultat ovanför knappen, med reserverat utrymme så att
+layouten inte flyttar sig. Bekräftade serverkvitton anger faktiska ökningar och Perfect
+Drill-utfall. Återkoppling för väntan, fel och nytt försök stannar i samma kort, utan någon
+gemensam resultatpanel för träningen. Ingen Energy-väljare eller batchmängd införs.
+Ekonomijournalen låser fortfarande alla övningar medan en förfrågan är oavgjord.
+Kompakt kortavstånd lägger Energy direkt under beskrivningen med 5px mellanrum.
+Statbilderna är 98px; bekräftade ökningar visas i framträdande 20px halvfet grön text.
+Resultatplatsen håller knapparna i linje utan att lägga till tomrum före Energy-kostnaden.
+Sedan 24 september har varje kortrad en fast storlek, så ett resultat ändrar aldrig
+kortets höjd: beskrivningen reserverar två rader, resultatplatsen är en fast rad på 38px
+(ökningstexten skalar med sidan och kortas av, text för väntan och fel begränsas till två
+rader), statvärdena står på en rad, en Perfect Drill visas som ett märke i kortets hörn och
+en knapp för nytt försök ersätter Train-knappen. Besättnings- och skeppskort mäter därför
+lika vid varje bredd. Matchande hörnaccenter på 18px ramar in alla fyra hörnen.
 
-The owner's night training-deck banner and four transparent gold icons are optimized
-WebP assets in `public/images/training/`. The original supplied artwork is unchanged.
-A panoramic header leads into the live six-part overview and four colored stat cards.
-The same configured Energy cost appears discreetly inside each card. Cards show current
-stats and text-only Train buttons, without gain previews. Each card has an inline live
-result above its button, reserved to avoid layout movement. Confirmed server receipts
-supply actual gains and Perfect Drill outcomes. Pending/error/retry feedback stays in the
-same card, with no shared training result panel. No Energy selector or batch quantity is
-introduced. The economy journal continues to lock all drills during an unresolved request.
-Compact card spacing puts Energy directly below the description with a 5px gap. Stat
-art is 98px; confirmed gains use prominent 20px semibold green text. The result slot
-keeps the buttons aligned without adding blank space before the Energy cost. Since
-September 24 every card row has a fixed size, so a result never changes the card height: the
-description reserves two lines, the result slot is a fixed 38px single line (gain text
-scales with the page and truncates, pending/error text clamps to two lines), stat values stay
-on one line, a Perfect Drill shows as a badge in the card corner and a retry button replaces
-the Train button. Crew and ship cards therefore measure the same at every width. Matching
-18px corner accents frame all four corners.
+Drill Schools visar alla tio konfigurerade nivåer med lägena aktiv, ägd och låst, förlopp i
+procent och nästa tillgängliga köp. Den högsta köpta nivån är automatiskt aktiv. Guiden
+bredvid använder de verkliga inställningarna för Energy, moral och Perfect Drill. Stabila
+träningsformulär behåller väntelås, köpresultat och återhämtning med nytt försök.
+Brytpunkter på containern går från fyra kort till två och sedan ett, och fäller ihop
+översikten och skolorna utan horisontell rullning.
 
-Drill Schools displays all ten configured tiers with active, owned and locked states,
-percentage progress and the next available purchase. The highest purchased tier remains
-automatically active. The adjacent guide uses the real Energy, morale and Perfect Drill
-settings. Stable training forms retain pending locks, purchase results and retry recovery.
-Container breakpoints change four cards to two, then one, and collapse the overview and
-schools without horizontal scrolling.
+## Ship Upgrades, 24 september
 
-## Ship Upgrades, September 24
+Ship Upgrades använder Crew Trainings layout genom gemensamma komponenter i
+`src/components/training/training-layout.tsx` och `training-tiers.tsx`, med de generiska
+klasserna `o-training-*`. Banner, översikt, statkort, Shipyard Workshops och guide speglar
+besättningssidan. Båda sidorna bygger varje kortinnehåll med `TrainingStatBody`: en
+kostnadsnot, den reserverade resultatplatsen på en rad och kortets handling, så alla kort
+har samma höjd i varje läge. Skeppets statkort är valbara radiokort; Work Order nedanför
+har Energy-reglaget, förhandsvisning av ökningen, material och Start work. Under ett jobb
+visar kortet för den staten förväntad ökning i sin resultatplats och nedräkningen i stället
+för knappen, och Work Order ersätts av det pågående jobbet.
+Grafiken återanvänder tills vidare besättningsträningens bilder som platshållare,
+definierade i en konstant i `ship-upgrade-panel.tsx`.
 
-Ship Upgrades uses the Crew Training layout through shared components in
-`src/components/training/training-layout.tsx` and `training-tiers.tsx`, with the generic
-`o-training-*` classes. The header, overview, stat cards, Shipyard Workshops and guide
-mirror the crew page. Both pages build every card body with `TrainingStatBody`: a cost note,
-the reserved one-line result slot and the card action, so all cards keep one height in every
-state. Ship stat cards are selectable radio cards; the Work Order below holds the Energy
-slider, gain preview, materials and Start work. During a job the card for that stat shows
-the expected gain in its result slot and the countdown in place of the button, and the Work
-Order is replaced by the running job.
-The artwork currently reuses the crew training images as placeholders, defined in one
-constant in `ship-upgrade-panel.tsx`.
-
-## Page banners, September 24
+## Sidbanners, 24 september
 
 The Harbor, Hideout, Crew Training, Ship Upgrades, Activities, Inventory, Hospital, Tavern,
-Bank and Marketplace open with the same banner (`PageHero` in `src/components/page-hero.tsx`, classes `o-page-hero-*`):
-artwork, the page's `h1`, a short lead and an icon. The banner has one fixed height (158px, 168px
-on narrow containers) on every page and is its own size container, so it looks the same inside
-and outside the training layout. The banner replaces the former panel title on those pages, and on The Harbor it replaces the
-former welcome art panel (the "Welcome ashore" greeting is now the banner lead);
-`Panel` renders without a title bar when none is given. Marketplace keeps its link row below the
-banner on every marketplace route. Pages without dedicated artwork use `PLACEHOLDER_HERO`
-(`public/images/headers/harbor-placeholder.webp`, the owner's harbor scene re-encoded to about
-295 KiB) and their navigation icon; replace the `image` prop per page when final art exists.
+Bank och Marketplace öppnar med samma banner (`PageHero` i `src/components/page-hero.tsx`,
+klasserna `o-page-hero-*`): bild, sidans `h1`, en kort ingress och en ikon. Bannern har en
+fast höjd (158px, 168px i smala containrar) på varje sida och är sin egen size container,
+så den ser likadan ut i och utanför träningslayouten. Bannern ersätter den tidigare
+paneltiteln på de sidorna, och på The Harbor ersätter den den tidigare panelen med
+välkomstbilden (hälsningen "Welcome ashore" är nu bannerns ingress); `Panel` renderas utan
+titelrad när ingen titel anges. Marketplace behåller sin länkrad under bannern på alla
+marknadsrutter. Sidor utan egen grafik använder `PLACEHOLDER_HERO`
+(`public/images/headers/harbor-placeholder.webp`, ägarens hamnscen omkodad till cirka
+295 KiB) och sin navigationsikon; byt `image`-propen per sida när slutlig grafik finns.
 
-## Profile, September 25
+<a id="profile-september-25"></a>
+## Profil, 25 september
 
-The profile follows the owner's September 25 mockup as a reference, not 1:1, on one page
-without tabs. `/players/<number>` opens with an artwork hero (`o-profile-hero`):
+Profilen följer ägarens mockup från 25 september som referens, inte 1:1, på en sida utan
+flikar. `/players/<number>` öppnar med en bildbanner (`o-profile-hero`):
 
-- `public/images/headers/profile-harbor-dusk.webp` is the owner's 2000 x 667 harbor at dusk,
-  unchanged. A dark gradient from the left keeps the text readable; the ship stays visible on
-  the right and on narrow screens.
-- The captain's chosen portrait sits in a gold frame. The owner supplied three 1086 x 1448
-  pixel-art portraits, used unchanged: Harbor Rover (`harbor-rover.webp`, the default), Old Salt
-  and Red Corsair. The catalog is `gameplay.portraits`; see [the profile rules](CHARACTER_PROFILES.md#porträtt).
-  The sidebar shows the same portrait, which also links to the profile.
-- On the owner's profile a round pencil button on the portrait's lower right corner opens the
-  gallery: a modal with every portrait as a radio card, the current one marked Current and the
-  selection outlined in gold. Save portrait is enabled once another portrait is selected; a saved
-  choice closes the dialog, returns focus to the button and is announced as Portrait saved.
-  Escape and Cancel close without saving. The gallery uses the shared `GameDialog`
-  (`src/components/game-dialog.tsx`), which the forum dialogs also build on.
-- Beside the portrait: `Name [ID]`, a status line with presence, location (or In hospital with
-  the remaining time) and three figures: Level, Character age and Max sea distance. Other
-  captains' profiles have Send message and Attack at the top right of the hero.
+- `public/images/headers/profile-harbor-dusk.webp` är ägarens hamn i skymning, 2000 x 667,
+  oförändrad. En mörk gradient från vänster håller texten läsbar; skeppet syns till höger
+  och på smala skärmar.
+- Kaptenens valda porträtt sitter i en guldram. Ägaren levererade tre pixelkonstporträtt i
+  1086 x 1448 som används oförändrade: Harbor Rover (`harbor-rover.webp`, standard), Old Salt
+  och Red Corsair. Katalogen är `gameplay.portraits`; se
+  [profilreglerna](CHARACTER_PROFILES.md#porträtt). Sidopanelen visar samma porträtt, som
+  också länkar till profilen.
+- På den egna profilen öppnar en rund pennknapp i porträttets nedre högra hörn galleriet:
+  en modal med varje porträtt som radiokort, det nuvarande märkt Current och valet inramat i
+  guld. Save portrait aktiveras när ett annat porträtt har valts; ett sparat val stänger
+  dialogen, återför fokus till knappen och meddelas som Portrait saved. Escape och Cancel
+  stänger utan att spara. Galleriet använder den gemensamma `GameDialog`
+  (`src/components/game-dialog.tsx`), som även forumets dialoger bygger på.
+- Bredvid porträttet: `Name [ID]`, en statusrad med närvaro, plats (eller In hospital med
+  återstående tid) och tre nyckeltal: Level, Character age och Max sea distance. Andra
+  kaptener har Send message och Attack uppe till höger i bannern.
 
-Below the hero, cards with a gold uppercase heading hold the rest: Details (Last action, At sea
-since, Forum posts, Forum karma), then the owner-only Defence orders and Skills. The owner sees
-Details and Defence orders beside Skills when the main column is wide; other profiles show the
-Details rows in two columns across the full width. Defence orders show the saved order's icon
-next to the existing selector and Save orders button.
+Under bannern finns kort med guldfärgad rubrik i versaler för resten: Details (Last action,
+At sea since, Forum posts, Forum karma), sedan Defense orders och Skills, som bara syns på
+den egna profilen. Där står Details och Defense orders bredvid Skills när huvudkolumnen är
+bred; andra profiler visar Details-raderna i två kolumner över hela bredden. Defense orders
+visar den sparade orderns ikon bredvid den befintliga väljaren och knappen Save orders.
 
-The page is its own size container: at 640px the portrait shrinks and the actions move below,
-at 440px the figures move under the portrait, and at 340px the defence selector stacks.
-There is no rank title or biography yet. The name preview at registration shows the name without a Captain prefix.
-
+Sidan är sin egen size container: vid 640px krymper porträttet och knapparna flyttas ned,
+vid 440px flyttas nyckeltalen under porträttet och vid 340px staplas väljaren i Defense
+orders. Det finns ännu ingen rangtitel eller biografi. Namnförhandsvisningen vid
+registrering visar namnet utan prefixet Captain.

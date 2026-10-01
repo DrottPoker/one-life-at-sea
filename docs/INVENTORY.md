@@ -63,7 +63,7 @@ Utrustning behåller sitt exemplar-ID och sin Quality. Utrustade exemplar måste
 innan de kan listas. Cirkulationen är oförändrad.
 
 [Value och historik](ITEM_MARKET_VALUE.md) visar det antalsviktade snittpriset från
-genomförda köp under 12 timmar, i hela Gold Coins, till vänster om Circ.
+genomförda köp inom `gameplay.marketplace.valueWindowHours`, i hela Gold Coins, till vänster om Circ.
 Saknas köp i fönstret behålls senaste Value; bara aldrig sålda items visar N/A.
 Båda använder samma diagram med sex perioder.
 
@@ -71,14 +71,13 @@ Faktiska consumable-effekter ingår inte ännu.
 
 ## Material för skeppsarbete
 
-Oak Planks och Iron Nails används av [Ship Upgrades](TRAINING_FOUNDATION.md).
-Ett jobb förbrukar 1 av varje per påbörjade 5 Energy. Båda är stackbara, handelsbara
-material. Endast innehavet i inventory kan användas; marknadslistade items räknas inte.
+Oak Planks och Iron Nails används av [Ship Upgrades](TRAINING_FOUNDATION.md#spelregler),
+som också anger åtgången per jobb. Båda är stackbara, handelsbara material. Endast innehavet i inventory kan användas; marknadslistade items räknas inte.
 Avdrag, Energy, jobb och kvitto sparas atomiskt. Cirkulationen minskar när material
 förbrukas, och ett återförsök förbrukar inget extra.
 
 Iron Nails har lagts till i katalogen med placeholderbild. Något nytt recept eller
-lootflöde för spikarna ingår inte. Oak Planks tillverkas fortsatt av 5 Oak Logs.
+lootflöde för spikarna ingår inte. Oak Planks tillverkas av Oak Logs, se [Crafting](CRAFTING.md).
 
 ## Datamodell och behörigheter
 
@@ -145,8 +144,8 @@ individuell Quality, mängder eller ägare. Flaggan tradable styr marknadens sä
 
 ## Lokala provitems
 
-Vanliga karaktärer börjar med tomt inventory. Lyckat Shore Fishing kan nu ge fem sorters
-fisk och en Silver Ring genom [lootsystemet](LOOT_TABLES.md).
+Vanliga karaktärer börjar med tomt inventory. Genom [lootsystemet](LOOT_TABLES.md) kan lyckat
+Shore Fishing ge fem sorters fisk och en Silver Ring, och lyckad Logging ger Oak Logs.
 
 För en uttryckligt vald lokal testkaraktär:
 

@@ -1,94 +1,39 @@
-# Player notifications
+# Notiser
 
-Players have a persistent private inbox at `/notifications`. The masthead bell shows
-an unread badge and links to the inbox. Notifications does not appear in the location sidebar. The inbox uses compact
-rows with linked names, an event description, `[view]`, a UTC timestamp and read state.
-It is available in Hospital and at sea, including during travel. Combat reports are
-also readable in Hospital and during travel. An active attacker retains the existing
-navigation lock until their participation ends.
+Spelare har en beständig privat inkorg på `/notifications`. Klockikonen i sidhuvudet visar antalet olästa och länkar till inkorgen. Notiserna finns inte i platsmenyn i sidofältet. Inkorgen visar kompakta rader med länkade namn, en händelsebeskrivning, `[view]`, en tidsstämpel i UTC och lässtatus. Den fungerar i Hospital och till sjöss, även under resa. Stridsrapporter går också att läsa i Hospital och under resa. En aktiv angripare behåller det befintliga navigeringslåset tills deltagandet är slut.
 
-## First event: incoming attack
+## Första händelsen: inkommande attack
 
-One `combat.attacked` notification is created for the defender when an encounter
-changes from active to completed. It lists every attacker in join order, including
-participants who already retreated or were defeated, with their public profile links.
-The message says `attacked you but lost` when the defender wins, `attacked and
-hospitalized you` when the defender is hospitalized, and otherwise `attacked you`.
-Retreats and draws are not described as defeats. The text uses the final
-saved health rather than the character's later recovered state. `[view]` opens the
-completed `/combatlog/<battle-id>` and marks the notification read on a normal click.
-Names and player numbers are snapshots, so later renaming does not rewrite history.
+En `combat.attacked`-notis skapas för försvararen när ett möte går från aktivt till avslutat. Den listar alla angripare i den ordning de anslöt, även deltagare som redan har retirerat eller besegrats, med länkar till deras publika profiler. Texten säger `attacked you but lost` när försvararen vinner, `attacked and hospitalized you` när försvararen hamnar i Hospital och annars `attacked you`. Reträtter och oavgjorda strider beskrivs inte som förluster. Texten utgår från den slutligt sparade hälsan, inte karaktärens senare återhämtade värde. `[view]` öppnar den avslutade `/combatlog/<battle-id>` och markerar notisen som läst vid ett vanligt klick. Namn och spelarnummer är kopior från händelsen, så ett senare namnbyte skriver inte om historiken.
 
-Completion includes victory, defended attacks, retreat, timeout, round limits and
-administrative interruption. Active encounters do not link to unavailable reports.
-Existing completed encounters are not added to the inbox. Existing attack notifications
-missing an outcome are enriched from their saved battle without changing read state. Encounters active when the migration
-is applied produce a notification when they subsequently finish. Offline players see
-saved notifications when they return; expired combats settle through existing gameplay
-reads, after which the same completion trigger creates the notification.
+Avslutade möten omfattar seger, avvärjda attacker, reträtt, timeout, rundgräns och administrativt avbrott. Aktiva möten länkar inte till rapporter som inte finns än. Möten som redan var avslutade när notiserna infördes läggs inte till i inkorgen. Befintliga attacknotiser som saknar utfall kompletteras från den sparade striden utan att lässtatus ändras. Möten som var aktiva när migreringen kördes ger en notis när de senare avslutas. Spelare som är offline ser sparade notiser när de kommer tillbaka; utgångna strider avgörs genom befintliga spelläsningar, och därefter skapar samma avslutningstrigger notisen.
 
-## Forum replies and quotes
+## Forumsvar och citat
 
-`forum.reply` tells a thread subscriber about a new reply and `forum.quote` tells an author that a post quoted theirs. Both
-payloads (version 1) hold the thread ID and title, the post ID and number and the author's name and player number; the
-link opens `/forums/posts/<post-id>`. A subscriber has at most one waiting reply notice per thread until they read past it,
-and players on the recipient's mail ignore list send neither kind. The post ID is the event key, so a replayed post never
-notifies twice. These two kinds are delivered after the reply commits, in batches: the app delivers right after the
-reply and the `forum-notifications` pg_cron job picks up the rest every minute. Recipients are decided at delivery, so a
-reply deleted before then notifies nobody. See [Forum](FORUMS.md#prenumerationer-och-notiser).
+`forum.reply` berättar för en trådprenumerant om ett nytt svar, och `forum.quote` berättar för en författare att ett inlägg har citerat deras. Båda nyttolasterna (version 1) innehåller trådens ID och titel, inläggets ID och nummer samt författarens namn och spelarnummer; länken öppnar `/forums/posts/<post-id>`. En prenumerant har högst en väntande svarsnotis per tråd tills den har läst förbi den, och spelare på mottagarens ignore-lista i brevposten skickar ingen av sorterna. Inläggets ID är händelsenyckeln, så ett återspelat inlägg notifierar aldrig två gånger. De två sorterna delas ut i omgångar efter att svaret har sparats: appen levererar direkt efter svaret och pg_cron-jobbet `forum-notifications` tar resten varje minut. Mottagarna bestäms vid leveransen, så ett svar som raderas innan dess notifierar ingen. Se [Forum](FORUMS.md#prenumerationer-och-notiser).
 
-## Forum moderation
+## Forummoderering
 
-`forum.moderation` tells an author that a moderator removed or edited their post, removed their thread or its poll, hid
-their image or cleared their signature; the payload holds the action and, except for signatures, the thread and post but
-not the moderator's private reason. `forum.ban` states when a forum ban ends (or
-that it is permanent) and its reason, and `forum.unban` says a ban was lifted. `forum.role` tells a player they were
-appointed or removed as a forum moderator. The moderator request ID is the event key.
+`forum.moderation` berättar för en författare att en moderator har tagit bort eller redigerat ett inlägg, tagit bort en tråd eller dess omröstning, dolt en bild eller tagit bort signaturen. Nyttolasten innehåller åtgärden och, utom för signaturer, tråden och inlägget, men inte moderatorns privata orsak. `forum.ban` anger när en forumavstängning upphör, eller att den är permanent, och dess orsak, och `forum.unban` säger att en avstängning har hävts. `forum.role` berättar för en spelare att den har utsetts till eller avsatts som forummoderator. Moderatorns begärans-ID är händelsenyckeln.
 
-## Storage, delivery and privacy
+## Lagring, leverans och integritet
 
-- `private.player_notifications` owns the recipient, kind, stable event key, versioned
-  JSON payload, event timestamp and read timestamp. IDs are bigint internally and
-  strings in JSON/TypeScript to preserve precision.
-- `private.emit_notification(recipient_id, event_kind, event_key, event_payload,
-  event_at)` is the shared internal entry point. Call it inside the source transaction.
-  `(character_id, kind, event_key)` deduplicates replays, preserving the original
-  payload and read state. Rollback removes the notification with the source action.
-- The combat completion trigger calls this helper once per encounter, not once per
-  attacker. Notification payloads contain only public names/numbers, the battle ID
-  and combat/Hospital outcome; account IDs, email, private stats and combat snapshots stay private.
-- RLS is enabled, raw table and sequence access is revoked, and the table is not
-  in Realtime. Public invoker RPCs delegate to private definers with an empty search
-  path and a registered-character check. Players cannot emit or edit payloads.
-- `get_notification_summary`, `get_notifications`, `mark_notification_read` and
-  `mark_all_notifications_read` always resolve the recipient from `auth.uid()`.
-  There is no caller-controlled recipient parameter.
-- Inserts and read changes signal the existing owner-only `player_game_events`.
-  AppFrame refreshes server snapshots on Realtime, reconnect, focus and its existing
-  15-second fallback. No extra subscription, per-second timer or browser inbox cache.
-- Indexed descending IDs provide cursor pagination without shifts when new rows arrive.
-  Page size is configured by `gameplay.notifications.pageSize`, initially 20.
-  Mark all read applies through the latest loaded ID; newer entries remain unread.
-  Account deletion cascades to its inbox. No automatic retention deletion is enabled.
+- `private.player_notifications` äger mottagare, sort, stabil händelsenyckel, versionerad JSON-nyttolast, händelsetid och lästid. ID:n är bigint internt och strängar i JSON och TypeScript för att behålla precisionen.
+- `private.emit_notification(recipient_id, event_kind, event_key, event_payload, event_at)` är den gemensamma interna ingången och anropas i källans transaktion. `(character_id, kind, event_key)` deduplicerar återspelningar och behåller den ursprungliga nyttolasten och lässtatusen. En rollback tar bort notisen tillsammans med källhandlingen.
+- Stridens avslutningstrigger anropar hjälparen en gång per möte, inte en gång per angripare. Nyttolasten innehåller bara publika namn och nummer, strids-ID och utfallet i strid och Hospital; konto-ID:n, e-post, privata stats och stridsögonblicksbilder förblir privata.
+- RLS är påslaget, direkt åtkomst till tabell och sekvens är återkallad och tabellen ingår inte i Realtime. Publika invoker-RPC:er delegerar till privata definer-funktioner med tom `search_path` och kontroll av registrerad karaktär. Spelare kan inte skapa notiser eller ändra nyttolaster.
+- `get_notification_summary`, `get_notifications`, `mark_notification_read` och `mark_all_notifications_read` hämtar alltid mottagaren från `auth.uid()`. Det finns ingen parameter där anroparen väljer mottagare.
+- Nya rader och läsändringar signalerar den befintliga ägarbundna `player_game_events`. AppFrame laddar om serverns snapshots vid Realtime, återanslutning, fokus och den befintliga reservuppdateringen med intervallet `frontend.refresh.fallbackMs`. Ingen extra prenumeration, sekundtimer eller cache av inkorgen i webbläsaren tillkommer.
+- Fallande indexerade ID:n ger markörbaserad sidindelning som inte förskjuts när nya rader kommer. Sidstorleken styrs av `gameplay.notifications.pageSize`. **Mark all as read** gäller till och med det senast inlästa ID:t; nyare notiser förblir olästa. När ett konto raderas raderas också dess inkorg. Ingen automatisk gallring är påslagen.
 
-## Adding an event type
+## Lägga till en händelsetyp
 
-1. Define a stable kind such as `market.sale` and a versioned payload with only fields
-   the recipient may see. Use a stable source ID as the event key.
-2. Call `private.emit_notification` inside the successful authoritative transaction.
-   Do not grant it to browsers or send from UI callbacks. A source-specific trigger
-   can be used when several code paths must share the same event transition.
-3. Add a payload renderer to `src/lib/notifications.ts`. Build links from validated
-   IDs and known routes; never accept arbitrary URLs or HTML from payloads.
-4. Add producer tests for recipient, rollback, retries and privacy, plus renderer tests.
-   Unknown types or unsupported payload versions show a safe generic message.
-5. Run config sync to generate the append-only SQL migration and apply it locally.
+1. Definiera en stabil sort som `market.sale` och en versionerad nyttolast med bara fält som mottagaren får se. Använd ett stabilt käll-ID som händelsenyckel.
+2. Anropa `private.emit_notification` i den lyckade auktoritativa transaktionen. Ge inte webbläsare rätt att anropa den och skicka inte notiser från UI-callbacks. En källspecifik trigger kan användas när flera kodvägar ska dela samma händelseövergång.
+3. Lägg till en renderare för nyttolasten i `src/lib/notifications.ts`. Bygg länkar från validerade ID:n och kända routes; acceptera aldrig godtyckliga URL:er eller HTML från nyttolaster.
+4. Lägg till tester för producenten (mottagare, rollback, återförsök och integritet) och för renderaren. Okända sorter och nyttolastversioner som inte stöds visar ett säkert generellt meddelande.
+5. Kör config sync för att generera den append-only SQL-migreringen och tillämpa den lokalt.
 
-## Verification
+## Verifiering
 
-Database tests cover grouped attacks, a retreated participant, exact report links,
-Hospital results, role/owner isolation, deduplication, read persistence, realtime
-signals, pagination, read-all boundaries, rollback and account cleanup. Unit tests
-cover group rendering, unsafe links, unknown kinds, bigint IDs and navigation access.
-Browser tests cover live group attacks, offline persistence, Hospital report access,
-read synchronization between tabs, pagination, reload and mobile widths.
+Databastesterna täcker grupperade attacker, en deltagare som har retirerat, exakta rapportlänkar, Hospital-utfall, isolering mellan roller och ägare, deduplicering, beständig lässtatus, realtidssignaler, sidindelning, gränsen för **Mark all as read**, rollback och kontostädning. Enhetstesterna täcker rendering av grupper, osäkra länkar, okända sorter, bigint-ID:n och navigeringsåtkomst. Webbläsartesterna täcker gruppattacker live, beständighet offline, åtkomst till rapporter i Hospital, synkad lässtatus mellan flikar, sidindelning, omladdning och mobilbredder.

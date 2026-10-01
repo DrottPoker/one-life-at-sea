@@ -1,84 +1,32 @@
-# Profile presence and last action
+# Närvaro och Last action
 
-Profiles show a 12px green, gold or grey status dot with the label Online, Idle or Offline
-in the status line under `Name [ID]`. The dot carries the accessible label;
-there is no separate Player status detail row. The same live snapshot supplies
-**Last action** as elapsed time. The hospital status remains a separate field.
-This applies to the owner's profile and other registered players' profiles.
+Profiler visar en 12 px stor grön, guldfärgad eller grå statusprick med etiketten **Online**, **Idle** eller **Offline** på statusraden under `Name [ID]`. Pricken bär den tillgängliga etiketten; det finns ingen separat detaljrad för spelarstatus. Samma livesnapshot ger **Last action** som förfluten tid. Hospital-statusen är ett eget fält. Detta gäller både den egna profilen och andra registrerade spelares profiler.
 
-## Meaning and timing
+## Betydelse och tider
 
-- Online: at least one connected game tab has not reached either idle deadline.
-  Pointer, keyboard, scroll and returning to the tab maintain presence without counting
-  as a game action. Input received outside a focused, visible tab does not reset inactivity.
-- Idle: no input for `gameplay.presence.idleSeconds` (300 seconds by default), or the
-  tab/window has continuously been hidden or unfocused for `gameplay.presence.unfocusedSeconds`
-  (120 seconds). Whichever deadline comes first applies. Brief focus losses keep Online.
-  Returning to focus resets both timers; repeated blur/visibility events do not extend
-  the ongoing absence. An already idle tab stays Idle when it loses focus.
-- Offline: no unexpired tab lease belongs to a live Auth session. A tab sends a heartbeat
-  every third of `gameplay.presence.leaseSeconds` (30 seconds with the default 90-second
-  lease). Hidden tabs keep reporting, becoming Idle after their grace period. Suspended tabs and lost connections
-  eventually expire. A close event is best effort; closing a browser may take up to
-  90 seconds to expire, plus the profile's next refresh. Revoked sessions stop counting
-  immediately on the next profile read, regardless of remaining lease time.
-- Last action: entering/navigating game pages, or committing a game command. Training,
-  activities (including a failed catch that spends Stamina), bank transfers, tavern,
-  inventory trash, market listing/purchase/cancellation, travel, scouting, joining an
-  attack, manual combat rounds and saving defence orders all count. Replaying an existing
-  receipt, rejected commands, mouse movement, focus, heartbeats, automatic resource
-  recovery, travel arrival, passive defence and combat timeouts do not count.
+- **Online**: minst en ansluten spelflik har inte nått någon av inaktivitetsgränserna. Pekare, tangentbord, scroll och att återvända till fliken håller närvaron vid liv utan att räknas som en spelhandling. Inmatning utanför en fokuserad, synlig flik nollställer inte inaktiviteten.
+- **Idle**: ingen inmatning under `gameplay.presence.idleSeconds`, eller fliken eller fönstret har varit dolt eller ofokuserat utan avbrott under `gameplay.presence.unfocusedSeconds`. Den gräns som nås först gäller. Korta fokusförluster behåller Online. När fokus kommer tillbaka nollställs båda tiderna; upprepade blur- och visibility-händelser förlänger inte en pågående frånvaro. En flik som redan är Idle förblir Idle när den tappar fokus.
+- **Offline**: ingen ej utgången flik-lease hör till en levande Auth-session. En flik skickar en heartbeat var tredjedel av `gameplay.presence.leaseSeconds`. Dolda flikar fortsätter rapportera och blir Idle efter sin grace-tid. Vilande flikar och tappade anslutningar löper ut efter en stund. En close-händelse är best effort; när en webbläsare stängs kan det ta upp till en hel lease-tid innan fliken löper ut, plus tiden till profilens nästa uppdatering. Återkallade sessioner slutar räknas direkt vid nästa profilläsning, oavsett kvarvarande lease-tid.
+- **Last action**: att öppna eller byta spelsida, eller att genomföra ett spelkommando. Följande räknas: träning, aktiviteter (även en misslyckad fångst som kostar Stamina), [crafting](CRAFTING.md), banköverföringar, tavernan, **Equip** och **Unequip**, Trash i Inventory, att lägga ut, köpa eller dra tillbaka på marknaden, resor, spaning, att ansluta till en attack, manuella stridsrundor, att spara försvarsorder, att skicka brev, att starta en forumtråd, svara i forumet, redigera eller radera ett eget inlägg och att välja ett nytt porträtt. Följande räknas inte: återspelning av ett befintligt kvitto, avvisade kommandon, att välja samma porträtt igen, en forumredigering som inte ändrar något, musrörelser, fokus, heartbeats, automatisk återhämtning av resurser, ankomst efter resa, passivt försvar och timeouts i strid.
 
-Status is independent of last action. Someone can remain Idle for hours with an old
-last action. Focusing a tab makes it Online without resetting last action. Browsing
-someone else's profile only records the viewer's page action.
+Status är oberoende av Last action. Någon kan vara Idle i timmar med en gammal Last action. Att fokusera en flik gör den Online utan att nollställa Last action. Att besöka någon annans profil registrerar bara besökarens egen sidhandling.
 
-Profile snapshots reuse `get_character_status` and the existing 15-second poller.
-Focus and reconnect trigger a fresh read. Last action shows Just now for the first
-minute, followed by whole minutes, hours or days. Its display timer wakes at minute
-boundaries instead of every second. Presence leases still expire at their exact
-individual deadlines. Both use server observation time plus a monotonic browser
-clock. The client never submits timestamps. Errors retain the last known action, label it as such, and show
-Unavailable for status with the existing retry control.
+Profilen hämtar sina snapshots med `get_character_status` och den befintliga pollern, som läser om med intervallet `frontend.refresh.fallbackMs`. Fokus och återanslutning ger en ny läsning. Last action visar **Just now** den första minuten och därefter hela minuter, timmar eller dagar. Visningens timer vaknar vid minutgränser i stället för varje sekund. Närvarons leases löper ändå ut vid sina exakta individuella tidpunkter. Båda använder serverns observationstid plus en monoton klocka i webbläsaren. Klienten skickar aldrig tidsstämplar. Vid fel behålls senast kända Last action, märkt **(last known)**, och statusen visar **Unavailable** med den befintliga knappen **Retry status**.
 
-## Storage and access
+## Lagring och åtkomst
 
-`private.player_presence` stores a lease per live Auth session and random mounted-tab ID.
-Independent tab rows mean an idle/closed tab cannot override a different active tab.
-Expired rows are pruned on the account's next report; session deletion cascades its rows.
-`private.character_actions` stores one timestamp per character. Character deletion
-removes both kinds of record. Both tables have RLS and no client table grants.
+`private.player_presence` lagrar en lease per levande Auth-session och slumpat ID för den monterade fliken. Separata rader per flik gör att en inaktiv eller stängd flik inte kan skriva över en annan aktiv flik. Utgångna rader rensas vid kontots nästa rapport, och när en session raderas försvinner dess rader. `private.character_actions` lagrar en tidsstämpel per karaktär. När en karaktär raderas försvinner båda sorternas rader. Båda tabellerna har RLS och inga tabellrättigheter för klienter.
 
-The presence RPC validates the calling account and its matching, unexpired Auth session.
-It accepts only tab identity and activity flags; it cannot target another player or set
-arbitrary dates. Heartbeat writes are throttled to ten seconds except for state changes.
-The profile exposes only aggregate connection deadlines and the latest action, never
-account IDs, session IDs, tab IDs or command details. Registered-player access remains
-required. Action receipts update timestamps atomically through private triggers;
-manual combat rounds and defence changes record them inside the command transaction.
+Närvaro-RPC:n kontrollerar det anropande kontot och dess matchande, ej utgångna Auth-session. Den tar bara emot flikidentitet och aktivitetsflaggor; den kan inte peka ut en annan spelare eller sätta godtyckliga datum. Heartbeat-skrivningar begränsas till en per tio sekunder, utom vid statusändringar. Profilen exponerar bara sammanräknade tidpunkter för anslutningen och den senaste handlingen, aldrig konto-ID:n, sessions-ID:n, flik-ID:n eller detaljer om kommandon. Åtkomst kräver fortfarande registrerad spelare. Nya kvitton uppdaterar tidsstämpeln atomärt genom privata triggers på kvittotabellerna, till exempel `inventory_requests` som täcker Trash, Equip och Unequip. Manuella stridsrundor, försvarsorder, brev, foruminlägg och porträttval sparar den i kommandots egen transaktion. Crafting sparar den i samma transaktion som ändringen i inventariet, och en återspelad eller avvisad craft flyttar den inte.
 
-Existing characters show Not recorded yet until their first tracked action. Neither
-creation dates nor earlier account-statistics heartbeats are treated as historical
-character actions. Configuration regeneration preserves all recorded timestamps.
+Befintliga karaktärer visar **Not recorded yet** tills deras första registrerade handling. Varken skapelsedatum eller tidigare heartbeats för kontostatistiken räknas som historiska karaktärshandlingar. Omgenerering av konfigurationen behåller alla registrerade tidsstämplar.
 
-Account analytics retain their separate daily activity definition; see
-[Player statistics](PLAYER_STATISTICS.md). A presence heartbeat does not fabricate
-another login or replace the analytics collection.
+Kontostatistiken har kvar sin egen definition av daglig aktivitet, se [Spelarstatistik](PLAYER_STATISTICS.md). En närvaro-heartbeat skapar ingen extra inloggning och ersätter inte statistikinsamlingen.
 
-## Verification
+## Verifiering
 
-- Unit tests: relative time boundaries, missing history, independent online/idle leases
-  and expiry using elapsed server time.
-- Database tests: live/expired/revoked/foreign sessions, private storage, registered
-  profile reads, multiple tabs, heartbeat and passive refresh exclusion, receipt replay,
-  rejected commands, expired-row cleanup and deletion.
-- Browser tests: own/other profiles, automatic status and action updates, idle timeout,
-  returning to play, multiple tabs, logout, failed refresh/retry and responsive layouts.
+- Enhetstester: gränser för relativ tid, saknad historik, oberoende online- och idle-leases och utgång baserad på förfluten servertid.
+- Databastester: levande, utgångna, återkallade och främmande sessioner, privat lagring, profilläsningar för registrerade spelare, flera flikar, att heartbeats och passiv uppdatering inte räknas, återspelade kvitton, avvisade kommandon, rensning av utgångna rader och radering.
+- Webbläsartester: egen och andras profil, automatiska uppdateringar av status och Last action, idle-timeout, återgång till spelet, flera flikar, utloggning, misslyckad uppdatering med nytt försök och responsiva layouter.
 
-Canonical SQL: `supabase/templates/gameplay/presence.sql` and `profile.sql`.
-Presence settings live in `config/gameplay.json`; regenerate with `npm run config:sync`
-and apply locally with `npm run db:migrate`.
-
-Crafting receipts also record Last action in the same transaction as the inventory
-change. Replaying a saved craft or rejecting insufficient materials does not move
-the timestamp. See [Crafting](CRAFTING.md).
+Kanonisk SQL: `supabase/templates/gameplay/presence.sql` och `profile.sql`. Närvaroinställningarna finns i [gameplay.json](../config/gameplay.json); generera om med `npm run config:sync` och tillämpa lokalt med `npm run db:migrate`.

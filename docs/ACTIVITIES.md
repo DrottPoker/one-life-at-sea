@@ -1,118 +1,123 @@
-# Activities
+# Aktiviteter
 
-The /activities page is available from the sidebar and the harbor directory. The initial
-activities are Shore Fishing (Fishing XP), Foraging (Foraging XP) and Logging (Logging XP).
-Each action costs 1 Stamina and a successful one grants 10 XP to its skill. Twenty successful
-actions give 200 XP and reach level 2 on the rebalanced curve. All three are available from level 1.
+Sidan `/activities` nås från sidomenyn och hamnens katalog. De första aktiviteterna är **Shore Fishing**
+(Fishing XP), **Foraging** (Foraging XP) och **Logging** (Logging XP). Alla tre är öppna från nivå 1. Varje
+försök kostar Stamina, se [Stamina](STAMINA.md). Ett lyckat försök ger aktivitetens `xpGain`, i dag 10 XP,
+till dess skill. Tjugo lyckade försök ger 200 XP och nivå 2 på den ombalanserade kurvan.
 
-These are immediate actions with no timer, equipment requirement or morale modifier.
-Shore Fishing now uses the admin-managed Harbor Shore loot table: success roll first,
-fixed items second, then weighted fish. Both catches and misses cost 1 Stamina. A catch grants
-10 XP and a miss grants half of that, 5 XP (see [Failure XP](#failure-xp)). Logging uses Woodland Logging and grants one Oak Log per successful attempt,
-with the same 70%-90% success curve. Foraging remains XP-only until a table is assigned. Energy, Gold Coins
-and training XP are unaffected. See [Loot tables](LOOT_TABLES.md). The
-activity row shows its skill level, XP progress, reward and cost. Results appear in an
-expandable result panel below the activity, with no modal. The awarded XP and level-ups show
-in the shared [XP drop](SKILLS.md#xp-drop). Stamina and skill progression refresh when a completed receipt is confirmed.
-The profile reflects the same XP and public Character Level.
+Handlingarna sker direkt, utan timer, utrustningskrav eller moralmodifierare. Shore Fishing använder loot
+table Harbor Shore, som hanteras i adminpanelen: först fångstslaget, sedan fasta föremål och sist viktade
+fiskar. Både fångst och miss kostar Stamina. En fångst ger full XP och en miss ger [failure XP](#failure-xp).
+Logging använder Woodland Logging och ger Oak Logs vid lyckat försök. Fångstchansen stiger med skillnivån
+enligt aktivitetens koppling till sin loot table. Startvärdena är seedade standardvärden som
+administratörer kan ändra i adminpanelen; de står i [Loot tables](LOOT_TABLES.md). Foraging ger bara XP
+tills en loot table kopplas till den. Energy, Gold Coins och tränings-XP påverkas inte.
 
-## Activity result panel
+Aktivitetsraden visar skillnivå, XP-framsteg, belöning och kostnad. Resultatet visas i en expanderbar
+resultatpanel under aktiviteten, utan modal. Tilldelad XP och nivåhöjningar visas i den gemensamma
+[XP drop](SKILLS.md#xp-drop). Stamina och skillframsteg uppdateras när ett slutfört kvitto har bekräftats.
+Profilen visar samma XP och publika Character Level.
 
-A confirmed receipt opens a compact panel below the activity. Successful catches show
-Success and their item thumbnails/quantities. Misses show Failure while retaining the
-Stamina cost; their reduced XP shows in the XP drop like any other gain. Activities with XP only show Success without an empty
-reward row. Pending or rejected requests are not labelled as a failed catch: uncertain
-responses show Unconfirmed, while known errors explain why the action could not complete.
+## Resultatpanel
 
-The latest result stays visible until another result arrives or its close button is used.
-Closing restores focus to the activity button. Normal game-state refreshes preserve the
-panel. Hovering, focusing or tapping a reward shows its item name; Escape or an outside
-interaction dismisses the tooltip. Tooltips stay within the viewport. Item artwork reuses
-the inventory fallback, including the shared dummy image. Announcements for screen readers
-are separate from tooltips. The result opens by expanding its actual height over 240 ms
-with eased motion, smoothly moving the following rows down. Clipping ends when the slide
-finishes so item tooltips remain visible. Repeated attempts update an already-open result
-without collapsing it first. Switching activities or dismissing a result collapses the old
-panel and its spacing over 150 ms before removing it. Closing results are inert and hidden
-from assistive technology. Interrupted slides resume from their current height, and
-reduced-motion settings complete the change immediately.
+Ett bekräftat kvitto öppnar en kompakt panel under aktiviteten. En fångst visar **Success** med föremålens
+miniatyrer och antal. En miss visar **Failure** och Stamina-kostnaden står kvar; den lägre XP:n syns i
+XP drop som all annan XP. Aktiviteter som bara ger XP visar **Success** utan en tom belöningsrad. Väntande
+eller nekade anrop märks inte som en misslyckad fångst: osäkra svar visar **Unconfirmed**, och kända fel
+förklarar varför handlingen inte kunde genomföras.
 
-Rewards are a wrapping row, with no fixed item count. The presentation layer accepts the
-current single-item loot receipt and an optional future rewards object containing an items
-array and a positive gold_coins amount. The latter can show items, Gold Coins, or both.
-An optional outcome field explicitly selects success/failure for future activity types;
-existing receipts derive this from loot.caught. Explicit rewards replace legacy loot in
-the view, so rewards are not displayed twice. Failure never renders a reward.
+Det senaste resultatet ligger kvar tills ett nytt resultat kommer eller stängknappen används. Stängning
+flyttar fokus tillbaka till aktivitetsknappen. Vanliga uppdateringar av spelläget behåller panelen. Hover,
+fokus eller tryck på en belöning visar föremålets namn; Escape eller en interaktion utanför stänger
+tooltipen. Tooltips stannar inom visningsytan. Föremålsbilder använder inventoryns reservbild, inklusive
+den gemensamma dummybilden. Meddelanden till skärmläsare är skilda från tooltips. Resultatet öppnas genom
+att dess faktiska höjd expanderar under 240 ms med mjuk easing, så att raderna nedanför flyttas ned jämnt.
+Klippningen upphör när animationen är klar, så att föremålens tooltips syns. Upprepade försök uppdaterar
+ett redan öppet resultat utan att först fälla ihop det. Byte av aktivitet eller stängning fäller ihop den
+gamla panelen och dess mellanrum under 150 ms innan den tas bort. Paneler som stängs är inerta och dolda
+för hjälpmedel. Avbrutna animationer fortsätter från sin aktuella höjd, och inställningen för reducerad
+rörelse genomför ändringen direkt.
 
-This is display support only: current drop counts, loot odds and actual currency payouts
-are unchanged. Future multi-item/gold awards must be granted atomically by the server and
-included in its durable receipt. The browser never grants rewards from displayed values.
+Belöningarna visas i en radbrytande rad utan fast antal föremål. Presentationslagret tar emot dagens
+lootkvitto med ett föremål och ett valfritt framtida `rewards`-objekt med en `items`-array och ett positivt
+`gold_coins`-belopp. Det senare kan visa föremål, Gold Coins eller båda. Ett valfritt `outcome`-fält väljer
+uttryckligen success eller failure för framtida aktivitetstyper; befintliga kvitton härleder utfallet från
+`loot.caught`. Uttryckliga `rewards` ersätter äldre loot i vyn, så belöningar visas inte två gånger.
+Failure visar aldrig någon belöning.
+
+Detta är bara visningsstöd: dagens antal, lootchanser och faktiska valutautbetalningar är oförändrade.
+Framtida belöningar med flera föremål eller guld måste delas ut atomiskt av servern och ingå i dess
+beständiga kvitto. Webbläsaren delar aldrig ut belöningar utifrån visade värden.
 
 ## Failure XP
 
-A missed catch roll grants `gameplay.activities.failureXpPercent` (50) percent of the
-activity's XP, rounded down but never below 1 XP. A catch, and every attempt of an activity
-without a linked loot table, grants the full XP. The server alone decides the amount from
-the saved loot outcome; the client's offer still names the full XP for stale-offer checks.
-Receipts saved before the change keep the XP they awarded.
+Ett missat fångstslag ger `gameplay.activities.failureXpPercent` (50) procent av aktivitetens XP, avrundat
+nedåt men aldrig under 1 XP. En fångst, och varje försök i en aktivitet utan kopplad loot table, ger full
+XP. Bara servern bestämmer beloppet utifrån det sparade lootutfallet; klientens erbjudande anger fortfarande
+full XP för kontrollen av inaktuella erbjudanden. Kvitton som sparades före ändringen behåller den XP de gav.
 
-## Eligibility
+## Villkor
 
-The first activities take place near The Harbor and require the character to be in the
-harbor, outside combat and hospital. Server checks enforce the same rules as navigation
-and buttons. No ship-job restriction is added; a pending ship upgrade still blocks travel
-but does not block these shore activities. Insufficient Stamina rejects the request.
-Recovery is settled on the server before spending, so offline recovery can fund an action.
-The existing Stamina deadline refresh re-enables buttons when a tick restores enough.
+De första aktiviteterna sker nära The Harbor och kräver att karaktären är i hamnen, utanför strid och
+Hospital. Serverkontroller tillämpar samma regler som navigeringen och knapparna. Ingen begränsning för
+skeppsarbete läggs till; en pågående skeppsuppgradering spärrar fortfarande resor men inte dessa
+strandaktiviteter. För lite Stamina nekar begäran. Återhämtningen avräknas på servern innan kostnaden dras,
+så återhämtning offline kan betala en handling. Den befintliga uppdateringen vid Stamina-deadline aktiverar
+knapparna igen när ett tick har återställt tillräckligt.
 
-## Atomic requests and recovery
+## Atomiska anrop och återställning
 
-public.perform_activity(activity_id, expected_stamina_cost, expected_xp_gain, request_id)
-delegates to the private authenticated transaction. The current character is determined
-from the authenticated account, never supplied by the client. Its shared combat/character
-locks serialize concurrent activities, training, resource changes and travel.
+`public.perform_activity(activity_id, expected_stamina_cost, expected_xp_gain, request_id)` delegerar till
+den privata autentiserade transaktionen. Aktuell karaktär bestäms från det inloggade kontot och skickas
+aldrig av klienten. Transaktionens gemensamma lås för strid och karaktär serialiserar samtidiga
+aktiviteter, träning, resursändringar och resor.
 
-The transaction checks its existing private.activity_requests receipt first. An exact
-replay returns that saved result without charging or granting XP again, even if the offer
-has changed, the activity is disabled, or the character is now at sea, in combat or in
-hospital. Reusing the ID with another activity, cost or reward raises REQUEST_CONFLICT.
+Transaktionen kontrollerar först sitt befintliga kvitto i `private.activity_requests`. En exakt
+återspelning returnerar det sparade resultatet utan att dra kostnad eller ge XP igen, även om erbjudandet
+har ändrats, aktiviteten har stängts av eller karaktären nu är till sjöss, i strid eller på Hospital.
+Återanvänds ID:t med en annan aktivitet, kostnad eller belöning ges `REQUEST_CONFLICT`.
 
-For a new request the server checks eligibility, an active activity and the current offer,
-then calls spend_activity_stamina, rolls and grants any configured loot using the skill
-level before this attempt, and calls award_skill_xp with the full or failure XP in the same transaction and records
-its receipt. Cost, XP, inventory, circulation, level projection, notifications and receipt commit together.
-A replay returns the saved catch without rerolling, even after rebalancing or unlinking loot.
-Invalid or failed actions leave no cost, reward or receipt. Concurrent unique requests
-cannot overspend the remaining Stamina. A skill at the safe-integer XP storage limit
-rejects further activity; reaching skill level 100 alone does not stop XP accumulation.
+För en ny begäran kontrollerar servern villkoren, att aktiviteten är aktiv och det aktuella erbjudandet.
+Därefter anropas `spend_activity_stamina`, eventuell konfigurerad loot slås och delas ut med skillnivån före
+försöket, och `award_skill_xp` anropas med full XP eller failure XP i samma transaktion, som också sparar
+kvittot. Kostnad, XP, inventory, cirkulation, nivåprojektion, notiser och kvitto committas tillsammans. En
+återspelning returnerar den sparade fångsten utan nytt slag, även efter ombalansering eller om kopplingen
+till loot table har tagits bort. Ogiltiga eller misslyckade handlingar lämnar varken kostnad, belöning eller
+kvitto. Samtidiga unika begäranden kan inte dra mer Stamina än som finns kvar. En skill vid lagringstaket
+för säkra heltal nekar fler aktiviteter (`SKILL_XP_LIMIT`); att nå skillnivå 100 stoppar inte i sig
+XP-ökningen.
 
-The shared browser economy journal saves the exact offer and UUID before sending. Web
-Locks coordinate tabs. Ordinary in-flight requests do not display the recovery banner.
-An uncertain response retains its request for safe checking through the existing recovery
-control. Recovered requests refresh the current game state and skill display.
+Den gemensamma ekonomijournalen i webbläsaren sparar exakt erbjudande och UUID innan anropet skickas. Web
+Locks samordnar flikarna. Vanliga pågående anrop visar inte återställningsbannern. Ett osäkert svar behåller
+sin begäran så att den kan kontrolleras säkert via den befintliga återställningskontrollen. Återställda
+begäranden uppdaterar aktuellt spelläge och skillvisning.
 
-## Configuration and data access
+## Konfiguration och dataåtkomst
 
-The catalog is under gameplay.activities.catalog: stable id, name, skillId, description,
-buttonLabel, xpGain and active. gameplay.activities.failureXpPercent (1-100) sets the share
-of xpGain a miss grants. Stamina cost uses gameplay.stamina.activityCost. SQL and UI
-use the same validated configuration. Existing activity IDs and skill mappings cannot be
-removed or reassigned; activities can instead be disabled. XP gains may be rebalanced.
-The client submits expected values for stale-offer detection, not authority over rewards.
+Katalogen ligger under `gameplay.activities.catalog`: stabilt `id`, `name`, `skillId`, `description`,
+`buttonLabel`, `xpGain` och `active`. `gameplay.activities.failureXpPercent` (1-100) styr hur stor andel av
+`xpGain` en miss ger. Stamina-kostnaden kommer från `gameplay.stamina.activityCost`. SQL och gränssnitt
+använder samma validerade konfiguration. Befintliga aktivitets-ID:n och skillkopplingar kan inte tas bort
+eller flyttas; aktiviteter kan i stället stängas av. XP kan ombalanseras. Klienten skickar förväntade
+värden för att upptäcka inaktuella erbjudanden, inte för att bestämma belöningar.
 
-Definitions and receipts are private with RLS and no client table grants. Verified admins
-may inspect them read-only. Stored receipts include actual XP and Stamina changes, level
-before/after, Character Level, gameplay revision and the saved loot outcome/table version. The existing profile privacy rule
-still applies: detailed skill levels/XP belong only to their owner.
+Definitioner och kvitton är privata med RLS och utan tabellbehörigheter för klienter. Verifierade
+administratörer kan läsa dem men inte ändra dem. Sparade kvitton innehåller faktisk XP- och
+Stamina-ändring, nivå före och efter, Character Level, gameplay-revision och det sparade lootutfallet med
+tabellversion. Den befintliga integritetsregeln för profiler gäller: detaljerade skillnivåer och XP visas
+bara för ägaren.
 
-## Verification
+## Verifiering
 
-Database checks cover all three skills, rebalanced early levels, atomic cost/reward, saved loot,
-stale/tampered offers, disabled activities, receipt replay, account isolation, rollback,
-Stamina recovery, zero balance, combat, travel and hospital. Misses grant half the XP and at
-least 1 XP. Alternative-config checks use 3 Stamina, 17 XP and a 30% failure share (5 XP).
-Tests that need exact XP totals use Foraging, which has no catch roll. Browser tests cover immediate feedback, profile persistence,
-mobile layouts, resource recovery, concurrent/duplicate requests and saved-action recovery.
-The shared feedback test holds a response open while checking two tabs for banner flashes.
+Databaskontroller täcker alla tre skills, de ombalanserade tidiga nivåerna, atomisk kostnad och belöning,
+sparad loot, inaktuella och manipulerade erbjudanden, avstängda aktiviteter, återspelade kvitton, isolering
+mellan konton, återrullning, Stamina-återhämtning, nollsaldo, strid, resor och Hospital. Missar ger halva
+XP:n och minst 1 XP. Kontroller med alternativ config använder 3 Stamina, 17 XP och en failure-andel på
+30 % (5 XP). Tester som behöver exakta XP-summor använder Foraging, som saknar fångstslag. Webbläsartester
+täcker direkt återkoppling, beständighet i profilen, mobillayouter, resursåterhämtning, samtidiga och
+duplicerade anrop och återställning av sparade handlingar. Det gemensamma återkopplingstestet håller ett
+svar öppet medan två flikar kontrolleras så att bannern inte blinkar till.
 
-Result-panel tests also cover legacy receipt compatibility, multiple item rewards, item-only/coin-only/combined outcomes, tooltip input methods, dismissal, and mobile wrapping. Future reward formats are tested with presentation receipts belonging only to disposable test characters.
+Tester av resultatpanelen täcker även kompatibilitet med äldre kvitton, flera föremålsbelöningar, utfall
+med bara föremål, bara mynt och båda, tooltips med olika inmatningssätt, stängning och radbrytning på
+mobil. Framtida belöningsformat testas med presentationskvitton som bara tillhör engångskaraktärer för test.

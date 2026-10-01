@@ -92,8 +92,8 @@ valet till Round shot.
 | Fas | Order | Regel |
 | --- | --- | --- |
 | Sea | Fire cannons, Round shot | En salva med utrustade kanoner. Skadar skeppet. |
-| Sea | Fire cannons, Chain Shot | En salva och en Chain Shot ur inventory. Träffar alltid riggen med full skada och sänker målets Ship Speed i tre rundor. |
-| Sea | Fire cannons, Grape Shot | En salva och en Grape Shot ur inventory. Skadar besättningen med 60 % av skadan, mot besättningens zoner och rustning. |
+| Sea | Fire cannons, Chain Shot | En salva och en Chain Shot ur inventory. Träffzonen är alltid riggen, med full skada. Bara en träff sänker målets Ship Speed i tre rundor. |
+| Sea | Fire cannons, Grape Shot | En salva och en Grape Shot ur inventory. Träff och skada räknas med Ship-stats: Accuracy mot målets Ship Speed och Attack mot målets Ship Defense. Träffen skadar Crew Health med 60 % av skadan, mot besättningens zoner och rustning. |
 | Boarding | Fire firearm | Kräver kvarvarande skott. Ett skott per order. |
 | Boarding | Throw temporary | Kräver utrustad Temporary med kvarvarande användning. Förbrukar ett föremål. |
 | Boarding | Melee attack | Melee eller Fists. Alltid tillgänglig. |

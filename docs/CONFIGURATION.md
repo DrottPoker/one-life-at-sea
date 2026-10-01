@@ -29,6 +29,7 @@ npm run test:e2e
 ```
 
 `db:migrate` använder uttryckligen lokal Supabase. Molnmigration och publicering ingår inte.
+`config:check` stoppar om en migration är nyare än den senaste gameplaymigrationen, eftersom nästa sync annars skulle ersätta handskriven SQL utan varning. All SQL för spelet hör hemma i mallarna.
 Produktionsklienter behöver få det nya bygget; revisionen ska stämma på båda sidor.
 
 Startvärden gäller nya karaktärer. Befintlig progression skrivs inte över.
@@ -43,7 +44,7 @@ Ett föremål som en aktiv loottabell fortfarande delar ut kan inte stängas av 
 
 ## Migrationshistorik och baslinje
 
-Varje configmigration innehåller hela den genererade gameplay-SQL:en, ungefär 290 kB. SQL-delarna är ordningsberoende (en del kan droppa en trigger som en senare del återskapar), så generatorn skriver alltid hela filen i stället för enbart ändrade delar.
+Varje configmigration innehåller hela den genererade gameplay-SQL:en, ungefär 500 kB. SQL-delarna är ordningsberoende (en del kan droppa en trigger som en senare del återskapar), så generatorn skriver alltid hela filen i stället för enbart ändrade delar.
 
 `supabase/migrations/20260923111042_baseline.sql` ersätter de 86 första migrationerna sedan 2026-09-24. Den senaste configmigrationen ligger kvar efter baslinjen, så `config:check` fungerar som tidigare. De ursprungliga filerna finns i Git-historiken.
 

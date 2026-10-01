@@ -1,200 +1,100 @@
-# Admin panel
+# Adminpanel
 
-Open `/admin`, or use **Admin panel** in the header. The workspace has eight sections:
-Overview, Economy, Players, Items, Loot tables, Activities, Database and Audit log. A ninth link, **Forum**, opens the forum moderation tools. Overview links
-to the primary workflows, live game totals and recent administrative changes. Ludorex
-is the first authorized local administrator.
+Öppna `/admin` eller välj **Admin panel** i sidhuvudet. Arbetsytan har åtta avdelningar: **Overview**, **Economy**, **Players**, **Items**, **Loot tables**, **Activities**, **Database** och **Audit log**. En nionde länk, **Forum**, öppnar forumets modereringsverktyg. **Overview** länkar till de viktigaste arbetsflödena, spelets aktuella totaler och de senaste administrativa ändringarna. Ludorex är den första behöriga lokala administratören.
 
-## Content authoring
+## Innehåll
 
-1. **Items**: search/filter the catalog, create an item or edit its name, category,
-   description, effect text, active/tradable flags and image. Item IDs, ownership types
-   and equipment slots are permanent after creation. Equipment also has the stat ranges
-   its slot requires (see [Equipment](EQUIPMENT.md)); editing them changes every owned piece,
-   because stats derive from each piece's Quality. Saving a Hull first settles Ship Health for
-   every captain who has it equipped, so a changed health range grants no health in arrears. Other effects are descriptive text;
-   creating a consumable does not add a new gameplay operation.
-2. **Loot tables**: create a named collection, add items, choose fixed percentages or
-   weights at level 1/mastery, and set quantity. Equipment rolls its Quality when granted.
-   A level slider previews percentages of successful catches, with mastery at 100.
-3. **Activities**: select a table, starting/mastery catch chances and mastery level for
-   each existing activity. Select No loot to retain XP-only behavior. Changes apply to
-   new attempts immediately; earlier receipts preserve their original result.
+1. **Items**: sök och filtrera i katalogen, skapa ett item eller ändra namn, kategori, beskrivning, effekttext, flaggorna för aktivt och handelsbart samt bild. Item-ID, ägandetyp och utrustningsplats kan inte ändras när itemet väl har skapats. Utrustning har också de statintervall som platsen kräver (se [Utrustning](EQUIPMENT.md)). En ändring av dem påverkar varje ägt exemplar, eftersom stats härleds från exemplarets Quality. När en Hull sparas avräknas först Ship Health för varje kapten som har den utrustad, så ett ändrat hälsointervall ger ingen hälsa i efterhand. Övriga effekter är beskrivande text; en ny förbrukningsvara lägger inte till någon ny spelfunktion.
+2. **Loot tables**: skapa en namngiven samling, lägg till items, välj fasta procentsatser eller vikter vid nivå 1 och vid mastery, och ange antal. Utrustning slumpar sin Quality när den delas ut. Ett nivåreglage förhandsvisar procentsatserna för lyckade fångster, med mastery vid 100.
+3. **Activities**: välj tabell, fångstchans vid start och vid mastery samt masterynivå för varje befintlig aktivitet. Välj **No loot (XP only)** för att behålla ett beteende med bara XP. Ändringar gäller nya försök direkt; tidigare kvitton behåller sitt ursprungliga resultat.
 
-See [Loot tables](LOOT_TABLES.md) for the exact probability model and initial fish.
-No rarity classification is used. The database browser remains available for advanced
-inspection, with grouped resources and links back to the dedicated editors.
+Se [Loot tables](LOOT_TABLES.md) för den exakta sannolikhetsmodellen och de första fiskarna. Ingen sällsynthetsklassning används. Databasbläddraren finns kvar för avancerad granskning, med grupperade resurser och länkar tillbaka till de särskilda redigerarna.
 
-Images are optional. `/images/items/placeholder.svg` is the shared default and broken
-images also fall back to it in inventory, marketplace and admin. Upload accepts PNG,
-JPG or WebP up to 4 MB; the picker checks decoding and dimensions up to 8192 × 8192.
-Supabase Storage enforces MIME/size limits and current admin membership. The public
-item-images bucket contains item artwork only. Upload paths are immutable UUIDs under
-the uploader's account ID; replacing an image creates a new object. The authenticated
-admin RPC verifies uploaded references exist. No arbitrary external URLs are accepted.
-Uploaded objects are not deleted automatically, preserving historical image references.
+Bilder är valfria. `/images/items/placeholder.svg` är den gemensamma standardbilden, och trasiga bilder faller också tillbaka på den i inventariet, marknaden och adminpanelen. Uppladdningen tar emot PNG, JPG eller WebP upp till 4 MB; väljaren kontrollerar att bilden går att avkoda och att måtten är högst 8192 × 8192. Supabase Storage upprätthåller MIME-typ, storleksgräns och aktuellt adminmedlemskap. Den publika hinken `item-images` innehåller bara itembilder. Uppladdningarnas sökvägar är oföränderliga UUID:n under uppladdarens konto-ID, och en ersatt bild blir ett nytt objekt. Den autentiserade admin-RPC:n kontrollerar att uppladdade referenser finns. Godtyckliga externa adresser tas inte emot. Uppladdade objekt raderas inte automatiskt, så historiska bildreferenser fortsätter att fungera.
 
-All content saves use the existing audit/retry system with version checks. A linked
-table cannot be disabled; unlink it first. An item in an active table cannot be disabled;
-remove it from that table first. Definitions are not deleted through the panel.
+Allt innehåll sparas genom det befintliga systemet för granskning och återförsök, med versionskontroll. En tabell som är kopplad till en aktivitet kan inte avaktiveras; koppla bort den först. Ett item i en aktiv tabell kan inte avaktiveras; ta bort det från tabellen först. Definitioner raderas inte via panelen.
 
-Admin-created and admin-edited item rows carry `managed_by_admin=true`. Configuration
-continues to seed the original catalog but does not overwrite those rows. Loot tables
-and activity loot settings belong to the database and survive later config migrations.
+Items som skapats eller ändrats i adminpanelen har `managed_by_admin=true`. Konfigurationen fortsätter att seeda den ursprungliga katalogen men skriver inte över de raderna. Loot tables och aktiviteternas lootinställningar tillhör databasen och finns kvar efter senare konfigurationsmigreringar.
 
-## Player tools
+## Spelarverktyg
 
-Players opens a statistics overview for account growth, new accounts and unique active
-accounts, with three interactive charts and last-month, 12-month and all-time periods.
-Repeated logins count once per period; continuing sessions also count. The searchable
-directory includes registration/last-activity timestamps, activity filters and sorting. See
-[Player statistics](PLAYER_STATISTICS.md) for exact definitions and history limits.
+**Players** öppnar en statistiköversikt över kontotillväxt, nya konton och unika aktiva konton, med tre interaktiva diagram och perioderna senaste månaden, 12 månader och all tid. Upprepade inloggningar räknas en gång per period, och pågående sessioner räknas också. Den sökbara spelarlistan har tidsstämplar för registrering och senaste aktivitet, aktivitetsfilter och sortering. Se [Spelarstatistik](PLAYER_STATISTICS.md) för exakta definitioner och historikens gränser.
 
-- Search by captain name, character ID or account ID.
-- Inspect and edit names, carried/banked gold, Energy, health, eight combat stats,
-  defence orders, protection timestamps and hospital timestamps. Resource changes
-  reset the corresponding recovery timestamp to the time of the correction.
-- Edit training XP and purchased tier using the database's composite key.
-- Generate active catalog items for any selected captain. Stacks add to existing
-  holdings; equipment creates individual instances with a chosen Quality (0-100, two
-  decimal places) or, when Quality is left empty, a Quality rolled for each piece.
-  Limits: 1,000,000 stack items or 100 equipment instances per request.
-- Correct stack quantities and equipment Quality, or delete an entire inventory row.
-  Deleting an equipped piece also removes it from the captain's loadout. An equipment edit or
-  deletion settles health at the previous maximum first, like a battling level correction.
-- Release a hospital patient with full health, including Hull and battling level bonuses.
-  The release is its own audited action and is refused while the captain is in an encounter.
-- Correct private skill XP. A Crew Battling or Ship Battling correction first settles health
-  recovery at the previous maximum, so a raised maximum grants no free health, and lowers
-  current health to a reduced maximum.
-- End an entire combat as a draw without another damage round. Health, previous
-  events and snapshot stats remain intact. Active participants become draws,
-  engagement locks are removed and a public `admin_end` event explains the ending.
-  This operation does not award new combat protection.
-- Cancel a pending ship job without a refund or stat/XP grant. The original job
-  is preserved in the audit record. A job whose end time has passed is complete even
-  before the captain's state is read again: the player page shows it as finished
-  without a cancel button, and the database refuses with `SHIP_JOB_FINISHED`.
+- Sök på kaptensnamn, karaktärs-ID eller konto-ID.
+- Granska och ändra namn, burna och bankade guldmynt, Energy, hälsa, åtta stridsstats, försvarsorder samt tidsstämplar för skydd och Hospital. En ändrad resurs nollställer motsvarande återhämtningstidsstämpel till korrigeringens tid.
+- Ändra tränings-XP och köpt nivå via databasens sammansatta nyckel.
+- Skapa aktiva katalogitems åt en vald kapten. Stackar läggs till befintligt innehav. Utrustning skapar enskilda exemplar med vald Quality (0-100, två decimaler) eller, om Quality lämnas tom, en Quality som slumpas för varje exemplar. Gränser: 1 000 000 stackade items eller 100 utrustningsexemplar per begäran.
+- Korrigera antal i stackar och utrustningens Quality, eller radera en hel rad i inventariet. Raderas ett utrustat exemplar tas det också bort från kaptenens uppsättning. En ändring eller radering av utrustning avräknar först hälsan vid det tidigare maximumet, precis som en korrigerad battling-nivå.
+- Skriv ut en patient från Hospital med full hälsa, inklusive bonusar från Hull och battling-nivåer. Utskrivningen är en egen loggad åtgärd och nekas medan kaptenen är i en strid.
+- Korrigera privat skill-XP. En korrigering av Crew Battling eller Ship Battling avräknar först hälsoåterhämtningen vid det tidigare maximumet, så ett höjt maximum ger ingen gratis hälsa, och sänker aktuell hälsa till ett sänkt maximum.
+- Avsluta en hel strid som oavgjord utan en ny skaderunda. Hälsa, tidigare händelser och snapshot-stats står kvar. Aktiva deltagare får oavgjort, engagemangslåsen tas bort och en publik händelse `admin_end` förklarar avslutet. Åtgärden ger inget nytt stridsskydd.
+- Avbryt ett pågående skeppsjobb utan återbetalning och utan stats eller XP. Originaljobbet sparas i granskningsposten. Ett jobb vars sluttid har passerat är klart redan innan kaptenens läge läses igen: spelarsidan visar det som färdigt utan avbrytknapp, och databasen nekar med `SHIP_JOB_FINISHED`.
 
-Admin access remains available during the administrator's hospital/attack lock.
-Editing a character in an active encounter is refused until that encounter ends.
-Before an edit or deletion, the captain's due hospital discharge, sea arrival and finished
-ship job are settled. The version check still compares the unsettled row the administrator
-saw, so the entered values are final instead of being changed by a later settlement.
-Item grants, item corrections and training progress edits use the same ordered
-character/combat locks as gameplay.
+Adminåtkomsten fungerar även medan administratören själv ligger på Hospital eller har ett attacklås. En karaktär i en pågående strid kan inte ändras förrän striden är slut. Före en ändring eller radering avräknas kaptenens förfallna utskrivning från Hospital, ankomst från sjöresa och färdiga skeppsjobb. Versionskontrollen jämför fortfarande med den oavräknade rad som administratören såg, så de inmatade värdena blir slutgiltiga i stället för att ändras av en senare avräkning. Utdelning av items, korrigering av items och ändring av träningsframsteg använder samma ordnade karaktärs- och stridslås som spelet.
 
-## Database browser
+## Databasbläddrare
 
-The browser exposes allowlisted game/admin tables, including private combat,
-bank history, jobs, inventory, circulation and request receipts. It provides:
+Bläddraren visar spel- och admintabeller från en tillåtelselista, även privata tabeller för strid, bankhistorik, jobb, inventarium, cirkulation och begärandekvitton. Den har:
 
-- Literal text search, exact column/value filtering and 50-row pagination.
-- Column names, PostgreSQL types, primary keys, NULL values and full row details.
-- Editable forms for characters, training progress, item stacks and instances.
-- Decimal strings for every scalar value, retaining bigint/numeric precision.
-- An audit browser with request ID, administrator account ID, reason, timestamp,
-  payload and before/after values. A grant of equipment records every new instance.
+- Bokstavlig textsökning, filtrering på exakt kolumn och värde samt sidor om 50 rader.
+- Kolumnnamn, PostgreSQL-typer, primärnycklar, NULL-värden och fullständiga raddetaljer.
+- Redigeringsformulär för karaktärer, träningsframsteg, itemstackar och utrustningsexemplar.
+- Decimalsträngar för varje skalärt värde, så att precisionen i bigint och numeric behålls.
+- En granskningsvy med begärande-ID, administratörens konto-ID, orsak, tidsstämpel, nyttolast samt värden före och efter. En utdelning av utrustning loggar varje nytt exemplar.
 
-Derived projections and historical records are inspectable but not raw editable.
-Items and loot use the dedicated content editors. Skill curves, activity cost/XP,
-training tiers and inventory categories still use config/gameplay.json and config:sync. Historical receipts and audit records cannot be edited or deleted.
-Account ownership/primary keys cannot be reassigned. This is a game administration
-panel; it does not expose arbitrary SQL, schema changes, account passwords,
-session tokens or infrastructure schemas. Account deletion and admin membership
-changes remain database-owner operations.
+Härledda projektioner och historiska poster går att granska men inte att redigera direkt. Items och loot ändras i de särskilda innehållsredigerarna. Skill-kurvor, aktiviteternas kostnad och XP, träningsnivåer och inventariekategorier styrs fortfarande av `config/gameplay.json` och `config:sync`. Historiska kvitton och granskningsposter kan inte ändras eller raderas. Kontoägarskap och primärnycklar kan inte flyttas. Panelen är till för att administrera spelet; den exponerar inte godtycklig SQL, schemaändringar, kontolösenord, sessionstoken eller infrastrukturscheman. Radering av konton och ändringar av adminmedlemskap görs fortfarande av databasägaren.
 
-## Authorization and retries
+## Behörighet och återförsök
 
-`private.admin_members` stores current administrator account IDs. All admin tables
-use RLS and no direct client grants. Public RPC wrappers are security invokers.
-Private entrypoints use fixed-search-path security definers, require a registered
-account and verify membership for every call, including receipt retries. User
-metadata cannot grant access. Revocation is effective without JWT refresh; a
-membership share lock allows an already running transaction to finish first.
+`private.admin_members` lagrar de nuvarande administratörernas konto-ID. Alla admintabeller har RLS och saknar direkta klienträttigheter. De publika RPC-wrapparna är security invoker. De privata ingångarna är security definer med fast `search_path`, kräver ett registrerat konto och kontrollerar medlemskapet vid varje anrop, även vid återförsök mot ett kvitto. Användarmetadata kan inte ge åtkomst. En återkallelse gäller utan att JWT behöver förnyas; ett delat lås på medlemskapet låter en transaktion som redan pågår bli klar först.
 
-Next.js checks identity and authorization server-side. Proxy returns HTTP 403 for
-signed-in non-admin requests to admin routes. Server Actions and database RPCs
-remain independently protected. Ordinary character visibility and other player
-policies are unchanged. No service-role key is needed.
+Next.js kontrollerar identitet och behörighet på servern. Proxyn svarar HTTP 403 när en inloggad användare som inte är administratör begär en adminroute, och HTTP 503 om medlemskapet inte gick att kontrollera. Server Actions och databasens RPC:er är skyddade var för sig. Vanlig synlighet för karaktärer och spelarnas övriga policyer är oförändrade. Ingen service-role-nyckel behövs.
 
-Mutations and their audit receipt commit together. A per-administrator request
-UUID serializes retries. Reusing a UUID with a different action, payload or reason
-fails. Row edits/deletes compare the original database fingerprint after locking;
-stale screens cannot overwrite newer state. All changes require a 3-500 character
-reason and an explicit review step with a readable summary. Technical payloads are
-collapsed. In-flight requests stay hidden from the recovery banner; a genuinely
-unconfirmed request becomes recoverable after an uncertain response or reload.
+En mutation och dess granskningskvitto sparas i samma transaktion. Ett begärande-UUID per administratör gör att återförsök körs ett i taget. Ett återanvänt UUID med annan åtgärd, nyttolast eller orsak misslyckas. Ändringar och raderingar av rader jämför radens ursprungliga fingeravtryck i databasen efter låsningen, så en inaktuell vy kan inte skriva över nyare data. Varje ändring kräver en orsak på 3-500 tecken och ett uttryckligt granskningssteg med en läsbar sammanfattning. Tekniska nyttolaster är ihopfällda. Begäranden som pågår visas inte i återhämtningsbannern; en begäran som verkligen är obekräftad går att återuppta efter ett osäkert svar eller en omladdning.
 
-Before sending a mutation, the browser saves its request in account-scoped
-session storage. Unconfirmed requests can be checked again after a reload or
-navigation within the same tab. Checking reuses the original request UUID and
-cannot grant/delete a second time. Closing the tab removes this browser journal;
-the durable database audit remains. Admin forms return rule violations without
-exposing raw database errors.
+Innan en mutation skickas sparar webbläsaren begäran i sessionStorage, avgränsat per konto. Obekräftade begäranden kan kontrolleras igen efter en omladdning eller navigering i samma flik. Kontrollen återanvänder det ursprungliga begärande-UUID:t och kan inte dela ut eller radera något en andra gång. När fliken stängs försvinner webbläsarens journal, men den beständiga granskningen i databasen finns kvar. Adminformulären visar regelbrott utan att exponera råa databasfel.
 
-Inventory changes automatically update world circulation and history through the
-existing triggers. Owner-only revision events refresh affected players' tabs.
+Ändringar i inventarier uppdaterar världens cirkulation och historik automatiskt genom de befintliga triggrarna. Revisionshändelser som bara ägaren tar emot uppdaterar de berörda spelarnas flikar.
 
-## Local access management
+## Lokal åtkomsthantering
 
-Use an existing, explicitly selected character:
+Använd en befintlig, uttryckligen vald karaktär:
 
 ```powershell
 node scripts/admin-access.mjs grant "Ludorex"
 node scripts/admin-access.mjs revoke "Character name"
 ```
 
-The script targets only the configured local Docker database. Migration files do
-not hardcode or automatically promote any account. For a future hosted database,
-the database owner grants access to the verified account UUID in
-`private.admin_members`; no browser route can perform that bootstrap.
+Skriptet riktar sig bara mot den konfigurerade lokala Docker-databasen. Migreringsfilerna hårdkodar inte och befordrar inte automatiskt något konto. I en framtida hosted databas ger databasägaren åtkomst till det verifierade konto-UUID:t i `private.admin_members`; ingen route i webbläsaren kan göra den första tilldelningen.
 
-The schema was introduced by the migrations `admin_panel`, `admin_combat_interruption` and `admin_resource_timestamps`, which are now part of the baseline `20260923111042_baseline.sql`.
+Schemat infördes av migreringarna `admin_panel`, `admin_combat_interruption` och `admin_resource_timestamps`, som nu ingår i baslinjen `20260923111042_baseline.sql`.
 
-## Verification
+## Verifiering
 
-See [implementation status](IMPLEMENTATION_STATUS.md) for executed checks.
-Tests use disposable local accounts; the SQL suite rolls back its fixtures.
+Se [implementationsstatus](IMPLEMENTATION_STATUS.md) för genomförda kontroller. Testerna använder tillfälliga lokala konton, och SQL-sviten rullar tillbaka sina fixtures.
 
+## Resor till havs
 
-## Sea travel integration
+Verifierade administratörer behåller åtkomsten under resor. Resefälten kan inte ändras i den generella spelarredigeraren. Ändrad Energy behåller heltalssaldon och sätter en ny avräkningspunkt utan att flytta de globala tickgränserna. Dödlig skada från en administratör avslutar resan via Hospital, rensar ruttval och byter till hamnåterhämtning från intagningen eller från en tidigare faktisk hemkomst. Se [Resor till havs](SEA_TRAVEL.md).
 
-Verified admins retain access while traveling. Travel fields are not editable
-through the generic player editor. Energy edits preserve whole-number balances and
-reset the settlement checkpoint without changing global tick boundaries. Lethal
-administrative damage ends the journey through Hospital, clears route choices
-and switches to harbor recovery from admission or an earlier actual homecoming.
-See [sea travel](SEA_TRAVEL.md).
+## Crew Morale och övriga resurser
 
-## Crew Morale
+Karaktärsredigeraren tar emot `crew_morale` från -100 till +100 med högst en decimal. Databasens villkor upprätthåller samma gränser för adminändringar. Varje ändring sätter en ny avräkningspunkt för moralen och sparas i den befintliga granskningsloggen. Stridslåsen gäller fortfarande. Tavernans kvitton finns som en skrivskyddad resurs. Den kanoniska SQL:en för adminmutationer ligger i `supabase/templates/gameplay/admin.sql`.
 
-The character editor supports crew_morale from -100 to +100 with at most one
-decimal. Database constraints enforce the same bounds for admin edits. Each
-change establishes a fresh morale checkpoint and is recorded in the existing
-audit log. Combat locks still apply. Tavern receipts are available as a read-only
-resource. Canonical admin mutation SQL is in supabase/templates/gameplay/admin.sql.
+Stamina är en redigerbar karaktärsresurs. Heltalssaldot begränsas av det konfigurerade taket. En loggad ändring sätter `stamina_updated_at` till serverns tid; spelare kan inte ändra värdet direkt.
 
-Stamina is an editable character resource. Its integer balance is limited by the configured cap.
-An audited edit resets `stamina_updated_at` to the server time; direct player edits are denied.
+Resursen `character_skills` tillåter loggade korrigeringar av enbart `xp`. Den sammansatta nyckeln anger karaktär och skill. Den privata skill-nivån och den publika Character Level härleds automatiskt. Skill-kataloger och tröskeltabeller är skrivskyddade i adminpanelen.
 
-The `character_skills` resource permits audited corrections to `xp` only. Its composite key
-identifies the character and skill. The private skill level and public Character Level are
-derived automatically. Skill catalogs and threshold tables are read-only in the admin panel.
+`activity_definitions` och `activity_requests` är skrivskyddade adminresurser. Definitionerna hanteras i gameplay-konfigurationen, och kvittona bevarar sparad kostnad, XP och loot. Den separata resursen `activity_loot` hanteras från **Activities**. Spelarens detaljsida har också korrigeringar av Stamina, Crew Morale och privat skill-XP.
 
-`activity_definitions` and `activity_requests` are read-only administrator resources. Definitions
-are managed through gameplay configuration; receipts preserve committed cost, XP and
-loot. The separate activity_loot resource is managed from Activities. The player detail
-page also exposes Stamina, Crew Morale and private skill XP corrections.
+## Ekonomi
 
-## Economy
+`/admin/economy` övervakar Gold Coins (burna och bankade), itemcirkulation och marknadsvärdering, lager utan pris, handelsomsättning och avgifter. Separata förmögenhetstopplistor länkar till spelarverktygen. De sökbara itemtotalerna räknar items i marknadens escrow exakt en gång. Diagrammen bygger på faktiska observationer var femte minut från ett privat pg_cron-jobb, oberoende av adminbesök. Åtkomsten kontrolleras vid varje läsning, och alla totaler behåller heltalsprecision. Se [Ekonomiövervakning](ECONOMY_MONITORING.md) för definitioner, gränser och drift.
 
-`/admin/economy` monitors Gold Coins (carried and banked), item circulation and market valuation, unpriced stock, trade turnover and fees. Independent wealth leaderboards link to player tools. Searchable item totals include market escrow exactly once. Charts record actual observations every five minutes through a private pg_cron job, independently of admin visits. Access is checked on every read; all totals preserve integer precision. See [Economy monitoring](ECONOMY_MONITORING.md) for definitions, limits and operations.
+## Forummoderering
 
-## Forum moderation
+Administratörer modererar alltid forumet och utser eller avsätter spelarmoderatorer. Modereringen sker i själva forumet: trådsidorna har verktyg för att fästa, låsa, flytta, skicka till Graveyard, ta bort, återställa, redigera och stänga av, och `/forums/moderation` (länkad som **Forum** i adminnavigeringen) samlar rapportkön, avstängningar, moderatorer och modereringsloggen. Varje åtgärd kräver en orsak. På trådsidorna går det också att stänga, ta bort och återställa omröstningar, dölja och återställa bilder och ta bort signaturer; bara administratörer raderar bildfiler för gott. Databasbläddraren har gruppen Forum med skrivskyddade tavlor, trådar, inlägg, versioner, rapporter, avstängningar, moderatorer, modereringsloggen, omröstningar och deras alternativ, bilder och de inlägg som visar dem, signaturer och väntande notiser. Enskilda röster är utelämnade så att röstningen förblir anonym. Se [Forum](FORUMS.md#moderering).
 
-Administrators always moderate the forum and appoint or remove player moderators. Moderation happens in the forum itself: thread pages carry pin, lock, move, graveyard, remove, restore, edit and ban controls, and `/forums/moderation` (linked as **Forum** in the admin navigation) holds the report queue, bans, moderators and the moderation log. Every action needs a reason. Thread pages also close, remove and restore polls, hide and restore images and clear signatures; only administrators delete image files for good. The database browser has a Forum group with read-only boards, threads, posts, revisions, reports, bans, moderators, the moderation log, polls and their options, images and their posts, signatures and waiting notifications. Individual votes are left out so that voting stays anonymous. See [Forum](FORUMS.md#moderering).
+## Kontobundna sparade begäranden
 
-## Account-bound saved requests
-
-The browser journal validates stored request IDs, actions, reasons and JSON payloads before rendering or sending. Invalid storage remains intact and produces a recoverable warning. The Server Action checks that the signed-in user still matches the request owner before calling the database; switching to another administrator cannot execute an old form. A temporarily unavailable session or revoked membership keeps the request for confirmation after access is restored.
+Webbläsarens journal validerar sparade begärande-ID, åtgärder, orsaker och JSON-nyttolaster innan de visas eller skickas. Ogiltig lagring lämnas orörd och ger en varning som går att åtgärda. Server Action kontrollerar att den inloggade användaren fortfarande är begärans ägare innan databasen anropas, så ett byte till en annan administratör kan inte köra ett gammalt formulär. Är sessionen tillfälligt otillgänglig eller medlemskapet återkallat sparas begäran för bekräftelse när åtkomsten är tillbaka.

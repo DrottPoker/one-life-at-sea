@@ -76,7 +76,7 @@ Forumet följer Torns upplägg med tavlor, trådar och numrerade inlägg, men me
 
 ## Tavlor och konfiguration
 
-`gameplay.forum` i [gameplay.json](../config/gameplay.json) äger tavlorna och gränserna:
+`gameplay.forum` i [gameplay.json](../config/gameplay.json) äger tavlorna och gränserna. Tavlorna har seriösa, Torn-lika namn i stället för tematiska sjönamn (ägarens beslut 2026-09-25).
 
 - `boards[]` har ett stabilt `id`, sektion, namn, beskrivning, `posting` och `active`. `open` betyder att alla skriver, `moderators` att bara moderatorer startar trådar och svarar (Announcements), `closed` att ingen skriver (Graveyard). Konfigurationen kräver exakt en aktiv stängd tavla och minst en öppen.
 - Tavlor tas aldrig bort, eftersom sparade trådar pekar på dem; avaktivera i stället. En inaktiv tavla och dess trådar döljs för spelare men syns för moderatorer. Namn, ordning och regler uppdateras vid `config:sync`, medan räknarna ägs av databasen.

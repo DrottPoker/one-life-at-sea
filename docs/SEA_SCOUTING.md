@@ -17,8 +17,7 @@ allt PvP till havs. [Resor](SEA_TRAVEL.md) och [strid](COMBAT_SYSTEM.md) gäller
 - Senaste sökningen ersätter föregående lista. Den gäller endast det aktuella
   havsbesöket. Ett nytt besök kräver ny scouting.
 - Scouting är spärrad under resa, på Hospital och för båda deltagare i pågående strid.
-  Energy återhämtas med +5 på fasta tiominutersticks, även under resor.
-  Intjänad Energy räknas före kontroll och debitering av scouting. Se [Energy](ENERGY_RECOVERY.md).
+  Energy som intjänats i havets takt räknas före kontroll och debitering av scouting. Se [Energy](ENERGY_RECOVERY.md).
 
 ## Attack efter scouting
 

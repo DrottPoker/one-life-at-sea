@@ -1,63 +1,31 @@
-# Server and transaction responsiveness
+# Svarstider för server och transaktioner
 
-## September 2026 audit
+## Granskningen i september 2026
 
-The audit covers account/session checks, shared layouts, navigation guards, resources,
-background subscriptions, activities, crafting, bank, training, tavern, inventory,
-marketplace, travel, scouting, combat, notifications, profiles and administration.
+Granskningen omfattar konto- och sessionskontroller, delade layouter, navigeringsspärrar, resurser, bakgrundsprenumerationer, aktiviteter, crafting, bank, träning, tavernan, inventariet, marknaden, resor, spaning, strid, notiser, profiler och administration.
 
-The local baseline showed a median 18ms for a direct activity RPC, versus 231ms from
-click until the activity button and confirmed XP were ready in a production build.
-The surrounding requests and rendering dominated the visible wait. Development mode
-also includes compilation and development tooling, so it is not the production budget.
+Den lokala utgångsmätningen gav en median på 18 ms för ett direkt aktivitets-RPC, mot 231 ms från klick tills aktivitetsknappen och bekräftad XP var klara i ett produktionsbygge. Det var omgivande anrop och rendering som dominerade den synliga väntan. Utvecklingsläget innehåller dessutom kompilering och utvecklingsverktyg och är därför inte måttstocken för produktion.
 
-## Changes
+## Ändringar
 
-- `get_player_context` returns only the authenticated player's character, current
-  administrator membership and gameplay revision in one read. It does not settle
-  gameplay or take combat locks. Server-side user validation remains in place.
-- `get_player_snapshot` returns resources, skills and notification counts in one
-  transaction after settling the current game state. Request-scoped React caches
-  share it across layouts/pages. There is no persistent cache of private balances,
-  permissions, offers or stock.
-- `requireCharacter` skips the resource read only when both existing navigation
-  exceptions are already enabled. Such mutations already enforce eligibility in
-  their transaction; their receipt-recovery behavior remains intact. Other callers,
-  including combat, retain their hospital/sea guards.
-- Navigation checks still settle combat, hospital and travel under the same locks,
-  but no longer build training catalogs, skill progress, resource snapshots or
-  combat history just to decide a redirect.
-- Last-combat lookup separates defender history and participant history so each
-  can start with the existing character-leading indexes, instead of testing every
-  battle with a correlated OR condition.
-- World-clock synchronization remains active on mount, focus and its configured
-  interval. Ordinary server renders update its time anchor directly instead of
-  restarting the clock and adding another HTTP request for every game action.
-- Game snapshots carry their committed event revision. The refresh queue drops
-  delayed realtime events already represented by the rendered snapshot, preserves
-  newer events, and coalesces refresh requests while one is running.
-- Economy requests, combat orders, defence changes, travel, scouting and navigation
-  defer background refresh while their own request is active. Combat preparation
-  uses the same refresh coordinator and no longer forces an extra refresh after
-  its server action has already revalidated the view. Hidden tabs catch up when
-  visible instead of repeatedly rebuilding private views in the background.
+- `get_player_context` returnerar bara den inloggade spelarens karaktär, aktuellt adminmedlemskap och gameplay-revision i en läsning. Den avräknar inget spelläge och tar inga stridslås. Valideringen av användaren på servern finns kvar.
+- `get_player_snapshot` returnerar resurser, skills och antal notiser i en transaktion efter att det aktuella spelläget har avräknats. React-cachar som gäller per begäran delar resultatet mellan layouter och sidor. Det finns ingen beständig cache av privata saldon, behörigheter, erbjudanden eller lager.
+- `requireCharacter` hoppar över resursläsningen bara när båda de befintliga navigeringsundantagen redan är påslagna. Sådana mutationer kontrollerar redan behörigheten i sin transaktion, och deras återhämtning via kvitton är oförändrad. Övriga anropare, även strid, behåller sina spärrar för Hospital och sjöresa.
+- Navigeringskontrollerna avräknar fortfarande strid, Hospital och resor under samma lås, men bygger inte längre träningskataloger, skill-framsteg, resurssnapshots eller stridshistorik bara för att avgöra en omdirigering.
+- Uppslaget av senaste strid delar upp försvararhistorik och deltagarhistorik, så att båda kan börja i de befintliga index som har karaktären först, i stället för att pröva varje strid med ett korrelerat OR-villkor.
+- Världsklockan synkroniseras fortfarande vid montering, vid fokus och med sitt konfigurerade intervall. Vanliga serverrenderingar uppdaterar klockans tidsankare direkt i stället för att starta om klockan och lägga till ännu ett HTTP-anrop för varje spelhandling.
+- Spelets snapshots bär sin sparade händelserevision. Uppdateringskön släpper fördröjda realtidshändelser som redan finns med i den renderade snapshoten, behåller nyare händelser och slår ihop uppdateringsbegäranden medan en uppdatering pågår.
+- Ekonomibegäranden, stridsorder, försvarsändringar, resor, spaning och navigering skjuter upp bakgrundsuppdateringen medan deras egen begäran pågår. Stridsförberedelsen använder samma uppdateringskoordinator och tvingar inte längre fram en extra uppdatering efter att dess Server Action redan har revaliderat vyn. Dolda flikar kommer ikapp när de blir synliga i stället för att bygga om privata vyer gång på gång i bakgrunden.
 
-## Transaction guarantees
+## Transaktionsgarantier
 
-All costs, resource recovery, rewards, inventory, circulation, progression,
-notifications and durable receipts still commit inside their existing PostgreSQL
-transactions. The changes do not remove locks, weaken eligibility checks, cache
-live money/stock, optimistically grant rewards or shorten gameplay timers. Duplicate
-requests, retries after lost responses and account switches keep the same rules.
+Alla kostnader, all resursåterhämtning, belöningar, inventarier, cirkulation, progression, notiser och beständiga kvitton sparas fortfarande i sina befintliga PostgreSQL-transaktioner. Ändringarna tar inte bort lås, försvagar inte behörighetskontroller, cachar inte aktuella pengar eller lager, delar inte ut belöningar i förväg och kortar inte speltimers. Dubblettbegäranden, återförsök efter förlorade svar och kontobyten följer samma regler.
 
-Database statement statistics were inspected alongside end-to-end measurements.
-Existing keyed receipts, character locks, paginated market/inventory reads and
-notification indexes remain in place. The audit found no reason to remove locking
-or add connection pools on top of the existing PostgREST transport.
+Databasens statistik per SQL-sats granskades tillsammans med mätningar genom hela kedjan. Befintliga nyckelade kvitton, karaktärslås, sidindelade läsningar av marknad och inventarium samt notisindex finns kvar. Granskningen hittade inget skäl att ta bort låsning eller lägga anslutningspooler ovanpå den befintliga PostgREST-transporten.
 
-## Reproducible measurements
+## Reproducerbara mätningar
 
-Build first, then run with local Supabase:
+Bygg först och kör sedan mot lokal Supabase:
 
 ```powershell
 npm run build
@@ -66,28 +34,21 @@ node node_modules/@playwright/test/cli.js test tests/e2e/performance.spec.ts
 Remove-Item Env:MEASURE_PERFORMANCE
 ```
 
-The opt-in test creates and cleans up a disposable account and writes raw samples
-and summaries to `.local/performance-comparison.json`. It measures direct RPCs,
-15 serial activity clicks, bank transfers, crew training and three full-document visits to each of ten pages.
-It is skipped in ordinary correctness runs. Click measurements stop when the request
-is no longer pending and the authoritative resource/XP change is visible, not at
-first paint. The bank clears its input after a successful transfer, so its measurement
-uses the completed form state rather than waiting for an empty-input button to enable.
-There are no fixed timing assertions that would fail on a busy CI machine.
+Testet körs bara på begäran och hoppas över i vanliga korrekthetskörningar. Det skapar och städar ett tillfälligt konto och mäter direkta RPC:er, 15 aktivitetsklick i följd, banköverföringar, besättningsträning och tre helsidesbesök på var och en av tio sidor. Klickmätningarna stoppar när begäran inte längre väntar och den auktoritativa ändringen av resurs eller XP syns, inte vid första renderingen. Banken tömmer sitt fält efter en lyckad överföring, så den mätningen använder formulärets färdiga läge i stället för att vänta på att en knapp med tomt fält aktiveras. Det finns inga fasta tidskrav som skulle fallera på en upptagen CI-maskin.
 
-Initial matched comparison on the same local Edge/Postgres setup:
+Råa mätvärden och sammanfattningar skrivs till `.local/performance-<tag>.json` på den dator som kör mätningen, där `<tag>` är värdet i `MEASURE_PERFORMANCE` (ovan `comparison`). `.local/` ignoreras av Git, så mätfilerna ingår inte i repot.
 
-| Measurement | Before median, ms | After median, ms |
+Första jämförelsen med samma lokala uppsättning av Edge och Postgres:
+
+| Mätning | Median före, ms | Median efter, ms |
 | --- | ---: | ---: |
-| Activity click to ready | 231 | 143 |
-| Activity RPC | 18 | 12 |
-| Game-state RPC | 13 | 10 |
+| Aktivitetsklick till klar | 231 | 143 |
+| Aktivitets-RPC | 18 | 12 |
+| RPC för spelläge | 13 | 10 |
 
-Activity p95 changed from 323ms to 190ms in the 15-sample comparison. This is about
-38% lower median click latency. Full-document page measurements use three samples
-per route and include browser work, so small differences are not significant:
+Aktivitetens p95 gick från 323 ms till 190 ms i jämförelsen med 15 mätvärden. Mediantiden för ett klick blev ungefär 38 % lägre. Helsidesmätningarna har tre mätvärden per route och omfattar webbläsarens arbete, så små skillnader är inte signifikanta:
 
-| Page | Before median, ms | After median, ms |
+| Sida | Median före, ms | Median efter, ms |
 | --- | ---: | ---: |
 | /harbor | 308 | 315 |
 | /activities | 315 | 285 |
@@ -100,36 +61,30 @@ per route and include browser work, so small differences are not significant:
 | /notifications | 292 | 297 |
 | /players/profile | 311 | 269 |
 
-A final independent run after the clock and unfinished-account fixes produced:
+En sista, oberoende körning efter rättelserna av klockan och av ofärdiga konton gav:
 
-| Measurement | Samples | Median, ms | p95, ms |
+| Mätning | Mätvärden | Median, ms | p95, ms |
 | --- | ---: | ---: | ---: |
-| Activity click to ready | 15 | 153 | 209 |
-| Bank deposit to confirmed balance | 10 | 141 | 193 |
-| Crew training to confirmed energy | 5 | 157 | 188 |
-| Activity RPC | 15 | 14 | 50 |
-| Game-state RPC | 15 | 11 | 33 |
+| Aktivitetsklick till klar | 15 | 153 | 209 |
+| Bankinsättning till bekräftat saldo | 10 | 141 | 193 |
+| Besättningsträning till bekräftad Energy | 5 | 157 | 188 |
+| Aktivitets-RPC | 15 | 14 | 50 |
+| RPC för spelläge | 15 | 11 | 33 |
 
-The final activity median is 34% below the baseline. The two post-change runs
-illustrate normal variation; bank and training do not have matched pre-change
-samples. Raw final samples are stored locally in `.local/performance-final.json`.
+Den slutliga aktivitetsmedianen ligger 34 % under utgångsläget. De två körningarna efter ändringarna visar normal variation; bank och träning saknar jämförbara mätvärden från före ändringarna. Råvärdena från körningen sparades bara lokalt på den dator som mätte.
 
-These are local measurements, not a hosted latency guarantee or a capacity test.
-Public deployment measurements must also cover client/server/database region distance,
-concurrent players and long histories. Retain the fixture-based benchmark to compare
-future changes under the same conditions.
+Det här är lokala mätningar, inte en garanti för svarstider i en hosted miljö och inte ett kapacitetstest. Mätningar inför en publik driftsättning måste också täcka avståndet mellan klientens, serverns och databasens regioner, samtidiga spelare och långa historiker. Behåll det fixturebaserade mättestet för att jämföra framtida ändringar under samma förutsättningar.
 
-## Measurements from the project audit, 2026-09-23
+## Mätningar från projektgranskningen 2026-09-23
 
-These measurements used Next.js 16.3.6 and Supabase JS 2.117.1.
-The existing benchmark ran as part of the full browser suite against local PostgreSQL.
+Mätningarna gjordes med Next.js 16.3.6 och Supabase JS 2.117.1. Det befintliga mättestet kördes som en del av hela webbläsarsviten mot lokal PostgreSQL.
 
-| Measurement | Samples | Median, ms | p95, ms |
+| Mätning | Mätvärden | Median, ms | p95, ms |
 | --- | ---: | ---: | ---: |
-| Activity click to ready | 15 | 154 | 170 |
-| Bank transfer to confirmed balance | 10 | 136 | 180 |
-| Crew training to confirmed Energy | 5 | 140 | 217 |
-| Activity RPC | 15 | 11 | 14 |
-| Game-state RPC | 15 | 9 | 11 |
+| Aktivitetsklick till klar | 15 | 154 | 170 |
+| Banköverföring till bekräftat saldo | 10 | 136 | 180 |
+| Besättningsträning till bekräftad Energy | 5 | 140 | 217 |
+| Aktivitets-RPC | 15 | 11 | 14 |
+| RPC för spelläge | 15 | 9 | 11 |
 
-Raw samples: `.local/performance-audit-2026-09-23.json`. These results describe this local run; they are not a controlled before/after speed claim or a concurrent-load benchmark. The earlier measurements above remain historical comparisons.
+Råvärdena sparades bara lokalt på den dator som körde mätningen och ingår inte i repot. Resultaten beskriver just den lokala körningen; de är inte ett kontrollerat påstående om snabbhet före och efter och inte ett test med samtidig belastning. De tidigare mätningarna ovan står kvar som historiska jämförelser.

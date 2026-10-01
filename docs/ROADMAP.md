@@ -18,6 +18,15 @@ Forumets etapp 1-4 finns, se [Forum](FORUMS.md): tavlor, reaktioner, karma, pren
 
 - Kvar: besättningsforum när fraktioner finns, modererade av besättningens ledare. Det kräver fraktionsmedlemskap och behörigheter, som ännu inte finns.
 
+## Profil
+
+Profilsidan och porträttgalleriet finns, se [profiler](CHARACTER_PROFILES.md). Två delar av ägarens mockup från 2026-09-25 väntar på beslut av ägaren:
+
+- Profiltext med knappen **Edit profile**. Den kräver en kolumn, en RPC, en längdgräns i config och moderering som forumets signaturer.
+- Uppladdade porträtt, om de någonsin ska finnas. De kan återanvända forumets bildflöde men behöver striktare moderering, eftersom porträtt syns överallt.
+
+Flikar på profilen väntar tills det finns mer innehåll, till exempel stridshistorik.
+
 ## Beslut som ska bevaras
 
 Permanent karaktärsdöd har ersatts av [Hospital](HOSPITAL.md); historiska dödsförslag ska inte återinföras som om de vore aktuella.

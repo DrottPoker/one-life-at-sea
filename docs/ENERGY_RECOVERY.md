@@ -13,7 +13,8 @@ och den tidigare pausen till havs.
 Energy lagras och returneras som heltal, med högst 1 000. Naturlig återhämtning stannar vid 100.
 Överskott bevaras utan nygenerering tills saldot faller under 100. Ingen delad tilldelning
 på 2,5 används. Alla kaptener använder samma servergränser, oavsett senaste
-handling, inloggning, webbläsarklocka eller tidszon. Hälsans timers ändras inte.
+handling, inloggning, webbläsarklocka eller tidszon. Hälsan påverkas inte av denna regel;
+den har egna fasta ticks, se [strid](COMBAT_SYSTEM.md#hälsa-och-återhämtning).
 
 Exempel: 40 Energy i hamnen vid 12:04:58 blir 45 vid 12:05:00.
 Till havs sker inget tillskott 12:05:00, men +5 vid 12:10:00.

@@ -32,12 +32,13 @@ För separata inloggningar: `npm run dev:players`, se [testfönster](docs/DEVELO
 - Resurser, Crew Training, tidsstyrt skeppsarbete med materialkostnader och Hospital.
 - Havsresor, scouting, gemensamma PvP-strider och offentliga stridsrapporter.
 - Skills, aktiviteter med loot, Hideout och Crafting.
-- Inventory, bank, Marketplace samt cirkulations- och prishistorik.
+- Inventory med utrustning (Equip och Unequip), bank, Marketplace samt cirkulations- och prishistorik.
 - Privat brevpost, notiser och en behörighetsstyrd adminpanel med revisionslogg.
+- Forum med tavlor, trådar, reaktioner, karma, prenumerationer, moderering, omröstningar och bilder (etapp 1-4).
 
 Aktuella regler finns i [dokumentindexet](docs/README.md).
 [Status](docs/IMPLEMENTATION_STATUS.md) skiljer verifierade funktioner från kvarstående arbete.
-[Framtida funktioner](docs/ROADMAP.md) omfattar bland annat Equip/Use, matlagning och fraktionssystem.
+[Framtida funktioner](docs/ROADMAP.md) omfattar bland annat Use och aktiva föremålseffekter, matlagning, fraktionssystem och besättningsforum.
 
 ## Utveckling och kontroll
 
@@ -49,10 +50,11 @@ npm run test:db
 npm run test:config:db
 npm run test:e2e
 npm run audit:economy
+npm run db:lint
 ```
 
-`check` kontrollerar dokumentlänkar, lint, typer, enhetstester och produktionsbygge.
-Databastesterna kräver den lokala Supabase-stacken. Webbläsartester använder Edge och startar produktionsbygget på port 3100. De skapar egna testkonton; automatiska traces, video och screenshots är avstängda för att skydda inloggningsuppgifter.
+`check` kontrollerar dokumentlänkar och ankare, lint, typer, enhetstester och produktionsbygge.
+Databastesterna kräver den lokala Supabase-stacken, och `db:check` kontrollerar först att den kör repots migrationer och RPC-signaturer. Webbläsartesterna bygger appen, använder Edge och startar produktionsbygget på port 3100. De skapar egna testkonton; automatiska traces, video och screenshots är avstängda för att skydda inloggningsuppgifter.
 
 Se [arkitektur](docs/ARCHITECTURE.md), [kodunderhåll](docs/CODE_MAINTENANCE.md) och [projektgranskning](docs/PROJECT_AUDIT.md).
 Molndrift, produktionsmejl och offentlig publicering behöver verifieras separat från lokal utveckling.

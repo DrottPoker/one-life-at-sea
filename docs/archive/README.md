@@ -17,6 +17,10 @@ För aktuellt beteende, följ [dokumentindexet](../README.md) och [status](../IM
 Konfigurationsplanen är ersatt av den fullständiga [konfigurationsguiden](../CONFIGURATION.md).
 Framtida punkter med fortsatt relevans sammanfattas i [Roadmap](../ROADMAP.md).
 
+## Tidigare granskningar
+
+- [Projektgranskning 2026-09-23](audits/2026-09-23.md)
+
 ## Leveranshistorik
 
 Den tidigare löpande implementationsstatusen har delats efter datum.

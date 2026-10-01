@@ -40,15 +40,18 @@ Migrationen utgår från nuvarande nått avstånd och eventuella förfallna utre
 
 ## Regler för aktiviteter
 
-- Energy återhämtas med +5 vid fasta tiominutersgränser till havs, inklusive båda resriktningarna.
-- I hamnen gäller fasta femminutersgränser. Hemkomsten byter takt vid faktisk ankomst,
-  även offline. Energy är alltid heltal. Hälsans återhämtning är oförändrad. Se [Energy](ENERGY_RECOVERY.md).
+- Energy återhämtas i havets långsammare takt vid havsplatser och under resor i båda riktningarna.
+  Hemkomsten byter till hamnens takt vid faktisk ankomst, även offline. Se [Energy](ENERGY_RECOVERY.md).
+  Hälsan återhämtas som i hamnen.
 - Skeppsarbete måste vara färdigt före avfärd. Passerad sluttid tillgodoräknas en gång.
 - Varken angripare eller försvarare kan lämna en pågående strid.
 - Vid en havsplats kan du scouta för 5 Energy och attackera upptäckta skepp som
   fortfarande är vid samma Sea distance. Skepp under resa är skyddade. Se [scouting](SEA_SCOUTING.md).
-- Hamnaktiviteter, inventorymutationer och försvarsändringar är servermässigt spärrade.
-- Profiler och inventory får läsas vid en havsplats. Under färd visas vänteläget.
+- Hamnaktiviteter, inventorymutationer och försvarsändringar är servermässigt spärrade, eftersom
+  [den gemensamma spärren](HOSPITAL.md#server-och-samtidighet) kräver hamnposition.
+- Vid en havsplats kan Inventory, Players, profiler och attacksidan öppnas. Messages, Forums,
+  Notifications och stridsrapporter är öppna både vid havsplats och under färd. Andra sidor
+  skickas till `/sea`, som under färd visar vänteläget.
   Log out, kontoåterställning och behörig administration är tillgängliga.
 - Övriga platsaktiviteter ingår inte i denna etapp.
 
@@ -83,8 +86,8 @@ ogiltigförklarar redan erbjudna val.
 `private.settle_sea_travel` färdigställer förfallna resor under befintliga lås.
 Den anropas av gemensam settlement för spelstatus, navigation och mutationer.
 Hemkomsten gäller vid sparad deadline. Ingen bakgrundsworker eller öppen flik
-krävs. `private.character_energy_snapshot` räknar gemensamma tiominutersticks till havs
-och femminutersticks efter faktisk hemkomst, utan att dubblera gränsen vid ankomst.
+krävs. `private.character_energy_snapshot` räknar havets ticks före och hamnens ticks efter
+faktisk hemkomst, utan att dubblera gränsen vid ankomst, se [Energy](ENERGY_RECOVERY.md#byte-av-plats).
 
 Adminredigering av Energy behåller heltalsvärden och flyttar avräkningstidpunkten.
 Administrativ dödlig skada följer Hospital-regeln: resa och alternativ avslutas,
@@ -107,8 +110,8 @@ Realtime, tidsgränser, fokus, återanslutning och reservkontroll. En offlinekap
 Proxy och AppFrame delar `src/lib/game-navigation.ts`. Hospital har företräde,
 sedan strid och resa. Serverhandlingar validerar fortfarande alla villkor i SQL.
 GameStateProvider schemalägger ankomstkontroll; nedräkningen låser aldrig upp
-resan utan bekräftad spelstatus. Vid en havsplats är även attackförberedelse och
-stridsrapporter tillgängliga. Start av strid kontrolleras separat av SQL.
+resan utan bekräftad spelstatus. Tillåtna sidor till havs styrs av `isSeaAccessiblePath`
+i `src/lib/sea-travel.ts`. Start av strid kontrolleras separat av SQL.
 
 ## Konfiguration och utveckling
 

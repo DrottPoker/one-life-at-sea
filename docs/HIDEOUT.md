@@ -1,47 +1,45 @@
 # Hideout
 
-The Hideout is each captain's home in The Harbor. It houses Crafting and is the future home of Cooking
-and similar domestic activities, with upgrades planned for the home itself
-and its workspaces.
+Hideout är varje kaptens hem i The Harbor. Där finns Crafting, och det ska också bli hem för Cooking och
+liknande hushållsaktiviteter. Uppgraderingar av själva hemmet och dess arbetsplatser är planerade.
 
-## Current page
+## Nuvarande sida
 
-- `/hideout` is available from the shared navigation and the harbor directory.
-- The page welcomes the signed-in character to their own modest quarters.
-- The Kitchen and Workshop introduce Cooking and Crafting. Their level and XP come
-  from the owner's existing private skill progression, also used by their profile.
-- Crafting opens `/hideout/crafting` with available recipes and owned materials.
-  Its first instant recipe consumes 5 Oak Logs to create 1 Oak Plank. See [Crafting](CRAFTING.md).
-- Cooking and Hideout upgrades remain marked Coming later. No home levels, bonuses
-  or upgrade prices are defined yet.
-- Inventory and Activities links let the player inspect belongings and gather supplies.
-- The layout follows the existing navy/gold interface, responsive navigation and
-  persistent sidebar. The welcome and workspace icons use the shared Lucide set.
+- `/hideout` nås från den gemensamma navigeringen och hamnens katalog.
+- Sidan välkomnar den inloggade karaktären till sin egen enkla bostad.
+- **Kitchen** och **Workshop** presenterar Cooking och Crafting. Deras nivå och XP kommer från ägarens
+  befintliga privata skillframsteg, samma som på profilen.
+- Crafting öppnar `/hideout/crafting` med tillgängliga recept och egna material. Recepten, med början i
+  Oak Plank, beskrivs i [Crafting](CRAFTING.md).
+- Cooking och Hideout-uppgraderingar är fortfarande märkta **Coming later**. Inga hemnivåer, bonusar
+  eller uppgraderingspriser är definierade än.
+- Länkar till Inventory och Activities låter spelaren se sina tillhörigheter och samla förnödenheter.
+- Layouten följer det befintliga marinblå och guldfärgade gränssnittet, den responsiva navigeringen och
+  den fasta sidomenyn. Välkomst- och arbetsplatsikonerna kommer från den gemensamma Lucide-uppsättningen.
 
-## Access and state
+## Åtkomst och tillstånd
 
-The Server Component uses `requireCharacter()` and `ownSkillProgress()`. Login and a
-character are required. Character identity always comes from the authenticated account;
-there is no public home lookup or caller-selected owner. Existing hospital, sea, journey
-and attacker navigation locks apply. The navigation disables Hideout while away from
-The Harbor or in hospital, and direct URLs obey the same server-side restrictions.
+Server Component-sidan använder `requireCharacter()` och `ownSkillProgress()`. Inloggning och en karaktär
+krävs. Karaktärens identitet kommer alltid från det inloggade kontot; det finns ingen publik hemsökning och
+ingen ägare som anroparen kan välja. Befintliga navigeringslås för Hospital, havet, resor och angripare
+gäller. Navigeringen inaktiverar Hideout utanför The Harbor och på Hospital, och direkta adresser följer
+samma regler på servern.
 
-Visiting home does not move the character, spend resources, give recovery bonuses or
-change skill XP. Normal page navigation still records Last action. Home is currently a
-view belonging to every character, with no separately mutable upgrade state. The home view itself needs no
-mutable database state; Crafting uses its own private recipes and action receipts.
+Ett besök hemma flyttar inte karaktären, drar inga resurser, ger ingen återhämtningsbonus och ändrar inte
+skill-XP. Vanlig sidnavigering registrerar fortfarande Last action. Hemmet är i dag en vy som hör till
+varje karaktär, utan eget föränderligt uppgraderingstillstånd. Själva hemvyn behöver inget föränderligt
+tillstånd i databasen; Crafting använder sina egna privata recept och handlingskvitton.
 
-## Later gameplay
+## Senare spelinnehåll
 
-Future upgrades should persist per character in the database, with explicit upgrade
-requirements and server-authoritative costs. Cooking and future workshop features
-should use the existing inventory, skill progression, action locks and idempotent
-receipt conventions. Additional recipes, XP rewards, station requirements and
-upgrade balance remain to be designed.
+Framtida uppgraderingar ska sparas per karaktär i databasen, med uttryckliga krav och kostnader som
+servern bestämmer. Cooking och framtida workshopfunktioner ska använda befintlig inventory,
+skillprogression, handlingslås och konventionerna för idempotenta kvitton. Fler recept, XP-belöningar,
+krav på arbetsstationer och balans för uppgraderingar återstår att utforma.
 
-## Verification
+## Verifiering
 
-Browser coverage checks owner identity/private skills, logged-out redirects, keyboard
-navigation and history, preserved sidebar/resources, useful links, hospital and sea
-restrictions, and layouts at 1440/768/375/320px. Disposable fixtures cover existing XP
-without introducing gameplay rewards into the page.
+Webbläsartesterna kontrollerar ägarens identitet och privata skills, omdirigering för utloggade,
+tangentbordsnavigering och historik, bevarad sidomeny och resurser, användbara länkar, spärrar för
+Hospital och havet samt layouter i 1440/768/375/320 px. Engångsfixturer täcker befintlig XP utan att föra
+in spelbelöningar på sidan.

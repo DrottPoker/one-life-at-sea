@@ -6,7 +6,7 @@ Implementerat lokalt 2026-09-19.
 
 Gold Coins är spelets valuta. Varje karaktär har två separata saldon:
 
-- Gold Coins på karaktären visas som en siffra ovanför Energy, Ship Health och Crew Health.
+- Gold Coins på karaktären visas som en siffra överst i sidopanelens kort, ovanför Condition-mätarna.
 - Gold Coins på banken visas på Bank-sidan i The Harbor.
 - Endast karaktärens saldo är tillgängligt för köp. Bankpengar måste tas ut först.
 - Nya karaktärer börjar med 0 på karaktären och 0 på banken, enligt ägarens beslut.
@@ -22,10 +22,11 @@ försvarare spärras från överföringar. Försvarare kan fortfarande läsa sin
 sätta in eller ta ut pengar. Sjukhusvistelse ändrar inte något av guldsaldona.
 
 På [Marketplace](MARKETPLACE.md) används enbart burna Gold Coins. Ett köp debiterar
-köparens gold_coins och krediterar säljarens gold_coins efter 5 % försäljningsavgift.
-Avgiften räknas på en listings sammanlagda försäljning, avrundat nedåt, så delade
-köp inte ändrar totalavgiften. Pengar, items och kvitto sparas atomiskt. Varken
+köparens gold_coins och krediterar säljarens gold_coins efter säljaravgiften, se
+[Marketplace](MARKETPLACE.md#pengar-ägande-och-handlingslås). Pengar, items och kvitto sparas atomiskt. Varken
 bank_gold_coins eller Energy debiteras för köp, publicering eller återtagning.
+Burna Gold Coins betalar också nivåköp i [träningen](TRAINING_FOUNDATION.md#nivåer-och-ekonomi)
+och tavernans måltid, se [Crew Morale](CREW_MORALE.md).
 
 ## Beständighet och transaktioner
 
@@ -52,7 +53,7 @@ Utloggning, omladdning och omstart nollställer inte pengar.
 - config/gameplay.json: economy.initialGoldCoins och economy.maxGoldCoins.
 - Startvärdet gäller nya karaktärer; ändrad config skriver inte om befintliga saldon.
 - Bankens startvärde är 0. En sänkt maxgräns som krockar med sparad data avvisas.
-- supabase/templates/gameplay.sql: serverregler, saldoläsning och konfigurerade gränser.
+- supabase/templates/gameplay/bank.sql: överföringsregler och konfigurerade gränser. Saldona läses via get_game_state i game-state.sql.
 - src/lib/bank.ts: beloppsvalidering, formattering och banktyper.
 - src/app/bank-actions.ts och src/components/bank-panel.tsx: formulär och serverhandling.
 - src/app/(game)/harbor/bank/page.tsx: banksidan.

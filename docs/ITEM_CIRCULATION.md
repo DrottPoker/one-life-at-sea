@@ -69,7 +69,7 @@ diagrammet öppnas. Vid periodbyte avbryts den äldre hämtningen.
 
 inventory.historyMaxPoints i config/gameplay.json begränsar interna diagrampunkter,
 standard 500, plus två ändpunkter. Små historiker returnerar alla ändringar.
-Stora historiker använder högst 500 indexerade uppslag efter senaste kända antal
+Stora historiker använder högst `historyMaxPoints` indexerade uppslag efter senaste kända antal
 vid varje stickprovstid. Indexet börjar med item_id och recorded_at.
 Den fullständiga transaktionshistoriken bevaras även när diagrammet visar stickprov.
 
@@ -77,7 +77,8 @@ Schema och baseline skapas atomärt under lås på innehavstabellerna. Triggers 
 innan låset släpps, så ändringar mellan migrationerna inte tappas.
 
 - Migrationerna `item_circulation_history` och `central_gameplay_config_ad98e4868b86` ingår numera i [baslinjen](../supabase/migrations/20260923111042_baseline.sql).
-- [gameplay.sql](../supabase/templates/gameplay.sql) är fortsatt källan för funktionerna.
+- [circulation-tracking.sql](../supabase/templates/gameplay/circulation-tracking.sql) (räknare och triggers) och
+  [circulation-history.sql](../supabase/templates/gameplay/circulation-history.sql) (historikläsning) är källan för funktionerna.
 - [circulation.ts](../src/lib/circulation.ts) behåller cirkulationens publika typer och hjälpfunktioner.
 - [item-history.ts](../src/lib/item-history.ts) innehåller den gemensamma diagramgeometrin.
 - [item-history-chart.tsx](../src/components/item-history-chart.tsx) hämtar och visar både Circ och

@@ -62,8 +62,8 @@ Om en angripare flyr eller besegras fortsätter de andra. När sista angriparen 
 Samma kapten kan inte återansluta till samma möte och därmed återställa ammunition eller rundor.
 En kapten kan delta i ett möte åt gången. Försvararen kan läsa vanliga spelsidor, inventory,
 profiler och sparade scoutingresultat, men kan inte utföra handlingar som flyttar eller ändrar
-karaktären. Resor, scouting, föremålsändringar, träning, nya skeppsarbeten, nivåköp,
-banköverföringar, ändrade försvarsorder och separata anfall är spärrade tills mötet avslutas.
+karaktären. Alla handlingar i [den gemensamma spärrlistan](HOSPITAL.md#server-och-samtidighet),
+samt resor, scouting och separata anfall, är spärrade tills mötet avslutas.
 Om flera angripare deltar kvarstår låset tills den sista lämnar eller hela mötet avslutas.
 
 ## Onlineförsvar och realtid
@@ -75,8 +75,8 @@ Läsning, filtrering och navigering för försvararen fungerar fortfarande.
 Redan startat skeppsarbete och vanlig passiv återhämtning följer sina befintliga regler;
 pågående möte använder sin sparade ögonblicksbild.
 
-Servern kontrollerar deltagarskapet under samma ordnade lås som attackstart. Träning,
-bank, inventory och försvarsorder använder private.assert_can_act; resor och scouting
+Servern kontrollerar deltagarskapet under samma ordnade lås som attackstart. Handlingarna i
+[spärrlistan](HOSPITAL.md#server-och-samtidighet) använder `private.assert_can_act`; resor och scouting
 kontrollerar samma deltagartabell i sina respektive platsflöden. Tidigare sparade kvitton
 kan fortfarande läsas med samma request-ID utan att en ny handling utförs.
 
@@ -94,21 +94,20 @@ Råa karaktärsrader, stats, försvarsförval och stridsögonblicksbilder public
 
 Både angripare och mål behöver minst 1 Ship Health och 1 Crew Health. Full hälsa krävs inte.
 Start återställer aldrig hälsa. Permanent karaktärsdöd finns inte, oavsett skadeorsak.
-Noll Crew Health ger fem minuter i [Hospital](HOSPITAL.md); noll Ship Health sätter också Crew Health till 0.
+Noll Crew Health ger en vistelse på [Hospital](HOSPITAL.md); noll Ship Health sätter också Crew Health till 0.
 Patienter kan inte spela eller attackeras under vistelsen och återkommer med båda hälsomätarna fulla.
 Karaktär, skepp, besättning, tränade stats och pengar behålls.
 
 - Ship Health och Crew Health: 5 % av kaptenens egen maxhälsa vid fasta femminutersticks (:00, :05, :10 och så vidare
-  i UTC), som Energy, efter deltagarens avslut (`resources.healthRecoveryPercent`, `shipRecoverySeconds` och
-  `crewRecoverySeconds`). Andelarna summeras innan de avrundas nedåt, så en bråkdel går inte förlorad mellan tickarna.
+  i UTC) på alla platser, även till havs där Energy tickar glesare, efter deltagarens avslut
+  (`resources.healthRecoveryPercent`, `shipRecoverySeconds` och `crewRecoverySeconds`). Andelarna summeras innan de avrundas nedåt, så en bråkdel går inte förlorad mellan tickarna.
   Från noll tar full hälsa 20 tick, det vill säga 95 till 100 minuter beroende på när skadan kom.
 - Överlevande återhämtar båda parallellt, även offline, upp till sitt maxvärde: 100 plus bonusar.
   Utrustad Hull och Ship Battling höjer maximal Ship Health; Crew Battling höjer maximal Crew Health.
   Sjukhuspatienter får full hälsa enligt aktuell utrustning och aktuella nivåer vid utskrivning.
 - Hälsa återhämtas inte för aktiva deltagare: tick som passeras under striden räknas inte, och återhämtningen börjar
   vid första ticket efter att deltagaren lämnat striden. En tillbakadragen angripare kan börja återhämta sig medan mötet fortsätter.
-- Energy: +5 vid fasta femminutersticks i hamnen och Hospital, samt vid fasta
-  tiominutersticks till havs och under resor. Högst 100, alltid heltal. Se [Energy](ENERGY_RECOVERY.md).
+- Energy återhämtas enligt [Energy](ENERGY_RECOVERY.md), även under strid.
 - Fem minuters skydd mot inkommande attacker efter deltagarens avslut.
 - Skyddet hindrar inte egna attacker. Ett eget anfall avslutar skyddet.
 
@@ -213,7 +212,7 @@ Endast den övre delen av kurvan har gjorts flackare. Lika stats ger fortfarande
 Sätt x = log10(Attack). Grundskadan är 7*x*x + 27*x + 30.
 Detta använder den offentliga Torn-approximationens form med en skalenhet där
 en av våra statpoäng motsvarar tio Torn-poäng. Nya karaktärer börjar med 10 i alla åtta stats
-och 100 HP. Detta ger 32 skada vid en träff mellan två nya kaptener. Befintliga karaktärers
+och 100 HP. Detta ger 32 skada vid en träff i en ×1-zon mellan två nya kaptener. Befintliga karaktärers
 stats och tidigare träning behålls. Första crew-övningen kostar 5 Energy för +1 stat; köpta nivåer och Perfect Drill kan öka utfallet.
 
 - Vid full blockering (q >= 25): 0 skada.
@@ -252,9 +251,9 @@ anpassningar för statskalan och full blockering vid 25 gånger Defense.
   Äldre händelser utan vapen och zon visas som tidigare. Rapporten inleds med stridsbilden från den fas som
   avgjorde mötet, utfallet, vem som gav det sista slaget, när striden utkämpades och hur länge den varade.
   Därefter står angriparna mot försvararen med träffar, skada och hälsa efter striden, följt av hela
-  händelselistan som en tidslinje. Se [gränssnittsdesignen](INTERFACE_DESIGN.md#combat-presentation).
+  händelselistan som en tidslinje. Se [gränssnittsdesignen](INTERFACE_DESIGN.md#stridspresentation).
 - Attackvyn spelar också upp den egna senaste rundan i stridsbilden, med träffzon, skada och miss
-  för båda sidor. Se [gränssnittsdesignen](INTERFACE_DESIGN.md#combat-presentation).
+  för båda sidor. Se [gränssnittsdesignen](INTERFACE_DESIGN.md#stridspresentation).
 - Loggen visar inga lokala rundnummer eller summerat antal rundor. Det egna rundtaket visas fortfarande i attackvyn.
 - Deltagarlistan visar Ship damage och Crew damage separat för både angripare och försvarare.
   Summorna räknas från vilken hälsa varje träff skadade; äldre händelser använder sin fas.
@@ -301,15 +300,15 @@ Se [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) för senaste slutkörnin
 Supabase security advisors rapporterade inga problem. Den tidigare dokumenterade
 Next.js-diagnostiken om avbrutna RSC-strömmar förekommer vid navigation.
 
-## Administrative interruption
+## Administrativt avbrott
 
-An authorized administrator can end an active encounter through /admin.
-The operation holds the existing ordered combat locks, completes all active
-participants as draws, closes the encounter and releases engagement rows.
-It does not resolve another round, roll damage, change health or assign a winner.
-Previous events and snapshots remain intact. A public admin_end log entry
-identifies the interruption; the private admin audit retains the reason and actor.
-No new protection period is awarded by this administrative operation.
+En behörig administratör kan avsluta ett aktivt möte via /admin.
+Åtgärden tar de befintliga ordnade stridslåsen, avslutar alla aktiva deltagare
+som oavgjort, stänger mötet och släpper reservationsraderna i `combat_engagements`.
+Den räknar ingen ny runda, slumpar ingen skada, ändrar ingen hälsa och utser ingen vinnare.
+Tidigare händelser och snapshots bevaras. En publik loggrad av typen `admin_end`
+visar avbrottet; den privata adminrevisionen sparar orsak och utförare.
+Åtgärden ger ingen ny skyddsperiod.
 
 ## Koppling till resor
 
@@ -326,7 +325,7 @@ Varken angripare eller försvarare kan scouta eller resa under pågående strid.
 
 Gemensamma sorterade deltagarlås gör samtidig attack och avfärd ömsesidigt
 uteslutande. Resor skapar inget nytt attackskydd. En överlevande kapten stannar
-på havsplatsen med fortsatt återhämtning på fasta tiominutersticks. Nederlag skickar kaptenen till
+på havsplatsen och återhämtar Energy i havets takt, se [Energy](ENERGY_RECOVERY.md). Nederlag skickar kaptenen till
 Hospital i hamnen och bevarar distansrekordet. Se [resor](SEA_TRAVEL.md).
 
 ## Crew Morale

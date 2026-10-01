@@ -6,20 +6,20 @@ och egna itembilder.
 
 ## Spelarens vy
 
-- **Most Popular** är startsidan. Itemtyper sorteras efter faktiskt sålt antal under
-  de senaste 12 timmarna, flest först. Antalet räknar exemplar, inte affärer eller
+- **Most Popular** är startsidan. Itemtyper sorteras efter faktiskt sålt antal i
+  popularitetsfönstret `marketplace.popularityHours`, flest först. Antalet räknar exemplar, inte affärer eller
   annonser. Vid lika försäljning används lägsta pris och därefter namn.
 - Kategorierna finns längst till vänster. En kategori sorteras efter billigaste
   aktuella styckpris, billigast först. Items utan aktiva listings visas sist.
   Namnsökning och kategori gäller före sidindelning och bevaras i adressen.
 - Itemkort visar lägsta styckpris följt av tillgängligt antal inom parentes på samma
-  rad, med en liten Gold Coins-ikon. Försäljningsantal per 12 timmar visas inte på korten;
+  rad, med en liten Gold Coins-ikon. Försäljningsantal visas inte på korten;
   Most Popular använder fortfarande samma försäljningsbaserade sortering.
 - Över bilden visas ett öga till vänster och en varukorg till höger vid hover eller
   tangentbordsfokus. På pekskärm är kontrollerna alltid synliga.
 - Ögat öppnar inventoryns beskrivning, effekttext, bild samt Value och Circ med
   varsitt diagram. Detaljerna rullas ut och upp på 0,1 sekunder, som i Inventory. [Value](ITEM_MARKET_VALUE.md) är antalsviktat genomsnitt från
-  genomförda köp under 12 timmar, före avgift och avrundat nedåt i Gold Coins.
+  genomförda köp i värdefönstret `marketplace.valueWindowHours`, före avgift och avrundat nedåt i Gold Coins.
   Senaste Value ligger kvar när fönstret blir tomt; bara aldrig sålda items visar N/A.
   Varukorgen öppnar listings med säljarlänk, Quality och stats, styckpris,
   kvarvarande antal, Quantity, Fill Max och Buy i kompakta rader. Priset är stigande.
@@ -101,7 +101,7 @@ orsakar luckor eller dubbletter mellan gamla sidor. Med `own_only=true` behålls
 sidindelning. Ett bytt item börjar på 20 igen.
 
 Populariteten räknas direkt från tidsindexerad försäljningshistorik.
-Fönstret är `(servertid - 12 timmar, servertid]`. Kontoradering tar bort kvarvarande
+Fönstret är `(servertid - popularityHours, servertid]`. Kontoradering tar bort kvarvarande
 innehav och listings, men försäljningshistorik behålls utan borttagna kontoidentiteter.
 
 ## Konfiguration och källor
