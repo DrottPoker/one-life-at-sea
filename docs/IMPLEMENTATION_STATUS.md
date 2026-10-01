@@ -32,7 +32,7 @@ Exakta regler finns i [dokumentindexet](README.md). Helhetsgranskningen rättar 
 | RPC-avtal | Alla 95 typade funktioner finns med rätt parameterlistor |
 | Ekonomins integritet efter alla tester | 0 avvikelser i samtliga 8 kontroller |
 
-Alla SQL-migrationer, även forumets, är applicerade lokalt. Next.js 16.3.6, Supabase JS 2.117.1 och Vitest 5.0.1 ingår i verifieringen.
+Alla SQL-migrationer, även forumets, är applicerade lokalt. Next.js 16.3.8 (hela webbläsarsviten körd 2026-10-01), Supabase JS 2.117.1 och Vitest 5.0.1 ingår i verifieringen.
 [Granskningsrapporten](PROJECT_AUDIT.md) beskriver fynd, rättningar och kontrollernas omfattning.
 [Prestanda](PERFORMANCE.md) innehåller faktiska lokala mätvärden.
 

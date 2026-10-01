@@ -121,7 +121,7 @@ future changes under the same conditions.
 
 ## Measurements from the project audit, 2026-09-23
 
-The current production build uses Next.js 16.3.6 and Supabase JS 2.117.1.
+These measurements used Next.js 16.3.6 and Supabase JS 2.117.1.
 The existing benchmark ran as part of the full browser suite against local PostgreSQL.
 
 | Measurement | Samples | Median, ms | p95, ms |

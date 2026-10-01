@@ -51,7 +51,7 @@ strömmad RSC-rendering, till exempel när ett sidbyte avbryter en pågående up
 serverfel: bara GET-renderingen avbryts och inget sparas. React rapporterar avbrottet som ett vanligt
 `Error`, medan Next bara tystar `AbortError` och `ResponseAborted`
 ([vercel/next.js#96704](https://github.com/vercel/next.js/issues/96704)). Rättningen
-([#96715](https://github.com/vercel/next.js/pull/96715)) finns i canary men inte i 16.3.6. Ta bort
+([#96715](https://github.com/vercel/next.js/pull/96715)) finns i canary men inte i 16.3.8. Ta bort
 noteringen efter uppgradering till en version med rättningen. De två vanligaste källorna är
 borta sedan 2026-09-25: sidor som bara omdirigerar besvaras av proxyn med en riktig omdirigering, och
 `app-frame.tsx` uppdaterar inte längre vid varje anslutning av realtidskanalen utan bara när den
