@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
-import { withDatabaseRetry } from "@/lib/database-retry";
+import { refusedByDatabase, withDatabaseRetry } from "@/lib/database-retry";
 import { isUuid } from "@/lib/validation";
 import { formatItemCount, isInventoryEntryType, parseItemQuantity, type TrashResult } from "@/lib/inventory";
 import { isEquipSlot, type EquipReceipt, type EquipResult } from "@/lib/equipment";
@@ -48,16 +48,16 @@ export async function trashInventoryItem(form: FormData, characterId: string): P
   }));
   revalidatePath("/(game)", "layout");
   if (error || !data) {
-    const message = errors[error?.message ?? ""];
+    const message = errors[error?.message ?? ""] ?? refusedByDatabase(error);
     return { error: true, retry: !message, message: message ??
       "The result could not be confirmed. Retry this action to check it safely." };
   }
   return { message: "Destroyed " + formatItemCount(data.quantity) + " × " + data.name + ".", receipt: data };
 }
 
-function equipmentOutcome({ data, error }: { data: EquipReceipt | null; error: { message: string } | null }): EquipResult {
+function equipmentOutcome({ data, error }: { data: EquipReceipt | null; error: { message: string; code?: string } | null }): EquipResult {
   if (error || !data) {
-    const message = equipBlocked[error?.message ?? ""] ?? errors[error?.message ?? ""];
+    const message = equipBlocked[error?.message ?? ""] ?? errors[error?.message ?? ""] ?? refusedByDatabase(error);
     return { error: true, retry: !message, message: message ?? "The result could not be confirmed. Retry this action to check it safely." };
   }
   return { message: (data.action === "equip" ? "Equipped " : "Unequipped ") + data.name + ".", receipt: data };

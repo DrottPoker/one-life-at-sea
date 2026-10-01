@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
-import { withDatabaseRetry } from "@/lib/database-retry";
+import { refusedByDatabase, withDatabaseRetry } from "@/lib/database-retry";
 import { isUuid } from "@/lib/validation";
 import { formatGold, isBankDirection, parseGoldAmount, type BankActionResult } from "@/lib/bank";
 
@@ -36,7 +36,7 @@ export async function transferGold(form: FormData, characterId: string): Promise
   }));
   revalidatePath("/(game)", "layout");
   if (error || !data) {
-    const message = errors[error?.message ?? ""];
+    const message = errors[error?.message ?? ""] ?? refusedByDatabase(error);
     return { error: true, retry: !message, message: message ??
       "The transfer could not be confirmed. Retry the same transfer to check it safely." };
   }

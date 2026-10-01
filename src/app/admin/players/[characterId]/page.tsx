@@ -8,6 +8,9 @@ import { GrantItems } from "@/components/admin/grant-items";
 import { MutationForm } from "@/components/admin/mutation-form";
 import { adminLabel } from "@/lib/admin";
 
+// Finished jobs only wait for lazy settlement; the database refuses to cancel them.
+const jobFinished = (finishesAt: unknown) => Date.parse(String(finishesAt)) <= Date.now();
+
 export default async function AdminPlayer({ params }: { params: Promise<{ characterId: string }> }) {
   const { characterId } = await params;
   if (!isUuid(characterId)) notFound();
@@ -49,9 +52,11 @@ export default async function AdminPlayer({ params }: { params: Promise<{ charac
       {engagements.rows.map(entry => <MutationForm key={entry.version} action="end_combat" payload={{ character_id: characterId, combat_id: entry.values.combat_id }}
         label="Review end combat" summary="End the entire encounter in a draw. No additional damage is dealt; existing health and snapshots are preserved." />)}
       {!engagements.rows.length && <p>No active combat.</p>}
-      {jobs.rows.filter(job => job.values.applied_at === null).map(job => <div key={job.values.id}><p>{job.values.workshop_name}: {job.values.stat}, finishes {job.values.finishes_at}</p>
-        <MutationForm action="cancel_ship_job" payload={{ character_id: characterId, version: job.version }} label="Review job cancellation"
-          summary="Cancel the pending ship job. No stats, XP or energy refund will be granted." /></div>)}
+      {jobs.rows.filter(job => job.values.applied_at === null).map(job => jobFinished(job.values.finishes_at)
+        ? <p key={job.values.id}>{job.values.workshop_name}: {job.values.stat}, finished {job.values.finishes_at}. The result applies the next time the captain&apos;s state is read.</p>
+        : <div key={job.values.id}><p>{job.values.workshop_name}: {job.values.stat}, finishes {job.values.finishes_at}</p>
+          <MutationForm action="cancel_ship_job" payload={{ character_id: characterId, version: job.version }} label="Review job cancellation"
+            summary="Cancel the pending ship job. No stats, XP or energy refund will be granted." /></div>)}
       <div className="admin-links">{["ship_upgrade_jobs", "combat_participants", "bank_transfers", "training_requests", "inventory_requests", "activity_requests"].map(name =>
         <Link key={name} href={filteredLink(name)}>{name.replaceAll("_", " ")}</Link>)}</div>
     </section>

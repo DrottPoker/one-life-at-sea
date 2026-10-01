@@ -56,7 +56,8 @@ returns jsonb language sql stable security invoker set search_path='' as $$
     'can_react',reactable and post.removed_at is null and post.author_id is distinct from viewer_id,
     'can_dislike',reactable and may_dislike and post.removed_at is null and post.author_id is distinct from viewer_id,
     'can_edit',post.author_id is not distinct from viewer_id and post.removed_at is null and writable,
-    'can_withdraw',post.author_id is not distinct from viewer_id and post.removed_at is null);
+    'can_withdraw',post.author_id is not distinct from viewer_id and post.removed_at is null,
+    'can_moderate',moderator and private.forum_may_moderate(post.author_id));
 $$;
 revoke all on function private.forum_author(uuid,text,bigint),private.forum_visible_person(uuid,text,bigint,text,boolean),private.forum_thread_json(private.forum_threads,integer,timestamptz,boolean),
   private.forum_post_json(private.forum_posts,uuid,boolean,boolean,boolean,boolean,boolean) from public,anon,authenticated;
@@ -148,7 +149,7 @@ begin
       'pinned',thread.pinned_at is not null,'locked',thread.locked_at is not null,
       'removed',case when thread.removed_at is not null then jsonb_build_object('by',thread.removed_by,'at',thread.removed_at) end,
       'post_count',thread.post_count,'post_seq',thread.post_seq,'views',thread.reader_count,'last_read_number',read_number,
-      'can_reply',writable,'can_moderate',moderator,'subscribed',coalesce(subscribed,false),'can_upload_images',writable and may_dislike,'can_purge_images',moderator and private.is_admin(),
+      'can_reply',writable,'can_moderate',moderator,'can_moderate_thread',moderator and private.forum_may_moderate(thread.author_id),'subscribed',coalesce(subscribed,false),'can_upload_images',writable and may_dislike,'can_purge_images',moderator and private.is_admin(),
       'poll',private.forum_poll_json(thread,board,viewer_id,moderator,ban is null and may_dislike and board.active and thread.removed_at is null)),
     'posts',posts,'signatures',coalesce(signatures,'{}'::jsonb),'page',current_page,'page_count',page_count,'page_size',{{gameplay.forum.postsPageSize}},'ban',ban);
 end;

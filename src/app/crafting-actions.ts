@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
-import { withDatabaseRetry } from "@/lib/database-retry";
+import { refusedByDatabase, withDatabaseRetry } from "@/lib/database-retry";
 import { isUuid } from "@/lib/validation";
 import { craftingMessage, parseCraftingForm, type CraftingResult } from "@/lib/crafting";
 
@@ -32,7 +32,7 @@ export async function craftItem(form: FormData, characterId: string): Promise<Cr
   const { data, error } = await withDatabaseRetry(() => client.rpc("craft_item", { ...values, request_id: requestId }));
   revalidatePath("/(game)", "layout");
   if (error || !data) {
-    const message = errors[error?.message ?? ""];
+    const message = errors[error?.message ?? ""] ?? refusedByDatabase(error);
     return { error: true, retry: !message, recipe_id: values.recipe_id, message: message ?? "Crafting could not be confirmed. Check the saved action safely." };
   }
   return { recipe_id: data.recipe_id, receipt: data, message: craftingMessage(data) };

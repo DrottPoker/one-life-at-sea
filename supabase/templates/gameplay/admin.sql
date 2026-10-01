@@ -77,6 +77,13 @@ begin
     if payload->>'version' is distinct from md5(before_row::text) then raise exception 'STALE_ROW' using errcode='40001'; end if;
     if spec.name='characters' and exists(select 1 from private.combat_engagements where character_id=captain_id) then
       raise exception 'PLAYER_IN_COMBAT' using errcode='P0001'; end if;
+    -- The version matches the unsettled row the administrator saw. Due discharges, arrivals and ship
+    -- jobs apply first, so the entered values are final instead of being changed by a later settlement.
+    perform private.settle_hospital(captain_id,clock_timestamp());
+    perform private.settle_sea_travel(captain_id,clock_timestamp());
+    perform private.settle_ship_upgrade(captain_id,clock_timestamp());
+    execute format('select to_jsonb(t) from %s t where %s',relation,clause) into before_row using identity;
+    if before_row is null then raise exception 'ROW_NOT_FOUND' using errcode='P0001'; end if;
     if action='update' then
       if spec.name='characters' then
         if patch ? 'crew_morale' then patch:=patch||jsonb_build_object('morale_updated_at',clock_timestamp()); end if;
@@ -133,6 +140,9 @@ begin
   elsif action='cancel_ship_job' then
     captain_id:=(payload->>'character_id')::uuid;
     perform private.lock_combat_context(array[captain_id]);
+    -- A job past its end time is complete and applies at the next settlement; it cannot be cancelled.
+    if exists(select 1 from private.ship_upgrade_jobs j where j.character_id=captain_id and j.applied_at is null and j.finishes_at<=clock_timestamp()) then
+      raise exception 'SHIP_JOB_FINISHED' using errcode='P0001'; end if;
     select to_jsonb(j) into before_row from private.ship_upgrade_jobs j where character_id=captain_id and applied_at is null for update;
     if before_row is null then raise exception 'ROW_NOT_FOUND' using errcode='P0001'; end if;
     if payload->>'version' is distinct from md5(before_row::text) then raise exception 'STALE_ROW' using errcode='40001'; end if;

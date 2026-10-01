@@ -159,7 +159,7 @@ export async function moderateForum(characterId: string, request: ForumModeratio
   const client = await createClient();
   const { data, error } = await withDatabaseRetry(() => client.rpc("moderate_forum", { action: request.action, payload, request_id: request.id, reason: request.reason.trim() }));
   if (error || !data) {
-    const known = error?.message === "FORUM_FORBIDDEN" ? "You cannot act on yourself, an administrator or, unless you are an administrator, another moderator." : knownError(error);
+    const known = error?.message === "FORUM_FORBIDDEN" ? "Moderators cannot act on themselves or an administrator, and only administrators act on other moderators." : knownError(error);
     return { error: known ?? "The action could not be confirmed. Retry to check the same request.", retry: !known };
   }
   // The purge is logged first and hides the image at once; the file is then deleted with the

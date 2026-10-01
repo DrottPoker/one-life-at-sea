@@ -191,6 +191,38 @@ select is((select (p->>'ignored')::boolean from jsonb_array_elements(public.get_
 select is((select (p->>'ignored')::boolean from jsonb_array_elements(public.get_forum_thread((select (value->>'thread_id')::bigint from safety_results where key='k1'))->'posts') p
   where p->>'number'='1'),false,'Other posts stay open');
 
+-- Player moderators do not act on themselves, administrators or other moderators.
+select pg_temp.as_player('SafetyAdmin');
+select pg_temp.cool();
+insert into safety_results values('admin_thread',public.create_forum_thread('general_discussion','Admin notes','An administrator wrote this thread.',gen_random_uuid()));
+select public.moderate_forum('grant_moderator',jsonb_build_object('player_number',pg_temp.number('SafetyNew')),gen_random_uuid(),'Second helper');
+select pg_temp.as_player('SafetyMod');
+select throws_ok($$select public.moderate_forum('remove_post',jsonb_build_object('post_id',pg_temp.post('admin_thread')::text),gen_random_uuid(),'Overreach')$$,
+  '42501','FORUM_FORBIDDEN','Player moderators cannot remove an administrator''s post');
+select throws_ok($$select public.moderate_forum('lock_thread',jsonb_build_object('thread_id',(select (value->>'thread_id')::bigint from safety_results where key='admin_thread')::text),gen_random_uuid(),'Overreach')$$,
+  '42501','FORUM_FORBIDDEN','Player moderators cannot lock an administrator''s thread');
+select throws_ok($$select public.moderate_forum('pin_thread',jsonb_build_object('thread_id',(select value->>'thread_id' from safety_results where key='announcement')),gen_random_uuid(),'Mine')$$,
+  '42501','FORUM_FORBIDDEN','Player moderators cannot moderate their own threads');
+select is((public.get_forum_thread((select (value->>'thread_id')::bigint from safety_results where key='admin_thread'))#>>'{posts,0,can_moderate}')::boolean,false,'An administrator''s post offers no player moderator tools');
+select is((public.get_forum_thread((select (value->>'thread_id')::bigint from safety_results where key='admin_thread'))#>>'{thread,can_moderate_thread}')::boolean,false,'Neither does an administrator''s thread');
+select is((public.get_forum_thread((select (value->>'thread_id')::bigint from safety_results where key='k1'))#>>'{posts,0,can_moderate}')::boolean,true,'Other captains'' posts stay moderated');
+select pg_temp.as_player('SafetyAdmin');
+select public.moderate_forum('ban_player',jsonb_build_object('player_number',pg_temp.number('SafetyNew'),'hours','1'),gen_random_uuid(),'Cool down');
+select pg_temp.as_player('SafetyMod');
+select throws_ok($$select public.moderate_forum('unban_player',jsonb_build_object('player_number',pg_temp.number('SafetyNew')),gen_random_uuid(),'Helping a friend')$$,
+  '42501','FORUM_FORBIDDEN','Player moderators cannot lift another moderator''s ban');
+select is((select (b->>'can_lift')::boolean from jsonb_array_elements(public.get_forum_moderation()->'bans') b where b#>>'{player,display_name}'='SafetyNew'),false,'The ban list offers no lift button for it');
+select pg_temp.as_player('SafetyNew');
+select throws_ok($$select public.moderate_forum('unban_player',jsonb_build_object('player_number',pg_temp.number('SafetyNew')),gen_random_uuid(),'Lifting my own ban')$$,
+  '42501','FORUM_BANNED','A banned moderator cannot lift their own ban');
+select throws_ok($$select public.moderate_forum('edit_post',jsonb_build_object('post_id',pg_temp.post('k1')::text,'body','Rewritten while banned.'),gen_random_uuid(),'Still editing')$$,
+  '42501','FORUM_BANNED','A banned moderator cannot edit posts');
+select is((public.get_forum_index()->>'can_moderate')::boolean,false,'A banned moderator loses the moderator view');
+select pg_temp.as_player('SafetyAdmin');
+select is(public.moderate_forum('unban_player',jsonb_build_object('player_number',pg_temp.number('SafetyNew')),gen_random_uuid(),'Served')->>'message','SafetyNew can post again.',
+  'Administrators lift a moderator''s ban');
+select public.moderate_forum('revoke_moderator',jsonb_build_object('player_number',pg_temp.number('SafetyNew')),gen_random_uuid(),'Trial over');
+
 -- Revoked moderators lose their tools.
 select pg_temp.as_player('SafetyAdmin');
 select public.moderate_forum('revoke_moderator',jsonb_build_object('player_number',pg_temp.number('SafetyMod')),gen_random_uuid(),'Stepped down');

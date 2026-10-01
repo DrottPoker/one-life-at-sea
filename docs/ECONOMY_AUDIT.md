@@ -56,6 +56,12 @@ Inga databasregler för priser, avgifter eller utfärdande av vanliga items har
 - Priser och mängder är positiva heltal. Pengar räknas exakt även nära
   maxgränsen; procentavgiften avrundas nedåt kumulativt per listing.
 - Ett återanvänt request-ID kan inte genomföra en ny affär. Ändrad payload nekas.
+- Ett fel som databasen själv har gett (SQLSTATE-klass P0, 22, 23 eller 42) betyder
+  att hela transaktionen rullades tillbaka. Den sparade begäran släpps då även när
+  felkoden saknar ett eget meddelande, så att journalen aldrig fastnar på ett svar
+  som ett nytt försök inte kan ändra. Utan felkod, till exempel vid nätverksfel,
+  tidsgräns eller förlorat svar, behålls begäran för en säker kontroll
+  (`refusedByDatabase` i `src/lib/database-retry.ts`).
 - Strid, Hospital och havsposition kontrolleras på servern för nya handlingar.
   Tidigare genomförda kvitton kan fortfarande kontrolleras.
 - Kontoradering tar enligt befintlig regel bort kontots kvarvarande innehav och

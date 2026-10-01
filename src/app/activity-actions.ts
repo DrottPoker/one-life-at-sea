@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
-import { withDatabaseRetry } from "@/lib/database-retry";
+import { refusedByDatabase, withDatabaseRetry } from "@/lib/database-retry";
 import { isUuid } from "@/lib/validation";
 import { activityMessage, parseActivityForm, type ActivityResult } from "@/lib/activities";
 
@@ -32,7 +32,7 @@ export async function performActivity(form: FormData, characterId: string): Prom
   const { data, error } = await withDatabaseRetry(() => client.rpc("perform_activity", { ...values, request_id: requestId }));
   revalidatePath("/(game)", "layout");
   if (error || !data) {
-    const message = errors[error?.message ?? ""];
+    const message = errors[error?.message ?? ""] ?? refusedByDatabase(error);
     return { error: true, retry: !message, activity_id: values.activity_id, message: message ?? "The activity could not be confirmed. Check the saved action safely." };
   }
   return { activity_id: data.activity_id, receipt: data, message: activityMessage(data) };

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
-import { withDatabaseRetry } from "@/lib/database-retry";
+import { refusedByDatabase, withDatabaseRetry } from "@/lib/database-retry";
 import { isMarketCommand, type MarketActionResult } from "@/lib/marketplace";
 import { formatGold } from "@/lib/bank";
 import { formatItemCount } from "@/lib/inventory";
@@ -17,6 +17,7 @@ const errors: Record<string, string> = {
   REQUEST_CONFLICT: "This request has changed. Reload the market before trying again.",
   ITEM_NOT_FOUND: "An item is no longer in your inventory. Review the refreshed list.",
   ITEM_NOT_TRADABLE: "This item is not currently tradable.",
+  ITEM_EQUIPPED: "Unequip this item before listing it.",
   NOT_ENOUGH_ITEMS: "You no longer have the selected quantity. Review your inventory.",
   LISTING_UNAVAILABLE: "This listing has sold out or was withdrawn.",
   NOT_ENOUGH_STOCK: "There are fewer items left. Review the available quantity.",
@@ -45,7 +46,7 @@ export async function marketAction(command: unknown, characterId: string): Promi
   });
   revalidatePath("/", "layout");
   if (error || !data) {
-    const message = errors[error?.message ?? ""];
+    const message = errors[error?.message ?? ""] ?? refusedByDatabase(error);
     return { error: true, retry: !message, message: message ?? "The trade could not be confirmed. Retry safely to check the same request." };
   }
   const message = data.action === "create" ? data.listings.length + (data.listings.length === 1 ? " listing added." : " listings added.") :

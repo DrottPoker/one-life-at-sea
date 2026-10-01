@@ -2,9 +2,9 @@
 
 import { Panel } from "@/components/shell";
 
-export default function CombatError({ reset }: { reset: () => void }) {
+export default function CombatError({ retry }: { retry: () => void }) {
   return <Panel title="The encounter could not be loaded"><div className="o-panel-body">
     <p>Your saved fight is still on record. Try loading its latest state.</p>
-    <button className="o-training-button" onClick={reset}>Try again</button>
+    <button className="o-training-button" onClick={retry}>Try again</button>
   </div></Panel>;
 }

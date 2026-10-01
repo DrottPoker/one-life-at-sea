@@ -70,10 +70,15 @@ directory includes registration/last-activity timestamps, activity filters and s
   engagement locks are removed and a public `admin_end` event explains the ending.
   This operation does not award new combat protection.
 - Cancel a pending ship job without a refund or stat/XP grant. The original job
-  is preserved in the audit record. Already completed jobs cannot be cancelled.
+  is preserved in the audit record. A job whose end time has passed is complete even
+  before the captain's state is read again: the player page shows it as finished
+  without a cancel button, and the database refuses with `SHIP_JOB_FINISHED`.
 
 Admin access remains available during the administrator's hospital/attack lock.
 Editing a character in an active encounter is refused until that encounter ends.
+Before an edit or deletion, the captain's due hospital discharge, sea arrival and finished
+ship job are settled. The version check still compares the unsettled row the administrator
+saw, so the entered values are final instead of being changed by a later settlement.
 Item grants, item corrections and training progress edits use the same ordered
 character/combat locks as gameplay.
 

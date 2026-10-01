@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
-import { withDatabaseRetry } from "@/lib/database-retry";
+import { refusedByDatabase, withDatabaseRetry } from "@/lib/database-retry";
 import { isUuid } from "@/lib/validation";
 import { isStat, isTrainingGroup, STAT_LABELS } from "@/lib/game";
 import { formatGold } from "@/lib/bank";
@@ -55,7 +55,7 @@ export async function trainingAction(form: FormData, characterId: string): Promi
   revalidatePath("/(game)", "layout");
   const { data, error } = response;
   if (error || !data) {
-    const message = errors[error?.message ?? ""];
+    const message = errors[error?.message ?? ""] ?? refusedByDatabase(error);
     return { error: true, retry: !message, message: message ?? "The action could not be confirmed. Retry it safely below." };
   }
   if (data.kind === "purchase") return { message: data.tier_name + " purchased for " + formatGold(data.gold_cost) + " Gold Coins." };

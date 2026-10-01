@@ -40,11 +40,13 @@ export type ForumPost = {
   removed: { by: "author" | "moderator"; at: string } | null; quote: ForumQuote | null; own: boolean; can_edit: boolean; can_withdraw: boolean;
   likes: number | null; dislikes: number | null; my_reaction: ForumReaction; can_react: boolean; can_dislike: boolean;
   ignored: boolean; reported: boolean; can_report: boolean;
+  // False for a player moderator's own posts and posts by administrators or other moderators.
+  can_moderate: boolean;
 };
 export type ForumThread = {
   id: string; title: string; board: { id: string; name: string; section: string; posting: ForumPosting }; author: ForumPerson | null; created_at: string;
   pinned: boolean; locked: boolean; removed: { by: "moderator"; at: string } | null; post_count: number; post_seq: number; views: number;
-  last_read_number: number | null; can_reply: boolean; can_moderate: boolean; subscribed: boolean; can_upload_images: boolean; can_purge_images: boolean; poll: ForumPoll | null;
+  last_read_number: number | null; can_reply: boolean; can_moderate: boolean; can_moderate_thread: boolean; subscribed: boolean; can_upload_images: boolean; can_purge_images: boolean; poll: ForumPoll | null;
 };
 // Signatures are keyed by the author's player number.
 export type ForumThreadPage = {
@@ -91,14 +93,14 @@ export const forumBanLengths = [
 ] as const;
 export type ForumReportReceipt = { report_id: string; already: boolean };
 export type ForumReportEntry = {
-  post: { id: string; number: number; excerpt: string; removed: "author" | "moderator" | null; author: ForumPerson };
+  post: { id: string; number: number; excerpt: string; removed: "author" | "moderator" | null; author: ForumPerson; can_moderate: boolean };
   thread: { id: string; title: string; removed: boolean }; board: { id: string; name: string };
   reports: { id: string; reason: ForumReportReason; note: string; created_at: string; status: "open" | "resolved" | "dismissed"; reporter: ForumPerson; handled_by: string | null; handled_at: string | null }[];
 };
 export type ForumReportPage = { items: ForumReportEntry[]; total: number; page: number; page_size: number };
 export type ForumModerationOverview = {
   can_manage_moderators: boolean; open_reports: number;
-  bans: { player: ForumPerson; starts_at: string; ends_at: string | null; reason: string; banned_by: string }[];
+  bans: { player: ForumPerson; starts_at: string; ends_at: string | null; reason: string; banned_by: string; can_lift: boolean }[];
   moderators: { player: ForumPerson; granted_at: string; granted_by: string | null }[];
   log: { id: string; action: ForumModerationAction; actor: string; reason: string; created_at: string; payload: Record<string, string>; thread: { id: string; title: string } | null; post_id: string | null }[];
   log_total: number; page: number; page_size: number;

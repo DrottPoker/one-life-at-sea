@@ -214,18 +214,28 @@ alter table private.forum_reports enable row level security;
 revoke all on private.forum_moderators,private.forum_bans,private.forum_reports from public,anon,authenticated;
 revoke all on sequence private.forum_bans_id_seq,private.forum_reports_id_seq from public,anon,authenticated;
 
+-- A banned player moderator keeps the role but cannot use it until the ban ends.
 create or replace function private.forum_is_moderator()
 returns boolean language sql stable security definer set search_path='' as $$
-  select private.is_admin() or exists(select 1 from private.forum_moderators m join public.characters c on c.id=m.character_id where c.user_id=auth.uid());
+  select private.is_admin() or exists(select 1 from private.forum_moderators m join public.characters c on c.id=m.character_id where c.user_id=auth.uid()
+    and not exists(select 1 from private.forum_bans b where b.character_id=c.id and b.lifted_at is null and (b.ends_at is null or b.ends_at>statement_timestamp())));
 $$;
 -- A share lock lets a revocation wait for an action that is already running, like require_admin.
 create or replace function private.forum_require_moderator()
 returns void language plpgsql volatile security definer set search_path='' as $$
+declare moderator_id uuid;
 begin
   if private.is_admin() then perform private.require_admin(); return; end if;
-  perform 1 from private.forum_moderators m join public.characters c on c.id=m.character_id where c.user_id=auth.uid() for share of m;
+  select m.character_id into moderator_id from private.forum_moderators m join public.characters c on c.id=m.character_id where c.user_id=auth.uid() for share of m;
   if not found then raise exception 'MODERATOR_REQUIRED' using errcode='42501'; end if;
+  perform private.forum_require_unbanned(moderator_id);
 end;
+$$;
+-- Player moderators do not moderate themselves, administrators or other moderators.
+create or replace function private.forum_may_moderate(target uuid)
+returns boolean language sql stable security definer set search_path='' as $$
+  select private.is_admin() or target is null or not exists(select 1 from public.characters c where c.id=target and (c.user_id=auth.uid()
+    or exists(select 1 from private.admin_members m where m.user_id=c.user_id) or exists(select 1 from private.forum_moderators m where m.character_id=c.id)));
 $$;
 create or replace function private.forum_active_ban(target uuid)
 returns jsonb language sql stable security invoker set search_path='' as $$
@@ -300,7 +310,7 @@ begin
     where s.character_id=a.character_id;
 end;
 $$;
-revoke all on function private.forum_is_moderator(),private.forum_require_moderator(),private.forum_active_ban(uuid),private.forum_require_unbanned(uuid),private.forum_can_post(text,boolean),private.forum_normalize(text),private.forum_valid_body(text),
+revoke all on function private.forum_is_moderator(),private.forum_require_moderator(),private.forum_may_moderate(uuid),private.forum_active_ban(uuid),private.forum_require_unbanned(uuid),private.forum_can_post(text,boolean),private.forum_normalize(text),private.forum_valid_body(text),
   private.forum_valid_title(text),private.forum_person(uuid,text,bigint),private.forum_refresh_last_post(bigint),private.forum_count_thread(bigint,integer)
   from public,anon,authenticated;
 

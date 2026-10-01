@@ -117,6 +117,19 @@ select lives_ok($$select public.admin_mutate('cancel_ship_job',current_setting('
 select lives_ok($$select public.admin_mutate('cancel_ship_job',current_setting('test.cancel')::jsonb,'ad100000-0000-4000-8000-000000000004','Cancel pending job')$$,'Cancellation retry returns receipt');
 select is(public.admin_read('ship_upgrade_jobs','',0,jsonb_build_object('character_id',current_setting('test.owner'),'applied_at',null))->>'total','0','Cancelled job cannot later grant stats');
 select is(public.get_game_state()->>'ship_attack','10','Cancelled job did not grant stats');
+-- A job past its end time is complete: it cannot be cancelled, and edits apply after it.
+select lives_ok($$select public.start_ship_upgrade('attack',5,'ship_1',gen_random_uuid())$$,'Create a ship job that finishes');
+reset role;
+update private.ship_upgrade_jobs set started_at=clock_timestamp()-interval '10 seconds',finishes_at=clock_timestamp()-interval '1 second' where character_id=current_setting('test.owner')::uuid and applied_at is null;
+set local role authenticated;
+select set_config('test.job',(public.admin_read('ship_upgrade_jobs','',0,jsonb_build_object('character_id',current_setting('test.owner'),'applied_at',null))->'rows'->0)::text,true);
+select throws_ok($$select public.admin_mutate('cancel_ship_job',jsonb_build_object('character_id',current_setting('test.owner'),'version',current_setting('test.job')::jsonb->>'version'),
+  gen_random_uuid(),'Cancel a finished job')$$,'P0001','SHIP_JOB_FINISHED','Finished ship jobs cannot be cancelled');
+select set_config('test.row',(public.admin_read('characters','',0,jsonb_build_object('id',current_setting('test.owner')))->'rows'->0)::text,true);
+select lives_ok($$select public.admin_mutate('update',jsonb_build_object('resource','characters','key',jsonb_build_object('id',current_setting('test.owner')),
+  'version',current_setting('test.row')::jsonb->>'version','changes','{"ship_attack":"25"}'::jsonb),gen_random_uuid(),'Set the final attack')$$,'Edits accept the unsettled row the administrator saw');
+select is(public.get_game_state()->>'ship_attack','25','A finished job applies before the edit, so the entered value is final');
+select is(public.admin_read('ship_upgrade_jobs','',0,jsonb_build_object('character_id',current_setting('test.owner'),'applied_at',null))->>'total','0','The finished job is settled by the edit');
 select set_config('test.progress',(public.admin_read('character_training','',0,jsonb_build_object('character_id',current_setting('test.captain'),'training_group','crew'))->'rows'->0)::text,true);
 select lives_ok($$select public.admin_mutate('update',jsonb_build_object('resource','character_training',
   'key',jsonb_build_object('character_id',current_setting('test.captain'),'training_group','crew'),

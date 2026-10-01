@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCharacter } from "@/lib/player";
 import { createClient } from "@/lib/supabase/server";
-import { withDatabaseRetry } from "@/lib/database-retry";
+import { refusedByDatabase, withDatabaseRetry } from "@/lib/database-retry";
 import { isUuid } from "@/lib/validation";
 import { formatGold, parseGoldAmount } from "@/lib/bank";
 import { formatMorale, type TavernResult } from "@/lib/morale";
@@ -31,7 +31,7 @@ export async function buyTavernMeal(form: FormData, characterId: string): Promis
   }));
   revalidatePath("/(game)", "layout");
   if (error || !data) {
-    const message = errors[error?.message ?? ""];
+    const message = errors[error?.message ?? ""] ?? refusedByDatabase(error);
     return { error: true, retry: !message, message: message ?? "The meal could not be confirmed. Retry the saved meal safely." };
   }
   return { message: "Crew meal served. Morale " + formatMorale(data.morale_gained) + ". Spent " + formatGold(data.gold_cost) + " Gold Coins." };

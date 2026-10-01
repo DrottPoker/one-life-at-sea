@@ -89,7 +89,7 @@ Forumet följer Torns upplägg med tavlor, trådar och numrerade inlägg, men me
 
 ## Moderering
 
-Administratörer är alltid moderatorer. De kan utse spelarmoderatorer, som får samma verktyg för innehåll, rapporter och avstängningar men inte kan utse moderatorer eller stänga av andra moderatorer. Ingen kan stänga av en administratör eller sig själv. Varje åtgärd kräver en orsak på 3-500 tecken och sparas i `private.forum_moderation_log` med före- och efterläge. Moderatorer ser **Moderation (antal öppna rapporter)** på forumets startsida, och adminpanelen länkar till samma verktyg under **Forum**.
+Administratörer är alltid moderatorer. De kan utse spelarmoderatorer, som får samma verktyg för innehåll, rapporter och avstängningar men inte kan utse moderatorer. En spelarmoderator agerar inte på sig själv, en administratör eller en annan moderator: inte på deras inlägg, trådar, bilder, rapporter, signaturer eller avstängningar. Verktygen visas inte där, och databasen svarar `FORUM_FORBIDDEN`. Ingen kan stänga av en administratör eller sig själv. En avstängd spelarmoderator behåller rollen men förlorar verktygen och moderatorvyn tills avstängningen upphör, och bara en administratör kan häva den. Varje åtgärd kräver en orsak på 3-500 tecken och sparas i `private.forum_moderation_log` med före- och efterläge. Moderatorer ser **Moderation (antal öppna rapporter)** på forumets startsida, och adminpanelen länkar till samma verktyg under **Forum**.
 
 - Trådar kan fästas och lossas, låsas och låsas upp, flyttas, skickas till Graveyard (flyttas, låses och lossas) samt tas bort och återställas.
 - Inlägg kan tas bort och återställas, även det sista synliga. Tråden står då kvar med platshållare. Hela tråden döljs bara med **Remove**.

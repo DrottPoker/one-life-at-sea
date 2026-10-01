@@ -57,11 +57,12 @@ export function ForumModerationTools({ characterId, view, overview, reports }: {
         {report.handled_by && <small> {report.status === "dismissed" ? "Dismissed" : "Resolved"} by {report.handled_by}{report.handled_at && <>, <MessageTime value={report.handled_at} compact /></>}</small>}
       </li>)}</ul>
       {view === "reports" && <div className="o-forum-moderation" role="group" aria-label={"Moderate post #" + entry.post.number}>
-        {!entry.post.removed && <button type="button" onClick={() => setPrompt({ action: "remove_post", payload: { post_id: entry.post.id }, title: "Remove this post?",
+        {!entry.post.can_moderate && <small>Only an administrator can moderate this post.</small>}
+        {entry.post.can_moderate && !entry.post.removed && <button type="button" onClick={() => setPrompt({ action: "remove_post", payload: { post_id: entry.post.id }, title: "Remove this post?",
           description: "Players will see that a moderator removed the post, and its reports are resolved.", confirm: "Remove post" })}><Trash2 aria-hidden="true" />Remove post</button>}
-        <button type="button" onClick={() => setPrompt({ action: "dismiss_reports", payload: { post_id: entry.post.id }, title: "Dismiss these reports?",
-          description: "The post stays as it is and the reports leave the queue.", confirm: "Dismiss reports" })}><CircleCheck aria-hidden="true" />Dismiss</button>
-        {!entry.post.author.deleted && <button type="button" onClick={() => setPrompt(banPrompt(String(entry.post.author.player_number), entry.post.author.display_name))}><Ban aria-hidden="true" />Ban author</button>}
+        {entry.post.can_moderate && <button type="button" onClick={() => setPrompt({ action: "dismiss_reports", payload: { post_id: entry.post.id }, title: "Dismiss these reports?",
+          description: "The post stays as it is and the reports leave the queue.", confirm: "Dismiss reports" })}><CircleCheck aria-hidden="true" />Dismiss</button>}
+        {entry.post.can_moderate && !entry.post.author.deleted && <button type="button" onClick={() => setPrompt(banPrompt(String(entry.post.author.player_number), entry.post.author.display_name))}><Ban aria-hidden="true" />Ban author</button>}
         <Link href={forumThreadUrl(entry.thread.id)} prefetch={false}>Open thread</Link>
       </div>}
     </li>)}</ol> : <p className="o-copy">{view === "reports" ? "No open reports. The queue is clear." : "Nothing here yet."}</p>)}
@@ -71,13 +72,13 @@ export function ForumModerationTools({ characterId, view, overview, reports }: {
         {overview.bans.length ? <ul className="o-forum-report-list">{overview.bans.map(ban => <li key={ban.player.player_number}>
           <ForumPersonLink person={ban.player} /> [{ban.player.player_number}] {ban.ends_at ? <>until <MessageTime value={ban.ends_at} /></> : "permanently"}, by {ban.banned_by}.
           <span className="o-forum-plain"> Reason: {ban.reason}</span>
-          <button type="button" className="o-text-button" onClick={() => setPrompt({ action: "unban_player", payload: { player_number: String(ban.player.player_number) },
-            title: "Lift the ban on " + ban.player.display_name + "?", description: "The captain can post, react and report again.", confirm: "Lift ban" })}><Undo2 size={14} aria-hidden="true" /> Lift ban</button>
+          {ban.can_lift && <button type="button" className="o-text-button" onClick={() => setPrompt({ action: "unban_player", payload: { player_number: String(ban.player.player_number) },
+            title: "Lift the ban on " + ban.player.display_name + "?", description: "The captain can post, react and report again.", confirm: "Lift ban" })}><Undo2 size={14} aria-hidden="true" /> Lift ban</button>}
         </li>)}</ul> : <p className="o-copy">Nobody is banned.</p>}
         <PlayerAction label="Ban a captain" button="Ban" onSubmit={playerNumber => setPrompt(banPrompt(playerNumber, "captain " + playerNumber))} />
       </section>
       <section className="o-forum-tool" aria-label="Forum moderators"><h3>Moderators</h3>
-        <p className="o-copy">Administrators always moderate. Appointed moderators handle reports, content and bans, but only administrators appoint moderators or ban them.</p>
+        <p className="o-copy">Administrators always moderate. Appointed moderators handle reports, content and bans, but only administrators appoint moderators or act on moderators&apos; and administrators&apos; content and bans.</p>
         {overview.moderators.length ? <ul className="o-forum-report-list">{overview.moderators.map(moderator => <li key={moderator.player.player_number}>
           <ForumPersonLink person={moderator.player} /> [{moderator.player.player_number}], appointed <MessageTime value={moderator.granted_at} compact />{moderator.granted_by && " by " + moderator.granted_by}
           {overview.can_manage_moderators && <button type="button" className="o-text-button" onClick={() => setPrompt({ action: "revoke_moderator", payload: { player_number: String(moderator.player.player_number) },

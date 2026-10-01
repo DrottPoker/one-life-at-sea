@@ -166,7 +166,7 @@ function ReportDialog({ characterId, post, open, onClose }: { characterId: strin
 // Moderators act on each image a post shows; only administrators delete files for good.
 function ImageModeration({ post, thread, onModerate }: { post: ForumPost; thread: ForumThread; onModerate: (prompt: ForumModerationPrompt) => void }) {
   const images = Object.entries(post.images ?? {});
-  if (!thread.can_moderate || !images.length) return null;
+  if (!post.can_moderate || !images.length) return null;
   return <ul className="o-forum-image-tools" aria-label={"Images in post #" + post.number}>{images.map(([imageId, image], index) => <li key={imageId}>
     <span>Image {index + 1}{image.purged ? " (file deleted)" : image.removed ? " (hidden from players)" : ""}</span>
     {!image.removed && <button type="button" onClick={() => onModerate({ action: "remove_image", payload: { image_id: imageId }, title: "Hide image " + (index + 1) + " in post #" + post.number + "?",
@@ -179,11 +179,11 @@ function ImageModeration({ post, thread, onModerate }: { post: ForumPost; thread
   </li>)}</ul>;
 }
 
-function Signature({ post, signature, thread, onModerate }: { post: ForumPost; signature: string; thread: ForumThread; onModerate: (prompt: ForumModerationPrompt) => void }) {
+function Signature({ post, signature, onModerate }: { post: ForumPost; signature: string; onModerate: (prompt: ForumModerationPrompt) => void }) {
   const author = post.author;
   return <div className="o-forum-signature">
     <ForumMarkup source={signature} className="o-forum-body o-forum-signature-body" />
-    {thread.can_moderate && author && !post.own && <button type="button" className="o-text-button" onClick={() => onModerate({ action: "clear_signature",
+    {post.can_moderate && author && !post.own && author.role !== "admin" && <button type="button" className="o-text-button" onClick={() => onModerate({ action: "clear_signature",
       payload: { player_number: String(author.player_number) }, title: "Clear " + author.display_name + "'s signature?",
       description: "The signature is removed everywhere. The captain is told, and can write a new one.", confirm: "Clear signature" })}>Clear signature</button>}
   </div>;
@@ -237,18 +237,18 @@ function PostCard({ characterId, post, thread, fresh, signature, onQuote, onMode
             <ForumMarkup source={post.body} className="o-forum-body o-forum-removed-body" images={post.images} moderator={thread.can_moderate} /></>}</div>
         : post.body !== null && <ForumMarkup source={post.body} images={post.images} moderator={thread.can_moderate} />}
       {!editing && <ImageModeration post={post} thread={thread} onModerate={onModerate} />}
-      {signature && !editing && !post.removed && <Signature post={post} signature={signature} thread={thread} onModerate={onModerate} />}
+      {signature && !editing && !post.removed && <Signature post={post} signature={signature} onModerate={onModerate} />}
       {post.edited && !editing && <p className="o-forum-edited">Last edited by {post.edited.by ?? "a former captain"}{post.edited.moderator && " (moderator)"} on <MessageTime value={post.edited.at} /></p>}
       {!editing && <footer className="o-forum-post-actions">
         <Reactions characterId={characterId} post={post} onError={setError} />
         {thread.can_reply && !post.removed && <button type="button" onClick={onQuote}><Quote aria-hidden="true" />Quote</button>}
         {post.can_edit && <button type="button" onClick={() => setEditing("author")}><Pencil aria-hidden="true" />Edit</button>}
         {post.can_withdraw && <button type="button" onClick={() => setConfirming(true)}><Trash2 aria-hidden="true" />Delete</button>}
-        {thread.can_moderate && !post.own && !post.removed && <button type="button" onClick={() => setEditing("moderator")}><Pencil aria-hidden="true" />Moderator edit</button>}
-        {thread.can_moderate && !post.removed && <button type="button" onClick={() => moderate("remove_post", "Remove post #" + post.number + "?", "Players will see that a moderator removed this post. Moderators can still read and restore it.", "Remove post")}><Trash2 aria-hidden="true" />Remove</button>}
-        {thread.can_moderate && post.removed?.by === "moderator" && <button type="button" onClick={() => moderate("restore_post", "Restore post #" + post.number + "?", "The post becomes visible to every player again.", "Restore post")}><RotateCcw aria-hidden="true" />Restore</button>}
+        {post.can_moderate && !post.own && !post.removed && <button type="button" onClick={() => setEditing("moderator")}><Pencil aria-hidden="true" />Moderator edit</button>}
+        {post.can_moderate && !post.removed && <button type="button" onClick={() => moderate("remove_post", "Remove post #" + post.number + "?", "Players will see that a moderator removed this post. Moderators can still read and restore it.", "Remove post")}><Trash2 aria-hidden="true" />Remove</button>}
+        {post.can_moderate && post.removed?.by === "moderator" && <button type="button" onClick={() => moderate("restore_post", "Restore post #" + post.number + "?", "The post becomes visible to every player again.", "Restore post")}><RotateCcw aria-hidden="true" />Restore</button>}
         {thread.can_moderate && post.edited && <button type="button" onClick={onHistory}><History aria-hidden="true" />History</button>}
-        {thread.can_moderate && author && !author.deleted && !post.own && <button type="button" onClick={() => onModerate({ action: "ban_player", payload: { player_number: String(author.player_number) },
+        {post.can_moderate && author && !author.deleted && !post.own && author.role !== "admin" && <button type="button" onClick={() => onModerate({ action: "ban_player", payload: { player_number: String(author.player_number) },
           title: "Ban " + author.display_name + " from posting?", description: "The captain can still read the forums and delete their own posts. Choose how long the ban lasts.",
           confirm: "Ban", banLength: true, reasonLabel: "Reason (shown to the player)" })}><Ban aria-hidden="true" />Ban author</button>}
         {post.reported ? <button type="button" disabled><Flag aria-hidden="true" />Reported</button>
@@ -319,7 +319,7 @@ export function ForumThreadView({ characterId, data }: { characterId: string; da
       <p className="o-copy">Started by <ForumPersonLink person={thread.author} /> on <MessageTime value={thread.created_at} /> · {thread.post_count} {thread.post_count === 1 ? "post" : "posts"} · {thread.views} {thread.views === 1 ? "view" : "views"}</p>
       {!thread.removed && <SubscribeButton characterId={characterId} thread={thread} />}
       {thread.removed && <p className="o-forum-warning" role="status">A moderator removed this thread. Only moderators can open it.</p>}
-      {thread.can_moderate && <ThreadModeration thread={thread} onModerate={setPrompt} />}
+      {thread.can_moderate_thread && <ThreadModeration thread={thread} onModerate={setPrompt} />}
     </header>
     {data.ban && <ForumBanNotice ban={data.ban} />}
     {notice && <p className="o-forum-notice" role="status">{notice}</p>}
